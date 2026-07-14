@@ -68,3 +68,4 @@ pause={
 [autoload]
 
 GameManager="*res://scripts/game_manager.gd"
+EnemyTypeData="*res://scripts/enemy_types.gd"

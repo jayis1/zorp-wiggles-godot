@@ -240,24 +240,14 @@ func _random_world_position() -> Vector3:
 	var z := randf_range(-HALF_WORLD + 10, HALF_WORLD - 10)
 	return Vector3(x, 0.5, z)
 
-func _random_enemy_type() -> int:
-	"""Pick a random enemy type based on difficulty progression."""
-	var roll := randf()
-	if GameManager.player_level >= 5 and roll < 0.1:
-		return GameConstants.EnemyType.DRAKE
-	if GameManager.player_level >= 3 and roll < 0.25:
-		return GameConstants.EnemyType.SENTINEL
-	if roll < 0.15:
-		return GameConstants.EnemyType.SERPENT
-	if roll < 0.25:
-		return GameConstants.EnemyType.GRAVITON
-	if roll < 0.35:
-		return GameConstants.EnemyType.WISP
-	if roll < 0.50:
-		return GameConstants.EnemyType.BOMBER
-	if roll < 0.70:
-		return GameConstants.EnemyType.SPITTER
-	return GameConstants.EnemyType.BLOB
+func _random_enemy_type() -> String:
+	"""Pick a random enemy type based on distance from spawn (difficulty scaling)."""
+	# Use player position for distance-based difficulty
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var dist := 0.0
+	if player:
+		dist = abs(player.global_position.x) + abs(player.global_position.z)
+	return EnemyTypeData.pick_type_by_distance(dist, GameConstants.DIFFICULTY_SCALE_DISTANCE)
 
 func _random_collectible_type() -> int:
 	var roll := randf()
@@ -275,17 +265,24 @@ func _random_collectible_type() -> int:
 		return GameConstants.CollectibleType.QUANTUM_FUZZ
 	return GameConstants.CollectibleType.NEBULA_DUST
 
-func _spawn_enemy_at(type: int, pos: Vector3) -> void:
+func _spawn_enemy_at(type_name: String, pos: Vector3) -> void:
 	"""Spawn an enemy of the given type at the given position."""
-	var scene_path: String = EnemySpawner.ENEMY_SCENES.get(type, "")
-	if scene_path.is_empty():
-		# Fallback to blob
-		scene_path = "res://scenes/entities/enemy_blob.tscn"
-	var enemy_scene: PackedScene = load(scene_path)
-	if not enemy_scene:
-		enemy_scene = preload("res://scenes/entities/enemy_blob.tscn")
-	var enemy: Node3D = enemy_scene.instantiate()
+	var type_data: Dictionary = EnemyTypeData.get_type(type_name)
+	var enemy_scene := preload("res://scenes/entities/enemy_blob.tscn")
+	var enemy := enemy_scene.instantiate()
 	enemy.global_position = pos
+	# Configure enemy with type data
+	enemy.enemy_name = type_name
+	enemy.max_hp = type_data["hp"]
+	enemy.hp = type_data["hp"]
+	enemy.speed = type_data["speed"]
+	enemy.damage = type_data["damage"]
+	enemy.base_scale = type_data["scale"]
+	enemy.detect_range = type_data.get("detect", GameConstants.ENEMY_DETECT_RANGE)
+	# Set color
+	enemy.base_color = type_data["color"]
+	# Set model based on type
+	var model_type: String = type_data["model"]
 	add_child(enemy)
 	GameManager.enemies.append(enemy)
 
