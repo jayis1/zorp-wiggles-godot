@@ -165,6 +165,9 @@ func _execute_attack(player: Node3D) -> void:
 	# Deal damage
 	GameManager.take_damage(damage)
 
+	# Camera shake on player hit
+	_trigger_camera_trauma(0.2)
+
 	# Forward lunge
 	var lunge_dir := (player.global_position - global_position).normalized()
 	lunge_dir.y = 0
@@ -216,11 +219,20 @@ func _die() -> void:
 	GameManager.add_score(score_reward)
 	enemy_died.emit(self)
 
-	# Death animation
+	# Camera shake on enemy death (bigger for larger enemies)
+	_trigger_camera_trauma(clampf(base_scale * 0.15, 0.08, 0.35))
+
+	# Death animation — scale down with bounce, rise, then free
 	var death_tween := create_tween()
 	death_tween.set_parallel(true)
-	death_tween.tween_property(self, "scale", Vector3.ZERO, 0.4).set_ease(Tween.EASE_IN)
-	death_tween.tween_property(self, "global_position:y", global_position.y + 1.0, 0.4)
+	death_tween.tween_property(self, "scale", Vector3.ZERO, 0.4) \
+		.set_ease(Tween.EASE_IN) \
+		.set_trans(Tween.TRANS_CUBIC)
+	death_tween.tween_property(self, "global_position:y", global_position.y + 1.0, 0.4) \
+		.set_ease(Tween.EASE_OUT)
+	# Quick spin on death for flair
+	death_tween.tween_property(self, "rotation:y", rotation.y + PI, 0.4) \
+		.set_ease(Tween.EASE_OUT)
 	death_tween.chain().tween_callback(queue_free)
 
 func _update_timers(delta: float) -> void:
@@ -246,3 +258,8 @@ func _update_visuals(delta: float) -> void:
 			var pulse := 0.5 + 0.5 * sin(GameManager.game_time * 8.0)
 			var warning_color := Color(1.0, 0.1, 0.1).lerp(Color.WHITE, pulse * 0.3)
 			_material.albedo_color = warning_color
+
+func _trigger_camera_trauma(amount: float) -> void:
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(amount)

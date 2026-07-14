@@ -70,12 +70,14 @@ func _apply_type_config() -> void:
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:
 		return
-	
-	# Bob up and down
+
+	# Bob up and down + gentle spin
 	if not is_popping:
 		bob_offset += delta * 2.0
 		global_position.y = base_y + sin(bob_offset) * 0.3
-	
+		# Continuous slow rotation for visual appeal
+		rotate_y(delta * 1.5)
+
 	# Magnetic pull toward player
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if not player:
@@ -115,10 +117,17 @@ func _collect() -> void:
 	# Pickup streak
 	GameManager.add_pickup_streak()
 	
-	# Pickup animation then remove
+	# Pickup animation: pop up + spin fast + shrink, with easing for juicy feel
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector3.ONE * 1.5, 0.1)
-	tween.chain().tween_property(self, "scale", Vector3.ZERO, 0.15)
+	tween.tween_property(self, "scale", Vector3.ONE * 1.5, 0.1) \
+		.set_ease(Tween.EASE_OUT) \
+		.set_trans(Tween.TRANS_BACK)
+	tween.chain().tween_property(self, "scale", Vector3.ZERO, 0.18) \
+		.set_ease(Tween.EASE_IN) \
+		.set_trans(Tween.TRANS_CUBIC)
+	# Rise slightly during shrink for a "lift" feel
+	tween.parallel().tween_property(self, "global_position:y", global_position.y + 0.8, 0.25) \
+		.set_ease(Tween.EASE_OUT)
 	tween.tween_callback(queue_free)
 	
 	collected.emit(collectible_type, xp_value)

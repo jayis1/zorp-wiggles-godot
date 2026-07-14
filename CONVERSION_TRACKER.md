@@ -283,5 +283,14 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - Godot 4.4 GDScript syntax throughout (not Godot 3)
 - GameManager registered as autoload singleton in project.godot
 
+## Improvement Patterns Applied
+- **Camera smooth lerp follow**: Exponential lerp (frame-rate independent) replaces linear move_toward for camera follow. Uses `1.0 - exp(-smoothing * delta)` weight formula.
+- **Trauma-based screen shake**: CameraRig.add_trauma(amount) system — trauma decays over time, shake amount = trauma² for organic feel. Triggered on dash (0.15), player damage (0.35), enemy attacks (0.2), enemy death (0.08-0.35 by size), pulse wave (0.25).
+- **Input buffering**: Dash input is buffered for 150ms — if pressed during cooldown, fires immediately when ready. Prevents dropped inputs.
+- **Smooth HUD bar animation**: HP/XP/Boss bars lerp toward target ratios in _process instead of snapping instantly. Uses same exponential lerp formula.
+- **Projectile trail + glow**: Projectiles now have a 6-point fading trail, OmniLight3D for real-time glow, and spawn impact_burst.tscn on hit (expanding + fading sphere).
+- **Tween easing curves**: Collectible pickup uses EASE_OUT + TRANS_BACK for pop, EASE_IN + TRANS_CUBIC for shrink + lift. Enemy death adds spin + CUBIC easing.
+- **Collectible spin**: Items rotate continuously while idle for visual appeal.
+
 ## Last Updated
 Phase 2 complete. All 7 enemy types implemented (Serpent, Graviton, Wisp, Sentinel, Bomber, Spitter, Drake) with dynamic spawner, enemy projectiles, shockwave rings, and spawn warnings. Phases 3-21 planned. Cron jobs active.

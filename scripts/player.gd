@@ -22,6 +22,10 @@ var is_dashing: bool = false
 var dash_timer: float = 0.0
 var dash_direction: Vector3 = Vector3.ZERO
 
+# ─── Input Buffering ──────────────────────────────────────────────────────────
+var _dash_buffer_timer: float = 0.0  # >0 means a dash press is buffered
+const DASH_BUFFER_WINDOW: float = 0.15  # Seconds to remember dash press before it expires
+
 # ─── Visual ───────────────────────────────────────────────────────────────────
 var base_color: Color = Color(0.3, 0.85, 0.3)  # Alien green
 var is_invuln_blinking: bool = false
@@ -55,6 +59,10 @@ func _physics_process(delta: float) -> void:
 		shoot_cooldown_timer -= delta
 	if pulse_wave_cooldown_timer > 0:
 		pulse_wave_cooldown_timer -= delta
+	
+	# Tick input buffer
+	if _dash_buffer_timer > 0:
+		_dash_buffer_timer -= delta
 	
 	_handle_movement(delta)
 	_handle_dash(delta)
@@ -103,14 +111,36 @@ func _handle_dash(delta: float) -> void:
 			is_dashing = false
 			dash_ended.emit()
 		return
-	
-	if Input.is_action_just_pressed("dash") and GameManager.player_dash_cooldown_timer <= 0:
-		is_dashing = true
-		dash_timer = GameConstants.PLAYER_DASH_DURATION
-		dash_direction = move_direction if move_direction.length_squared() > 0.01 else Vector3.FORWARD
-		GameManager.player_dash_cooldown_timer = GameConstants.PLAYER_DASH_COOLDOWN
-		GameManager.player_invuln_timer = max(GameManager.player_invuln_timer, GameConstants.PLAYER_DASH_INVULN_DURATION)
-		dash_started.emit()
+
+	# Consume buffered dash if cooldown is ready
+	if _dash_buffer_timer > 0 and GameManager.player_dash_cooldown_timer <= 0:
+		_dash_buffer_timer = 0.0
+		_start_dash()
+	elif Input.is_action_just_pressed("dash"):
+		if GameManager.player_dash_cooldown_timer <= 0:
+			_start_dash()
+		else:
+			# Buffer the input — will fire when cooldown expires (if within window)
+			_dash_buffer_timer = DASH_BUFFER_WINDOW
+
+func _start_dash() -> void:
+	is_dashing = true
+	dash_timer = GameConstants.PLAYER_DASH_DURATION
+	dash_direction = move_direction if move_direction.length_squared() > 0.01 else get_forward_dir_fallback()
+	GameManager.player_dash_cooldown_timer = GameConstants.PLAYER_DASH_COOLDOWN
+	GameManager.player_invuln_timer = max(GameManager.player_invuln_timer, GameConstants.PLAYER_DASH_INVULN_DURATION)
+	dash_started.emit()
+
+	# Camera shake on dash for punch
+	_trigger_camera_trauma(0.15)
+
+func get_forward_dir_fallback() -> Vector3:
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	if cam:
+		var fwd := -cam.global_basis.z
+		fwd.y = 0
+		return fwd.normalized()
+	return Vector3.FORWARD
 
 func _handle_invuln_blink(delta: float) -> void:
 	if GameManager.player_invuln_timer > 0:
@@ -195,3 +225,10 @@ func _use_pulse_wave() -> void:
 	var pulse: Node3D = PULSE_WAVE_SCENE.instantiate()
 	get_parent().add_child(pulse)
 	pulse.global_position = global_position
+	# Camera shake on pulse wave
+	_trigger_camera_trauma(0.25)
+
+func _trigger_camera_trauma(amount: float) -> void:
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(amount)

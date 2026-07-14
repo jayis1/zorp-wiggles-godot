@@ -41,6 +41,12 @@ var message_timer: float = 0.0
 var level_up_display_timer: float = 0.0
 var boss_ref: Node3D = null
 
+# ─── Smooth Bar Animation ─────────────────────────────────────────────────────
+var _hp_bar_target_ratio: float = 1.0
+var _xp_bar_target_ratio: float = 0.0
+var _boss_bar_target_ratio: float = 0.0
+var _bar_smoothing: float = 10.0  # Higher = snappier bar transitions
+
 func _ready() -> void:
 	# Connect game manager signals
 	GameManager.hp_changed.connect(_on_hp_changed)
@@ -63,12 +69,25 @@ func _process(delta: float) -> void:
 		message_timer -= delta
 		if message_timer <= 0:
 			message_text.visible = false
-	
+
 	if level_up_display_timer > 0:
 		level_up_display_timer -= delta
 		if level_up_display_timer <= 0:
 			level_up_text.visible = false
-	
+
+	# Smoothly animate bars toward target ratios (frame-rate independent lerp)
+	var weight: float = 1.0 - exp(-_bar_smoothing * delta)
+
+	# HP bar
+	var hp_current_ratio: float = hp_bar.size.x / hp_bar_bg.size.x if hp_bar_bg.size.x > 0 else 0.0
+	hp_current_ratio = lerpf(hp_current_ratio, _hp_bar_target_ratio, weight)
+	hp_bar.size.x = hp_bar_bg.size.x * hp_current_ratio
+
+	# XP bar
+	var xp_current_ratio: float = xp_bar.size.x / 400.0
+	xp_current_ratio = lerpf(xp_current_ratio, _xp_bar_target_ratio, weight)
+	xp_bar.size.x = 400.0 * xp_current_ratio
+
 	# Combo timer bar
 	if GameManager.player_combo > 0:
 		combo_timer_bar.visible = true
@@ -81,16 +100,30 @@ func _process(delta: float) -> void:
 			combo_timer_bar.color = Color(1.0, ratio * 2.0, 0.0)
 	else:
 		combo_timer_bar.visible = false
-	
-	# Boss HP bar
-	_update_boss_hp()
+
+	# Boss HP bar (smooth)
+	if boss_ref and is_instance_valid(boss_ref) and boss_ref.hp > 0:
+		boss_hp_container.visible = true
+		_boss_bar_target_ratio = float(boss_ref.hp) / float(boss_ref.max_hp) if boss_ref.max_hp > 0 else 0.0
+		var boss_current_ratio: float = boss_hp_bar.size.x / 300.0
+		boss_current_ratio = lerpf(boss_current_ratio, _boss_bar_target_ratio, weight)
+		boss_hp_bar.size.x = 300.0 * boss_current_ratio
+		boss_name_text.text = "☠ %s" % boss_ref.enemy_name
+		# Boss bar color: red → orange → yellow
+		if boss_current_ratio > 0.5:
+			boss_hp_bar.color = Color(1.0, (1.0 - boss_current_ratio) * 2.0 * 0.78, 0.0)
+		else:
+			boss_hp_bar.color = Color(1.0, boss_current_ratio * 2.0 * 0.39, 0.0)
+	else:
+		boss_hp_container.visible = false
+		boss_ref = null
 
 func _on_hp_changed(new_hp: int, max_hp: int) -> void:
 	var ratio := float(new_hp) / float(max_hp) if max_hp > 0 else 0.0
-	hp_bar.size.x = hp_bar_bg.size.x * ratio
+	_hp_bar_target_ratio = ratio
 	hp_text.text = "%d / %d" % [new_hp, max_hp]
-	
-	# Color: green → yellow → red
+
+	# Color: green → yellow → red (set immediately, bar size animates smoothly)
 	if ratio > 0.5:
 		hp_bar.color = Color(1.0 - (ratio - 0.5) * 2.0, 1.0, 0.0)
 	else:
@@ -98,7 +131,7 @@ func _on_hp_changed(new_hp: int, max_hp: int) -> void:
 
 func _on_xp_changed(new_xp: int, xp_to_next: int) -> void:
 	var ratio := float(new_xp) / float(xp_to_next) if xp_to_next > 0 else 0.0
-	xp_bar.size.x = 400.0 * ratio
+	_xp_bar_target_ratio = ratio
 	xp_text.text = "XP: %d / %d" % [new_xp, xp_to_next]
 
 func _on_level_up(level: int) -> void:
@@ -140,21 +173,6 @@ func _update_all_displays() -> void:
 	_on_xp_changed(GameManager.player_xp, GameManager.player_xp_to_next)
 	_on_score_changed(GameManager.player_score)
 	level_text.text = "Lv %d" % GameManager.player_level
-
-func _update_boss_hp() -> void:
-	if boss_ref and is_instance_valid(boss_ref) and boss_ref.hp > 0:
-		boss_hp_container.visible = true
-		var ratio := float(boss_ref.hp) / float(boss_ref.max_hp) if boss_ref.max_hp > 0 else 0.0
-		boss_hp_bar.size.x = 300.0 * ratio
-		boss_name_text.text = "☠ %s" % boss_ref.enemy_name
-		# Boss bar color: red → orange → yellow
-		if ratio > 0.5:
-			boss_hp_bar.color = Color(1.0, (1.0 - ratio) * 2.0 * 0.78, 0.0)
-		else:
-			boss_hp_bar.color = Color(1.0, ratio * 2.0 * 0.39, 0.0)
-	else:
-		boss_hp_container.visible = false
-		boss_ref = null
 
 func show_message(text: String, duration: float = 2.0) -> void:
 	message_text.text = text

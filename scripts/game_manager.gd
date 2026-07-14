@@ -136,8 +136,15 @@ func take_damage(amount: int) -> void:
 	player_hp = max(0, player_hp - amount)
 	player_invuln_timer = GameConstants.PLAYER_INVULN_DURATION
 	hp_changed.emit(player_hp, player_max_hp)
+	# Camera shake on taking damage
+	_trigger_camera_trauma(0.35)
 	if player_hp <= 0:
 		_die()
+
+func _trigger_camera_trauma(amount: float) -> void:
+	var cam_rig: Node3D = camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(amount)
 
 func heal(amount: int) -> void:
 	player_hp = min(player_max_hp, player_hp + amount)
