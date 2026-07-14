@@ -34,18 +34,38 @@ Originally built with the Ursina engine (Python), this is a ground-up rewrite in
 zorp-wiggles-godot/
 ├── project.godot           # Project settings, input mappings
 ├── scenes/
-│   ├── main.tscn           # Main game scene
+│   ├── main.tscn           # Main game scene (with EnemySpawner)
 │   ├── main_menu.tscn       # Start menu
-│   ├── entities/
-│   │   ├── enemy_blob.tscn  # Basic enemy
-│   │   └── collectible.tscn # Pickup items
-│   └── ui/                  # HUD scenes (TODO)
+│   └── entities/
+│       ├── enemy_blob.tscn      # Basic Slime Blob
+│       ├── enemy_serpent.tscn   # Plasma Serpent (segmented)
+│       ├── enemy_graviton.tscn  # Graviton (gravity pull)
+│       ├── enemy_wisp.tscn      # Void Wisp (teleport)
+│       ├── enemy_sentinel.tscn  # Starburst Sentinel (shockwave)
+│       ├── enemy_bomber.tscn    # Void Bomber (kamikaze)
+│       ├── enemy_spitter.tscn   # Spore Spitter (ranged)
+│       ├── enemy_drake.tscn     # Plasma Drake (boss)
+│       ├── enemy_projectile.tscn # Enemy ranged projectile
+│       ├── shockwave.tscn       # Expanding shockwave ring
+│       ├── spawn_warning.tscn   # Ground warning before spawn
+│       └── collectible.tscn     # Pickup items
 ├── scripts/
 │   ├── game_constants.gd   # All game constants
 │   ├── game_manager.gd     # Autoload singleton — game state
 │   ├── player.gd           # Player controller
 │   ├── camera_rig.gd       # Orbit camera
-│   ├── enemy_base.gd       # Base enemy AI
+│   ├── enemy_base.gd       # Base enemy AI class
+│   ├── enemy_serpent.gd    # Plasma Serpent (segments + scatter)
+│   ├── enemy_graviton.gd   # Graviton (gravity pull + DoT)
+│   ├── enemy_wisp.gd       # Void Wisp (teleport on hit)
+│   ├── enemy_sentinel.gd   # Sentinel (shockwave rings)
+│   ├── enemy_bomber.gd     # Bomber (fuse + explosion)
+│   ├── enemy_spitter.gd    # Spitter (charge-up + projectile)
+│   ├── enemy_drake.gd      # Drake boss (enrage + fire breath + charge)
+│   ├── enemy_projectile.gd # Enemy projectile system
+│   ├── shockwave.gd        # Expanding AoE ring
+│   ├── spawn_warning.gd    # Spawn warning visual
+│   ├── enemy_spawner.gd    # Dynamic spawner with difficulty scaling
 │   ├── world_generator.gd  # Procedural world
 │   ├── hud.gd              # HUD overlay
 │   ├── collectible.gd      # Pickup items
@@ -69,7 +89,21 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Projectile system
 - Pulse wave ability
 
-**Remaining phases:** Enemy varieties, decorations, particle effects, missions, audio, polish, export.
+**Phase 2 (Enemy Varieties):** ✅ Complete
+- 7 new enemy types: Plasma Serpent, Graviton, Void Wisp, Starburst Sentinel, Void Bomber, Spore Spitter, Plasma Drake (boss)
+- Plasma Serpent: Segmented body that follows head, scatters into mini-enemies on death
+- Graviton: Periodic gravity pull that drags player in, deals damage-per-second
+- Void Wisp: Tiny, fast, semi-transparent, teleports behind player when hit
+- Starburst Sentinel: Stationary turret firing expanding shockwave rings
+- Void Bomber: Kamikaze with fuse warning ring, AoE explosion damages player + enemies
+- Spore Spitter: Ranged enemy with charge-up telegraph, keeps distance, fires projectiles
+- Plasma Drake: Boss with enrage phase (<30% HP), fire breath (cone of projectiles), charge attack
+- Dynamic enemy spawner with difficulty scaling (tiered by distance + player level)
+- Spawn warning rings before enemy materialization
+- Enemy projectile system with pulsing aura
+- Boss HP bar integration in HUD
+
+**Remaining phases:** World decorations, particle effects, missions, audio, polish, export.
 
 ## License
 

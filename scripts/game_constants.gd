@@ -106,6 +106,81 @@ enum EnemyType {
 	DRAKE,
 }
 
+# ─── Enemy Spawn & Difficulty ────────────────────────────────────────────────
+const MAX_ACTIVE_ENEMIES: int = 40
+const ENEMY_SPAWN_INTERVAL: float = 10.0
+const ENEMY_SPAWN_INTERVAL_LEVEL_DECAY: float = 0.5
+const MIN_SPAWN_INTERVAL: float = 3.0
+const ENEMY_SPAWN_DISTANCE_MIN: float = 30.0
+const ENEMY_SPAWN_DISTANCE_MAX: float = 60.0
+const PLAYER_LEVEL_DIFFICULTY_INTERVAL: int = 5
+const ENEMY_HP_SCALE_PER_TIER: float = 0.15
+const ENEMY_DAMAGE_SCALE_PER_TIER: float = 0.10
+const DIFFICULTY_SCALE_DISTANCE: float = 100.0
+const SPAWN_DENSITY_NEAR_RADIUS: float = 25.0
+const SPAWN_DENSITY_NEAR_THRESHOLD: int = 8
+const SPAWN_DENSITY_SLOWDOWN: float = 0.5
+const ENEMY_SPAWN_WARNING_DURATION: float = 1.2
+
+# ─── Plasma Serpent ───────────────────────────────────────────────────────────
+const PLASMA_SERPENT_SEGMENTS: int = 4
+const PLASMA_SERPENT_SEGMENT_SPACING: float = 1.8
+const PLASMA_SERPENT_SCATTER_HP: int = 8
+const PLASMA_SERPENT_SCATTER_DAMAGE: int = 4
+const PLASMA_SERPENT_SCATTER_SPEED: float = 6.0
+
+# ─── Graviton ─────────────────────────────────────────────────────────────────
+const GRAVITON_PULL_RADIUS: float = 18.0
+const GRAVITON_PULL_FORCE: float = 8.0
+const GRAVITON_PULL_DURATION: float = 2.5
+const GRAVITON_PULL_COOLDOWN_MIN: float = 4.0
+const GRAVITON_PULL_COOLDOWN_MAX: float = 7.0
+const GRAVITON_PULL_DAMAGE: int = 5
+
+# ─── Void Wisp ────────────────────────────────────────────────────────────────
+const VOID_WISP_TELEPORT_RANGE: float = 8.0
+const VOID_WISP_TELEPORT_CHANCE: float = 0.50
+const VOID_WISP_TELEPORT_COOLDOWN: float = 2.0
+
+# ─── Starburst Sentinel ───────────────────────────────────────────────────────
+const STARBURST_SHOCKWAVE_INTERVAL_MIN: float = 3.0
+const STARBURST_SHOCKWAVE_INTERVAL_MAX: float = 5.0
+const STARBURST_SHOCKWAVE_RADIUS: float = 8.0
+const STARBURST_SHOCKWAVE_DAMAGE: int = 15
+const STARBURST_SHOCKWAVE_EXPAND_SPEED: float = 15.0
+const STARBURST_SHOCKWAVE_MAX_RADIUS: float = 8.0
+
+# ─── Void Bomber ──────────────────────────────────────────────────────────────
+const VOID_BOMBER_EXPLOSION_RADIUS: float = 5.5
+const VOID_BOMBER_EXPLOSION_DAMAGE: int = 40
+const VOID_BOMBER_FUSE_DURATION: float = 1.5
+const VOID_BOMBER_FUSE_TRIGGER_RANGE: float = 6.0
+
+# ─── Spore Spitter ────────────────────────────────────────────────────────────
+const SPORE_SPIT_CHARGE_TIME: float = 0.45
+const SPORE_SPIT_CHARGE_SCALE: float = 0.25
+const SPORE_SPIT_CHARGE_BRIGHTNESS: float = 0.55
+const SPORE_SPIT_SPEED: float = 20.0
+const SPORE_SPIT_DAMAGE: int = 12
+const SPORE_SPIT_LIFETIME: float = 3.0
+const SPORE_SPIT_RANGE: float = 25.0
+
+# ─── Enemy Projectile ─────────────────────────────────────────────────────────
+const ENEMY_PROJECTILE_HIT_RADIUS: float = 1.5
+const ENEMY_PROJECTILE_AURA_PULSE_SPEED: float = 10.0
+
+# ─── Plasma Drake (Boss) ──────────────────────────────────────────────────────
+const DRAKE_ENRAGE_HP_THRESHOLD: float = 0.3
+const DRAKE_ENRAGE_SPEED_MULT: float = 1.5
+const DRAKE_ENRAGE_DAMAGE_MULT: float = 1.3
+const DRAKE_FIRE_BREATH_COOLDOWN: float = 5.0
+const DRAKE_FIRE_BREATH_RANGE: float = 15.0
+const DRAKE_FIRE_BREATH_DAMAGE: int = 30
+const DRAKE_FIRE_BREATH_CONE_ANGLE: float = 45.0
+const DRAKE_CHARGE_COOLDOWN: float = 8.0
+const DRAKE_CHARGE_SPEED: float = 25.0
+const DRAKE_CHARGE_DAMAGE: int = 35
+
 # ─── Collectible Types ───────────────────────────────────────────────────────
 enum CollectibleType {
 	STAR_FRUIT,

@@ -1,0 +1,124 @@
+## Zorp Wiggles — Void Bomber
+## Kamikaze enemy that rushes the player and explodes in an AoE.
+## When in range, a fuse activates (with warning ring), then detonates.
+## Explosion damages player and nearby enemies.
+
+extends EnemyBase
+
+class_name EnemyBomber
+
+# ─── Bomber State ─────────────────────────────────────────────────────────────
+var fuse_active: bool = false
+var fuse_timer: float = 0.0
+var has_exploded: bool = false
+
+# ─── Visual ───────────────────────────────────────────────────────────────────
+var warning_ring: MeshInstance3D = null
+
+func _ready() -> void:
+	enemy_name = "Void Bomber"
+	enemy_type = GameConstants.EnemyType.BOMBER
+	max_hp = 50
+	speed = 3.5
+	damage = 15
+	base_scale = 1.1
+	detect_range = 28.0
+	xp_reward = 25
+	score_reward = 100
+	base_color = Color(80.0 / 255.0, 0.0, 40.0 / 255.0)  # Dark purple-red
+	super._ready()
+
+	# Create explosion warning ring
+	var ring_mesh := CylinderMesh.new()
+	ring_mesh.top_radius = GameConstants.VOID_BOMBER_EXPLOSION_RADIUS
+	ring_mesh.bottom_radius = GameConstants.VOID_BOMBER_EXPLOSION_RADIUS
+	ring_mesh.height = 0.05
+	warning_ring = MeshInstance3D.new()
+	warning_ring.mesh = ring_mesh
+	var ring_mat := StandardMaterial3D.new()
+	ring_mat.albedo_color = Color(1.0, 0.2, 0.0, 0.0)
+	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ring_mat.emission_enabled = true
+	ring_mat.emission = Color(1.0, 0.2, 0.0) * 0.5
+	warning_ring.material_override = ring_mat
+	add_child(warning_ring)
+	warning_ring.position = Vector3(0, -0.5, 0)
+	warning_ring.visible = false
+
+func _physics_process(delta: float) -> void:
+	if is_dead or GameManager.is_paused or spawn_grace_timer > 0:
+		return
+
+	super._physics_process(delta)
+
+	if fuse_active:
+		fuse_timer -= delta
+		# Pulse the warning ring faster as fuse counts down
+		if warning_ring and warning_ring.visible:
+			var pulse_speed: float = 10.0 + (1.0 - fuse_timer / GameConstants.VOID_BOMBER_FUSE_DURATION) * 20.0
+			var pulse: float = 0.5 + 0.5 * sin(GameManager.game_time * pulse_speed)
+			var mat := warning_ring.material_override as StandardMaterial3D
+			if mat:
+				mat.albedo_color.a = 0.2 + pulse * 0.3
+
+		if fuse_timer <= 0:
+			_explode()
+	else:
+		# Check if close enough to trigger fuse
+		var player: Node3D = get_tree().get_first_node_in_group("player")
+		if player and is_alerted:
+			var dist: float = global_position.distance_to(player.global_position)
+			if dist < GameConstants.VOID_BOMBER_FUSE_TRIGGER_RANGE:
+				_activate_fuse()
+
+func _activate_fuse() -> void:
+	fuse_active = true
+	fuse_timer = GameConstants.VOID_BOMBER_FUSE_DURATION
+	if warning_ring:
+		warning_ring.visible = true
+	# Stop moving during fuse
+	velocity = Vector3.ZERO
+
+func _explode() -> void:
+	if has_exploded:
+		return
+	has_exploded = true
+
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	if player:
+		var dist: float = global_position.distance_to(player.global_position)
+		if dist < GameConstants.VOID_BOMBER_EXPLOSION_RADIUS:
+			GameManager.take_damage(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE)
+
+	# Damage nearby enemies too
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if enemy == self or not is_instance_valid(enemy):
+			continue
+		if enemy.has_method("take_damage"):
+			var edist: float = global_position.distance_to(enemy.global_position)
+			if edist < GameConstants.VOID_BOMBER_EXPLOSION_RADIUS:
+				enemy.take_damage(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE / 2)
+
+	# Visual explosion effect — flash and scale
+	if _material:
+		_material.albedo_color = Color(1.0, 0.6, 0.0)
+	var boom_tween := create_tween()
+	boom_tween.set_parallel(true)
+	boom_tween.tween_property(self, "scale",
+		Vector3.ONE * base_scale * 3.0, 0.15)
+	if _material:
+		boom_tween.tween_property(_material, "albedo_color:a", 0.0, 0.15)
+	boom_tween.chain().tween_callback(queue_free)
+
+	# Mark as dead for game logic
+	is_dead = true
+	GameManager.register_kill()
+	GameManager.gain_xp(xp_reward)
+	GameManager.add_score(score_reward)
+	enemy_died.emit(self)
+
+func _die() -> void:
+	# Override: if not already exploded, do normal death
+	if has_exploded:
+		return
+	super._die()

@@ -1,0 +1,110 @@
+## Zorp Wiggles — Graviton
+## Floating enemy that periodically pulls the player toward it with gravity force.
+## While pulling, deals damage-per-second to the player if caught in range.
+## Ported from Graviton logic in Ursina game.py.
+
+extends EnemyBase
+
+class_name EnemyGraviton
+
+# ─── Graviton State ───────────────────────────────────────────────────────────
+var pull_active: bool = false
+var pull_timer: float = 0.0
+var cooldown_timer: float = 5.0
+var pull_damage_accum: float = 0.0
+
+# ─── Visual ───────────────────────────────────────────────────────────────────
+var pull_ring: MeshInstance3D = null
+
+func _ready() -> void:
+	enemy_name = "Graviton"
+	enemy_type = GameConstants.EnemyType.GRAVITON
+	max_hp = 75
+	speed = 2.8
+	damage = 10
+	base_scale = 1.5
+	detect_range = 30.0
+	xp_reward = 40
+	score_reward = 150
+	base_color = Color(180.0 / 255.0, 0.0, 1.0)  # Purple
+	super._ready()
+
+	cooldown_timer = randf_range(
+		GameConstants.GRAVITON_PULL_COOLDOWN_MIN,
+		GameConstants.GRAVITON_PULL_COOLDOWN_MAX
+	)
+
+	# Create gravity pull indicator ring (flat disc on ground)
+	var ring_mesh := CylinderMesh.new()
+	ring_mesh.top_radius = GameConstants.GRAVITON_PULL_RADIUS
+	ring_mesh.bottom_radius = GameConstants.GRAVITON_PULL_RADIUS
+	ring_mesh.height = 0.05
+	pull_ring = MeshInstance3D.new()
+	pull_ring.mesh = ring_mesh
+	var ring_mat := StandardMaterial3D.new()
+	ring_mat.albedo_color = Color(180.0 / 255.0, 0.0, 1.0, 0.0)
+	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	pull_ring.material_override = ring_mat
+	add_child(pull_ring)
+	pull_ring.position = Vector3(0, -0.5, 0)
+	pull_ring.visible = false
+
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if is_dead or GameManager.is_paused or spawn_grace_timer > 0:
+		return
+
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+
+	var dist_to_player: float = global_position.distance_to(player.global_position)
+
+	if pull_active:
+		pull_timer -= delta
+		# Pull player toward this enemy
+		if dist_to_player > 1.0 and dist_to_player < GameConstants.GRAVITON_PULL_RADIUS:
+			var pull_dir: Vector3 = (global_position - player.global_position).normalized()
+			pull_dir.y = 0
+			var pull_strength: float = GameConstants.GRAVITON_PULL_FORCE * \
+				(1.0 - dist_to_player / GameConstants.GRAVITON_PULL_RADIUS)
+			player.global_position += pull_dir * pull_strength * delta
+
+			# Damage per second while in pull range
+			pull_damage_accum += GameConstants.GRAVITON_PULL_DAMAGE * delta
+			if pull_damage_accum >= 1.0:
+				GameManager.take_damage(int(pull_damage_accum))
+				pull_damage_accum = 0.0
+
+		# Animate pull ring pulse
+		if pull_ring and pull_ring.visible:
+			var pulse_scale: float = 0.8 + 0.2 * sin(GameManager.game_time * 5.0)
+			pull_ring.scale = Vector3.ONE * pulse_scale
+
+		if pull_timer <= 0:
+			pull_active = false
+			cooldown_timer = randf_range(
+				GameConstants.GRAVITON_PULL_COOLDOWN_MIN,
+				GameConstants.GRAVITON_PULL_COOLDOWN_MAX
+			)
+			if pull_ring:
+				pull_ring.visible = false
+	else:
+		cooldown_timer -= delta
+		# Show warning ring when about to pull
+		if cooldown_timer < 1.5 and dist_to_player < GameConstants.GRAVITON_PULL_RADIUS:
+			if pull_ring and not pull_ring.visible:
+				pull_ring.visible = true
+				var mat := pull_ring.material_override as StandardMaterial3D
+				if mat:
+					mat.albedo_color = Color(180.0 / 255.0, 0.0, 1.0, 0.15)
+
+		# Activate pull
+		if cooldown_timer <= 0 and is_alerted and dist_to_player < GameConstants.GRAVITON_PULL_RADIUS:
+			pull_active = true
+			pull_timer = GameConstants.GRAVITON_PULL_DURATION
+			if pull_ring:
+				pull_ring.visible = true
+				var mat := pull_ring.material_override as StandardMaterial3D
+				if mat:
+					mat.albedo_color = Color(180.0 / 255.0, 0.0, 1.0, 0.3)

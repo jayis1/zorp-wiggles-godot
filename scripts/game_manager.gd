@@ -11,6 +11,9 @@ signal combo_changed(count: int)
 signal score_changed(new_score: int)
 signal player_died()
 signal game_restarted()
+signal boss_spawned(boss: Node)
+signal boss_defeated(boss: Node)
+signal message_added(text: String)
 
 # ─── Player State ─────────────────────────────────────────────────────────────
 var player_hp: int = GameConstants.PLAYER_START_HP
@@ -43,6 +46,8 @@ var collectibles: Array[Node3D] = []
 var projectiles: Array[Node3D] = []
 var missions: Array = []
 var active_buffs: Dictionary = {}
+var current_boss: Node = null
+var messages: Array[String] = []
 
 # ─── Game State ────────────────────────────────────────────────────────────────
 var game_time: float = 0.0
@@ -186,3 +191,8 @@ func add_pickup_streak() -> void:
 	player_pickup_streak_timer = 3.0
 	if player_pickup_streak > player_max_pickup_streak:
 		player_max_pickup_streak = player_pickup_streak
+
+func add_message(text: String) -> void:
+	messages.append(text)
+	message_added.emit(text)
+	print("[ZorpWiggles] %s" % text)

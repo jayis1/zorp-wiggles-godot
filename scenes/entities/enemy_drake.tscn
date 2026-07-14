@@ -1,23 +1,16 @@
-[gd_scene load_steps=4 format=3 uid="uid://eblob"]
+[gd_scene load_steps=4 format=3 uid="uid://edrake"]
 
-[ext_resource type="Script" path="res://scripts/enemy_base.gd" id="1_eb"]
+[ext_resource type="Script" path="res://scripts/enemy_drake.gd" id="1_ed"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_1"]
-radius = 0.5
+radius = 1.1
 
 [sub_resource type="SphereMesh" id="SphereMesh_1"]
-radius = 0.5
-height = 1.0
+radius = 1.1
+height = 2.2
 
-[node name="EnemyBlob" type="CharacterBody3D" groups=["enemies"]]
-script = ExtResource("1_eb")
-enemy_name = "Space Blob"
-max_hp = 40
-speed = 3.5
-damage = 8
-xp_reward = 15
-score_reward = 50
-base_scale = 1.0
+[node name="EnemyDrake" type="CharacterBody3D" groups=["enemies"]]
+script = ExtResource("1_ed")
 
 [node name="BodyMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -28,8 +21,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("SphereShape3D_1")
 
 [node name="AlertIndicator" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
 text = "!"
 visible = false
 billboard = 1
-font_size = 32
+font_size = 48

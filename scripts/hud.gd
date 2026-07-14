@@ -49,6 +49,9 @@ func _ready() -> void:
 	GameManager.score_changed.connect(_on_score_changed)
 	GameManager.player_died.connect(_on_player_died)
 	GameManager.game_restarted.connect(_on_game_restarted)
+	GameManager.boss_spawned.connect(_on_boss_spawned)
+	GameManager.boss_defeated.connect(_on_boss_defeated)
+	GameManager.message_added.connect(_on_message_added)
 	
 	# Initialize displays
 	_update_all_displays()
@@ -159,3 +162,20 @@ func show_message(text: String, duration: float = 2.0) -> void:
 
 func set_boss_reference(enemy: Node3D) -> void:
 	boss_ref = enemy
+
+func _on_boss_spawned(boss: Node) -> void:
+	boss_ref = boss
+	GameManager.current_boss = boss
+	boss_hp_container.visible = true
+	if "enemy_name" in boss:
+		boss_name_text.text = "☠ %s" % boss.enemy_name
+		show_message("⚠ %s has appeared!" % boss.enemy_name, 3.0)
+
+func _on_boss_defeated(boss: Node) -> void:
+	boss_ref = null
+	GameManager.current_boss = null
+	boss_hp_container.visible = false
+	show_message("%s defeated!" % boss.enemy_name, 3.0)
+
+func _on_message_added(text: String) -> void:
+	show_message(text, 2.5)

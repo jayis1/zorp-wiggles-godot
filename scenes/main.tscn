@@ -1,10 +1,11 @@
-[gd_scene load_steps=2 format=3 uid="uid://bmain"]
+[gd_scene load_steps=7 format=3 uid="uid://bmain"]
 
 [ext_resource type="Script" path="res://scripts/game_manager.gd" id="1_gm"]
 [ext_resource type="Script" path="res://scripts/world_generator.gd" id="2_wg"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="3_pl"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="4_cr"]
 [ext_resource type="Script" path="res://scripts/hud.gd" id="5_hud"]
+[ext_resource type="Script" path="res://scripts/enemy_spawner.gd" id="6_es"]
 
 [node name="Main" type="Node3D"]
 
@@ -163,3 +164,6 @@ offset_top = 2.0
 offset_right = 495.0
 offset_bottom = 20.0
 text = "Boss"
+
+[node name="EnemySpawner" type="Node3D" parent="."]
+script = ExtResource("6_es")

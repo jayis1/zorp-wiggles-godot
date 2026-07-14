@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 1 — Core Framework (COMPLETE)
+## Status: PHASE 2 — Enemy Varieties (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -43,16 +43,21 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] enemy_blob.tscn — Basic enemy scene
 - [x] collectible.tscn — Pickup item scene
 
-### Phase 2: Enemy Varieties (TODO)
-- [ ] enemy_serpent.gd — Plasma Serpent (segmented body, follow leader)
-- [ ] enemy_graviton.gd — Gravity pull attack (draws player in)
-- [ ] enemy_wisp.gd — Void Wisp (teleport on hit, appears behind player)
-- [ ] enemy_sentinel.gd — Shockwave Sentinel (ring AoE attack)
-- [ ] enemy_bomber.gd — Void Bomber (ranged AoE explosion)
-- [ ] enemy_spitter.gd — Spore Spitter (ranged projectile, charge-up telegraph)
-- [ ] enemy_drake.gd — Plasma Drake (boss: multi-phase, enrage)
-- [ ] All enemy .tscn scene files
-- [ ] Dynamic enemy spawner (difficulty scaling over time)
+### Phase 2: Enemy Varieties ✅ COMPLETE
+- [x] enemy_serpent.gd — Plasma Serpent (segmented body, follow leader, scatter on death)
+- [x] enemy_graviton.gd — Gravity pull attack (draws player in, DoS damage)
+- [x] enemy_wisp.gd — Void Wisp (teleport on hit, appears behind player)
+- [x] enemy_sentinel.gd — Shockwave Sentinel (stationary, expanding ring AoE)
+- [x] enemy_bomber.gd — Void Bomber (kamikaze, fuse + AoE explosion)
+- [x] enemy_spitter.gd — Spore Spitter (ranged projectile, charge-up telegraph)
+- [x] enemy_drake.gd — Plasma Drake (boss: multi-phase, enrage, fire breath, charge)
+- [x] All enemy .tscn scene files (7 new scenes + fixed blob/collectible scenes)
+- [x] Dynamic enemy spawner (difficulty scaling, spawn warnings, density throttle)
+- [x] enemy_projectile.gd + .tscn — Ranged enemy projectile system
+- [x] shockwave.gd + .tscn — Expanding shockwave ring for Sentinel
+- [x] spawn_warning.gd + .tscn — Ground warning ring before enemy materializes
+- [x] Boss HP bar integration in HUD (boss_spawned/boss_defeated signals)
+- [x] game_constants.gd — All enemy constants added (serpent, graviton, wisp, sentinel, bomber, spitter, drake)
 
 ### Phase 3: World & Decorations (TODO)
 - [ ] Biome decorations: trees (forest), crystals (crystal), mushrooms (mushroom)
@@ -279,4 +284,4 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - GameManager registered as autoload singleton in project.godot
 
 ## Last Updated
-Phase 1 complete. Phases 2-21 planned. Cron jobs active.
+Phase 2 complete. All 7 enemy types implemented (Serpent, Graviton, Wisp, Sentinel, Bomber, Spitter, Drake) with dynamic spawner, enemy projectiles, shockwave rings, and spawn warnings. Phases 3-21 planned. Cron jobs active.
