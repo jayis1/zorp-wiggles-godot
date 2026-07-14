@@ -1,0 +1,165 @@
+[gd_scene load_steps=2 format=3 uid="uid://bmain"]
+
+[ext_resource type="Script" path="res://scripts/game_manager.gd" id="1_gm"]
+[ext_resource type="Script" path="res://scripts/world_generator.gd" id="2_wg"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="3_pl"]
+[ext_resource type="Script" path="res://scripts/camera_rig.gd" id="4_cr"]
+[ext_resource type="Script" path="res://scripts/hud.gd" id="5_hud"]
+
+[node name="Main" type="Node3D"]
+
+[node name="GameManager" type="Node" parent="."]
+script = ExtResource("1_gm")
+
+[node name="World" type="Node3D" parent="."]
+script = ExtResource("2_wg")
+
+[node name="Player" type="CharacterBody3D" parent="World" groups=["player"]]
+script = ExtResource("3_pl")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="BodyMesh" type="MeshInstance3D" parent="World/Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="World/Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="ShootOrigin" type="Marker3D" parent="World/Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="RayCast3D" type="RayCast3D" parent="World/Player"]
+target_position = Vector3(0, 0, -50)
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("4_cr")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22)
+current = true
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("5_hud")
+
+[node name="HPBarContainer" type="Panel" parent="HUD"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 50.0
+
+[node name="HPBarBG" type="ColorRect" parent="HUD/HPBarContainer"]
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 298.0
+offset_bottom = 28.0
+color = Color(0.3, 0.1, 0.1, 1)
+
+[node name="HPBar" type="ColorRect" parent="HUD/HPBarContainer"]
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 298.0
+offset_bottom = 28.0
+color = Color(0.2, 0.9, 0.2, 1)
+
+[node name="HPText" type="Label" parent="HUD/HPBarContainer"]
+offset_left = 5.0
+offset_top = 3.0
+offset_right = 295.0
+offset_bottom = 27.0
+text = "120 / 120"
+horizontal_alignment = 1
+
+[node name="XPBarContainer" type="Panel" parent="HUD"]
+offset_left = 20.0
+offset_top = 55.0
+offset_right = 420.0
+offset_bottom = 72.0
+
+[node name="XPBar" type="ColorRect" parent="HUD/XPBarContainer"]
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 398.0
+offset_bottom = 15.0
+color = Color(0.6, 0.2, 0.9, 1)
+
+[node name="XPText" type="Label" parent="HUD/XPBarContainer"]
+offset_left = 5.0
+offset_top = -15.0
+offset_right = 395.0
+offset_bottom = 0.0
+text = "XP: 0 / 80"
+
+[node name="LevelText" type="Label" parent="HUD"]
+offset_left = 430.0
+offset_top = 20.0
+offset_right = 550.0
+offset_bottom = 50.0
+text = "Lv 1"
+
+[node name="ScoreText" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 100.0
+text = "Score: 0"
+
+[node name="KillsText" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 100.0
+offset_right = 300.0
+offset_bottom = 120.0
+text = "Kills: 0"
+
+[node name="ComboText" type="Label" parent="HUD"]
+offset_left = 500.0
+offset_top = 100.0
+offset_right = 700.0
+offset_bottom = 130.0
+text = "COMBO x0"
+visible = false
+
+[node name="ComboTimerBar" type="ColorRect" parent="HUD"]
+offset_left = 500.0
+offset_top = 132.0
+offset_right = 700.0
+offset_bottom = 138.0
+color = Color(1, 1, 0, 1)
+visible = false
+
+[node name="MessageText" type="Label" parent="HUD"]
+offset_left = 300.0
+offset_top = 200.0
+offset_right = 980.0
+offset_bottom = 240.0
+text = ""
+horizontal_alignment = 1
+visible = false
+
+[node name="LevelUpText" type="Label" parent="HUD"]
+offset_left = 340.0
+offset_top = 250.0
+offset_right = 940.0
+offset_bottom = 310.0
+text = ""
+horizontal_alignment = 1
+visible = false
+
+[node name="BossHPContainer" type="Panel" parent="HUD"]
+offset_left = 390.0
+offset_top = 10.0
+offset_right = 890.0
+offset_bottom = 45.0
+visible = false
+
+[node name="BossHPBar" type="ColorRect" parent="HUD/BossHPContainer"]
+offset_left = 2.0
+offset_top = 20.0
+offset_right = 498.0
+offset_bottom = 33.0
+color = Color(1, 0, 0, 1)
+
+[node name="BossNameText" type="Label" parent="HUD/BossHPContainer"]
+offset_left = 5.0
+offset_top = 2.0
+offset_right = 495.0
+offset_bottom = 20.0
+text = "Boss"

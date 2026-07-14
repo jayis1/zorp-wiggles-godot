@@ -1,0 +1,65 @@
+[gd_scene load_steps=2 format=3 uid="uid://mmenu"]
+
+[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_mm"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mm")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.05, 0.15, 1)
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 0
+offset_left = 200.0
+offset_top = 100.0
+offset_right = 1080.0
+offset_bottom = 200.0
+text = "ZORP WIGGLES
+ALIEN ADVENTURE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="."]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 220.0
+offset_right = 940.0
+offset_bottom = 260.0
+text = "Godot Edition"
+horizontal_alignment = 1
+
+[node name="StartButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 490.0
+offset_top = 350.0
+offset_right = 790.0
+offset_bottom = 410.0
+text = "START GAME"
+
+[node name="QuitButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 490.0
+offset_top = 430.0
+offset_right = 790.0
+offset_bottom = 490.0
+text = "QUIT"
+
+[node name="Controls" type="Label" parent="."]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 540.0
+offset_right = 940.0
+offset_bottom = 680.0
+text = "WASD: Move | RClick: Look | Click: Shoot
+Space: Dash | E: Trade | M: Minimap
+Tab: Missions | P: Pause | Q: Pulse Wave"

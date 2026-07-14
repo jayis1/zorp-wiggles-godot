@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3 uid="uid://eblob"]
+
+[ext_resource type="Script" path="res://scripts/enemy_base.gd" id="1_eb"]
+
+[node name="EnemyBlob" type="CharacterBody3D" groups=["enemies"]]
+script = ExtResource("1_eb")
+enemy_name = "Space Blob"
+max_hp = 40
+speed = 3.5
+damage = 8
+xp_reward = 15
+score_reward = 50
+base_scale = 1.0
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="AlertIndicator" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "!"
+visible = false
+billboard = 1
+font_size = 32
