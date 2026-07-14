@@ -29,13 +29,10 @@ func _process(delta: float) -> void:
 		if not _target_node:
 			return
 	
-	# Smoothly follow player
+	# Smoothly follow player (XZ position only, keep rig's own Y at 0)
 	var target_pos := _target_node.global_position
 	global_position = global_position.move_toward(Vector3(target_pos.x, 0, target_pos.z), smooth_factor * delta)
-	
-	# Apply yaw from player input (right-click drag rotates camera)
-	# This is handled in player.gd via right-click mouse motion
-	rotate_y(deg_to_rad(0))  # Camera yaw is set externally
+	# Camera yaw and pitch are set externally via set_camera_yaw() and rotation_degrees.x
 
 func set_camera_yaw(yaw_deg: float) -> void:
 	rotation_degrees.y = yaw_deg

@@ -32,8 +32,9 @@ extends CanvasLayer
 @onready var boss_name_text: Label = $BossHPContainer/BossNameText
 
 # ─── Minimap ──────────────────────────────────────────────────────────────────
-@onready var minimap: SubViewport = $MinimapViewport
-@onready var minimap_display: TextureRect = $MinimapDisplay
+# Minimap viewport nodes — not yet implemented; refs resolved lazily if added.
+var minimap: SubViewport = null
+var minimap_display: TextureRect = null
 
 # ─── Internal State ───────────────────────────────────────────────────────────
 var message_timer: float = 0.0

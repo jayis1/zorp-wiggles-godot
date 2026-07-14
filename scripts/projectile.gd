@@ -13,8 +13,7 @@ var speed: float = GameConstants.PROJECTILE_SPEED
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 
 func _ready() -> void:
-	# Connect area signals
-	area_entered.connect(_on_area_entered)
+	# Connect body_entered signal — fires when a PhysicsBody3D (enemy) enters
 	body_entered.connect(_on_body_entered)
 	
 	# Create projectile visual
@@ -38,7 +37,7 @@ func _physics_process(delta: float) -> void:
 		return
 	
 	# Move forward
-	position += direction * speed * delta
+	global_position += direction * speed * delta
 	
 	# Lifetime countdown
 	lifetime -= delta
@@ -47,12 +46,6 @@ func _physics_process(delta: float) -> void:
 	
 	# Trail effect (small fading spheres behind projectile)
 	# Will be added by builder cron job
-
-func _on_area_entered(area: Area3D) -> void:
-	# Check if it's an enemy
-	var parent := area.get_parent()
-	if parent and parent.is_in_group("enemies"):
-		_hit_enemy(parent)
 
 func _on_body_entered(body: Node3D) -> void:
 	# Check if it's an enemy
@@ -64,8 +57,8 @@ func _on_body_entered(body: Node3D) -> void:
 		queue_free()
 
 func _hit_enemy(enemy: Node3D) -> void:
-	# Calculate damage with level bonus
-	var total_damage := damage + (GameManager.player_level - 1) * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
+	# damage already includes level bonus (set by player.gd on spawn)
+	var total_damage := damage
 	
 	# Crit check
 	var crit_chance := 0.1  # Base 10% crit chance

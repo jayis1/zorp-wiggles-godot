@@ -74,7 +74,7 @@ func _physics_process(delta: float) -> void:
 	# Bob up and down
 	if not is_popping:
 		bob_offset += delta * 2.0
-		position.y = base_y + sin(bob_offset) * 0.3
+		global_position.y = base_y + sin(bob_offset) * 0.3
 	
 	# Magnetic pull toward player
 	var player: Node3D = get_tree().get_first_node_in_group("player")
@@ -88,7 +88,7 @@ func _physics_process(delta: float) -> void:
 		is_magnetic = true
 		var pull_speed := GameConstants.COLLECT_PULL_SPEED * (1.0 - dist / GameConstants.COLLECT_PULL_RADIUS)
 		var dir := (player.global_position - global_position).normalized()
-		position += dir * pull_speed * delta
+		global_position += dir * pull_speed * delta
 	
 	# Collect radius
 	if dist < GameConstants.COLLECT_RADIUS:

@@ -46,11 +46,16 @@ func _ready() -> void:
 	warning_ring.visible = false
 
 func _physics_process(delta: float) -> void:
-	if is_dead or GameManager.is_paused or spawn_grace_timer > 0:
+	if is_dead or GameManager.is_paused:
 		return
-
-	super._physics_process(delta)
-
+	
+	# Spawn grace period — decrement timer ourselves since we return before super
+	if spawn_grace_timer > 0:
+		spawn_grace_timer -= delta
+		_update_spawn_visuals(delta)
+		return
+	
+	# If fuse is active, handle fuse logic but skip normal AI movement
 	if fuse_active:
 		fuse_timer -= delta
 		# Pulse the warning ring faster as fuse counts down
@@ -60,16 +65,24 @@ func _physics_process(delta: float) -> void:
 			var mat := warning_ring.material_override as StandardMaterial3D
 			if mat:
 				mat.albedo_color.a = 0.2 + pulse * 0.3
-
+		
+		# Keep still while fuse counts down
+		velocity = Vector3.ZERO
+		move_and_slide()
+		
 		if fuse_timer <= 0:
 			_explode()
-	else:
-		# Check if close enough to trigger fuse
-		var player: Node3D = get_tree().get_first_node_in_group("player")
-		if player and is_alerted:
-			var dist: float = global_position.distance_to(player.global_position)
-			if dist < GameConstants.VOID_BOMBER_FUSE_TRIGGER_RANGE:
-				_activate_fuse()
+		return
+	
+	# Normal AI behavior via base class (handles detection, movement, timers)
+	super._physics_process(delta)
+	
+	# Check if close enough to trigger fuse (after AI has updated is_alerted)
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	if player and is_alerted:
+		var dist: float = global_position.distance_to(player.global_position)
+		if dist < GameConstants.VOID_BOMBER_FUSE_TRIGGER_RANGE:
+			_activate_fuse()
 
 func _activate_fuse() -> void:
 	fuse_active = true

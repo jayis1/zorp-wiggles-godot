@@ -36,15 +36,21 @@ func _ready() -> void:
 	GameManager.boss_spawned.emit(self)
 
 func _physics_process(delta: float) -> void:
-	if is_dead or GameManager.is_paused or spawn_grace_timer > 0:
+	if is_dead or GameManager.is_paused:
 		return
-
+	
+	# Spawn grace period — decrement timer ourselves since we return before super
+	if spawn_grace_timer > 0:
+		spawn_grace_timer -= delta
+		_update_spawn_visuals(delta)
+		return
+	
 	# Check enrage threshold
 	if not is_enraged and float(hp) / float(max_hp) < GameConstants.DRAKE_ENRAGE_HP_THRESHOLD:
 		_enter_enrage()
-
+	
 	super._physics_process(delta)
-
+	
 	if is_alerted and not is_dead:
 		_update_boss_attacks(delta)
 
@@ -110,14 +116,15 @@ func _fire_breath(player: Node3D) -> void:
 		var angle_offset: float = (i - 2) * 10.0  # -20, -10, 0, 10, 20 degrees
 		var angled_dir := base_dir.rotated(Vector3.UP, deg_to_rad(angle_offset))
 		var proj: Area3D = proj_scene.instantiate()
-		get_parent().add_child(proj)
-		proj.global_position = global_position + Vector3(0, 1.0, 0)
+		# Set properties BEFORE adding to tree so _ready() picks them up
 		proj.set("direction", angled_dir)
 		proj.set("speed", GameConstants.SPORE_SPIT_SPEED * 1.2)
 		proj.set("damage", GameConstants.DRAKE_FIRE_BREATH_DAMAGE)
 		proj.set("lifetime", 2.0)
-		# Drake projectiles are red
+		# Drake projectiles are red — must be set before _ready() creates the material
 		proj.set("projectile_color", Color(1.0, 0.3, 0.0))
+		get_parent().add_child(proj)
+		proj.global_position = global_position + Vector3(0, 1.0, 0)
 
 func _die() -> void:
 	# Boss death — extra rewards and notification

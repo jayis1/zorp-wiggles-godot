@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://pwave1"]
+
+[ext_resource type="Script" path="res://scripts/pulse_wave.gd" id="1_pw"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.5
+bottom_radius = 0.5
+height = 0.1
+
+[node name="PulseWave" type="Node3D"]
+script = ExtResource("1_pw")
+
+[node name="RingMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0)
+mesh = SubResource("CylinderMesh_1")

@@ -42,7 +42,11 @@ func _physics_process(delta: float) -> void:
 	# Damage enemies in ring
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	for enemy in enemies:
-		if enemy.is_in_group("enemies") and not has_hit.has(enemy.get_instance_id()):
+		if not is_instance_valid(enemy):
+			continue
+		if not enemy.is_in_group("enemies"):
+			continue
+		if not has_hit.has(enemy.get_instance_id()):
 			var dist := global_position.distance_to(enemy.global_position)
 			# Only hit enemies within the ring's current band
 			if dist <= radius and dist >= radius - 2.0:

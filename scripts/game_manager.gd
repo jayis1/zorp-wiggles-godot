@@ -53,16 +53,27 @@ var messages: Array[String] = []
 var game_time: float = 0.0
 var is_paused: bool = false
 
-# ─── References ───────────────────────────────────────────────────────────────
-@onready var world: Node3D = $World
-@onready var player: CharacterBody3D = $World/Player
-@onready var camera_rig: Node3D = $CameraRig
-@onready var hud: CanvasLayer = $HUD
+# ─── References (lazily populated — autoload _ready runs before main scene) ──
+var world: Node3D = null
+var player: CharacterBody3D = null
+var camera_rig: Node3D = null
+var hud: CanvasLayer = null
 
 func _ready() -> void:
 	world_seed = randi()
 	print("[ZorpWiggles] Game initialized — seed: %d" % world_seed)
+	# Defer scene node lookup — autoload is ready before the main scene exists
+	call_deferred("_resolve_scene_refs")
 	_start_game()
+
+func _resolve_scene_refs() -> void:
+	var main: Node = get_tree().current_scene
+	if not main:
+		return
+	world = main.get_node_or_null("World")
+	player = main.get_node_or_null("World/Player")
+	camera_rig = main.get_node_or_null("CameraRig")
+	hud = main.get_node_or_null("HUD")
 
 func _process(delta: float) -> void:
 	if is_paused or not player_is_alive:

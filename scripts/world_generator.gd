@@ -277,9 +277,13 @@ func _random_collectible_type() -> int:
 
 func _spawn_enemy_at(type: int, pos: Vector3) -> void:
 	"""Spawn an enemy of the given type at the given position."""
-	# Will create the appropriate enemy scene
-	# For now, use basic blob enemy
-	var enemy_scene := preload("res://scenes/entities/enemy_blob.tscn")
+	var scene_path: String = EnemySpawner.ENEMY_SCENES.get(type, "")
+	if scene_path.is_empty():
+		# Fallback to blob
+		scene_path = "res://scenes/entities/enemy_blob.tscn"
+	var enemy_scene := load(scene_path)
+	if not enemy_scene:
+		enemy_scene = preload("res://scenes/entities/enemy_blob.tscn")
 	var enemy := enemy_scene.instantiate()
 	enemy.global_position = pos
 	add_child(enemy)

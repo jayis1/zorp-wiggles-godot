@@ -27,23 +27,34 @@ var base_color: Color = Color(0.3, 0.85, 0.3)  # Alien green
 var is_invuln_blinking: bool = false
 var blink_visible: bool = true
 
+# ─── Combat ───────────────────────────────────────────────────────────────────
+var shoot_cooldown_timer: float = 0.0
+var pulse_wave_cooldown_timer: float = 0.0
+const PROJECTILE_SCENE := preload("res://scenes/entities/projectile.tscn")
+const PULSE_WAVE_SCENE := preload("res://scenes/entities/pulse_wave.tscn")
+
 # ─── Camera ────────────────────────────────────────────────────────────────────
 var camera_yaw: float = 0.0
 var camera_pitch: float = -55.0  # Looking down
 var is_right_clicking: bool = false
 
 func _ready() -> void:
-	# Set up collision shape (sphere for Zorp)
-	if not collision_shape:
+	# Ensure collision shape has a sphere (fallback if scene missing it)
+	if collision_shape and not collision_shape.shape:
 		var shape = SphereShape3D.new()
 		shape.radius = 0.5
-		collision_shape = CollisionShape3D.new()
 		collision_shape.shape = shape
-		add_child(collision_shape)
+	add_to_group("player")
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:
 		return
+	
+	# Cooldowns
+	if shoot_cooldown_timer > 0:
+		shoot_cooldown_timer -= delta
+	if pulse_wave_cooldown_timer > 0:
+		pulse_wave_cooldown_timer -= delta
 	
 	_handle_movement(delta)
 	_handle_dash(delta)
@@ -121,16 +132,40 @@ func _unhandled_input(event: InputEvent) -> void:
 		camera_yaw -= event.relative.x * 0.3
 		camera_pitch -= event.relative.y * 0.3
 		camera_pitch = clampf(camera_pitch, -80.0, -10.0)
+		_apply_camera_rotation()
 	
 	# Shoot on left click
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		if not GameManager.is_paused and GameManager.player_is_alive:
-			var shoot_dir := get_shoot_direction()
-			shoot.emit(shoot_dir)
+			_try_shoot()
 	
 	# Pulse wave
 	if event.is_action_pressed("pulse_wave") and GameManager.player_is_alive:
 		_use_pulse_wave()
+
+func _apply_camera_rotation() -> void:
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("set_camera_yaw"):
+		cam_rig.set_camera_yaw(camera_yaw)
+	if cam_rig:
+		# Apply pitch by rotating the rig on X axis
+		cam_rig.rotation_degrees.x = camera_pitch
+
+func _try_shoot() -> void:
+	if shoot_cooldown_timer > 0:
+		return
+	shoot_cooldown_timer = GameConstants.SHOOT_COOLDOWN
+	_spawn_projectile()
+
+func _spawn_projectile() -> void:
+	var shoot_dir := get_shoot_direction()
+	var proj: Area3D = PROJECTILE_SCENE.instantiate()
+	get_parent().add_child(proj)
+	proj.global_position = global_position + Vector3(0, 0.5, 0)
+	proj.set("direction", shoot_dir)
+	# Damage scales with player level
+	var dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + (GameManager.player_level - 1) * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
+	proj.set("damage", dmg)
 
 func get_shoot_direction() -> Vector3:
 	var camera_3d: Camera3D = get_viewport().get_camera_3d()
@@ -153,5 +188,10 @@ func get_shoot_direction() -> Vector3:
 	return -global_basis.z
 
 func _use_pulse_wave() -> void:
-	# Pulse wave damage — handled by game_manager spawning the pulse wave
-	pass  # Will be connected via signal to GameWorld
+	if pulse_wave_cooldown_timer > 0:
+		return
+	pulse_wave_cooldown_timer = GameConstants.PULSE_WAVE_COOLDOWN
+	# Spawn pulse wave at player position
+	var pulse: Node3D = PULSE_WAVE_SCENE.instantiate()
+	get_parent().add_child(pulse)
+	pulse.global_position = global_position

@@ -51,9 +51,19 @@ func _teleport_behind_player() -> void:
 	if not player:
 		return
 
-	# Teleport behind the player
-	var behind_dir: Vector3 = -player.global_basis.z.normalized()
-	behind_dir.y = 0
+	# Determine player's facing direction from the camera, since the player
+	# CharacterBody3D itself never rotates (camera-relative movement).
+	var camera_3d: Camera3D = get_viewport().get_camera_3d()
+	var facing_dir: Vector3
+	if camera_3d:
+		facing_dir = -camera_3d.global_basis.z
+	else:
+		facing_dir = -player.global_basis.z
+	facing_dir.y = 0
+	facing_dir = facing_dir.normalized()
+
+	# Teleport behind the player (opposite of facing direction)
+	var behind_dir: Vector3 = -facing_dir
 	var tp_dist: float = randf_range(
 		GameConstants.VOID_WISP_TELEPORT_RANGE * 0.5,
 		GameConstants.VOID_WISP_TELEPORT_RANGE
@@ -63,9 +73,9 @@ func _teleport_behind_player() -> void:
 
 	# Teleport visual — quick fade out and in
 	if _material:
-		var fade_tween := create_tween()
 		_material.albedo_color.a = 0.0
 		global_position = new_pos
+		var fade_tween := create_tween()
 		fade_tween.tween_property(_material, "albedo_color:a",
 			160.0 / 255.0, 0.3)
 

@@ -149,6 +149,7 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	var enemy: CharacterBody3D = scene.instantiate()
 	get_parent().add_child(enemy)
 	enemy.global_position = pos
+	GameManager.enemies.append(enemy)
 
 	# Scale enemy to player level
 	_scale_enemy_to_player_level(enemy)
@@ -205,6 +206,6 @@ func _reset_spawn_timer() -> void:
 			if player.global_position.distance_to(e.global_position) < GameConstants.SPAWN_DENSITY_NEAR_RADIUS:
 				nearby += 1
 		if nearby >= GameConstants.SPAWN_DENSITY_NEAR_THRESHOLD:
-			interval /= GameConstants.SPAWN_DENSITY_SLOWDOWN
+			interval /= GameConstants.SPAWN_DENSITY_SLOWDOWN  # SLOWER (longer interval)
 
 	spawn_timer = interval

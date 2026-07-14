@@ -182,7 +182,11 @@ func _execute_attack(player: Node3D) -> void:
 	restore_tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15)
 
 	# Cooldown before next attack
-	get_tree().create_timer(0.1).timeout.connect(func(): is_attacking = false)
+	get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
+
+func _reset_attack_flag() -> void:
+	if not is_dead:
+		is_attacking = false
 
 func take_damage(amount: int) -> void:
 	if is_dead:
@@ -233,8 +237,12 @@ func _update_visuals(delta: float) -> void:
 	# Update HP bar color based on HP ratio
 	var ratio: float = float(hp) / float(max_hp) if max_hp > 0 else 0.0
 
-	# Low-HP warning pulse
-	if ratio < 0.25 and ratio > 0 and _material:
-		var pulse := 0.5 + 0.5 * sin(GameManager.game_time * 8.0)
-		var warning_color := Color(1.0, 0.1, 0.1).lerp(Color.WHITE, pulse * 0.3)
-		_material.albedo_color = warning_color
+	# Low-HP warning pulse — only when not currently being hit-flashed
+	# (hit flash tween controls _material.albedo_color during its 0.15s duration)
+	if ratio < 0.25 and ratio > 0 and _material and not is_windup:
+		# Don't override while a hit-flash tween is active (simplistic check:
+		# skip if albedo is currently WHITE from a fresh hit)
+		if _material.albedo_color != Color.WHITE:
+			var pulse := 0.5 + 0.5 * sin(GameManager.game_time * 8.0)
+			var warning_color := Color(1.0, 0.1, 0.1).lerp(Color.WHITE, pulse * 0.3)
+			_material.albedo_color = warning_color

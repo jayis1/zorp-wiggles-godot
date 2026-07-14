@@ -1,16 +1,19 @@
-[gd_scene load_steps=7 format=3 uid="uid://bmain"]
+[gd_scene load_steps=8 format=3 uid="uid://bmain"]
 
-[ext_resource type="Script" path="res://scripts/game_manager.gd" id="1_gm"]
 [ext_resource type="Script" path="res://scripts/world_generator.gd" id="2_wg"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="3_pl"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="4_cr"]
 [ext_resource type="Script" path="res://scripts/hud.gd" id="5_hud"]
 [ext_resource type="Script" path="res://scripts/enemy_spawner.gd" id="6_es"]
 
-[node name="Main" type="Node3D"]
+[sub_resource type="SphereShape3D" id="PlayerSphere"]
+radius = 0.5
 
-[node name="GameManager" type="Node" parent="."]
-script = ExtResource("1_gm")
+[sub_resource type="SphereMesh" id="PlayerMesh"]
+radius = 0.5
+height = 1.0
+
+[node name="Main" type="Node3D"]
 
 [node name="World" type="Node3D" parent="."]
 script = ExtResource("2_wg")
@@ -21,9 +24,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 
 [node name="BodyMesh" type="MeshInstance3D" parent="World/Player"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("PlayerMesh")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="World/Player"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+shape = SubResource("PlayerSphere")
 
 [node name="ShootOrigin" type="Marker3D" parent="World/Player"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
@@ -33,6 +38,7 @@ target_position = Vector3(0, 0, -50)
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("4_cr")
+target = NodePath("../World/Player")
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22)

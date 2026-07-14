@@ -87,9 +87,7 @@ func _die() -> void:
 			var mini_blob_scene := load("res://scenes/entities/enemy_blob.tscn")
 			if mini_blob_scene:
 				var mini_blob: CharacterBody3D = mini_blob_scene.instantiate()
-				get_parent().add_child(mini_blob)
-				mini_blob.global_position = seg.global_position
-				# Configure as scattered serpent segment
+				# Configure BEFORE adding to scene tree so _ready() picks up overrides
 				mini_blob.set("max_hp", GameConstants.PLASMA_SERPENT_SCATTER_HP)
 				mini_blob.set("hp", GameConstants.PLASMA_SERPENT_SCATTER_HP)
 				mini_blob.set("damage", GameConstants.PLASMA_SERPENT_SCATTER_DAMAGE)
@@ -98,6 +96,8 @@ func _die() -> void:
 				mini_blob.set("enemy_name", "Serpent Segment")
 				mini_blob.set("xp_reward", 5)
 				mini_blob.set("score_reward", 25)
+				get_parent().add_child(mini_blob)
+				mini_blob.global_position = seg.global_position
 				seg.queue_free()
 
 	segment_nodes.clear()

@@ -105,13 +105,14 @@ func _fire_spit(player: Node3D) -> void:
 	var proj_scene := load("res://scenes/entities/enemy_projectile.tscn")
 	if proj_scene:
 		var proj: Area3D = proj_scene.instantiate()
-		get_parent().add_child(proj)
-		proj.global_position = global_position + Vector3(0, 0.5, 0)
 		var dir: Vector3 = (player.global_position - global_position).normalized()
+		# Set properties BEFORE adding to tree so _ready() picks them up
 		proj.set("direction", dir)
 		proj.set("speed", GameConstants.SPORE_SPIT_SPEED)
 		proj.set("damage", GameConstants.SPORE_SPIT_DAMAGE)
 		proj.set("lifetime", GameConstants.SPORE_SPIT_LIFETIME)
+		get_parent().add_child(proj)
+		proj.global_position = global_position + Vector3(0, 0.5, 0)
 	else:
 		# Fallback: instant damage
 		GameManager.take_damage(GameConstants.SPORE_SPIT_DAMAGE)
