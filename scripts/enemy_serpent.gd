@@ -84,7 +84,7 @@ func _die() -> void:
 		var seg := segment_nodes[i]
 		if is_instance_valid(seg):
 			# Create a mini blob at the segment position
-			var mini_blob_scene := load("res://scenes/entities/enemy_blob.tscn")
+			var mini_blob_scene: PackedScene = load("res://scenes/entities/enemy_blob.tscn")
 			if mini_blob_scene:
 				var mini_blob: CharacterBody3D = mini_blob_scene.instantiate()
 				# Configure BEFORE adding to scene tree so _ready() picks up overrides

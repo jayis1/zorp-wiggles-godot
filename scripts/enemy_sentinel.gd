@@ -64,7 +64,7 @@ func _update_ai(delta: float) -> void:
 
 func _fire_shockwave() -> void:
 	# Create expanding shockwave ring
-	var shockwave_scene := load("res://scenes/entities/shockwave.tscn")
+	var shockwave_scene: PackedScene = load("res://scenes/entities/shockwave.tscn")
 	if shockwave_scene:
 		var shockwave: Area3D = shockwave_scene.instantiate()
 		get_parent().add_child(shockwave)

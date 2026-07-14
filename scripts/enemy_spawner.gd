@@ -126,7 +126,7 @@ func _try_spawn() -> void:
 	})
 
 	# Create visual warning ring
-	var warning_scene := load("res://scenes/entities/spawn_warning.tscn")
+	var warning_scene: PackedScene = load("res://scenes/entities/spawn_warning.tscn")
 	if warning_scene:
 		var warning: Node3D = warning_scene.instantiate()
 		get_parent().add_child(warning)
@@ -141,7 +141,7 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	if scene_path.is_empty():
 		return
 
-	var scene := load(scene_path)
+	var scene: PackedScene = load(scene_path)
 	if not scene:
 		print("[EnemySpawner] Failed to load enemy scene: %s" % scene_path)
 		return

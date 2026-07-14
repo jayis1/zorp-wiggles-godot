@@ -281,10 +281,10 @@ func _spawn_enemy_at(type: int, pos: Vector3) -> void:
 	if scene_path.is_empty():
 		# Fallback to blob
 		scene_path = "res://scenes/entities/enemy_blob.tscn"
-	var enemy_scene := load(scene_path)
+	var enemy_scene: PackedScene = load(scene_path)
 	if not enemy_scene:
 		enemy_scene = preload("res://scenes/entities/enemy_blob.tscn")
-	var enemy := enemy_scene.instantiate()
+	var enemy: Node3D = enemy_scene.instantiate()
 	enemy.global_position = pos
 	add_child(enemy)
 	GameManager.enemies.append(enemy)

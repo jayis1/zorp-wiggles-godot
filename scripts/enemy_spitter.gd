@@ -102,7 +102,7 @@ func _update_spit(delta: float, player: Node3D, dist_to_player: float) -> void:
 
 func _fire_spit(player: Node3D) -> void:
 	# Create enemy projectile
-	var proj_scene := load("res://scenes/entities/enemy_projectile.tscn")
+	var proj_scene: PackedScene = load("res://scenes/entities/enemy_projectile.tscn")
 	if proj_scene:
 		var proj: Area3D = proj_scene.instantiate()
 		var dir: Vector3 = (player.global_position - global_position).normalized()

@@ -107,7 +107,7 @@ func _fire_breath(player: Node3D) -> void:
 	var base_dir: Vector3 = (player.global_position - global_position).normalized()
 	base_dir.y = 0
 
-	var proj_scene := load("res://scenes/entities/enemy_projectile.tscn")
+	var proj_scene: PackedScene = load("res://scenes/entities/enemy_projectile.tscn")
 	if not proj_scene:
 		GameManager.take_damage(GameConstants.DRAKE_FIRE_BREATH_DAMAGE)
 		return
