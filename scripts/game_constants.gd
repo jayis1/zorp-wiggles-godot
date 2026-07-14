@@ -53,6 +53,8 @@ const ENEMY_ATTACK_WINDUP_SQUASH: float = 0.15
 const ENEMY_ATTACK_WINDUP_BRIGHTNESS: float = 0.5
 const ENEMY_ATTACK_LUNGE_DISTANCE: float = 1.5
 const ENEMY_ATTACK_LUNGE_DURATION: float = 0.15
+const ENEMY_ATTACK_LUNGE_SIZE_BASE: float = 1.0
+const ENEMY_ATTACK_LUNGE_SIZE_MULT_MIN: float = 0.3
 
 # ─── Pulse Wave (Q ability) ──────────────────────────────────────────────────
 const PULSE_WAVE_COOLDOWN: float = 8.0
