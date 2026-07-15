@@ -48,12 +48,22 @@ zorp-wiggles-godot/
 │       ├── enemy_projectile.tscn # Enemy ranged projectile
 │       ├── shockwave.tscn       # Expanding shockwave ring
 │       ├── spawn_warning.tscn   # Ground warning before spawn
-│       └── collectible.tscn     # Pickup items
+│       ├── collectible.tscn     # Pickup items
+│       ├── portal.tscn         # Linked teleporter portals
+│       ├── trader.tscn         # Wandering trader NPC
+│       ├── monolith.tscn       # Alien monolith (buffs)
+│       └── healing_shrine.tscn # Healing crystal shrine
 ├── scripts/
 │   ├── game_constants.gd   # All game constants
 │   ├── game_manager.gd     # Autoload singleton — game state
 │   ├── player.gd           # Player controller
 │   ├── camera_rig.gd       # Orbit camera
+│   ├── sky_dome.gd         # Sky dome, stars, nebula, horizon glow
+│   ├── decoration.gd       # Biome decorations (trees, crystals, mushrooms, etc.)
+│   ├── portal.gd           # Linked portal teleporters
+│   ├── trader.gd           # Wandering trader NPC
+│   ├── monolith.gd         # Alien monolith buff structures
+│   ├── healing_shrine.gd   # Healing crystal shrines
 │   ├── enemy_base.gd       # Base enemy AI class
 │   ├── enemy_serpent.gd    # Plasma Serpent (segments + scatter)
 │   ├── enemy_graviton.gd   # Graviton (gravity pull + DoT)
@@ -103,7 +113,21 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Enemy projectile system with pulsing aura
 - Boss HP bar integration in HUD
 
-**Remaining phases:** World decorations, particle effects, missions, audio, polish, export.
+**Phase 3 (World & Decorations):** ✅ Complete
+- Sky dome: 24 gradient billboard panels (3 layers × 8 angles, purple→pink gradient)
+- Star field: 80 twinkling stars with 8-color palette (white, cream, blue-white, orange, icy blue, pink, yellow, mint)
+- Nebula clouds: 12 drifting translucent clouds in 8 colors (purple, blue, crimson, teal, amber, indigo, sky blue, rose)
+- Horizon glow: 8 low-altitude translucent quads for atmospheric depth
+- Biome decorations: trees (forest), crystals (crystal), alien mushrooms (mushroom), floating islands with crystals, toxic bog pools/spires/fungal stalks, desert ruins (pillars + broken walls)
+- Water surface overlays (semi-transparent blue tint on water tiles)
+- Lava glow overlays (orange glow disc on lava tiles)
+- Portal system: 4 linked portal pairs (8 portals total) with animated spinning rings, ground glow, pillar markers, teleport on contact with cooldown
+- Wandering Trader NPC: 2 initial traders that wander, glow when player is near, trade Space Gloop for rare items (press E)
+- Alien Monoliths: Tall crystal-capped structures in crystal/snow biomes that grant random buffs (Speed Surge, Power Surge, Wisdom Aura) on contact, with cooldown
+- Healing Crystal Shrines: Green glowing shrines in mushroom/swamp biomes that heal the player on contact, with long cooldown
+- Biome fog colors and density values defined (per-biome, 0-1 normalized)
+
+**Remaining phases:** Combat & abilities, HUD polish, particles, missions, physics, shaders, AI, GPU particles, animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
 
 ## License
 

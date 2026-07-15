@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 2 — Enemy Varieties (COMPLETE)
+## Status: PHASE 3 — World & Decorations (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -59,16 +59,21 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Boss HP bar integration in HUD (boss_spawned/boss_defeated signals)
 - [x] game_constants.gd — All enemy constants added (serpent, graviton, wisp, sentinel, bomber, spitter, drake)
 
-### Phase 3: World & Decorations (TODO)
-- [ ] Biome decorations: trees (forest), crystals (crystal), mushrooms (mushroom)
-- [ ] Floating islands with shadows, crystals, and bounce pads
-- [ ] Sky dome (3 layers × 8 billboard quads = 24 sky panels)
-- [ ] Star field with twinkling animation
-- [ ] Nebula clouds (layered, drifting)
-- [ ] Portal structures (inter-biome teleporters)
-- [ ] Trader NPC (wandering, trade menu)
-- [ ] Monolith buff structures (speed, damage, shield, health_regen)
-- [ ] Water/lava surfaces with shader effects
+### Phase 3: World & Decorations ✅ COMPLETE
+- [x] Biome decorations: trees (forest), crystals (crystal), mushrooms (mushroom)
+- [x] Floating islands with shadows, crystals, and bounce pads
+- [x] Sky dome (3 layers × 8 billboard quads = 24 sky panels)
+- [x] Star field with twinkling animation (80 stars, 8 color palette)
+- [x] Nebula clouds (layered, drifting, 12 clouds, 8 color palette)
+- [x] Portal structures (inter-biome teleporters, 4 linked pairs)
+- [x] Trader NPC (wandering, trade menu, 2 initial traders)
+- [x] Monolith buff structures (speed, damage, XP buffs in crystal/snow biomes)
+- [x] Healing Crystal Shrines (heal player in mushroom/swamp biomes)
+- [x] Water/lava surface overlays (semi-transparent tinted quads)
+- [x] Toxic bog decorations (bubbling pools, fungal stalks, toxic spires)
+- [x] Desert ruins (ancient stone pillars, broken walls)
+- [x] Biome fog colors and density values (per-biome, 0-1 normalized)
+- [x] Horizon glow band (8 translucent colored quads at low altitude)
 
 ### Phase 4: Full Combat & Abilities (TODO)
 - [ ] Damage numbers (floating 3D Label3D that rises and fades)
@@ -293,4 +298,4 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - **Collectible spin**: Items rotate continuously while idle for visual appeal.
 
 ## Last Updated
-Phase 2 complete. All 7 enemy types implemented (Serpent, Graviton, Wisp, Sentinel, Bomber, Spitter, Drake) with dynamic spawner, enemy projectiles, shockwave rings, and spawn warnings. Phases 3-21 planned. Cron jobs active.
+Phase 3 complete. World & decorations fully implemented: sky dome (24 gradient panels), 80 twinkling stars (8-color palette), 12 drifting nebula clouds, 8 horizon glow quads, biome decorations (trees, crystals, mushrooms, floating islands, toxic bog, desert ruins), water/lava surface overlays, 4 linked portal pairs, 2 wandering trader NPCs, alien monoliths (speed/damage/XP buffs in crystal/snow biomes), healing crystal shrines (mushroom/swamp biomes). 337+ decorations spawned per world. Phases 4-21 planned. Cron jobs active.

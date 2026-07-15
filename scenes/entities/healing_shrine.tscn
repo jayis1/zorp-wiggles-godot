@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://shrine01"]
+
+[ext_resource type="Script" path="res://scripts/healing_shrine.gd" id="1_shrine"]
+
+[sub_resource type="BoxShape3D" id="ShrineShape"]
+size = Vector3(4, 5, 4)
+
+[node name="HealingShrine" type="Area3D"]
+script = ExtResource("1_shrine")
+
+[node name="ShrineCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+shape = SubResource("ShrineShape")

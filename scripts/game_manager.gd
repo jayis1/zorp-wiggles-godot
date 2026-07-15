@@ -109,6 +109,17 @@ func _update_timers(delta: float) -> void:
 		player_crit_chain_timer -= delta
 		if player_crit_chain_timer <= 0:
 			player_crit_chain = 0
+	
+	# Active buff timers (monolith buffs)
+	var buff_keys: Array = active_buffs.keys()
+	var expired_buffs: Array[String] = []
+	for buff_key in buff_keys:
+		active_buffs[buff_key] -= delta
+		if active_buffs[buff_key] <= 0:
+			expired_buffs.append(buff_key)
+	for key in expired_buffs:
+		active_buffs.erase(key)
+		add_message("%s expired" % key.capitalize())
 
 func _start_game() -> void:
 	player_hp = GameConstants.PLAYER_START_HP

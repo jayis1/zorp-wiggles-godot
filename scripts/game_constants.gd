@@ -191,3 +191,129 @@ enum CollectibleType {
 	XP_ORB,
 	HEALTH_FRAGMENT,
 }
+
+# ─── Sky & Stars ──────────────────────────────────────────────────────────────
+const STAR_COUNT: int = 80
+const STAR_HEIGHT_MIN: float = 80.0
+const STAR_HEIGHT_MAX: float = 150.0
+const STAR_SPREAD: float = 200.0
+const SKY_RADIUS: float = 300.0
+const SKY_HEIGHT_MIN: float = 60.0
+const SKY_HEIGHT_MAX: float = 250.0
+# Sky gradient: deep purple at zenith → alien pink at horizon
+const SKY_TOP_COLOR: Color = Color(20.0 / 255.0, 0.0, 60.0 / 255.0)
+const SKY_HORIZON_COLOR: Color = Color(120.0 / 255.0, 40.0 / 255.0, 80.0 / 255.0)
+
+# Star color palette (0-1 normalized — converted from Ursina rgba 0-255)
+const STAR_COLORS: Array[Color] = [
+	Color(1.0, 1.0, 1.0),
+	Color(1.0, 240.0 / 255.0, 220.0 / 255.0),
+	Color(220.0 / 255.0, 230.0 / 255.0, 1.0),
+	Color(1.0, 200.0 / 255.0, 180.0 / 255.0),
+	Color(180.0 / 255.0, 220.0 / 255.0, 1.0),
+	Color(1.0, 220.0 / 255.0, 1.0),
+	Color(1.0, 1.0, 200.0 / 255.0),
+	Color(200.0 / 255.0, 1.0, 220.0 / 255.0),
+]
+
+# ─── Nebula Clouds ────────────────────────────────────────────────────────────
+const NEBULA_CLOUD_COUNT: int = 12
+const NEBULA_SPREAD: float = 250.0
+const NEBULA_HEIGHT_MIN: float = 100.0
+const NEBULA_HEIGHT_MAX: float = 180.0
+
+# Nebula color palette (0-1 normalized — converted from Ursina rgb 0-255)
+const NEBULA_COLORS: Array[Color] = [
+	Color(100.0 / 255.0, 30.0 / 255.0, 160.0 / 255.0),   # deep purple
+	Color(30.0 / 255.0, 60.0 / 255.0, 160.0 / 255.0),    # deep blue
+	Color(160.0 / 255.0, 30.0 / 255.0, 60.0 / 255.0),    # crimson
+	Color(30.0 / 255.0, 140.0 / 255.0, 100.0 / 255.0),   # teal
+	Color(160.0 / 255.0, 90.0 / 255.0, 30.0 / 255.0),    # amber
+	Color(60.0 / 255.0, 30.0 / 255.0, 140.0 / 255.0),    # indigo
+	Color(50.0 / 255.0, 100.0 / 255.0, 160.0 / 255.0),   # sky blue
+	Color(140.0 / 255.0, 50.0 / 255.0, 100.0 / 255.0),   # rose
+]
+
+# ─── Horizon Glow ─────────────────────────────────────────────────────────────
+const HORIZON_GLOW_COUNT: int = 8
+const HORIZON_GLOW_SPREAD: float = 300.0
+const HORIZON_GLOW_HEIGHT_MIN: float = 5.0
+const HORIZON_GLOW_HEIGHT_MAX: float = 40.0
+const HORIZON_GLOW_ALPHA_BASE: float = 35.0 / 255.0
+
+# ─── Portal System ────────────────────────────────────────────────────────────
+const PORTAL_COUNT: int = 4
+const PORTAL_COOLDOWN: float = 3.0
+const PORTAL_INNER_COLOR: Color = Color(0.0, 1.0, 1.0, 150.0 / 255.0)
+const PORTAL_OUTER_COLOR: Color = Color(100.0 / 255.0, 0.0, 1.0, 80.0 / 255.0)
+const PORTAL_GROUND_GLOW_COLOR: Color = Color(0.0, 200.0 / 255.0, 1.0, 40.0 / 255.0)
+const PORTAL_PILLAR_COLOR: Color = Color(60.0 / 255.0, 180.0 / 255.0, 220.0 / 255.0)
+
+# ─── Wandering Trader ────────────────────────────────────────────────────────
+const TRADER_NAMES: Array[String] = ["Zix", "Glip", "Orbix", "Fweem"]
+const TRADER_SPEED: float = 2.5
+const TRADER_WANDER_RADIUS: float = 40.0
+const TRADER_TRADE_COST: int = 5
+const TRADER_RESPAWN_TIME: float = 60.0
+const TRADER_INITIAL_COUNT: int = 2
+const TRADER_GLOW_RANGE: float = 4.0
+const TRADER_GLOW_PULSE_SPEED: float = 5.0
+const TRADER_BODY_COLOR: Color = Color(1.0, 200.0 / 255.0, 100.0 / 255.0)
+const TRADER_HAT_COLOR: Color = Color(200.0 / 255.0, 50.0 / 255.0, 200.0 / 255.0)
+
+# ─── Alien Monolith ──────────────────────────────────────────────────────────
+const MONOLITH_SPAWN_CHANCE_CRYSTAL: float = 0.06
+const MONOLITH_SPAWN_CHANCE_SNOW: float = 0.04
+const MONOLITH_BUFF_DURATION: float = 10.0
+const MONOLITH_COOLDOWN: float = 45.0
+const MONOLITH_ACTIVATE_RANGE: float = 4.5
+const MONOLITH_SPEED_MULT: float = 1.5
+const MONOLITH_DAMAGE_MULT: float = 1.4
+const MONOLITH_XP_MULT: float = 2.0
+const MONOLITH_BODY_COLOR: Color = Color(80.0 / 255.0, 60.0 / 255.0, 120.0 / 255.0)
+const MONOLITH_CAP_COLOR: Color = Color(150.0 / 255.0, 100.0 / 255.0, 1.0)
+const MONOLITH_SKIP_IF_ALL_BUFFS_ACTIVE: bool = true
+
+# ─── Healing Crystal Shrine ──────────────────────────────────────────────────
+const SHRINE_HEAL_AMOUNT: int = 55
+const SHRINE_COOLDOWN: float = 60.0
+const SHRINE_ACTIVATE_RANGE: float = 4.5
+const SHRINE_SPAWN_CHANCE_MUSHROOM: float = 0.04
+const SHRINE_SPAWN_CHANCE_SWAMP: float = 0.05
+const SHRINE_CRYSTAL_COLOR: Color = Color(100.0 / 255.0, 1.0, 150.0 / 255.0)
+
+# ─── Floating Islands ────────────────────────────────────────────────────────
+const FLOATING_ISLAND_HEIGHT_MIN: float = 3.0
+const FLOATING_ISLAND_HEIGHT_MAX: float = 6.0
+const FLOATING_ISLAND_SPAWN_CHANCE: float = 0.15
+const FLOATING_ISLAND_CRYSTAL_CHANCE: float = 0.4
+const FLOATING_ISLAND_COLOR: Color = Color(160.0 / 255.0, 120.0 / 255.0, 200.0 / 255.0)
+
+# ─── Alien Ruins ─────────────────────────────────────────────────────────────
+const RUINS_PILLAR_CHANCE: float = 0.08
+const RUINS_WALL_CHANCE: float = 0.05
+
+# ─── Biome Fog (0-1 normalized colors, converted from Ursina 0-255) ──────────
+const BIOME_FOG: Dictionary = {
+	GameConstants.Biome.GRASS: {"color": Color(30.0 / 255.0, 10.0 / 255.0, 60.0 / 255.0), "density": 0.006},
+	GameConstants.Biome.DESERT: {"color": Color(100.0 / 255.0, 70.0 / 255.0, 30.0 / 255.0), "density": 0.014},
+	GameConstants.Biome.WATER: {"color": Color(10.0 / 255.0, 20.0 / 255.0, 80.0 / 255.0), "density": 0.010},
+	GameConstants.Biome.LAVA: {"color": Color(100.0 / 255.0, 20.0 / 255.0, 5.0 / 255.0), "density": 0.016},
+	GameConstants.Biome.FOREST: {"color": Color(10.0 / 255.0, 40.0 / 255.0, 15.0 / 255.0), "density": 0.012},
+	GameConstants.Biome.CRYSTAL: {"color": Color(15.0 / 255.0, 40.0 / 255.0, 60.0 / 255.0), "density": 0.007},
+	GameConstants.Biome.SNOW: {"color": Color(60.0 / 255.0, 60.0 / 255.0, 80.0 / 255.0), "density": 0.005},
+	GameConstants.Biome.SWAMP: {"color": Color(30.0 / 255.0, 50.0 / 255.0, 15.0 / 255.0), "density": 0.016},
+	GameConstants.Biome.MUSHROOM: {"color": Color(50.0 / 255.0, 10.0 / 255.0, 60.0 / 255.0), "density": 0.012},
+	GameConstants.Biome.FLOATING_ISLANDS: {"color": Color(40.0 / 255.0, 25.0 / 255.0, 60.0 / 255.0), "density": 0.005},
+	GameConstants.Biome.TOXIC_BOG: {"color": Color(50.0 / 255.0, 60.0 / 255.0, 15.0 / 255.0), "density": 0.018},
+}
+const FOG_TRANSITION_SPEED: float = 4.0
+
+# ─── Water & Lava Surface Colors (0-1 normalized) ────────────────────────────
+const WATER_OVERLAY_COLOR: Color = Color(30.0 / 255.0, 80.0 / 255.0, 220.0 / 255.0, 80.0 / 255.0)
+const LAVA_GLOW_COLOR: Color = Color(1.0, 120.0 / 255.0, 30.0 / 255.0, 60.0 / 255.0)
+
+# ─── Bounce Pad ──────────────────────────────────────────────────────────────
+const BOUNCE_PAD_FORCE: float = 25.0
+const BOUNCE_PAD_COLOR: Color = Color(1.0, 200.0 / 255.0, 50.0 / 255.0)
+const BOUNCE_PAD_COOLDOWN: float = 0.5

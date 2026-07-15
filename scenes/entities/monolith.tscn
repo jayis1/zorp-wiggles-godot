@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://monolith01"]
+
+[ext_resource type="Script" path="res://scripts/monolith.gd" id="1_mono"]
+
+[sub_resource type="BoxShape3D" id="MonoShape"]
+size = Vector3(2, 6, 2)
+
+[node name="Monolith" type="Area3D"]
+script = ExtResource("1_mono")
+
+[node name="MonolithCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+shape = SubResource("MonoShape")

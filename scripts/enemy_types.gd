@@ -1,9 +1,8 @@
-## Zorp Wiggles — Enemy Type Data (Godot Resource)
+## Zorp Wiggles — Enemy Type Data (Autoload Singleton)
 ## All 18 enemy types ported from Ursina game.py Enemy.TYPES
 ## Colors converted from Ursina (0-255 rgb / 0-1 named) to Godot Color(0-1)
 
-class_name EnemyTypeData
-extends Resource
+extends Node
 
 ## Enemy type definitions: name, hp, speed, damage, scale, model, decor, detect_range, color
 ## Ported from game.py lines 4483-4503

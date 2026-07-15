@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3 uid="uid://trader01"]
+
+[ext_resource type="Script" path="res://scripts/trader.gd" id="1_trader"]
+
+[sub_resource type="SphereShape3D" id="TraderShape"]
+radius = 1.0
+
+[sub_resource type="SphereMesh" id="TraderMesh"]
+radius = 1.0
+height = 2.0
+
+[node name="Trader" type="CharacterBody3D"]
+script = ExtResource("1_trader")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("TraderMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("TraderShape")

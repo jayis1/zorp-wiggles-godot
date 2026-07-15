@@ -210,8 +210,11 @@ func _build_ground_collision() -> void:
 
 func _spawn_decorations() -> void:
 	"""Spawn biome-appropriate decorations (trees, crystals, mushrooms, etc.)."""
-	# This will be expanded by the builder cron job
-	pass
+	var deco_node := DecorationSystem.new()
+	deco_node.name = "Decorations"
+	deco_node.spawn_all_decorations(grid, GRID_SIZE, TILE_SIZE)
+	add_child(deco_node)
+	print("[WorldGenerator] Spawned %d decorations" % deco_node.get_decoration_count())
 
 func _spawn_initial_enemies() -> void:
 	"""Spawn initial wave of enemies across the world."""
@@ -230,9 +233,127 @@ func _spawn_collectibles() -> void:
 		_spawn_collectible_at(type, pos)
 
 func _spawn_structures() -> void:
-	"""Spawn monoliths, traders, and portals."""
-	# Will be expanded by builder cron job
-	pass
+	"""Spawn monoliths, traders, portals, and healing shrines."""
+	_spawn_portal_pairs()
+	_spawn_initial_traders()
+	_spawn_monoliths()
+	_spawn_healing_shrines()
+
+func _spawn_portal_pairs() -> void:
+	"""Create linked portal pairs at walkable locations around the world."""
+	var spawn_center: float = GRID_SIZE / 2.0 * TILE_SIZE
+	var portal_scene := preload("res://scenes/entities/portal.tscn")
+
+	for i in range(GameConstants.PORTAL_COUNT):
+		for _attempt in range(50):
+			var angle1: float = randf() * TAU
+			var dist1: float = randf_range(30, GRID_SIZE * TILE_SIZE * 0.4)
+			var x1: float = spawn_center + cos(angle1) * dist1 - HALF_WORLD
+			var z1: float = spawn_center + sin(angle1) * dist1 - HALF_WORLD
+			x1 = clamp(x1, -HALF_WORLD + 10, HALF_WORLD - 10)
+			z1 = clamp(z1, -HALF_WORLD + 10, HALF_WORLD - 10)
+
+			# Partner portal on the opposite side
+			var angle2: float = angle1 + PI + randf_range(-0.5, 0.5)
+			var dist2: float = randf_range(30, GRID_SIZE * TILE_SIZE * 0.4)
+			var x2: float = spawn_center + cos(angle2) * dist2 - HALF_WORLD
+			var z2: float = spawn_center + sin(angle2) * dist2 - HALF_WORLD
+			x2 = clamp(x2, -HALF_WORLD + 10, HALF_WORLD - 10)
+			z2 = clamp(z2, -HALF_WORLD + 10, HALF_WORLD - 10)
+
+			# Check both positions are walkable (not water/lava)
+			var biome1: int = get_biome_at(Vector3(x1, 0, z1))
+			var biome2: int = get_biome_at(Vector3(x2, 0, z2))
+			if _is_biome_walkable(biome1) and _is_biome_walkable(biome2):
+				var d1: float = Vector2(x1, z1).distance_to(Vector2(0, 0))
+				var d2: float = Vector2(x2, z2).distance_to(Vector2(0, 0))
+				if d1 > 30 and d2 > 30:
+					# Create portal A
+					var portal_a := portal_scene.instantiate()
+					add_child(portal_a)
+					portal_a.global_position = Vector3(x1, 0, z1)
+					portal_a.partner_position = Vector3(x2, 0, z2)
+					portal_a.portal_id = i
+					# Create portal B
+					var portal_b := portal_scene.instantiate()
+					add_child(portal_b)
+					portal_b.global_position = Vector3(x2, 0, z2)
+					portal_b.partner_position = Vector3(x1, 0, z1)
+					portal_b.portal_id = i
+					break
+
+func _spawn_initial_traders() -> void:
+	"""Spawn initial wandering traders at walkable locations."""
+	var trader_scene := preload("res://scenes/entities/trader.tscn")
+	for _i in range(GameConstants.TRADER_INITIAL_COUNT):
+		for _attempt in range(50):
+			var angle: float = randf() * TAU
+			var dist: float = randf_range(40, 120)
+			var tx: float = cos(angle) * dist
+			var tz: float = sin(angle) * dist
+			tx = clamp(tx, -HALF_WORLD + 10, HALF_WORLD - 10)
+			tz = clamp(tz, -HALF_WORLD + 10, HALF_WORLD - 10)
+			var biome: int = get_biome_at(Vector3(tx, 0, tz))
+			if _is_biome_walkable(biome):
+				var trader := trader_scene.instantiate()
+				add_child(trader)
+				trader.global_position = Vector3(tx, 1, tz)
+				trader.trader_name = GameConstants.TRADER_NAMES[randi() % GameConstants.TRADER_NAMES.size()]
+				break
+
+func _spawn_monoliths() -> void:
+	"""Spawn Alien Monoliths in crystal and snow biomes."""
+	var monolith_scene := preload("res://scenes/entities/monolith.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			var wx: float = (x - half_grid) * TILE_SIZE
+			var wz: float = (z - half_grid) * TILE_SIZE
+			var dist_from_spawn: float = Vector2(wx, wz).length()
+
+			if dist_from_spawn < 60:
+				continue
+
+			if biome == GameConstants.Biome.CRYSTAL and randf() < GameConstants.MONOLITH_SPAWN_CHANCE_CRYSTAL:
+				var monolith := monolith_scene.instantiate()
+				add_child(monolith)
+				monolith.global_position = Vector3(wx, 0, wz)
+			elif biome == GameConstants.Biome.SNOW and randf() < GameConstants.MONOLITH_SPAWN_CHANCE_SNOW:
+				var monolith := monolith_scene.instantiate()
+				add_child(monolith)
+				monolith.global_position = Vector3(wx, 0, wz)
+
+func _spawn_healing_shrines() -> void:
+	"""Spawn Healing Crystal Shrines in mushroom and swamp biomes."""
+	var shrine_scene := preload("res://scenes/entities/healing_shrine.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			var wx: float = (x - half_grid) * TILE_SIZE
+			var wz: float = (z - half_grid) * TILE_SIZE
+			var dist_from_spawn: float = Vector2(wx, wz).length()
+
+			if dist_from_spawn < 50:
+				continue
+
+			if biome == GameConstants.Biome.MUSHROOM and randf() < GameConstants.SHRINE_SPAWN_CHANCE_MUSHROOM:
+				var shrine := shrine_scene.instantiate()
+				add_child(shrine)
+				shrine.global_position = Vector3(wx, 0, wz)
+			elif biome == GameConstants.Biome.SWAMP and randf() < GameConstants.SHRINE_SPAWN_CHANCE_SWAMP:
+				var shrine := shrine_scene.instantiate()
+				add_child(shrine)
+				shrine.global_position = Vector3(wx, 0, wz)
+
+func _is_biome_walkable(biome: int) -> bool:
+	"""Check if a biome type is walkable (not water or lava)."""
+	return biome != GameConstants.Biome.WATER and biome != GameConstants.Biome.LAVA
 
 func _random_world_position() -> Vector3:
 	"""Random position within the world bounds."""
