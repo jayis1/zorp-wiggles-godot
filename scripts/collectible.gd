@@ -16,6 +16,7 @@ var is_popping: bool = false  # Pickup lift animation
 var base_y: float = 0.0
 var bob_offset: float = 0.0
 var glow_phase: float = 0.0
+var _mat: StandardMaterial3D = null
 
 # ─── Type-specific config ────────────────────────────────────────────────────
 const TYPE_CONFIG := {
@@ -60,12 +61,13 @@ func _apply_type_config() -> void:
 		mesh_instance.mesh = sphere
 		
 		# Unlit material with the type color
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = config["color"]
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.emission_enabled = true
-		mat.emission = config["color"] * 0.3
-		mesh_instance.material_override = mat
+		_mat = StandardMaterial3D.new()
+		_mat.albedo_color = config["color"]
+		_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_mat.emission_enabled = true
+		_mat.emission = config["color"] * 0.3
+		_mat.emission_energy_multiplier = 1.0
+		mesh_instance.material_override = _mat
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:
@@ -77,6 +79,10 @@ func _physics_process(delta: float) -> void:
 		global_position.y = base_y + sin(bob_offset) * 0.3
 		# Continuous slow rotation for visual appeal
 		rotate_y(delta * 1.5)
+		# Pulsing emission glow for better visibility ("breathing" effect)
+		if _mat:
+			var pulse: float = 0.7 + 0.4 * sin(bob_offset * 1.5)
+			_mat.emission_energy_multiplier = pulse
 
 	# Magnetic pull toward player
 	var player: Node3D = get_tree().get_first_node_in_group("player")

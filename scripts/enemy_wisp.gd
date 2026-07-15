@@ -25,8 +25,10 @@ func _ready() -> void:
 	# Semi-transparent material
 	if _material:
 		_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_material.albedo_color = base_color
 		_material.emission = base_color * 0.3
+		# _spawn_target_alpha was already set from base_color.a in super._ready()
+		# Just restore the correct albedo color (alpha will be driven by spawn fade)
+		_material.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.0)
 
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta)

@@ -296,6 +296,10 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - **Projectile trail + glow**: Projectiles now have a 6-point fading trail, OmniLight3D for real-time glow, and spawn impact_burst.tscn on hit (expanding + fading sphere).
 - **Tween easing curves**: Collectible pickup uses EASE_OUT + TRANS_BACK for pop, EASE_IN + TRANS_CUBIC for shrink + lift. Enemy death adds spin + CUBIC easing.
 - **Collectible spin**: Items rotate continuously while idle for visual appeal.
+- **Dash squash-and-stretch**: Player mesh compresses (1.4, 0.6, 1.4) on dash start, then bounces back with EASE_OUT + TRANS_ELASTIC for juicy game feel.
+- **Shoot scale pulse**: Player mesh does a quick 1.12x pop on each shot (EASE_OUT + TRANS_ELASTIC rebound), skipped during dash to avoid tween conflicts.
+- **Collectible emission breathing**: Items pulse their emission_energy_multiplier (0.7–1.1) synced to bob cycle for a "breathing" glow that improves visibility.
+- **Enemy spawn material fade-in**: `_update_spawn_visuals()` now fades material alpha from 0→target using quadratic ease-in during the 2s grace period, instead of being a no-op. Preserves per-enemy alpha (Void Wisp stays semi-transparent).
 
 ## Last Updated
 Phase 3 complete. World & decorations fully implemented: sky dome (24 gradient panels), 80 twinkling stars (8-color palette), 12 drifting nebula clouds, 8 horizon glow quads, biome decorations (trees, crystals, mushrooms, floating islands, toxic bog, desert ruins), water/lava surface overlays, 4 linked portal pairs, 2 wandering trader NPCs, alien monoliths (speed/damage/XP buffs in crystal/snow biomes), healing crystal shrines (mushroom/swamp biomes). 337+ decorations spawned per world. Phases 4-21 planned. Cron jobs active.

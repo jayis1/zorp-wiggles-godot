@@ -134,6 +134,16 @@ func _start_dash() -> void:
 	# Camera shake on dash for punch
 	_trigger_camera_trauma(0.15)
 
+	# Squash-and-stretch: compress vertically, stretch horizontally, then bounce back
+	if mesh:
+		var squash_tween := create_tween()
+		squash_tween.tween_property(mesh, "scale", Vector3(1.4, 0.6, 1.4), 0.08) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_CUBIC)
+		squash_tween.tween_property(mesh, "scale", Vector3.ONE, 0.18) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_ELASTIC)
+
 func get_forward_dir_fallback() -> Vector3:
 	var cam: Camera3D = get_viewport().get_camera_3d()
 	if cam:
@@ -196,6 +206,16 @@ func _spawn_projectile() -> void:
 	# Damage scales with player level
 	var dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + (GameManager.player_level - 1) * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
 	proj.set("damage", dmg)
+
+	# Quick scale pulse on shoot for juicy feedback (skip if dashing to avoid tween conflict)
+	if mesh and not is_dashing:
+		var pulse_tween := create_tween()
+		pulse_tween.tween_property(mesh, "scale", Vector3.ONE * 1.12, 0.04) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_CUBIC)
+		pulse_tween.tween_property(mesh, "scale", Vector3.ONE, 0.07) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_ELASTIC)
 
 func get_shoot_direction() -> Vector3:
 	var camera_3d: Camera3D = get_viewport().get_camera_3d()

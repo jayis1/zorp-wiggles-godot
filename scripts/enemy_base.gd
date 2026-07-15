@@ -32,6 +32,7 @@ var alert_indicator_timer: float = 0.0
 var hit_flinch_timer: float = 0.0
 var is_windup: bool = false
 var knockback_vel: Vector3 = Vector3.ZERO
+var _spawn_target_alpha: float = 1.0
 
 # ─── Wandering ────────────────────────────────────────────────────────────────
 var wander_dir: Vector3 = Vector3.ZERO
@@ -65,6 +66,10 @@ func _ready() -> void:
 		_material.roughness = 0.6
 		_material.emission_enabled = true
 		_material.emission = base_color * 0.15
+		# Enable transparency for spawn fade-in (alpha=1 is fully opaque, no perf cost)
+		_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_spawn_target_alpha = base_color.a
+		_material.albedo_color.a = 0.0
 		body_mesh.material_override = _material
 
 	# Spawn animation — scale up from small
@@ -242,8 +247,13 @@ func _update_timers(delta: float) -> void:
 		hit_flinch_timer -= delta
 
 func _update_spawn_visuals(delta: float) -> void:
-	# Visual fade-in during grace period — handled by the spawn scale tween
-	pass
+	# Material fade-in during spawn grace period (quadratic ease-in for smooth appearance)
+	if not _material:
+		return
+	var progress: float = 1.0 - (spawn_grace_timer / GameConstants.ENEMY_SPAWN_GRACE_PERIOD)
+	progress = clampf(progress, 0.0, 1.0)
+	var eased: float = progress * progress  # quadratic ease-in
+	_material.albedo_color.a = _spawn_target_alpha * eased
 
 func _update_visuals(delta: float) -> void:
 	# Update HP bar color based on HP ratio
@@ -257,6 +267,8 @@ func _update_visuals(delta: float) -> void:
 		if _material.albedo_color != Color.WHITE:
 			var pulse := 0.5 + 0.5 * sin(GameManager.game_time * 8.0)
 			var warning_color := Color(1.0, 0.1, 0.1).lerp(Color.WHITE, pulse * 0.3)
+			# Preserve the original alpha (e.g. Void Wisp is semi-transparent)
+			warning_color.a = _spawn_target_alpha
 			_material.albedo_color = warning_color
 
 func _trigger_camera_trauma(amount: float) -> void:
