@@ -81,6 +81,8 @@ zorp-wiggles-godot/
 │   ├── collectible.gd      # Pickup items
 │   ├── projectile.gd       # Player laser
 │   ├── pulse_wave.gd       # Q ability
+│   ├── damage_number.gd    # Floating 3D damage/XP/heal numbers
+│   ├── spawn_direction_indicator.gd  # HUD arrows for off-screen enemies
 │   └── main_menu.gd        # Menu logic
 ├── assets/                  # Models, textures, audio (TODO)
 └── CONVERSION_TRACKER.md   # Conversion progress tracker
@@ -127,7 +129,18 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Healing Crystal Shrines: Green glowing shrines in mushroom/swamp biomes that heal the player on contact, with long cooldown
 - Biome fog colors and density values defined (per-biome, 0-1 normalized)
 
-**Remaining phases:** Combat & abilities, HUD polish, particles, missions, physics, shaders, AI, GPU particles, animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
+**Phase 4 (Full Combat & Abilities):** 🔄 Partial — 9 of 10 complete
+- Damage numbers: Floating 3D Label3D with pop-in animation (scale overshoot), upward drift, fade out; white for normal, gold ★ for crits, yellow KILL! for kills, cyan-blue +XP for XP gains, green +N for heals
+- Anti-overlap jitter: Random ±0.8 horizontal offset so simultaneous numbers don't stack
+- Combo milestones: Every 5 kills (x5, x10, x15...) grants tier-based bonus XP + rainbow screen flash (5-color palette: red, cyan, gold, purple, green)
+- Pickup streak milestones: Every 5 consecutive rapid pickups grants bonus XP + mint-cyan HUD label
+- Crit chain: 3+ consecutive crits within 3s window = 3x damage (vs normal 2x), using centralized constants
+- Spawn direction indicators: Screen-edge arrows (▲) pointing toward off-screen newly-spawned enemies, with rotation toward target
+- Health fragment emergency magnet: When HP < 25%, Health Fragments pull from 14-unit radius at accelerated speed
+- Enemy attack windup telegraph, spawn fade-in, and alert indicator (already from Phase 2)
+- Dash invulnerability frames (partially done — blink effect needs polish)
+
+**Remaining phases:** HUD polish, particles, missions, physics, shaders, AI, GPU particles, animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
 
 ## License
 

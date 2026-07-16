@@ -26,9 +26,11 @@ var player_kills: int = 0
 var player_combo: int = 0
 var player_combo_timer: float = 0.0
 var player_best_combo: int = 0
+var player_last_combo_milestone: int = 0  # Last milestone reached (for milestone detection)
 var player_pickup_streak: int = 0
 var player_pickup_streak_timer: float = 0.0
 var player_max_pickup_streak: int = 0
+var player_last_pickup_milestone: int = 0  # Last pickup milestone reached
 var player_crit_chain: int = 0
 var player_crit_chain_timer: float = 0.0
 var player_invuln_timer: float = 0.0
@@ -37,6 +39,12 @@ var player_is_dashing: bool = false
 var player_dash_timer: float = 0.0
 var player_is_paused: bool = false
 var player_is_alive: bool = true
+
+# ─── Combo Milestone Signal ───────────────────────────────────────────────────
+signal combo_milestone(combo: int, tier: int, color: Color)
+signal pickup_streak_milestone(streak: int, xp_bonus: int)
+signal crit_chain_activated(chain: int)
+signal enemy_spawned_near(pos: Vector3, enemy_type: int)
 
 # ─── World State ──────────────────────────────────────────────────────────────
 var world_seed: int = 0
@@ -96,6 +104,7 @@ func _update_timers(delta: float) -> void:
 		player_combo_timer -= delta
 		if player_combo_timer <= 0:
 			player_combo = 0
+			player_last_combo_milestone = 0
 			combo_changed.emit(player_combo)
 	
 	# Pickup streak timer
@@ -103,6 +112,7 @@ func _update_timers(delta: float) -> void:
 		player_pickup_streak_timer -= delta
 		if player_pickup_streak_timer <= 0:
 			player_pickup_streak = 0
+			player_last_pickup_milestone = 0
 	
 	# Crit chain timer
 	if player_crit_chain_timer > 0:
@@ -131,8 +141,10 @@ func _start_game() -> void:
 	player_kills = 0
 	player_combo = 0
 	player_best_combo = 0
+	player_last_combo_milestone = 0
 	player_pickup_streak = 0
 	player_max_pickup_streak = 0
+	player_last_pickup_milestone = 0
 	player_crit_chain = 0
 	player_invuln_timer = 0.0
 	player_is_alive = true
@@ -188,6 +200,12 @@ func register_kill() -> void:
 		player_best_combo = player_combo
 	combo_changed.emit(player_combo)
 	add_score(100)
+	
+	# Combo milestone check (every COMBO_MILESTONE_INTERVAL kills)
+	if player_combo > 0 and player_combo % GameConstants.COMBO_MILESTONE_INTERVAL == 0:
+		if player_combo > player_last_combo_milestone:
+			player_last_combo_milestone = player_combo
+			_check_combo_milestone(player_combo)
 
 func _die() -> void:
 	player_is_alive = false
@@ -217,12 +235,40 @@ func add_combo() -> void:
 	if player_combo > player_best_combo:
 		player_best_combo = player_combo
 	combo_changed.emit(player_combo)
+	# Combo milestone check
+	if player_combo > 0 and player_combo % GameConstants.COMBO_MILESTONE_INTERVAL == 0:
+		if player_combo > player_last_combo_milestone:
+			player_last_combo_milestone = player_combo
+			_check_combo_milestone(player_combo)
+
+func _check_combo_milestone(combo: int) -> void:
+	# Tier = combo / interval (x5 = tier 1, x10 = tier 2, etc.)
+	var tier: int = combo / GameConstants.COMBO_MILESTONE_INTERVAL
+	var color_idx: int = (tier - 1) % GameConstants.COMBO_MILESTONE_FLASH_COLORS.size()
+	var flash_color: Color = GameConstants.COMBO_MILESTONE_FLASH_COLORS[color_idx]
+	
+	# XP bonus: base + per-tier extra
+	var xp_bonus: int = GameConstants.COMBO_MILESTONE_XP_BASE + (tier - 1) * GameConstants.COMBO_MILESTONE_XP_PER_TIER
+	gain_xp(xp_bonus)
+	
+	# Emit milestone signal for HUD flash + message
+	combo_milestone.emit(combo, tier, flash_color)
+	add_message("★ COMBO MILESTONE x%d! +%d XP" % [combo, xp_bonus])
 
 func add_pickup_streak() -> void:
 	player_pickup_streak += 1
-	player_pickup_streak_timer = 3.0
+	player_pickup_streak_timer = GameConstants.PICKUP_STREAK_WINDOW
 	if player_pickup_streak > player_max_pickup_streak:
 		player_max_pickup_streak = player_pickup_streak
+	
+	# Pickup streak milestone check
+	if player_pickup_streak > 0 and player_pickup_streak % GameConstants.PICKUP_STREAK_MILESTONE_INTERVAL == 0:
+		if player_pickup_streak > player_last_pickup_milestone:
+			player_last_pickup_milestone = player_pickup_streak
+			var xp_bonus: int = GameConstants.PICKUP_STREAK_XP_PER_MILESTONE
+			gain_xp(xp_bonus)
+			pickup_streak_milestone.emit(player_pickup_streak, xp_bonus)
+			add_message("✦ PICKUP STREAK x%d! +%d XP" % [player_pickup_streak, xp_bonus])
 
 func add_message(text: String) -> void:
 	messages.append(text)

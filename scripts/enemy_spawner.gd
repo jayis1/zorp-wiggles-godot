@@ -151,6 +151,9 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	enemy.global_position = pos
 	GameManager.enemies.append(enemy)
 
+	# Emit spawn direction signal for HUD arrows
+	GameManager.enemy_spawned_near.emit(pos, enemy_type)
+
 	# Scale enemy to player level
 	_scale_enemy_to_player_level(enemy)
 

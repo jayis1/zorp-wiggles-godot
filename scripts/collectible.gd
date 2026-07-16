@@ -91,8 +91,21 @@ func _physics_process(delta: float) -> void:
 	
 	var dist := global_position.distance_to(player.global_position)
 	
-	# Pull radius
-	if dist < GameConstants.COLLECT_PULL_RADIUS and not is_popping:
+	# ── Emergency Health Fragment Magnet ── When player HP is critically low,
+	# Health Fragments are pulled from a much larger radius at accelerated speed
+	var is_emergency_magnet: bool = false
+	if collectible_type == GameConstants.CollectibleType.HEALTH_FRAGMENT:
+		var hp_ratio: float = float(GameManager.player_hp) / float(GameManager.player_max_hp) if GameManager.player_max_hp > 0 else 0.0
+		if hp_ratio < GameConstants.EMERGENCY_HP_THRESHOLD:
+			if dist < GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS and not is_popping:
+				is_emergency_magnet = true
+				is_magnetic = true
+				var pull_speed := GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_SPEED * (1.0 - dist / GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS)
+				var dir := (player.global_position - global_position).normalized()
+				global_position += dir * pull_speed * delta
+	
+	# Normal pull radius (skip if emergency magnet already handled)
+	if not is_emergency_magnet and dist < GameConstants.COLLECT_PULL_RADIUS and not is_popping:
 		is_magnetic = true
 		var pull_speed := GameConstants.COLLECT_PULL_SPEED * (1.0 - dist / GameConstants.COLLECT_PULL_RADIUS)
 		var dir := (player.global_position - global_position).normalized()
@@ -115,10 +128,14 @@ func _collect() -> void:
 	# Award XP
 	if xp_value > 0:
 		GameManager.gain_xp(xp_value)
+		# Spawn XP gain popup (cyan-blue "+N XP")
+		_spawn_xp_popup(xp_value)
 	
 	# Health fragments heal
 	if collectible_type == GameConstants.CollectibleType.HEALTH_FRAGMENT:
 		GameManager.heal(25)
+		# Spawn heal popup (green "+25")
+		_spawn_heal_popup(25)
 	
 	# Pickup streak
 	GameManager.add_pickup_streak()
@@ -137,3 +154,21 @@ func _collect() -> void:
 	tween.tween_callback(queue_free)
 	
 	collected.emit(collectible_type, xp_value)
+
+func _spawn_xp_popup(amount: int) -> void:
+	var parent: Node = get_parent()
+	if not parent:
+		return
+	var dn := DamageNumber.new()
+	parent.add_child(dn)
+	dn.global_position = global_position + Vector3(0, 1.5, 0)
+	dn.configure_xp(amount)
+
+func _spawn_heal_popup(amount: int) -> void:
+	var parent: Node = get_parent()
+	if not parent:
+		return
+	var dn := DamageNumber.new()
+	parent.add_child(dn)
+	dn.global_position = global_position + Vector3(0, 1.5, 0)
+	dn.configure_heal(amount)

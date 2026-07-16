@@ -31,6 +31,17 @@ extends CanvasLayer
 @onready var boss_hp_bar: ColorRect = $BossHPContainer/BossHPBar
 @onready var boss_name_text: Label = $BossHPContainer/BossNameText
 
+# ─── Combo Milestone Flash ────────────────────────────────────────────────────
+var _combo_flash_rect: ColorRect = null
+var _combo_flash_timer: float = 0.0
+
+# ─── Pickup Streak Display ────────────────────────────────────────────────────
+var _pickup_streak_label: Label = null
+var _pickup_streak_timer: float = 0.0
+
+# ─── Spawn Direction Indicator ────────────────────────────────────────────────
+var _spawn_direction_indicator: Control = null
+
 # ─── Minimap ──────────────────────────────────────────────────────────────────
 # Minimap viewport nodes — not yet implemented; refs resolved lazily if added.
 var minimap: SubViewport = null
@@ -59,6 +70,35 @@ func _ready() -> void:
 	GameManager.boss_spawned.connect(_on_boss_spawned)
 	GameManager.boss_defeated.connect(_on_boss_defeated)
 	GameManager.message_added.connect(_on_message_added)
+	GameManager.combo_milestone.connect(_on_combo_milestone)
+	GameManager.pickup_streak_milestone.connect(_on_pickup_streak_milestone)
+	
+	# Create combo milestone flash overlay (full-screen ColorRect)
+	_combo_flash_rect = ColorRect.new()
+	_combo_flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_combo_flash_rect.color = Color(0, 0, 0, 0)
+	_combo_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_combo_flash_rect)
+	
+	# Create pickup streak label (bottom-right area)
+	_pickup_streak_label = Label.new()
+	_pickup_streak_label.offset_left = 900.0
+	_pickup_streak_label.offset_top = 140.0
+	_pickup_streak_label.offset_right = 1150.0
+	_pickup_streak_label.offset_bottom = 170.0
+	_pickup_streak_label.text = ""
+	_pickup_streak_label.visible = false
+	_pickup_streak_label.add_theme_color_override("font_color", GameConstants.PICKUP_STREAK_COLOR)
+	_pickup_streak_label.add_theme_font_size_override("font_size", 18)
+	add_child(_pickup_streak_label)
+	
+	# Create spawn direction indicator
+	var sdi_script := load("res://scripts/spawn_direction_indicator.gd")
+	_spawn_direction_indicator = Control.new()
+	_spawn_direction_indicator.set_script(sdi_script)
+	_spawn_direction_indicator.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_spawn_direction_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_spawn_direction_indicator)
 	
 	# Initialize displays
 	_update_all_displays()
@@ -74,6 +114,26 @@ func _process(delta: float) -> void:
 		level_up_display_timer -= delta
 		if level_up_display_timer <= 0:
 			level_up_text.visible = false
+	
+	# Combo milestone flash decay
+	if _combo_flash_timer > 0:
+		_combo_flash_timer -= delta
+		var flash_progress: float = _combo_flash_timer / GameConstants.COMBO_MILESTONE_FLASH_DURATION
+		flash_progress = clampf(flash_progress, 0.0, 1.0)
+		if _combo_flash_rect:
+			# Fade out the flash
+			var alpha: float = flash_progress * (40.0 / 255.0)  # Max alpha = 40/255 (subtle)
+			var c: Color = _combo_flash_rect.color
+			c.a = alpha
+			_combo_flash_rect.color = c
+			if _combo_flash_timer <= 0:
+				_combo_flash_rect.color = Color(0, 0, 0, 0)
+	
+	# Pickup streak display timer
+	if _pickup_streak_timer > 0:
+		_pickup_streak_timer -= delta
+		if _pickup_streak_timer <= 0 and _pickup_streak_label:
+			_pickup_streak_label.visible = false
 
 	# Smoothly animate bars toward target ratios (frame-rate independent lerp)
 	var weight: float = 1.0 - exp(-_bar_smoothing * delta)
@@ -198,3 +258,17 @@ func _on_boss_defeated(boss: Node) -> void:
 
 func _on_message_added(text: String) -> void:
 	show_message(text, 2.5)
+
+# ─── Combo Milestone Flash ───────────────────────────────────────────────────
+func _on_combo_milestone(combo: int, tier: int, flash_color: Color) -> void:
+	_combo_flash_timer = GameConstants.COMBO_MILESTONE_FLASH_DURATION
+	if _combo_flash_rect:
+		# Set the flash color with initial alpha
+		_combo_flash_rect.color = Color(flash_color.r, flash_color.g, flash_color.b, 40.0 / 255.0)
+
+# ─── Pickup Streak Milestone ──────────────────────────────────────────────────
+func _on_pickup_streak_milestone(streak: int, xp_bonus: int) -> void:
+	if _pickup_streak_label:
+		_pickup_streak_label.text = "✦ PICKUP STREAK x%d (+%d XP)" % [streak, xp_bonus]
+		_pickup_streak_label.visible = true
+		_pickup_streak_timer = GameConstants.PICKUP_STREAK_DISPLAY_LIFETIME

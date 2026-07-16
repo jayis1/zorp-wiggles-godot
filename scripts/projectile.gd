@@ -128,30 +128,30 @@ func _hit_enemy(enemy: Node3D) -> void:
 	var total_damage := damage
 
 	# Crit check
-	var crit_chance := 0.1  # Base 10% crit chance
+	var crit_chance := GameConstants.CRIT_BASE_CHANCE
 	var is_crit := randf() < crit_chance
 	if is_crit:
 		# Crit chain bonus
 		GameManager.player_crit_chain += 1
-		GameManager.player_crit_chain_timer = 3.0
-		var crit_mult := 2.0
-		if GameManager.player_crit_chain >= 3:
-			crit_mult = 3.0  # Chain crit bonus
+		GameManager.player_crit_chain_timer = GameConstants.CRIT_CHAIN_WINDOW
+		var crit_mult := GameConstants.CRIT_BASE_MULT
+		if GameManager.player_crit_chain >= GameConstants.CRIT_CHAIN_THRESHOLD:
+			crit_mult = GameConstants.CRIT_CHAIN_MULT  # Chain crit bonus: 3x
 		total_damage = int(total_damage * crit_mult)
 
+	# Check if this will be a kill before applying damage
+	var will_kill: bool = false
 	if enemy.has_method("take_damage"):
+		if "hp" in enemy and "max_hp" in enemy:
+			will_kill = total_damage >= enemy.hp
 		enemy.take_damage(total_damage)
 
-	# Damage number popup (will be added by builder)
-	_spawn_damage_number(total_damage, is_crit)
+	# Damage number popup
+	DamageNumber.spawn(get_parent(), global_position, total_damage, is_crit, will_kill)
 
 	# Impact effect
 	_impact_effect()
 	queue_free()
-
-func _spawn_damage_number(amount: int, is_crit: bool) -> void:
-	# TODO: Spawn floating damage number at impact point
-	pass
 
 func _impact_effect() -> void:
 	# Spawn impact burst effect

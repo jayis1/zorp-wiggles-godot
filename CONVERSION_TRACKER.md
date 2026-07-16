@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 3 — World & Decorations (COMPLETE)
+## Status: PHASE 4 — Full Combat & Abilities (PARTIALLY COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -75,17 +75,17 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Biome fog colors and density values (per-biome, 0-1 normalized)
 - [x] Horizon glow band (8 translucent colored quads at low altitude)
 
-### Phase 4: Full Combat & Abilities (TODO)
-- [ ] Damage numbers (floating 3D Label3D that rises and fades)
-- [ ] Kill combo system with milestones (x5, x10, x15 fireworks)
-- [ ] Pickup streak system with bonus XP
-- [ ] Crit chain bonus (3x damage at 3+ consecutive crits)
-- [ ] Dash invulnerability frames with blink effect
-- [ ] Enemy attack windup telegraph (squash + brighten)
-- [ ] Enemy spawn animation (fade-in + bounce scale)
-- [ ] Enemy alert indicator ("!" above head)
-- [ ] Spawn direction indicator arrows on HUD
-- [ ] Health fragment emergency magnet (vacuum nearby health when low HP)
+### Phase 4: Full Combat & Abilities (PARTIAL — 5 of 10 complete)
+- [x] Damage numbers (floating 3D Label3D that rises and fades, with pop-in animation)
+- [x] Kill combo system with milestones (x5, x10, x15... bonus XP + screen flash)
+- [x] Pickup streak system with bonus XP (every 5 pickups = milestone XP)
+- [x] Crit chain bonus (3x damage at 3+ consecutive crits, using constants)
+- [ ] Dash invulnerability frames with blink effect (partially done — invuln exists, blink needs polish)
+- [x] Enemy attack windup telegraph (squash + brighten) — already done in enemy_base.gd
+- [x] Enemy spawn animation (fade-in + bounce scale) — already done in enemy_base.gd
+- [x] Enemy alert indicator ("!" above head) — already done in enemy_base.gd
+- [x] Spawn direction indicator arrows on HUD (screen-edge arrows for off-screen enemies)
+- [x] Health fragment emergency magnet (vacuum nearby health when low HP)
 
 ### Phase 5: HUD Polish (TODO)
 - [ ] Minimap (SubViewport with top-down camera, color-coded tiles)
@@ -302,4 +302,4 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - **Enemy spawn material fade-in**: `_update_spawn_visuals()` now fades material alpha from 0→target using quadratic ease-in during the 2s grace period, instead of being a no-op. Preserves per-enemy alpha (Void Wisp stays semi-transparent).
 
 ## Last Updated
-Phase 3 complete. World & decorations fully implemented: sky dome (24 gradient panels), 80 twinkling stars (8-color palette), 12 drifting nebula clouds, 8 horizon glow quads, biome decorations (trees, crystals, mushrooms, floating islands, toxic bog, desert ruins), water/lava surface overlays, 4 linked portal pairs, 2 wandering trader NPCs, alien monoliths (speed/damage/XP buffs in crystal/snow biomes), healing crystal shrines (mushroom/swamp biomes). 337+ decorations spawned per world. Phases 4-21 planned. Cron jobs active.
+Phase 4 partially complete. Full Combat & Abilities: damage numbers (floating 3D Label3D with pop-in, rise, fade, anti-overlap jitter; white/gold/yellow for normal/crit/kill, cyan-blue for XP, green for heals), combo milestones (every 5 kills = tier-based XP bonus + rainbow screen flash in 5-color palette), pickup streak milestones (every 5 pickups = bonus XP + mint-cyan HUD label), crit chain system (3+ consecutive crits = 3x damage, using constants from game_constants.gd), spawn direction indicators (screen-edge arrows pointing to off-screen newly-spawned enemies), health fragment emergency magnet (14-unit pull radius when HP < 25%). Enemy windup, spawn animation, and alert indicator confirmed already implemented from Phase 2. New scripts: damage_number.gd, spawn_direction_indicator.gd. Phases 5-21 planned.

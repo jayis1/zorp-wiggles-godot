@@ -317,3 +317,58 @@ const LAVA_GLOW_COLOR: Color = Color(1.0, 120.0 / 255.0, 30.0 / 255.0, 60.0 / 25
 const BOUNCE_PAD_FORCE: float = 25.0
 const BOUNCE_PAD_COLOR: Color = Color(1.0, 200.0 / 255.0, 50.0 / 255.0)
 const BOUNCE_PAD_COOLDOWN: float = 0.5
+
+# ─── Damage Numbers (Phase 4) ─────────────────────────────────────────────────
+const DMG_NUMBER_LIFETIME: float = 1.2
+const DMG_NUMBER_RISE_SPEED: float = 3.0
+const DMG_NUMBER_FADE_START: float = 0.5  # Fraction of lifetime before fade begins
+const DMG_NUMBER_POPIN_DURATION: float = 0.12
+const DMG_NUMBER_POPIN_START_SCALE: float = 0.3
+const DMG_NUMBER_POPIN_PEAK_SCALE: float = 1.15
+const DMG_NUMBER_BASE_SCALE: float = 1.0
+const DMG_NUMBER_CRIT_SCALE: float = 1.25
+const DMG_NUMBER_KILL_SCALE: float = 1.4
+const DMG_NUMBER_CRIT_COLOR: Color = Color(1.0, 215.0 / 255.0, 0.0)   # Gold
+const DMG_NUMBER_KILL_COLOR: Color = Color(1.0, 1.0, 0.0)             # Yellow
+const DMG_NUMBER_NORMAL_COLOR: Color = Color(1.0, 1.0, 1.0)           # White
+const DMG_NUMBER_HEAL_COLOR: Color = Color(80.0 / 255.0, 1.0, 120.0 / 255.0)  # Green
+const DMG_NUMBER_XP_COLOR: Color = Color(100.0 / 255.0, 200.0 / 255.0, 1.0)   # Cyan-blue
+const DMG_NUMBER_JITTER_X: float = 0.8
+const DMG_NUMBER_JITTER_Z: float = 0.4
+
+# ─── Combo Milestones (Phase 4) ───────────────────────────────────────────────
+const COMBO_MILESTONE_INTERVAL: int = 5
+const COMBO_MILESTONE_XP_BASE: int = 20
+const COMBO_MILESTONE_XP_PER_TIER: int = 10
+const COMBO_MILESTONE_FLASH_DURATION: float = 0.3
+const COMBO_MILESTONE_FLASH_COLORS: Array[Color] = [
+	Color(1.0, 60.0 / 255.0, 60.0 / 255.0),    # Tier 1 (x5): Red
+	Color(60.0 / 255.0, 200.0 / 255.0, 1.0),   # Tier 2 (x10): Cyan
+	Color(1.0, 215.0 / 255.0, 50.0 / 255.0),   # Tier 3 (x15): Gold
+	Color(200.0 / 255.0, 60.0 / 255.0, 1.0),   # Tier 4 (x20): Purple
+	Color(60.0 / 255.0, 1.0, 80.0 / 255.0),    # Tier 5 (x25): Green
+]
+
+# ─── Pickup Streak Milestones (Phase 4) ───────────────────────────────────────
+const PICKUP_STREAK_WINDOW: float = 3.0
+const PICKUP_STREAK_MILESTONE_INTERVAL: int = 5
+const PICKUP_STREAK_XP_PER_MILESTONE: int = 15
+const PICKUP_STREAK_DISPLAY_LIFETIME: float = 2.5
+const PICKUP_STREAK_COLOR: Color = Color(100.0 / 255.0, 1.0, 180.0 / 255.0)  # Mint-cyan
+
+# ─── Crit Chain (Phase 4) ─────────────────────────────────────────────────────
+const CRIT_CHAIN_WINDOW: float = 3.0
+const CRIT_CHAIN_THRESHOLD: int = 3
+const CRIT_CHAIN_MULT: float = 3.0
+const CRIT_BASE_CHANCE: float = 0.1
+const CRIT_BASE_MULT: float = 2.0
+
+# ─── Emergency Health Magnet (Phase 4) ────────────────────────────────────────
+const EMERGENCY_HP_THRESHOLD: float = 0.25
+const HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS: float = 14.0
+const HEALTH_FRAGMENT_EMERGENCY_PULL_SPEED: float = 18.0
+
+# ─── Spawn Direction Indicator (Phase 4) ──────────────────────────────────────
+const SPAWN_DIRECTION_INDICATOR_DURATION: float = 2.0
+const SPAWN_DIRECTION_INDICATOR_DISTANCE: float = 250.0  # Screen-edge offset
+const SPAWN_DIRECTION_ARROW_COLOR: Color = Color(1.0, 0.4, 0.2, 0.8)
