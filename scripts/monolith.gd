@@ -42,14 +42,7 @@ func _ready() -> void:
 	_glow_phase = randf() * TAU
 	_build_visuals()
 
-	# Collision for activation detection
-	var col_shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(2.0, 6.0, 2.0)
-	col_shape.shape = box
-	col_shape.position = Vector3(0, 3.0, 0)
-	add_child(col_shape)
-
+	# Collision shape is provided by the scene (MonolithCollision) — no need to create a duplicate.
 	body_entered.connect(_on_body_entered)
 
 func _build_visuals() -> void:

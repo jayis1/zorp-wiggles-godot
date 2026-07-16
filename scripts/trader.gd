@@ -27,7 +27,8 @@ const TRADE_ITEMS: Array[String] = [
 ]
 
 # ─── Child nodes ─────────────────────────────────────────────────────────────
-var _body_mesh: MeshInstance3D
+@onready var _body_mesh: MeshInstance3D = $BodyMesh
+@onready var _collision_shape: CollisionShape3D = $CollisionShape3D
 var _hat_mesh: MeshInstance3D
 var _eye_l: MeshInstance3D
 var _eye_r: MeshInstance3D
@@ -48,14 +49,9 @@ func _update_home() -> void:
 	_home = global_position
 
 func _build_visuals() -> void:
-	# Main body — sphere
-	var body_sphere := SphereMesh.new()
-	body_sphere.radius = 1.0
-	body_sphere.height = 2.0
-	_body_mesh = MeshInstance3D.new()
-	_body_mesh.mesh = body_sphere
-	_body_mesh.material_override = _make_mat(GameConstants.TRADER_BODY_COLOR)
-	add_child(_body_mesh)
+	# Apply material to the body mesh provided by the scene
+	if _body_mesh:
+		_body_mesh.material_override = _make_mat(GameConstants.TRADER_BODY_COLOR)
 
 	# Hat — small box on top
 	var hat_box := BoxMesh.new()
@@ -94,12 +90,7 @@ func _build_visuals() -> void:
 	_glow_light.light_energy = 0.0  # Off until player is close
 	add_child(_glow_light)
 
-	# Collision shape for Area3D detection (trader can be walked up to)
-	var col_shape := CollisionShape3D.new()
-	var sphere := SphereShape3D.new()
-	sphere.radius = 1.0
-	col_shape.shape = sphere
-	add_child(col_shape)
+	# Collision shape is provided by the scene (CollisionShape3D) — no need to create a duplicate.
 
 func _physics_process(delta: float) -> void:
 	_time += delta

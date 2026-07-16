@@ -27,15 +27,7 @@ func _ready() -> void:
 	_bob_offset = randf() * TAU
 	_build_visuals()
 
-	# Set up collision for teleport detection
-	var col_shape := CollisionShape3D.new()
-	var cylinder := CylinderShape3D.new()
-	cylinder.radius = 1.5
-	cylinder.height = 3.0
-	col_shape.shape = cylinder
-	col_shape.position = Vector3(0, 1.5, 0)
-	add_child(col_shape)
-
+	# Collision shape is provided by the scene (PortalCollision) — no need to create a duplicate.
 	body_entered.connect(_on_body_entered)
 
 func _build_visuals() -> void:

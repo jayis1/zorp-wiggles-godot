@@ -98,6 +98,8 @@ func _die() -> void:
 				mini_blob.set("score_reward", 25)
 				get_parent().add_child(mini_blob)
 				mini_blob.global_position = seg.global_position
+				# Track mini-blob so it is cleaned up on restart and counted by the spawner
+				GameManager.enemies.append(mini_blob)
 				seg.queue_free()
 
 	segment_nodes.clear()

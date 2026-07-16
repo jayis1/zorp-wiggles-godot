@@ -197,11 +197,14 @@ func _die() -> void:
 func restart_game() -> void:
 	# Clear enemies, collectibles, projectiles
 	for enemy in enemies:
-		enemy.queue_free()
+		if is_instance_valid(enemy):
+			enemy.queue_free()
 	for collectible in collectibles:
-		collectible.queue_free()
+		if is_instance_valid(collectible):
+			collectible.queue_free()
 	for proj in projectiles:
-		proj.queue_free()
+		if is_instance_valid(proj):
+			proj.queue_free()
 	enemies.clear()
 	collectibles.clear()
 	projectiles.clear()

@@ -49,10 +49,18 @@ func _physics_process(delta: float) -> void:
 	if not is_enraged and float(hp) / float(max_hp) < GameConstants.DRAKE_ENRAGE_HP_THRESHOLD:
 		_enter_enrage()
 	
-	super._physics_process(delta)
-	
+	# Handle boss attacks first — this may set velocity for charging
 	if is_alerted and not is_dead:
 		_update_boss_attacks(delta)
+	
+	# If charging, skip normal AI (which would overwrite velocity) but still
+	# need move_and_slide to apply the charge velocity
+	if is_charging:
+		move_and_slide()
+		return
+	
+	# Normal AI behavior via base class (handles detection, movement, timers, move_and_slide)
+	super._physics_process(delta)
 
 func _enter_enrage() -> void:
 	is_enraged = true
@@ -94,6 +102,8 @@ func _update_boss_attacks(delta: float) -> void:
 		charge_dir = (player.global_position - global_position).normalized()
 		charge_dir.y = 0
 		charge_duration = 0.8
+		# Set charge velocity immediately so the first frame of charging moves the drake
+		velocity = charge_dir * GameConstants.DRAKE_CHARGE_SPEED
 		return
 
 	# Fire breath
