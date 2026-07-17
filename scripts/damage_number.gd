@@ -66,9 +66,11 @@ func _process(delta: float) -> void:
 
 func _update_popin() -> void:
 	# Pop-in: start_scale → peak_scale → settle_scale using proper easing curves.
-	# First half uses ease-out cubic for a quick, decisive pop. Second half uses
-	# ease-out quartic for a soft landing. Replaces the previous linear lerp with
-	# the same juice techniques used on dash squash.
+	# First half uses ease-out cubic (1-(1-t)^3) for a quick, decisive pop.
+	# Second half uses ease-out quartic (1-(1-t)^4) for a soft, decelerating landing.
+	# Replaces the previous linear lerp with the same juice techniques used on
+	# dash squash. Note: Godot's ease(t, curve) uses curve<1 for ease-out, but
+	# the manual pow formula is clearer and matches standard animation terminology.
 	var progress: float = 1.0 - (popin_timer / GameConstants.DMG_NUMBER_POPIN_DURATION)
 	progress = clampf(progress, 0.0, 1.0)
 
@@ -78,12 +80,12 @@ func _update_popin() -> void:
 
 	var current_scale: float
 	if progress < 0.6:
-		# Ramp from start to peak (first 60%) — ease-out cubic (1-(1-t)^3)
-		var t: float = ease(progress / 0.6, -3.0)
+		# Ramp from start to peak (first 60%) — ease-out cubic: fast pop, decelerates
+		var t: float = 1.0 - pow(1.0 - progress / 0.6, 3.0)
 		current_scale = lerpf(start_s, peak_s, t)
 	else:
-		# Settle from peak to base (last 40%) — ease-out quartic for a soft landing
-		var t: float = ease((progress - 0.6) / 0.4, -4.0)
+		# Settle from peak to base (last 40%) — ease-out quartic: soft landing
+		var t: float = 1.0 - pow(1.0 - (progress - 0.6) / 0.4, 4.0)
 		current_scale = lerpf(peak_s, settle_s, t)
 
 	scale = Vector3.ONE * current_scale * _base_scale
