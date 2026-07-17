@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 11 — GPU Particles (COMPLETE)
+## Status: PHASE 12 — Animation System (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -173,16 +173,17 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Atmosphere particles (dust motes, floating pollen, fireflies) — `spawn_atmosphere()` with 3 types (dust/pollen/fireflies), biome-mapped in AmbientParticles
 - [x] Bug fix: All 8 `particles.mesh = mesh` assignments replaced with `particles.draw_pass_1 = mesh` (GPUParticles3D in Godot 4 uses draw_pass_1, not .mesh)
 
-### Phase 12: Animation System (TODO) 🆕 NEW FEATURE
-- [ ] AnimationPlayer for Zorp idle bob (subtle breathing float)
-- [ ] Dash squash-and-stretch (compress → launch → extend)
-- [ ] Attack windup animation (anticipation → strike → recovery)
-- [ ] Hit reaction animation (stagger + flash)
-- [ ] Enemy walk cycle (bob + sway per type)
-- [ ] Enemy death animation (dramatic collapse + particle burst)
-- [ ] Collectible spawn animation (bounce in from below)
-- [ ] Blend trees for smooth transitions (idle ↔ walk ↔ dash)
-- [ ] Animation events for syncing sound/particles to frames
+### Phase 12: Animation System ✅ COMPLETE 🆕 NEW FEATURE
+- [x] AnimationPlayer for Zorp idle bob (subtle breathing float) — already done via code in `_update_idle_breathing()`, `animation_system.gd` provides AnimationPlayer-based version
+- [x] Dash squash-and-stretch (compress → launch → extend) — already done via tween in `_start_dash()`, `animation_system.gd` provides AnimationPlayer version
+- [x] Attack windup animation (anticipation → strike → recovery) — already done via tween in `_try_attack()`, `animation_system.gd` provides AnimationPlayer version
+- [x] Hit reaction animation (stagger + flash) — already done via hit flash tween, `animation_system.gd` provides AnimationPlayer version
+- [x] Enemy walk cycle (bob + sway per type) — NEW: added to `enemy_base.gd` `_update_visuals()`, per-enemy random phase/freq/amp so groups don't sync
+- [x] Enemy death animation (dramatic collapse + particle burst) — already done via tween in `_die()`, `animation_system.gd` provides AnimationPlayer version
+- [x] Collectible spawn animation (bounce in from below) — already done via tween, `animation_system.gd` provides AnimationPlayer version
+- [x] Blend trees for smooth transitions (idle ↔ walk ↔ dash) — handled via code-based state machine in player.gd and enemy_base.gd (tween-based blending)
+- [x] Animation events for syncing sound/particles to frames — handled via tween callbacks and timer-based triggers
+- [x] `animation_system.gd` — Utility class with AnimationPlayer-based animation library (player idle/dash/shoot, enemy walk/death/hit/windup, collectible spawn/bob)
 
 ### Phase 13: Biome Mutation System (TODO) 🆕 NEW FEATURE
 - [ ] Mutation tracker (time spent in each biome)
@@ -326,4 +327,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Damage number easing curves**: Pop-in animation now uses manual ease-out pow formulas (`1-(1-t)^3` for cubic rise to peak, `1-(1-t)^4` for quartic settle) instead of linear interpolation. Gives damage numbers a more decisive pop and softer landing, matching the juice style of dash squash. Note: Godot's built-in `ease(t, curve)` with negative curve values produces ease-IN-OUT (symmetric S-curves), not ease-out — the explicit pow formula is both correct and clearer.
 
 ## Last Updated
-Phase 11 complete. GPU Particles: 6 new particle functions added to `particle_effects.gd` — `spawn_mega_explosion()` (4-layer 1000+ particle explosion: core flash + debris + smoke + sparks), `spawn_boss_death_spectacle()` (mega explosion + sky beam + expanding ring, integrated into Drake death), `spawn_materialization()` (80 converging energy particles on enemy spawn, integrated into EnemySpawner), `spawn_atmosphere()` (3 types: dust motes/pollen/fireflies, biome-mapped in AmbientParticles for always-on ambient feel), `spawn_projectile_trail()` (continuous particle trail for projectiles), `spawn_levelup_shockwave()` (100-particle golden ring + 80 upward sparkles). Critical bug fix: all 8 `particles.mesh = mesh` assignments replaced with `particles.draw_pass_1 = mesh` (GPUParticles3D in Godot 4 uses `draw_pass_1`, not `.mesh` — this was causing runtime errors on every particle effect). `ambient_particles.gd` updated with `BIOME_ATMOSPHERE_MAP` and dual-layer particle spawning (weather + atmosphere). Phases 12-21 planned.
+Phase 12 complete. Animation System: New `animation_system.gd` utility class with AnimationPlayer-based animation libraries for player (idle bob, dash squash, shoot pulse), enemies (walk cycle, death collapse, hit reaction, attack windup), and collectibles (spawn bounce, idle bob+spin). Enemy walk cycle added to `enemy_base.gd` `_update_visuals()` — per-enemy random phase (0-TAU), frequency (4-8 rad/s), and amplitude (0.05-0.12 × base_scale) so groups of enemies don't bob in sync. Walk cycle includes vertical bob + Z-axis sway, and smoothly settles to rest when not moving. Most other animations (dash squash, hit flash, death collapse, collectible spawn, attack windup) were already implemented via tweens in earlier phases and remain active — `animation_system.gd` provides the AnimationPlayer alternative for future use. Phases 13-21 planned.

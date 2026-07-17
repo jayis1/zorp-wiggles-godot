@@ -45,6 +45,12 @@ var current_color: Color = Color.RED
 @export var base_scale: float = 1.0
 var _material: StandardMaterial3D = null
 
+# ── Phase 12: Walk cycle animation ──
+# Per-enemy random phase/freq/amp so groups of enemies don't bob in sync.
+var _walk_phase: float = 0.0
+var _walk_freq: float = 6.0   # Bob frequency (rad/s)
+var _walk_amp: float = 0.08   # Bob amplitude (meters)
+
 # ─── Movement Smoothing ──────────────────────────────────────────────────────
 ## Higher = snappier velocity changes. ~8 = smooth organic, ~20 = tight.
 @export var velocity_smoothing: float = 8.0
@@ -75,6 +81,11 @@ func _ready() -> void:
 	if use_smart_ai:
 		ai_controller = EnemyAIController.new()
 		ai_controller.setup(self)
+
+	# ── Phase 12: Random walk cycle parameters ──
+	_walk_phase = randf_range(0.0, TAU)
+	_walk_freq = randf_range(4.0, 8.0)
+	_walk_amp = randf_range(0.05, 0.12) * base_scale
 
 	# Spawn grace period — enemy can't detect player for a bit
 	spawn_grace_timer = GameConstants.ENEMY_SPAWN_GRACE_PERIOD
@@ -453,6 +464,22 @@ func _update_spawn_visuals(delta: float) -> void:
 func _update_visuals(delta: float) -> void:
 	# Update HP bar color based on HP ratio
 	var ratio: float = float(hp) / float(max_hp) if max_hp > 0 else 0.0
+
+	# ── Phase 12: Enemy walk cycle bob ──
+	# Subtle vertical bob + sway while moving, giving enemies a more organic feel.
+	# Each enemy gets a random phase so groups don't sync.
+	if not is_windup and not is_attacking and velocity.length() > 0.5:
+		_walk_phase += delta * _walk_freq
+		if body_mesh:
+			var bob_y: float = sin(_walk_phase) * _walk_amp
+			body_mesh.position.y = 0.5 + bob_y
+			# Slight Z sway
+			var sway: float = sin(_walk_phase * 0.5) * 0.08
+			body_mesh.rotation.z = sway
+	elif body_mesh and not is_windup:
+		# Settle to rest position when not moving
+		body_mesh.position.y = move_toward(body_mesh.position.y, 0.5, delta * 3.0)
+		body_mesh.rotation.z = move_toward(body_mesh.rotation.z, 0.0, delta * 3.0)
 
 	# Low-HP warning pulse — only when not currently being hit-flashed
 	# (hit flash tween controls _material.albedo_color during its 0.15s duration)
