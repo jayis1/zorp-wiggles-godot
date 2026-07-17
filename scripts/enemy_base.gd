@@ -399,8 +399,13 @@ func _execute_attack(player: Node3D) -> void:
 		# Deal damage to P1 (pass enemy position for damage direction indicator)
 		GameManager.take_damage(damage, global_position)
 
-	# Camera shake on player hit
-	_trigger_camera_trauma(0.2)
+	# Camera shake on player hit — biased toward the enemy's attack direction
+	# so the camera lurches away from the attacker, reinforcing the hit feel.
+	var attack_dir: Vector3 = Vector3.ZERO
+	if player and is_instance_valid(player):
+		attack_dir = (player.global_position - global_position).normalized()
+		attack_dir.y = 0
+	_trigger_camera_trauma(0.2, attack_dir)
 
 	# Forward lunge
 	var lunge_dir := (player.global_position - global_position).normalized()
@@ -550,6 +555,15 @@ func _die() -> void:
 	# Phase 6: Death poof particles
 	ParticleEffects.spawn_death_poof(get_parent(), global_position, base_color, base_scale)
 
+	# ── Death shockwave ring for large enemies — a flat expanding ring that
+	#    gives bigger enemies a weighty, cinematic death impact. Small enemies
+	#    (Blobs, Wisps, Swarm Mites) just get the poof; larger foes (Sentinels,
+	#    Drakes, Crystal Guardians, Bombers) get the ring too. Ring radius
+	#    scales with enemy size so a Drake gets a bigger shockwave than a Bomber.
+	if base_scale >= 1.5:
+		var shockwave_radius: float = clampf(base_scale * 3.5, 4.0, 12.0)
+		ParticleEffects.spawn_death_shockwave(get_parent(), global_position, base_color, shockwave_radius)
+
 	# ── Death light flash ── A brief OmniLight3D that flashes the enemy's
 	# color at the death point, then fades. Gives extra punch in dark biomes
 	# where the particle burst alone can be hard to see. Intensity scales
@@ -632,10 +646,10 @@ func _update_visuals(delta: float) -> void:
 			warning_color.a = _spawn_target_alpha
 			_material.albedo_color = warning_color
 
-func _trigger_camera_trauma(amount: float) -> void:
+func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
-		cam_rig.add_trauma(amount)
+		cam_rig.add_trauma(amount, bias_dir)
 
 # ─── Phase 16: Weapon Mod Crafting — material drops ───────────────────────────
 

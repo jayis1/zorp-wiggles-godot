@@ -256,6 +256,45 @@ static func spawn_death_poof(parent: Node, pos: Vector3, color: Color = Color(0.
 	particles.global_position = pos
 	_free_after_lifetime(particles, 0.9)
 
+## Spawn a flat expanding shockwave ring on large enemy deaths. This is a
+## purely visual effect (no gameplay Area3D) — a quick ring that expands
+## outward from the death point and fades, giving large enemies a weighty
+## death impact. Scale determines the ring's max radius. Used by enemies
+## with base_scale >= 1.5 (Sentinels, Drakes, Crystal Guardians, Bombers).
+static func spawn_death_shockwave(parent: Node, pos: Vector3, color: Color = Color(1.0, 0.5, 0.2),
+		max_radius: float = 6.0) -> void:
+	var ring := MeshInstance3D.new()
+	var ring_mesh := CylinderMesh.new()
+	ring_mesh.top_radius = 1.0
+	ring_mesh.bottom_radius = 1.0
+	ring_mesh.height = 0.08
+	ring_mesh.radial_segments = 24
+	ring_mesh.rings = 2
+	ring.mesh = ring_mesh
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(color.r, color.g, color.b, 0.7)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.emission_enabled = true
+	mat.emission = color * 0.6
+	mat.emission_energy_multiplier = 2.0
+	ring.material_override = mat
+	ring.rotate_x(deg_to_rad(90))  # Lay flat on ground
+	parent.add_child(ring)
+	ring.global_position = pos + Vector3(0, 0.05, 0)
+	ring.scale = Vector3.ONE * 0.3
+
+	# Expand + fade with ease-out for a sharp burst that decelerates
+	var ring_tween := ring.create_tween()
+	ring_tween.set_parallel(true)
+	ring_tween.tween_property(ring, "scale", Vector3(max_radius, max_radius, 1.0), 0.4) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	ring_tween.tween_property(mat, "albedo_color:a", 0.0, 0.4) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	ring_tween.tween_property(mat, "emission_energy_multiplier", 0.0, 0.4) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	ring_tween.chain().tween_callback(ring.queue_free)
+
 ## Spawn a vertical sky beam — tall light column for rare pickups.
 static func spawn_sky_beam(parent: Node, pos: Vector3, color: Color = Color(1.0, 0.9, 0.3),
 		height: float = 30.0) -> void:

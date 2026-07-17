@@ -259,18 +259,24 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	hp_changed.emit(player_hp, player_max_hp)
 	# Phase 20: Audio — damage SFX
 	AudioManager.play_sfx(AudioManager.SFX_DAMAGE)
-	# Camera shake on taking damage
-	_trigger_camera_trauma(0.35)
+	# Camera shake on taking damage — biased toward the damage source so
+	# the shake direction matches the hit direction, reinforcing the
+	# damage direction indicator. The bias makes the camera lurch away
+	# from the attacker for a visceral "hit from the left" feel.
+	var shake_dir: Vector3 = Vector3.ZERO
+	if source_pos != Vector3.ZERO and player and is_instance_valid(player):
+		shake_dir = (player.global_position - source_pos).normalized()
+	_trigger_camera_trauma(0.35, shake_dir)
 	# Phase 5: Emit damage direction signal (if source_pos is non-zero)
 	if source_pos != Vector3.ZERO:
 		damage_taken_from.emit(source_pos)
 	if player_hp <= 0:
 		_die()
 
-func _trigger_camera_trauma(amount: float) -> void:
+func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> void:
 	var cam_rig: Node3D = camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
-		cam_rig.add_trauma(amount)
+		cam_rig.add_trauma(amount, bias_dir)
 
 func heal(amount: int) -> void:
 	player_hp = min(player_max_hp, player_hp + amount)

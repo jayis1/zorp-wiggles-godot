@@ -57,6 +57,17 @@ const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
 const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
 const _IDLE_EMISSION_MAX: float = 1.3    # Idle emission pulse max
 
+# ── Low-HP heartbeat: when HP drops below 25%, Zorp's mesh pulses with a
+#    rhythmic "thump-thump" scale animation synced to a heartbeat interval.
+#    This communicates danger through motion — the player feels the urgency
+#    without needing to look at the HP bar. The emission also pulses red-ish
+#    on each beat for a visceral "danger" read. Skipped during dash/slide
+#    (their tweens own mesh.scale) and invuln-blinking (toggles visibility).
+var _heartbeat_phase: float = 0.0
+const _HEARTBEAT_BPM: float = 90.0       # Heartbeat tempo (faster = more urgent)
+const _HEARTBEAT_HP_THRESHOLD: float = 0.25  # Start heartbeat below 25% HP
+const _HEARTBEAT_SCALE_AMP: float = 0.06     # Scale pulse amplitude (subtle)
+
 # ── Movement lean: Zorp's mesh tilts subtly toward the direction of motion,
 #    giving a sense of weight and momentum. The lean is smoothed via exponential
 #    lerp so it eases in/out rather than snapping. Skipped during dash/slide
@@ -178,6 +189,7 @@ func _physics_process(delta: float) -> void:
 	_handle_invuln_blink(delta)
 	_update_idle_breathing(delta)
 	_update_movement_lean(delta)
+	_update_low_hp_heartbeat(delta)
 
 	move_and_slide()
 
@@ -201,6 +213,52 @@ func _update_idle_breathing(delta: float) -> void:
 		var pulse: float = 0.5 + 0.5 * sin(_idle_phase)
 		_player_material.emission_energy_multiplier = lerpf(
 			_IDLE_EMISSION_MIN, _IDLE_EMISSION_MAX, pulse)
+
+# ── Low-HP heartbeat: when HP is below the threshold, Zorp's mesh throbs with
+#    a double-pulse "lub-dub" heartbeat pattern. The pulse uses a phase
+#    accumulator driven by BPM, with two Gaussian-style bumps per beat (the
+#    first louder, the second softer). Scale pulses outward; emission shifts
+#    toward red on each beat. Skipped during dash/slide (tween conflict) and
+#    invuln-blinking (visibility toggle conflict). This adds visceral tension
+#    without requiring the player to watch the HP bar.
+func _update_low_hp_heartbeat(delta: float) -> void:
+	var hp_ratio: float = float(GameManager.player_hp) / float(GameManager.player_max_hp) \
+		if GameManager.player_max_hp > 0 else 1.0
+	if hp_ratio > _HEARTBEAT_HP_THRESHOLD or hp_ratio <= 0.0:
+		# Not in danger — ensure mesh scale is at rest (if it was pulsing)
+		if mesh and not is_dashing and not is_sliding and not is_invuln_blinking:
+			# Ease scale back to ONE only if it was offset by heartbeat
+			mesh.scale = mesh.scale.lerp(Vector3.ONE, 1.0 - exp(-12.0 * delta))
+		return
+	if is_dashing or is_sliding or is_invuln_blinking:
+		return  # Other systems own mesh.scale/visibility right now
+
+	# Advance heartbeat phase (BPM → rad/s)
+	_heartbeat_phase += delta * (_HEARTBEAT_BPM / 60.0) * TAU
+	var beat_phase: float = fmod(_heartbeat_phase, TAU)  # 0..TAU per beat
+
+	# Double-pulse "lub-dub": two Gaussian bumps, first at phase 0, second at ~0.35*TAU
+	# The first pulse is stronger (the "lub"), the second is softer (the "dub").
+	var pulse1: float = exp(-pow((beat_phase - 0.0) * 2.5, 2.0))       # First beat
+	var pulse2: float = exp(-pow((beat_phase - TAU * 0.32) * 3.5, 2.0)) * 0.6  # Second beat (softer)
+	var heartbeat: float = pulse1 + pulse2  # 0..~1.6
+
+	# Apply scale pulse — grows outward on each beat, returns to 1.0 between beats
+	if mesh:
+		var pulse_scale: float = 1.0 + _HEARTBEAT_SCALE_AMP * heartbeat
+		# Smooth toward the target so the pulse eases rather than snaps
+		mesh.scale = mesh.scale.lerp(Vector3.ONE * pulse_scale, 1.0 - exp(-20.0 * delta))
+
+	# Emission pulses red on each beat for a "danger" visual cue
+	if _player_material and heartbeat > 0.01:
+		var danger_blend: float = clampf(heartbeat * 0.4, 0.0, 0.5)
+		var danger_color: Color = base_color.lerp(Color(1.0, 0.2, 0.15), danger_blend)
+		_player_material.emission = danger_color * 0.4
+		_player_material.emission_energy_multiplier = 1.0 + heartbeat * 0.8
+	elif _player_material:
+		# Between beats, ease emission back to the idle color
+		var idle_emission: Color = base_color * 0.4
+		_player_material.emission = _player_material.emission.lerp(idle_emission, 1.0 - exp(-8.0 * delta))
 
 # ── Movement lean: tilts Zorp's mesh toward the velocity direction for a
 #    sense of weight and momentum. The tilt is proportional to speed and
@@ -374,8 +432,8 @@ func _update_slide(delta: float) -> void:
 		normal = normal.normalized()
 		# Reflect slide velocity around the collision normal
 		slide_velocity = slide_velocity.bounce(normal) * GameConstants.DASH_BOUNCE_RESTITUTION
-		# Small camera shake on wall bump
-		_trigger_camera_trauma(0.1)
+		# Small camera shake on wall bump — biased toward the wall normal
+		_trigger_camera_trauma(0.1, normal)
 		# Sparkle on bounce
 		ParticleEffects.spawn_dash_trail(get_parent(), global_position, Color(0.5, 0.8, 1.0))
 
@@ -671,10 +729,10 @@ func _try_pulse_wave_or_buffer() -> void:
 	_pulse_buffer_timer = 0.0
 	_use_pulse_wave()
 
-func _trigger_camera_trauma(amount: float) -> void:
+func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
-		cam_rig.add_trauma(amount)
+		cam_rig.add_trauma(amount, bias_dir)
 
 # ── Phase 13: Biome Mutation System — visual color shifts ─────────────────────
 # Applied by MutationSystem when a mutation activates/deactivates.

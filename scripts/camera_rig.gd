@@ -69,6 +69,14 @@ var _target_pitch: float = 0.0
 var _trauma: float = 0.0  # 0..1, decays over time
 var _shake_seed: Vector3 = Vector3.ZERO  # Random seeds for noise
 
+# ── Directional shake bias ── When trauma is added with a direction (e.g. from
+#    a hit on the player's left), the shake offset is biased slightly toward
+#    that direction. This makes impacts feel directional — a hit from the right
+#    pushes the camera right, reinforcing the damage direction indicator.
+#    The bias decays with trauma so the shake returns to centered noise.
+var _shake_bias_dir: Vector3 = Vector3.ZERO  # Normalized horizontal direction
+var _shake_bias_strength: float = 0.0        # 0..1, how much bias to apply
+
 func _ready() -> void:
 	if target:
 		_target_node = get_node_or_null(target)
@@ -183,14 +191,28 @@ func _apply_screen_shake(delta: float) -> void:
 	if shake_amount > 0.001:
 		# Use time-based pseudo-noise for shake (sin with different frequencies)
 		var t: float = Time.get_ticks_msec() * 0.05
-		var offset_x: float = sin(t + _shake_seed.x) * max_shake_offset * shake_amount
-		var offset_y: float = sin(t * 1.3 + _shake_seed.y) * max_shake_offset * shake_amount
+		var noise_x: float = sin(t + _shake_seed.x) * max_shake_offset * shake_amount
+		var noise_y: float = sin(t * 1.3 + _shake_seed.y) * max_shake_offset * shake_amount
 		var rot_z: float = sin(t * 0.9 + _shake_seed.z) * max_shake_rotation * shake_amount
 
-		camera.position.x = offset_x
-		camera.position.y = offset_y
+		# Directional bias: blend the noise with a directional offset that
+		# pushes the camera toward the impact source. The bias fades with
+		# trauma so the early frames of the shake are directional (punchy
+		# directional kick) and later frames are pure noise (organic rattle).
+		# This makes hits feel like they come *from* somewhere rather than
+		# being a generic screen wobble.
+		var bias_amt: float = _shake_bias_strength * shake_amount * max_shake_offset * 0.5
+		var bias_x: float = _shake_bias_dir.x * bias_amt
+		var bias_z: float = _shake_bias_dir.z * bias_amt  # Z bias affects Y in camera local space via rig pitch
+		# Also add a slight Y bias for vertical feel (e.g. explosions below push down)
+		var bias_y: float = _shake_bias_dir.z * bias_amt * 0.3
+
+		camera.position.x = noise_x + bias_x
+		camera.position.y = noise_y + bias_y
 		camera.position.z = _current_zoom_distance  # Preserve zoom distance
-		camera.rotation_degrees.z = rot_z
+		# Rotation bias: tilt the camera roll slightly toward the hit direction
+		var bias_rot: float = _shake_bias_dir.x * _shake_bias_strength * shake_amount * max_shake_rotation * 0.3
+		camera.rotation_degrees.z = rot_z + bias_rot
 	else:
 		# Restore camera local transform (keep zoom distance)
 		camera.position.x = 0.0
@@ -199,8 +221,20 @@ func _apply_screen_shake(delta: float) -> void:
 		camera.rotation_degrees.z = 0.0
 
 ## Add screen shake trauma (0..1). Clamps to 1.0. Multiple calls stack additively.
-func add_trauma(amount: float) -> void:
+## Optional `bias_dir` (world-space horizontal direction) biases the shake offset
+## toward the impact source so hits feel directional. The bias strength is set
+## to the trauma amount (bigger hits = more directional kick).
+func add_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> void:
 	_trauma = clampf(_trauma + amount, 0.0, 1.0)
+	# Set directional bias if provided. Horizontal-only (y=0) since the camera
+	# shake operates on the X/Y local plane.
+	if bias_dir.length_squared() > 0.01:
+		var horiz := Vector3(bias_dir.x, 0.0, bias_dir.z).normalized()
+		_shake_bias_dir = horiz
+		_shake_bias_strength = clampf(amount, 0.0, 1.0)
+	else:
+		# No direction → decay any existing bias so it returns to centered noise
+		_shake_bias_strength = maxf(_shake_bias_strength * 0.5, 0.0)
 
 ## Kick the camera FOV up by `kick_amount` degrees for a speed sensation.
 ## Called on dash. The FOV then eases back to `default_fov` in _process.

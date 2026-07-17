@@ -240,7 +240,20 @@ func _process(delta: float) -> void:
 	if level_up_display_timer > 0:
 		level_up_display_timer -= delta
 		if level_up_display_timer <= 0:
-			level_up_text.visible = false
+			# Smooth fade-out + scale down instead of a hard disappear
+			if level_up_text:
+				if level_up_text.has_meta("_lv_tween") and is_instance_valid(level_up_text.get_meta("_lv_tween") as Tween):
+					(level_up_text.get_meta("_lv_tween") as Tween).kill()
+				var fade_tween := create_tween()
+				fade_tween.tween_property(level_up_text, "modulate:a", 0.0, 0.3) \
+					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+				fade_tween.parallel().tween_property(level_up_text, "scale", Vector3.ONE * 0.8, 0.3) \
+					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+				fade_tween.tween_callback(func():
+					level_up_text.visible = false
+					level_up_text.modulate.a = 1.0
+					level_up_text.scale = Vector3.ONE
+				)
 	
 	# Combo milestone flash decay
 	if _combo_flash_timer > 0:
@@ -329,6 +342,22 @@ func _on_level_up(level: int) -> void:
 	level_up_text.text = "LEVEL UP! → Lv %d" % level
 	level_up_text.visible = true
 	level_up_display_timer = 3.0
+	# Animated scale-in with bounce overshoot — the text pops in from zero
+	# scale, overshoots slightly, then settles. This makes level-ups feel
+	# celebratory instead of a flat text swap. The tween is killed if a
+	# new level-up happens before it completes (via kill + recreate).
+	if level_up_text:
+		# Kill any existing tween on the label to avoid stacking
+		if level_up_text.has_meta("_lv_tween") and is_instance_valid(level_up_text.get_meta("_lv_tween") as Tween):
+			(level_up_text.get_meta("_lv_tween") as Tween).kill()
+		level_up_text.scale = Vector3.ZERO
+		level_up_text.modulate.a = 1.0
+		var lv_tween := create_tween()
+		lv_tween.tween_property(level_up_text, "scale", Vector3.ONE * 1.25, 0.25) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		lv_tween.tween_property(level_up_text, "scale", Vector3.ONE, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		level_up_text.set_meta("_lv_tween", lv_tween)
 	show_message("Level Up! Full HP restored!", 3.0)
 
 func _on_combo_changed(count: int) -> void:
@@ -342,6 +371,19 @@ func _on_combo_changed(count: int) -> void:
 			combo_text.add_theme_color_override("font_color", GameConstants.C_COMBO_ORANGE)
 		else:
 			combo_text.add_theme_color_override("font_color", GameConstants.C_COMBO_GOLD)
+		# Punch-in scale pop on each combo increment — quick squash to 1.3x
+		# then elastic settle back to 1.0. Gives each combo tick a juicy
+		# "thwack" feel. Only plays if the label is already visible (not
+		# the first combo hit which already has scale=1).
+		if combo_text:
+			if combo_text.has_meta("_combo_tween") and is_instance_valid(combo_text.get_meta("_combo_tween") as Tween):
+				(combo_text.get_meta("_combo_tween") as Tween).kill()
+			var combo_tween := create_tween()
+			combo_tween.tween_property(combo_text, "scale", Vector3.ONE * 1.3, 0.06) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			combo_tween.tween_property(combo_text, "scale", Vector3.ONE, 0.15) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+			combo_text.set_meta("_combo_tween", combo_tween)
 	else:
 		combo_text.visible = false
 
