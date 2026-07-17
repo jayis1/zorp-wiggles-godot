@@ -133,19 +133,23 @@ func _shoot_dark_projectile(player: Node3D) -> void:
 		return
 
 	var proj: Area3D = proj_scene.instantiate()
-	get_parent().add_child(proj)
-	proj.global_position = global_position + Vector3(0, 0.5, 0) + dir * 0.8
+	# Set properties BEFORE adding to tree so _ready() picks them up
 	proj.set("direction", dir)
 	proj.set("damage", damage)
 	proj.set("speed", 18.0)
 	proj.set("lifetime", 4.0)
+	# Set the projectile color before _ready() creates the material
+	proj.set("projectile_color", Color(0.2, 0.0, 0.3))
+	get_parent().add_child(proj)
+	proj.global_position = global_position + Vector3(0, 0.5, 0) + dir * 0.8
 
 	# Make the projectile look void-themed (dark purple)
+	# The material was already created in _ready() with the correct color,
+	# but we also update the emission for the void-themed glow.
 	if proj.has_node("MeshInstance3D"):
 		var mesh_inst: MeshInstance3D = proj.get_node("MeshInstance3D")
 		if mesh_inst and mesh_inst.material_override is StandardMaterial3D:
 			var mat := mesh_inst.material_override as StandardMaterial3D
-			mat.albedo_color = Color(0.2, 0.0, 0.3)
 			mat.emission = Color(0.4, 0.0, 0.6) * 0.5
 
 	# Shoot scale pulse
