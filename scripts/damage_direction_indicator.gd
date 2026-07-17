@@ -72,7 +72,7 @@ func _draw() -> void:
 
 	# Triangle vertices: tip at (ax, ay), base behind
 	var tip := Vector2(ax, ay)
-	var base_center := Vector2(ax - dir * arrow_size, ay - dir * arrow_size)
+	var base_center := Vector2(ax - dir.x * arrow_size, ay - dir.y * arrow_size)
 	var base_left := base_center + perp * arrow_size * 0.6
 	var base_right := base_center - perp * arrow_size * 0.6
 

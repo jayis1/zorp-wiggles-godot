@@ -59,9 +59,10 @@ func _process(delta: float) -> void:
 				continue
 		else:
 			# Position arrow at screen edge pointing toward enemy
-			var screen_pos: Vector3 = camera.unproject_position(enemy_pos)
+			var screen_pos: Vector2 = camera.unproject_position(enemy_pos)
+			var is_behind: bool = camera.is_position_behind(enemy_pos)
 			var is_on_screen: bool = (
-				screen_pos.z < 1.0 and  # In front of camera
+				not is_behind and
 				screen_pos.x >= 0 and screen_pos.x <= viewport_size.x and
 				screen_pos.y >= 0 and screen_pos.y <= viewport_size.y
 			)
@@ -77,15 +78,15 @@ func _process(delta: float) -> void:
 				var edge_y: float = clampf(screen_pos.y, margin, viewport_size.y - margin)
 
 				# If behind camera, flip direction
-				if screen_pos.z >= 1.0:
+				if is_behind:
 					edge_x = viewport_size.x - edge_x
 					edge_y = viewport_size.y - edge_y
 
 				arrow.position = Vector2(edge_x - 15, edge_y - 15)
 
 				# Calculate rotation to point toward enemy
-				var dir_to_enemy: Vector2 = Vector2(screen_pos.x, screen_pos.y) - Vector2(edge_x, edge_y)
-				if screen_pos.z >= 1.0:
+				var dir_to_enemy: Vector2 = screen_pos - Vector2(edge_x, edge_y)
+				if is_behind:
 					dir_to_enemy = -dir_to_enemy
 				if dir_to_enemy.length() > 1.0:
 					var angle: float = dir_to_enemy.angle()
