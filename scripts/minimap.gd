@@ -170,6 +170,23 @@ func _draw_entity_dots(rect: Rect2) -> void:
 		if _is_in_rect(pos, rect):
 			draw_rect(Rect2(pos.x - 2.5, pos.y - 2.5, 5.0, 5.0), GameConstants.MINIMAP_PORTAL_DOT_COLOR, true)
 
+	# ── Phase 14: Rift dots (pulsing purple diamonds) ──
+	for rift in get_tree().get_nodes_in_group("rifts"):
+		if not is_instance_valid(rift):
+			continue
+		var rpos: Vector2 = _world_to_mini(rift.global_position.x, rift.global_position.z, px, pz, pixel_per_world)
+		if _is_in_rect(rpos, rect):
+			var rift_color: Color = Color(0.7, 0.3, 1.0)
+			# Draw a diamond shape
+			var s: float = 4.0
+			var pts: PackedVector2Array = PackedVector2Array([
+				Vector2(rpos.x, rpos.y - s),
+				Vector2(rpos.x + s, rpos.y),
+				Vector2(rpos.x, rpos.y + s),
+				Vector2(rpos.x - s, rpos.y),
+			])
+			draw_colored_polygon(pts, rift_color)
+
 	# ── Trader dots (orange) ──
 	for trader in get_tree().get_nodes_in_group("trader"):
 		if not is_instance_valid(trader):

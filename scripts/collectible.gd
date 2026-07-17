@@ -126,6 +126,27 @@ func _collect() -> void:
 	if is_popping:
 		return
 
+	# ── Phase 14: Mirror dimension — collectibles are hostile, damage the player ──
+	if DimensionSystem.collectibles_hostile():
+		GameManager.take_damage(GameConstants.MIRROR_COLLECTIBLE_DAMAGE, global_position)
+		# Flash red and knock back instead of collecting
+		if _mat:
+			_mat.albedo_color = Color.RED
+			var flash_tween := create_tween()
+			flash_tween.tween_property(_mat, "albedo_color",
+				TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])["color"],
+				0.3).set_ease(Tween.EASE_OUT)
+		# Small knockback away from player
+		var player: Node3D = _cached_player
+		if player and is_instance_valid(player):
+			var away_dir: Vector3 = (global_position - player.global_position).normalized()
+			away_dir.y = 0
+			var knockback_tween := create_tween()
+			knockback_tween.tween_property(self, "global_position",
+				global_position + away_dir * 2.0, 0.2) \
+				.set_ease(Tween.EASE_OUT)
+		return
+
 	is_popping = true
 
 	# Award XP

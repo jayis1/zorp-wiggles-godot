@@ -14,6 +14,7 @@ class_name EnemyProjectile
 var direction: Vector3 = Vector3.FORWARD
 var age: float = 0.0
 var _material: StandardMaterial3D = null
+var _time_scale: float = 1.0  # Phase 14: Time-Slow dimension
 
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
@@ -33,6 +34,8 @@ func _ready() -> void:
 	add_to_group("enemy_projectiles")
 
 func _physics_process(delta: float) -> void:
+	# ── Phase 14: Apply dimension time scale ──
+	delta *= _time_scale
 	age += delta
 	if age >= lifetime:
 		queue_free()
@@ -53,6 +56,10 @@ func _physics_process(delta: float) -> void:
 	if _material:
 		var pulse: float = 0.7 + 0.3 * sin(age * GameConstants.ENEMY_PROJECTILE_AURA_PULSE_SPEED)
 		_material.emission_energy_multiplier = pulse
+
+# ── Phase 14: Set time scale (called by DimensionSystem) ──
+func set_time_scale(scale: float) -> void:
+	_time_scale = scale
 
 func _on_body_entered(body: Node3D) -> void:
 	if body.is_in_group("player"):

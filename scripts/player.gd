@@ -96,6 +96,23 @@ func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:
 		return
 	
+	# ── Phase 14: Reverse Gravity dimension — walk on ceiling ──
+	# Smoothly move the player to ceiling height when in reverse gravity dimension
+	if DimensionSystem.gravity_reversed():
+		var ceiling_y: float = GameConstants.REVERSE_GRAVITY_HEIGHT
+		# Smoothly move player to ceiling
+		global_position.y = lerpf(global_position.y, ceiling_y, 1.0 - exp(-8.0 * delta))
+		# Flip the mesh upside down for visual effect
+		if mesh:
+			mesh.rotation.x = lerpf(mesh.rotation.x, deg_to_rad(180), 1.0 - exp(-5.0 * delta))
+	else:
+		# Return to ground level when not in reverse gravity
+		if mesh and abs(mesh.rotation.x) > 0.01:
+			mesh.rotation.x = lerpf(mesh.rotation.x, 0.0, 1.0 - exp(-5.0 * delta))
+		# Gravity pulls back to ground if we were on ceiling
+		if global_position.y > 2.0:
+			global_position.y = lerpf(global_position.y, 0.5, 1.0 - exp(-8.0 * delta))
+	
 	# Cooldowns
 	if shoot_cooldown_timer > 0:
 		shoot_cooldown_timer -= delta
@@ -178,8 +195,10 @@ func _handle_movement(delta: float) -> void:
 		return
 	
 	# Acceleration/deceleration
+	# ── Phase 14: Time-Slow dimension — player moves at reduced speed ──
+	var speed_mult: float = DimensionSystem.get_player_time_scale()
 	if move_direction.length_squared() > 0.01:
-		velocity_target = move_direction * GameConstants.PLAYER_SPEED
+		velocity_target = move_direction * GameConstants.PLAYER_SPEED * speed_mult
 		# Snap Y velocity to zero (no vertical movement)
 		velocity_target.y = 0
 	else:

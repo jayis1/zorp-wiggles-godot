@@ -171,6 +171,12 @@ func _ready() -> void:
 	df_ctrl.set_script(df_script)
 	add_child(df_ctrl)
 
+	# ── Phase 14: Dimension Indicator ──
+	var di_script := load("res://scripts/dimension_indicator.gd")
+	var di_ctrl := Control.new()
+	di_ctrl.set_script(di_script)
+	add_child(di_ctrl)
+
 	# Initialize displays
 	_update_all_displays()
 

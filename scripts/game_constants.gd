@@ -579,3 +579,66 @@ const AI_SHUDDER_INTERVAL_MIN: float = 0.4            # Min seconds between shud
 const AI_SHUDDER_INTERVAL_MAX: float = 0.9            # Max seconds between shudder bursts
 const AI_SHUDDER_DURATION: float = 0.15               # How long a shudder burst lasts
 const AI_SHUDDER_AMPLITUDE: float = 0.08              # X/Z scale jitter magnitude
+
+# ─── Phase 14: Dimensional Rifts ──────────────────────────────────────────────
+# 4 alternate dimensions, each with distinct gameplay effects.
+enum Dimension {
+	NORMAL,         # Default state
+	VOID,           # Silhouettes only, shadow clone boss
+	MIRROR,         # Collectibles hostile, enemies friendly
+	TIME_SLOW,      # World at 0.3x speed, Zorp at 0.5x (relative advantage)
+	REVERSE_GRAVITY,# Walk on ceiling, collectibles fall up
+}
+
+const DIMENSION_NAMES: Dictionary = {
+	Dimension.NORMAL: "Normal Space",
+	Dimension.VOID: "Void Dimension",
+	Dimension.MIRROR: "Mirror Dimension",
+	Dimension.TIME_SLOW: "Time-Slow Dimension",
+	Dimension.REVERSE_GRAVITY: "Reverse Gravity",
+}
+
+const DIMENSION_COLORS: Dictionary = {
+	Dimension.NORMAL: Color(0.9, 0.9, 1.0),
+	Dimension.VOID: Color(0.1, 0.0, 0.15),
+	Dimension.MIRROR: Color(0.8, 0.9, 1.0),
+	Dimension.TIME_SLOW: Color(0.5, 0.7, 1.0),
+	Dimension.REVERSE_GRAVITY: Color(0.9, 0.6, 1.0),
+}
+
+# Rift spawn system
+const RIFT_SPAWN_INTERVAL_MIN: float = 25.0       # Min seconds between rift spawns
+const RIFT_SPAWN_INTERVAL_MAX: float = 45.0       # Max seconds between rift spawns
+const RIFT_SPAWN_DISTANCE_MIN: float = 20.0       # Min distance from player
+const RIFT_SPAWN_DISTANCE_MAX: float = 50.0       # Max distance from player
+const RIFT_MAX_ACTIVE: int = 2                    # Max rifts in world at once
+const RIFT_LIFETIME: float = 60.0                 # Rift despawns after this (if not entered)
+const RIFT_INTERACT_RANGE: float = 3.0            # Distance to enter rift
+
+# Dimension duration (auto-return to normal after this)
+const DIMENSION_DURATION: float = 30.0            # Seconds in alternate dimension
+const DIMENSION_TRANSITION_DURATION: float = 0.8  # Screen wipe duration
+
+# Time-slow dimension multipliers
+const TIME_SLOW_WORLD_SCALE: float = 0.3          # Enemy/projectile speed multiplier
+const TIME_SLOW_PLAYER_SCALE: float = 0.5         # Player speed multiplier (relative advantage)
+
+# Reverse gravity
+const REVERSE_GRAVITY_HEIGHT: float = 20.0        # Ceiling height above ground
+
+# Mirror dimension
+const MIRROR_COLLECTIBLE_DAMAGE: int = 8          # Damage from touching "hostile" collectibles
+const MIRROR_ENEMY_PASSIVE: bool = true           # Enemies don't attack in mirror
+
+# Void dimension
+const VOID_SHADOW_CLONE_HP: int = 80              # HP of shadow clone boss in void
+const VOID_SHADOW_CLONE_DAMAGE: int = 12          # Damage of shadow clone
+const VOID_VISIBILITY_THRESHOLD: float = 0.3      # How dark everything gets
+
+# Dimension-exclusive collectibles (rare items only found in rifts)
+const RIFT_COLLECTIBLE_CHANCE: float = 0.5        # Chance a rift drops a rare item on exit
+const RIFT_COLLECTIBLE_TYPES: Array[int] = [
+	GameConstants.CollectibleType.METEOR_SHARD,
+	GameConstants.CollectibleType.QUANTUM_FUZZ,
+	GameConstants.CollectibleType.NEBULA_DUST,
+]

@@ -53,7 +53,9 @@ zorp-wiggles-godot/
 │       ├── trader.tscn         # Wandering trader NPC
 │       ├── monolith.tscn       # Alien monolith (buffs)
 │       ├── healing_shrine.tscn # Healing crystal shrine
-│       └── destructible.tscn # Breakable crates & crystal clusters (Phase 8)
+│       ├── destructible.tscn # Breakable crates & crystal clusters (Phase 8)
+│       ├── dimensional_rift.tscn # Rift portal to alternate dimensions (Phase 14)
+│       └── shadow_clone.tscn     # Void dimension shadow clone mini-boss (Phase 14)
 ├── scripts/
 │   ├── game_constants.gd   # All game constants
 │   ├── game_manager.gd     # Autoload singleton — game state
@@ -100,6 +102,11 @@ zorp-wiggles-godot/
 │   ├── shader_manager.gd   # Screen-space post-process shader manager (Phase 9)
 │   ├── enemy_ai_controller.gd  # Smart AI: LOS, flanking, retreat, ambush, pack, enrage (Phase 10)
 │   ├── navigation_manager.gd   # NavMesh generation & pathfinding autoload (Phase 10)
+│   ├── mutation_system.gd  # Biome mutation system autoload (Phase 13)
+│   ├── dimension_system.gd # Dimensional rift system autoload (Phase 14)
+│   ├── dimensional_rift.gd # Rift portal entity (Phase 14)
+│   ├── shadow_clone.gd    # Void dimension shadow clone mini-boss (Phase 14)
+│   ├── dimension_indicator.gd # Dimension HUD indicator + timer (Phase 14)
 │   └── main_menu.gd        # Menu logic
 ├── assets/
 │   ├── shaders/              # GLSL shaders (.gdshader)
@@ -110,7 +117,9 @@ zorp-wiggles-godot/
 │   │   ├── crystal_refraction.gdshader  # Crystal biome prismatic shimmer
 │   │   ├── water_surface.gdshader       # Animated water ripples (spatial)
 │   │   ├── low_hp_vignette.gdshader     # Low-HP pulsing red warning
-│   │   └── boss_enrage.gdshader         # Boss enrage screen effect
+│   │   ├── boss_enrage.gdshader         # Boss enrage screen effect
+│   │   ├── rift_vortex.gdshader        # Dimensional rift swirling vortex (Phase 14)
+│   │   └── dimension_transition.gdshader # Screen wipe for dimension shifts (Phase 14)
 │   ├── audio/                # Sound effects & music (TODO)
 │   ├── models/               # 3D models (TODO)
 │   └── textures/             # Textures (TODO)
@@ -228,7 +237,19 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - **Near-death shudder**: Enemies below 10% HP periodically shudder with X/Z scale jitter, signaling they're one hit from death.
 - Smart AI is opt-in via `@export use_smart_ai` — disabled for stationary Sentinel, flanking/ambush disabled for Drake boss and Spore Spitter.
 
-**Remaining phases:** GPU particles (polish), animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
+**Phase 14 (Dimensional Rifts):** ✅ Complete — 🆕 New Feature
+- 4 alternate dimensions accessible via rift portals: **Void**, **Mirror**, **Time-Slow**, **Reverse Gravity**
+- Rift portals spawn randomly every 25-45s near the player (max 2 active, 60s lifetime), with a swirling vortex shader (chromatic aberration, energy rings, pulsing glow)
+- Entering a rift triggers a screen-wipe transition (sweep bands + chromatic aberration shader), then the dimension lasts 30s before auto-returning
+- **Void Dimension**: Everything darkened to silhouettes; a shadow clone mini-boss spawns (80 HP, pure black with purple rim glow, strafes and shoots dark projectiles)
+- **Mirror Dimension**: Collectibles become hostile (damage + knockback on touch, flash red), enemies become passive and won't attack
+- **Time-Slow Dimension**: Enemies and enemy projectiles at 0.3x speed via `set_time_scale()`, player at 0.5x speed (relative advantage — Zorp is faster than the world)
+- **Reverse Gravity Dimension**: Player smoothly rises to a 20m ceiling, mesh flips upside down; enemies and collectibles also relocate to ceiling height
+- Exiting a dimension: 50% chance to spawn 2-4 rare collectibles (Meteor Shard, Quantum Fuzz, Nebula Dust) as rift rewards
+- Dimension indicator HUD: top-center label with dimension name (color-matched) + countdown timer bar
+- Rift portals visible on minimap as purple diamonds
+
+**Remaining phases:** Companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
 
 ## License
 

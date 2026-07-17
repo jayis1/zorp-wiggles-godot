@@ -50,6 +50,11 @@ var _boss_enrage_strength: float = 0.0
 var _boss_enrage_target: float = 0.0
 var _boss_ref: Node = null
 
+# ── Phase 14: Dimension transition overlay ──
+var _dimension_transition_rect: ColorRect = null
+var _dimension_transition_active: bool = false
+var _dimension_transition_progress: float = 0.0
+
 # ─── Shader file paths ───────────────────────────────────────────────────────
 const SHADER_PATHS: Dictionary = {
 	"heat_distortion": "res://assets/shaders/heat_distortion.gdshader",
@@ -59,6 +64,7 @@ const SHADER_PATHS: Dictionary = {
 	"crystal_refraction": "res://assets/shaders/crystal_refraction.gdshader",
 	"low_hp_vignette": "res://assets/shaders/low_hp_vignette.gdshader",
 	"boss_enrage": "res://assets/shaders/boss_enrage.gdshader",
+	"dimension_transition": "res://assets/shaders/dimension_transition.gdshader",
 }
 
 func _ready() -> void:
@@ -87,6 +93,12 @@ func _ready() -> void:
 	_boss_enrage_rect.material = _create_shader_material("boss_enrage", 0.0)
 	add_child(_boss_enrage_rect)
 
+	# ── Phase 14: Dimension transition rect ──
+	_dimension_transition_rect = _create_overlay_rect()
+	_dimension_transition_rect.material = _create_shader_material("dimension_transition", 0.0)
+	_dimension_transition_rect.visible = false
+	add_child(_dimension_transition_rect)
+
 	# Connect signals
 	GameManager.biome_changed.connect(_on_biome_changed)
 	GameManager.hp_changed.connect(_on_hp_changed)
@@ -94,6 +106,11 @@ func _ready() -> void:
 	GameManager.boss_defeated.connect(_on_boss_defeated)
 	GameManager.player_died.connect(_on_player_died)
 	GameManager.game_restarted.connect(_on_game_restarted)
+
+	# ── Phase 14: Dimension transition signals ──
+	DimensionSystem.dimension_transition_started.connect(_on_dimension_transition_started)
+	DimensionSystem.dimension_transition_ended.connect(_on_dimension_transition_ended)
+	DimensionSystem.dimension_changed.connect(_on_dimension_changed)
 
 func _create_overlay_rect() -> ColorRect:
 	var rect := ColorRect.new()
@@ -154,6 +171,16 @@ func _process(delta: float) -> void:
 		_boss_enrage_rect.visible = _boss_enrage_strength > 0.01
 	# Update boss enrage target from boss HP ratio
 	_update_boss_enrage_target()
+
+	# ── Phase 14: Dimension transition progress ──
+	if _dimension_transition_active:
+		_dimension_transition_progress = minf(_dimension_transition_progress + delta / GameConstants.DIMENSION_TRANSITION_DURATION, 1.0)
+		if _dimension_transition_rect and _dimension_transition_rect.material is ShaderMaterial:
+			var mat: ShaderMaterial = _dimension_transition_rect.material as ShaderMaterial
+			mat.set_shader_parameter("progress", _dimension_transition_progress)
+			# Sin wave for in-and-out effect: 0→1→0 over the transition
+			var visual_progress: float = sin(_dimension_transition_progress * PI) 
+			mat.set_shader_parameter("progress", visual_progress)
 
 # ─── Biome shader application ─────────────────────────────────────────────────
 func _apply_biome_strength(rect_idx: int, strength: float) -> void:
@@ -258,3 +285,36 @@ func _on_game_restarted() -> void:
 	if _boss_enrage_rect and _boss_enrage_rect.material is ShaderMaterial:
 		(_boss_enrage_rect.material as ShaderMaterial).set_shader_parameter("strength", 0.0)
 		_boss_enrage_rect.visible = false
+
+# ── Phase 14: Dimension transition handlers ───────────────────────────────────
+
+func _on_dimension_transition_started(target_dim: int) -> void:
+	_dimension_transition_active = true
+	_dimension_transition_progress = 0.0
+	if _dimension_transition_rect:
+		_dimension_transition_rect.visible = true
+		var dim_color: Color = GameConstants.DIMENSION_COLORS.get(target_dim, Color(0.5, 0.7, 1.0))
+		if _dimension_transition_rect.material is ShaderMaterial:
+			(_dimension_transition_rect.material as ShaderMaterial).set_shader_parameter("wipe_color", dim_color)
+			(_dimension_transition_rect.material as ShaderMaterial).set_shader_parameter("progress", 0.0)
+
+func _on_dimension_transition_ended(_dim: int) -> void:
+	_dimension_transition_active = false
+	_dimension_transition_progress = 0.0
+	if _dimension_transition_rect:
+		_dimension_transition_rect.visible = false
+		if _dimension_transition_rect.material is ShaderMaterial:
+			(_dimension_transition_rect.material as ShaderMaterial).set_shader_parameter("progress", 0.0)
+
+func _on_dimension_changed(new_dim: int, _old_dim: int) -> void:
+	# Apply dimension-specific screen tint via biome-like overlay
+	# In Void dimension, darken the screen for silhouette mode
+	if new_dim == GameConstants.Dimension.VOID:
+		# Use a darkened version of the biome shader to simulate the void
+		# We'll boost the low-HP-like darkening effect
+		pass  # The transition shader handles the visual; persistent void darkening
+			  # could be done via a separate overlay, but the silhouettes come from
+			  # the world lighting changes handled by DimensionSystem
+	elif new_dim == GameConstants.Dimension.TIME_SLOW:
+		# Could add a blue time-slow overlay
+		pass

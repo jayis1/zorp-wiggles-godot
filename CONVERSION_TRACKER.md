@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 13 — Biome Mutation System (COMPLETE)
+## Status: PHASE 14 — Dimensional Rifts (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -201,17 +201,20 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Max 3 concurrent mutations, oldest replaced when full
 - [x] Particle burst on mutation activation
 
-### Phase 14: Dimensional Rifts (TODO) 🆕 NEW FEATURE
-- [ ] Rift portal structures (swirling vortex mesh + shader)
-- [ ] Dimension shift system (4 dimensions: Normal, Void, Mirror, Time-slow)
-- [ ] Void dimension: everything is silhouettes, shadow clone boss fight
-- [ ] Mirror dimension: collectibles are hostile, enemies are friendly
-- [ ] Time-slow dimension: everything at 0.3x speed, Zorp at 0.5x (relative advantage)
-- [ ] Reversed gravity dimension: walk on ceiling, collectibles fall up
-- [ ] Dimension transition effect (screen wipe + chromatic shift)
-- [ ] Dimension timer (30 seconds then auto-return)
-- [ ] Dimension-exclusive collectibles (rare items only in rifts)
-- [ ] Rift spawn system (random portals appear, pulse and shimmer)
+### Phase 14: Dimensional Rifts ✅ COMPLETE 🆕 NEW FEATURE
+- [x] Rift portal structures (swirling vortex mesh + shader) — `dimensional_rift.gd` + `.tscn`, `rift_vortex.gdshader` with swirl, chromatic aberration, pulsing energy rings
+- [x] Dimension shift system (4 dimensions: Normal, Void, Mirror, Time-slow, Reverse gravity) — `dimension_system.gd` autoload singleton
+- [x] Void dimension: everything is silhouettes, shadow clone boss fight — `shadow_clone.gd` + `.tscn`, pure black with purple rim, strafes + shoots dark projectiles, 80 HP mini-boss
+- [x] Mirror dimension: collectibles are hostile, enemies are friendly — `collectible.gd` damages player + knocks back; `enemy_base.gd` skips attacks when `DimensionSystem.enemies_passive()`
+- [x] Time-slow dimension: world at 0.3x speed, Zorp at 0.5x (relative advantage) — `set_time_scale()` on `enemy_base.gd` and `enemy_projectile.gd`; player speed multiplier via `DimensionSystem.get_player_time_scale()`
+- [x] Reversed gravity dimension: walk on ceiling, collectibles fall up — player smoothly lerps to `REVERSE_GRAVITY_HEIGHT` (20m), mesh flips 180°, enemies/collectibles moved to ceiling
+- [x] Dimension transition effect (screen wipe + chromatic shift) — `dimension_transition.gdshader` with sweep bands + chromatic aberration, integrated into `ShaderManager`
+- [x] Dimension timer (30 seconds then auto-return) — `DIMENSION_DURATION` countdown with `dimension_timer_changed` signal
+- [x] Dimension-exclusive collectibles (rare items only in rifts) — 50% chance to spawn 2-4 rare collectibles (Meteor Shard, Quantum Fuzz, Nebula Dust) on dimension exit
+- [x] Rift spawn system (random portals appear, pulse and shimmer) — spawn timer (25-45s), max 2 active rifts, 60s lifetime, spawn near player at 20-50m distance
+- [x] Dimension indicator HUD (top-center label + timer bar) — `dimension_indicator.gd`, color-matched to dimension
+- [x] Rift portals on minimap (pulsing purple diamonds) — integrated into `minimap.gd`
+- [x] `DimensionSystem` registered as autoload in `project.godot`
 
 ### Phase 15: Alien Companion Pet (TODO) 🆕 NEW FEATURE
 - [ ] Pet companion entity (follows Zorp with smooth pathfinding)
@@ -334,4 +337,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Projectile in-flight spin**: Player laser bolts now rotate on their Y axis during flight (12 rad/s), giving them a sense of energy and motion rather than appearing as a static sphere drifting forward.
 
 ## Last Updated
-Phase 13 complete. Biome Mutation System: New `mutation_system.gd` autoload with 6 biome-based mutations (Lava→Inferno Form, Crystal→Prismatic Veil, Snow→Frost Aegis, Alien→Void Step, Forest→Nature's Pact, Toxic→Venom Trail). Mutations activate after 15s in a biome, decay 60s after leaving, max 3 concurrent. Each mutation shifts the player's material color toward the mutation color via `_apply_mutation_color()`/`_remove_mutation_color()` in player.gd. Snow mutation's ice armor (20% damage reduction, 30% with combo) integrated into `GameManager.take_damage()`. Lava mutation provides 30% fire resistance (50% with combo). Forest mutation makes enemies passive in forest biome. Combo system: 2+ active mutations enhance all effects. Signals for HUD integration (`mutation_activated`, `mutation_deactivated`, `mutation_progress_changed`). Phases 14-21 planned.
+Phase 14 complete. Dimensional Rift System: New `dimension_system.gd` autoload with 4 alternate dimensions (Void, Mirror, Time-Slow, Reverse Gravity). Rift portals (`dimensional_rift.gd` + `.tscn`) spawn randomly every 25-45s near the player with swirling vortex shader (`rift_vortex.gdshader`). Entering a rift triggers a screen-wipe transition (`dimension_transition.gdshader` in ShaderManager). Each dimension lasts 30s then auto-returns: Void spawns a shadow clone mini-boss (`shadow_clone.gd` + `.tscn`, 80 HP, strafes + shoots dark projectiles); Mirror makes collectibles hostile (damage + knockback) and enemies passive; Time-Slow slows enemies/projectiles to 0.3x and player to 0.5x via `set_time_scale()`; Reverse Gravity lifts everything to a 20m ceiling with player mesh flipping upside-down. Exiting a dimension has 50% chance to spawn 2-4 rare collectibles. Dimension indicator HUD shows current dimension + timer bar. Rifts shown as purple diamonds on minimap. Phases 15-21 planned.

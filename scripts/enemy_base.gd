@@ -69,6 +69,9 @@ var ai_controller: EnemyAIController = null
 var _nav_agent: NavigationAgent3D = null
 var _nav_path_timer: float = 0.0  # Time until next repath
 
+# ── Phase 14: Dimensional Rifts — time scale (Time-Slow dimension) ──
+var _time_scale: float = 1.0
+
 # ─── Node References ─────────────────────────────────────────────────────────
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var alert_indicator: Label3D = $AlertIndicator
@@ -128,6 +131,9 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or is_dead:
 		return
+
+	# ── Phase 14: Apply dimension time scale (Time-Slow dimension) ──
+	delta *= _time_scale
 
 	# Spawn grace period
 	if spawn_grace_timer > 0:
@@ -327,6 +333,13 @@ func _try_attack(player: Node3D) -> void:
 	if is_attacking:
 		return
 
+	# ── Phase 14: Mirror dimension — enemies are passive, don't attack ──
+	if DimensionSystem.enemies_passive():
+		return
+	# ── Phase 13: Forest mutation — enemies passive in forest biome ──
+	if MutationSystem.enemies_passive():
+		return
+
 	is_attacking = true
 	attack_cooldown_timer = attack_cooldown
 
@@ -410,6 +423,10 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 
 func apply_knockback(direction: Vector3, force: float) -> void:
 	knockback_vel = direction.normalized() * force
+
+# ── Phase 14: Dimension time scale (Time-Slow dimension) ──
+func set_time_scale(scale: float) -> void:
+	_time_scale = scale
 
 func _die() -> void:
 	is_dead = true

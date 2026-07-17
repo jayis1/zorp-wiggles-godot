@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://shdwclone"]
+
+[ext_resource type="Script" path="res://scripts/shadow_clone.gd" id="1_sc"]
+
+[node name="ShadowClone" type="CharacterBody3D"]
+script = ExtResource("1_sc")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
