@@ -392,9 +392,16 @@ func _try_attack(player: Node3D) -> void:
 
 func _execute_attack(player: Node3D) -> void:
 	is_windup = false
+	# The windup tween calls this via tween_callback after ENEMY_ATTACK_WINDUP_TIME.
+	# The bound `player` reference may have been freed during that delay (especially
+	# P2 in co-op, who can drop out or bleed out mid-windup). Bail out safely.
+	if not player or not is_instance_valid(player):
+		# Still reset the attack flag so the enemy can attack again later
+		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
+		return
 	# ── Phase 19: Co-op — damage the correct player ──
 	# Check if the target is P2 (Zerp) by checking if it's in the player2 group
-	if player and is_instance_valid(player) and player.is_in_group("player2"):
+	if player.is_in_group("player2"):
 		CoOpManager.p2_take_damage(damage, global_position)
 	else:
 		# Deal damage to P1 (pass enemy position for damage direction indicator)
@@ -402,10 +409,8 @@ func _execute_attack(player: Node3D) -> void:
 
 	# Camera shake on player hit — biased toward the enemy's attack direction
 	# so the camera lurches away from the attacker, reinforcing the hit feel.
-	var attack_dir: Vector3 = Vector3.ZERO
-	if player and is_instance_valid(player):
-		attack_dir = (player.global_position - global_position).normalized()
-		attack_dir.y = 0
+	var attack_dir: Vector3 = (player.global_position - global_position).normalized()
+	attack_dir.y = 0
 	_trigger_camera_trauma(0.2, attack_dir)
 
 	# Forward lunge

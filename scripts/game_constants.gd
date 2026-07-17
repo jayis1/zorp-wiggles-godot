@@ -1252,7 +1252,7 @@ const COOP_REVIVE_HP_RESTORE: int = 60        # HP on revive
 const COOP_REVIVE_INVULN_DURATION: float = 2.0 # Invuln after revive
 const COOP_DOWNED_SPEED: float = 0.0          # Downed player can't move
 const COOP_DOWNED_TIMER_MAX: float = 30.0     # Bleed-out timer (auto-die after this)
-const COOP_DOWNED_REVIVE_PROGRESS_TICK: float = 0.034  # Progress per tick (~30/sec → ~3s)
+const COOP_DOWNED_REVIVE_PROGRESS_TICK: float = 1.0 / 60.0 / COOP_REVIVE_DURATION  # Progress per physics tick at 60fps → COOP_REVIVE_DURATION seconds total
 
 # Co-op mega pulse wave (both players Q within sync window)
 const COOP_PULSE_SYNC_WINDOW: float = 1.0     # Seconds for both players to press Q
