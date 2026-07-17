@@ -197,6 +197,9 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 			var pet_shield: float = pet.get_shield_reduction()
 			if pet_shield > 0:
 				actual_amount = int(actual_amount * (1.0 - pet_shield))
+	# ── Phase 16: Reflective Shield weapon mod reduces incoming damage ──
+	if WeaponModSystem and WeaponModSystem.get_equipped_mod() == GameConstants.WeaponMod.REFLECTIVE_SHIELD:
+		actual_amount = int(actual_amount * 0.6)  # 40% damage reduction
 	player_hp = max(0, player_hp - actual_amount)
 	player_invuln_timer = GameConstants.PLAYER_INVULN_DURATION
 	hp_changed.emit(player_hp, player_max_hp)

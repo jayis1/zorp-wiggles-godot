@@ -72,6 +72,10 @@ pet_fetch={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":71,"physical_keycode":0,"key_label":0,"unicode":103,"location":0,"echo":false,"script":null)]
 }
+crafting={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":67,"physical_keycode":0,"key_label":0,"unicode":99,"location":0,"echo":false,"script":null)]
+}
 
 [autoload]
 
@@ -81,3 +85,4 @@ MissionSystem="*res://scripts/mission_system.gd"
 NavigationManager="*res://scripts/navigation_manager.gd"
 MutationSystem="*res://scripts/mutation_system.gd"
 DimensionSystem="*res://scripts/dimension_system.gd"
+WeaponModSystem="*res://scripts/weapon_mod_system.gd"

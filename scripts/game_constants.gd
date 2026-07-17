@@ -193,7 +193,31 @@ enum CollectibleType {
 	SPACE_GLOOP,
 	XP_ORB,
 	HEALTH_FRAGMENT,
+	# ── Phase 16: Weapon Mod Crafting materials ──
+	SHIELD_CRYSTAL,   # Blue crystalline shielding material
+	FIREBALL_SCROLL,  # Orange combustible scroll
+	REGEN_CRYSTAL,    # Green regenerative crystal
+	MAGNET_CORE,      # Metallic magnetic core
+	TOXIC_EXTRACT,    # Sickly green toxic extract
 }
+
+# Collectible types that are crafting materials (used by weapon mod system)
+const CRAFTING_MATERIALS: Array[int] = [
+	CollectibleType.METEOR_SHARD,
+	CollectibleType.QUANTUM_FUZZ,
+	CollectibleType.NEBULA_DUST,
+	CollectibleType.SPACE_GLOOP,
+	CollectibleType.STAR_FRUIT,
+	CollectibleType.SHIELD_CRYSTAL,
+	CollectibleType.FIREBALL_SCROLL,
+	CollectibleType.REGEN_CRYSTAL,
+	CollectibleType.MAGNET_CORE,
+	CollectibleType.TOXIC_EXTRACT,
+]
+
+# Drop chance for crafting materials from enemy kills
+const CRAFTING_MATERIAL_DROP_CHANCE: float = 0.12  # 12% chance per kill
+const CRAFTING_MATERIAL_DROP_CHANCE_BOSS: float = 1.0  # Bosses always drop a material
 
 # ─── Sky & Stars ──────────────────────────────────────────────────────────────
 const STAR_COUNT: int = 80
@@ -666,6 +690,12 @@ const PET_FEED_VALUES: Dictionary = {
 	GameConstants.CollectibleType.METEOR_SHARD: 40,
 	GameConstants.CollectibleType.QUANTUM_FUZZ: 35,
 	GameConstants.CollectibleType.NEBULA_DUST: 30,
+	# Phase 16: Crafting materials also feed the pet
+	GameConstants.CollectibleType.SHIELD_CRYSTAL: 35,
+	GameConstants.CollectibleType.FIREBALL_SCROLL: 35,
+	GameConstants.CollectibleType.REGEN_CRYSTAL: 35,
+	GameConstants.CollectibleType.MAGNET_CORE: 30,
+	GameConstants.CollectibleType.TOXIC_EXTRACT: 30,
 }
 
 # Pet stats per stage
@@ -721,6 +751,223 @@ const PET_FETCH_RANGE: float = 60.0            # Max distance for fetch command
 const PET_HEAL_PER_PICKUP: float = 2.0         # Pet heals itself per item collected
 const PET_IDLE_ANIMATION_INTERVAL: float = 5.0 # Seconds between random idle anims
 const PET_SPAWN_OFFSET: Vector3 = Vector3(2.0, 1.0, 0.0)  # Initial spawn offset from player
+
+# ─── Phase 16: Weapon Mod Crafting ────────────────────────────────────────────
+
+# Weapon mod IDs (0 = NONE / default laser)
+enum WeaponMod {
+	NONE,                # 0 — default laser, no mod
+	HOMING_LASER,        # 1 — Meteor Shard + Quantum Fuzz
+	REFLECTIVE_SHIELD,   # 2 — Shield Crystal + Fireball Scroll
+	CHAIN_LIGHTNING,     # 3 — Nebula Dust + Star Fruit
+	SPREAD_SHOT,         # 4 — Fireball Scroll + Quantum Fuzz
+	PIERCING_BEAM,       # 5 — Meteor Shard + Star Fruit
+	BOUNCING_BOLT,       # 6 — Quantum Fuzz + Space Gloop
+	FREEZE_RAY,          # 7 — Regen Crystal + Star Fruit
+	ACID_TRAIL,          # 8 — Magnet Core + Toxic Extract
+	MEGA_BLAST,          # 9 — Meteor Shard + Quantum Fuzz + Nebula Dust (3-item mega)
+	SPLITTER_LASER,      # 10 — Star Fruit + Shield Crystal
+	VAMPIRE_BEAM,        # 11 — Health Fragment + Meteor Shard (uses health frag as material)
+	GRAVITY_WELL_LASER,  # 12 — Magnet Core + Nebula Dust
+	RICOCHET_PULSE,      # 13 — Shield Crystal + Quantum Fuzz
+	PLASMA_NOVA,         # 14 — Fireball Scroll + Nebula Dust
+	SNIPER_BEAM,         # 15 — Meteor Shard + Shield Crystal
+	SHRAPNEL_BURST,      # 16 — Toxic Extract + Fireball Scroll
+	BLAZE_TRAIL,         # 17 — Fireball Scroll + Meteor Shard
+	TESLA_COIL,          # 18 — Quantum Fuzz + Shield Crystal
+	VOID_RAY,            # 19 — Nebula Dust + Toxic Extract
+	QUANTUM_OVERDRIVE,   # 20 — Meteor Shard + Quantum Fuzz + Star Fruit (3-item mega)
+}
+
+const WEAPON_MOD_NAMES: Array[String] = [
+	"Standard Laser",
+	"Homing Laser",
+	"Reflective Shield",
+	"Chain Lightning",
+	"Spread Shot",
+	"Piercing Beam",
+	"Bouncing Bolt",
+	"Freeze Ray",
+	"Acid Trail",
+	"Mega Blast",
+	"Splitter Laser",
+	"Vampire Beam",
+	"Gravity Well Laser",
+	"Ricochet Pulse",
+	"Plasma Nova",
+	"Sniper Beam",
+	"Shrapnel Burst",
+	"Blaze Trail",
+	"Tesla Coil",
+	"Void Ray",
+	"Quantum Overdrive",
+]
+
+const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
+	"Zorp's default tentacle laser. Reliable and effective.",
+	"Homing bolts that track the nearest enemy.",
+	"Shields that reflect enemy projectiles back at them.",
+	"Lightning chains between nearby enemies on hit.",
+	"Three bolts spread in a fan pattern.",
+	"Pierces through multiple enemies in a line.",
+	"Bounces off walls and enemies up to 3 times.",
+	"Freezes enemies, slowing them for 2 seconds.",
+	"Leaves a damaging acid pool on impact.",
+	"Massive explosion on impact — the big one.",
+	"Splits into two on hit, hitting more enemies.",
+	"Drains HP from enemies and heals Zorp.",
+	"Creates a gravity well pulling enemies in.",
+	"Ricochets between nearby enemies on hit.",
+	"Explodes in a plasma nova on impact.",
+	"Long-range high-damage single bolt.",
+	"Explodes into shrapnel fragments on hit.",
+	"Sets enemies on fire, burning over time.",
+	"Shocks nearby enemies with electric arcs.",
+	"Slows enemies and drains their energy.",
+	"Devastating triple-bolt with homing + chain.",
+]
+
+# Colors for each weapon mod (laser color)
+const WEAPON_MOD_COLORS: Array[Color] = [
+	Color(0.2, 1.0, 0.8),   # Standard: cyan
+	Color(1.0, 0.5, 0.1),   # Homing: orange
+	Color(0.3, 0.6, 1.0),   # Reflective: sky blue
+	Color(0.6, 0.8, 1.0),   # Chain Lightning: pale blue
+	Color(1.0, 0.4, 0.2),   # Spread: red-orange
+	Color(0.8, 0.2, 1.0),   # Piercing: purple
+	Color(0.9, 0.9, 0.3),   # Bouncing: yellow
+	Color(0.3, 0.9, 1.0),   # Freeze: ice blue
+	Color(0.4, 0.8, 0.2),   # Acid: toxic green
+	Color(1.0, 0.3, 0.3),   # Mega Blast: bright red
+	Color(0.6, 1.0, 0.4),   # Splitter: lime
+	Color(0.9, 0.2, 0.4),   # Vampire: crimson
+	Color(0.5, 0.3, 0.9),   # Gravity Well: deep purple
+	Color(0.3, 0.7, 1.0),   # Ricochet: azure
+	Color(1.0, 0.6, 0.9),   # Plasma Nova: pink
+	Color(0.2, 0.4, 1.0),   # Sniper: deep blue
+	Color(0.7, 0.5, 0.2),   # Shrapnel: brown-orange
+	Color(1.0, 0.5, 0.3),   # Blaze: fire orange
+	Color(0.5, 0.9, 1.0),   # Tesla: electric blue
+	Color(0.3, 0.1, 0.5),   # Void: dark purple
+	Color(1.0, 0.8, 0.2),   # Quantum Overdrive: gold
+]
+
+# Damage multiplier per weapon mod
+const WEAPON_MOD_DAMAGE_MULT: Array[float] = [
+	1.0,   # Standard
+	0.8,   # Homing (lower damage, tracking compensates)
+	0.6,   # Reflective Shield (defensive utility)
+	0.7,   # Chain Lightning
+	0.6,   # Spread Shot (3 bolts, so each is weaker)
+	1.2,   # Piercing Beam
+	0.7,   # Bouncing Bolt
+	0.5,   # Freeze Ray (utility — slow, not damage)
+	0.6,   # Acid Trail
+	2.5,   # Mega Blast (big damage)
+	0.8,   # Splitter
+	0.9,   # Vampire
+	0.7,   # Gravity Well
+	0.8,   # Ricochet
+	1.3,   # Plasma Nova
+	2.0,   # Sniper Beam
+	1.1,   # Shrapnel
+	0.8,   # Blaze Trail
+	0.9,   # Tesla Coil
+	0.7,   # Void Ray
+	1.5,   # Quantum Overdrive
+]
+
+# Fire rate multiplier (lower = faster)
+const WEAPON_MOD_FIRE_RATE_MULT: Array[float] = [
+	1.0,   # Standard
+	1.0,   # Homing
+	1.5,   # Reflective (slower)
+	1.2,   # Chain
+	1.3,   # Spread
+	1.5,   # Piercing (slower, more powerful)
+	1.0,   # Bouncing
+	1.2,   # Freeze
+	1.0,   # Acid
+	2.5,   # Mega Blast (much slower)
+	1.1,   # Splitter
+	1.0,   # Vampire
+	1.5,   # Gravity
+	1.1,   # Ricochet
+	1.8,   # Plasma Nova
+	2.0,   # Sniper (slow, powerful)
+	1.3,   # Shrapnel
+	1.0,   # Blaze
+	1.2,   # Tesla
+	1.2,   # Void
+	2.0,   # Quantum Overdrive
+]
+
+# Projectile speed multiplier
+const WEAPON_MOD_SPEED_MULT: Array[float] = [
+	1.0,   # Standard
+	0.8,   # Homing (slower to allow turning)
+	1.0,   # Reflective
+	1.0,   # Chain
+	0.9,   # Spread
+	1.5,   # Piercing (fast)
+	0.9,   # Bouncing
+	0.8,   # Freeze
+	0.9,   # Acid
+	0.7,   # Mega Blast (slow, heavy)
+	1.0,   # Splitter
+	1.0,   # Vampire
+	0.8,   # Gravity Well
+	0.9,   # Ricochet
+	0.8,   # Plasma Nova
+	2.0,   # Sniper (very fast)
+	0.9,   # Shrapnel
+	0.9,   # Blaze
+	1.0,   # Tesla
+	0.9,   # Void
+	1.2,   # Quantum Overdrive
+]
+
+# Crafting recipes: maps a sorted key string "typeA,typeB[,typeC]" → WeaponMod enum value
+# Two-item recipes combine two different materials. Three-item recipes (mega) need all three.
+const CRAFTING_RECIPES: Dictionary = {
+	# Two-item recipes (19 of them)
+	"METEOR_SHARD,QUANTUM_FUZZ": WeaponMod.HOMING_LASER,
+	"FIREBALL_SCROLL,SHIELD_CRYSTAL": WeaponMod.REFLECTIVE_SHIELD,
+	"NEBULA_DUST,STAR_FRUIT": WeaponMod.CHAIN_LIGHTNING,
+	"FIREBALL_SCROLL,QUANTUM_FUZZ": WeaponMod.SPREAD_SHOT,
+	"METEOR_SHARD,STAR_FRUIT": WeaponMod.PIERCING_BEAM,
+	"QUANTUM_FUZZ,SPACE_GLOOP": WeaponMod.BOUNCING_BOLT,
+	"REGEN_CRYSTAL,STAR_FRUIT": WeaponMod.FREEZE_RAY,
+	"MAGNET_CORE,TOXIC_EXTRACT": WeaponMod.ACID_TRAIL,
+	"SHIELD_CRYSTAL,STAR_FRUIT": WeaponMod.SPLITTER_LASER,
+	"HEALTH_FRAGMENT,METEOR_SHARD": WeaponMod.VAMPIRE_BEAM,
+	"MAGNET_CORE,NEBULA_DUST": WeaponMod.GRAVITY_WELL_LASER,
+	"QUANTUM_FUZZ,SHIELD_CRYSTAL": WeaponMod.RICOCHET_PULSE,
+	"FIREBALL_SCROLL,NEBULA_DUST": WeaponMod.PLASMA_NOVA,
+	"METEOR_SHARD,SHIELD_CRYSTAL": WeaponMod.SNIPER_BEAM,
+	"FIREBALL_SCROLL,TOXIC_EXTRACT": WeaponMod.SHRAPNEL_BURST,
+	"FIREBALL_SCROLL,METEOR_SHARD": WeaponMod.BLAZE_TRAIL,
+	"REGEN_CRYSTAL,QUANTUM_FUZZ": WeaponMod.TESLA_COIL,  # electric + quantum
+	"NEBULA_DUST,TOXIC_EXTRACT": WeaponMod.VOID_RAY,
+	# Three-item mega recipes
+	"METEOR_SHARD,NEBULA_DUST,QUANTUM_FUZZ": WeaponMod.MEGA_BLAST,
+	"METEOR_SHARD,QUANTUM_FUZZ,STAR_FRUIT": WeaponMod.QUANTUM_OVERDRIVE,
+}
+
+# Crafting material type names for recipe key lookup
+const COLLECTIBLE_TYPE_NAMES: Dictionary = {
+	CollectibleType.STAR_FRUIT: "STAR_FRUIT",
+	CollectibleType.METEOR_SHARD: "METEOR_SHARD",
+	CollectibleType.QUANTUM_FUZZ: "QUANTUM_FUZZ",
+	CollectibleType.NEBULA_DUST: "NEBULA_DUST",
+	CollectibleType.SPACE_GLOOP: "SPACE_GLOOP",
+	CollectibleType.HEALTH_FRAGMENT: "HEALTH_FRAGMENT",
+	CollectibleType.SHIELD_CRYSTAL: "SHIELD_CRYSTAL",
+	CollectibleType.FIREBALL_SCROLL: "FIREBALL_SCROLL",
+	CollectibleType.REGEN_CRYSTAL: "REGEN_CRYSTAL",
+	CollectibleType.MAGNET_CORE: "MAGNET_CORE",
+	CollectibleType.TOXIC_EXTRACT: "TOXIC_EXTRACT",
+}
 
 # Pet aura particle counts per stage
 const PET_AURA_PARTICLE_COUNTS: Array[int] = [0, 8, 20]  # Baby: none, Adolescent: few, Adult: many

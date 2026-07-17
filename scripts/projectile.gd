@@ -13,6 +13,18 @@ var speed: float = GameConstants.PROJECTILE_SPEED
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 
+# ─── Phase 16: Weapon Mod Crafting ────────────────────────────────────────────
+var _weapon_mod: int = GameConstants.WeaponMod.NONE
+var _mod_color: Color = Color(0.2, 1.0, 0.8)
+var _bounce_count: int = 0          # For Bouncing Bolt
+var _pierce_count: int = 0          # For Piercing Beam
+var _max_bounces: int = 3
+var _max_pierces: int = 3
+var _homing_strength: float = 8.0   # For Homing Laser
+var _has_hit_enemies: Array[Node3D] = []  # Track hit enemies for pierce/chain (prevent double-hit)
+var _light: OmniLight3D = null
+var _mod_material: StandardMaterial3D = null  # Per-projectile material for mod color
+
 # ─── Shared Resources ──────────────────────────────────────────────────────────
 # Projectiles are spawned at ~9/sec during combat. Creating a new
 # StandardMaterial3D per shot causes unnecessary GPU resource allocation
@@ -60,6 +72,7 @@ var _trail_materials: Array[StandardMaterial3D] = []  # Per-trail-node mat for a
 
 # ─── Impact Effect ────────────────────────────────────────────────────────────
 const IMPACT_SCENE := preload("res://scenes/entities/impact_burst.tscn")
+const PROJECTILE_SCENE := preload("res://scenes/entities/projectile.tscn")  # Phase 16: Splitter
 
 func _ready() -> void:
 	# Connect body_entered signal — fires when a PhysicsBody3D (enemy) enters
@@ -69,19 +82,34 @@ func _ready() -> void:
 	_ensure_shared_resources()
 	if mesh_instance:
 		mesh_instance.mesh = _shared_mesh
-		mesh_instance.material_override = _shared_material
+		# Phase 16: If a weapon mod is set, use a per-projectile material with the mod color
+		if _weapon_mod != GameConstants.WeaponMod.NONE:
+			_mod_material = _shared_material.duplicate() as StandardMaterial3D
+			_mod_material.albedo_color = _mod_color
+			_mod_material.emission = _mod_color * 0.8
+			mesh_instance.material_override = _mod_material
+		else:
+			mesh_instance.material_override = _shared_material
 
-	# Add a small point light for real-time glow
-	var light := OmniLight3D.new()
-	light.light_color = Color(0.2, 1.0, 0.8)
-	light.light_energy = 0.8
-	light.omni_range = 3.0
-	light.omni_attenuation = 1.5
-	add_child(light)
+	# Add a small point light for real-time glow (color matches mod)
+	_light = OmniLight3D.new()
+	_light.light_color = _mod_color
+	_light.light_energy = 0.8
+	_light.omni_range = 3.0
+	_light.omni_attenuation = 1.5
+	add_child(_light)
+
+## Phase 16: Set the weapon mod ID and color. Called by player when spawning.
+func set_weapon_mod(mod_id: int, col: Color) -> void:
+	_weapon_mod = mod_id
+	_mod_color = col
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused:
 		return
+
+	# ── Phase 16: Weapon mod behavior in flight ──
+	_apply_mod_flight_behavior(delta)
 
 	# Move forward
 	global_position += direction * speed * delta
@@ -103,6 +131,77 @@ func _physics_process(delta: float) -> void:
 	lifetime -= delta
 	if lifetime <= 0:
 		queue_free()
+
+## Phase 16: Apply weapon mod behavior while the projectile is in flight.
+func _apply_mod_flight_behavior(delta: float) -> void:
+	match _weapon_mod:
+		GameConstants.WeaponMod.HOMING_LASER, GameConstants.WeaponMod.QUANTUM_OVERDRIVE:
+			# Homing: steer toward the nearest enemy
+			var target: Node3D = _find_nearest_enemy()
+			if target:
+				var to_target: Vector3 = (target.global_position - global_position).normalized()
+				var current_dir: Vector3 = direction.normalized()
+				# Steer toward target with a limited turn rate
+				var new_dir: Vector3 = current_dir.lerp(to_target, _homing_strength * delta).normalized()
+				direction = new_dir
+		GameConstants.WeaponMod.GRAVITY_WELL_LASER:
+			# Gravity Well: pull nearby enemies toward the projectile's path
+			_pull_nearby_enemies(delta)
+		GameConstants.WeaponMod.TESLA_COIL:
+			# Tesla: periodically zap nearby enemies with electric arcs
+			_tesla_zap_timer -= delta
+			if _tesla_zap_timer <= 0:
+				_tesla_zap_timer = 0.15
+				_tesla_zap_nearby()
+
+# Tesla coil internal timer
+var _tesla_zap_timer: float = 0.0
+
+## Find the nearest enemy to the projectile (for homing).
+func _find_nearest_enemy() -> Node3D:
+	var nearest: Node3D = null
+	var nearest_dist: float = 30.0  # Max homing range
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if not enemy.is_in_group("enemies"):
+			continue
+		if _has_hit_enemies.has(enemy):
+			continue
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < nearest_dist:
+			nearest_dist = d
+			nearest = enemy
+	return nearest
+
+## Gravity Well: pull nearby enemies toward the projectile.
+func _pull_nearby_enemies(delta: float) -> void:
+	var pull_radius: float = 8.0
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if not enemy.is_in_group("enemies"):
+			continue
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < pull_radius and d > 0.5:
+			var pull_dir: Vector3 = (global_position - enemy.global_position).normalized()
+			var pull_strength: float = 10.0 * (1.0 - d / pull_radius)
+			enemy.global_position += pull_dir * pull_strength * delta
+
+## Tesla Coil: zap nearby enemies with small damage.
+func _tesla_zap_nearby() -> void:
+	var zap_radius: float = 5.0
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if not enemy.is_in_group("enemies"):
+			continue
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < zap_radius:
+			if enemy.has_method("take_damage"):
+				enemy.take_damage(int(damage * 0.3))
+			# Visual: small spark particle
+			ParticleEffects.spawn_explosion(get_parent(), enemy.global_position, Color(0.5, 0.9, 1.0), 6, 0.2)
 
 func _record_trail_point(pos: Vector3) -> void:
 	_trail_positions.push_front(pos)
@@ -144,6 +243,9 @@ func _update_trail_visuals(delta: float) -> void:
 func _on_body_entered(body: Node3D) -> void:
 	# Check if it's an enemy
 	if body.is_in_group("enemies"):
+		# Don't hit the same enemy twice (for piercing/chain)
+		if _has_hit_enemies.has(body):
+			return
 		_hit_enemy(body)
 	elif body.is_in_group("destructibles"):
 		# Hit a destructible prop — damage it
@@ -152,12 +254,27 @@ func _on_body_entered(body: Node3D) -> void:
 		_impact_effect()
 		queue_free()
 	else:
-		# Hit terrain/wall — destroy projectile
+		# Hit terrain/wall
+		# Phase 16: Bouncing Bolt bounces off walls
+		if _weapon_mod == GameConstants.WeaponMod.BOUNCING_BOLT and _bounce_count < _max_bounces:
+			_bounce_off_wall(body)
+			return
 		_impact_effect()
 		queue_free()
 
+## Phase 16: Bounce off a wall — reflect direction and continue.
+func _bounce_off_wall(_body: Node3D) -> void:
+	_bounce_count += 1
+	# Simple bounce: reverse direction (more sophisticated would use normals,
+	# but Area3D doesn't provide collision normals easily)
+	# Try to bounce upward/away
+	direction = -direction + Vector3(0, 0.3, 0)
+	direction = direction.normalized()
+	# Small visual feedback
+	ParticleEffects.spawn_explosion(get_parent(), global_position, _mod_color, 8, 0.2)
+
 func _hit_enemy(enemy: Node3D) -> void:
-	# damage already includes level bonus (set by player.gd on spawn)
+	# damage already includes level bonus and mod multiplier (set by player.gd on spawn)
 	var total_damage := damage
 
 	# Crit check
@@ -186,9 +303,262 @@ func _hit_enemy(enemy: Node3D) -> void:
 	# Damage number popup
 	DamageNumber.spawn(get_parent(), global_position, total_damage, is_crit, will_kill)
 
+	# ── Phase 16: Weapon mod on-hit effects ──
+	_apply_mod_on_hit(enemy, total_damage)
+
+	# Track this enemy as hit (for pierce/chain)
+	_has_hit_enemies.append(enemy)
+
+	# Phase 16: Piercing Beam — pass through enemies without being destroyed
+	if _weapon_mod == GameConstants.WeaponMod.PIERCING_BEAM and _pierce_count < _max_pierces:
+		_pierce_count += 1
+		_impact_effect()
+		return  # Don't free — continue flying
+
+	# Phase 16: Splitter Laser — spawn two angled projectiles on hit
+	if _weapon_mod == GameConstants.WeaponMod.SPLITTER_LASER:
+		_spawn_splitter_projectiles(enemy)
+
+	# Phase 16: Mega Blast / Plasma Nova — AoE explosion on impact
+	if _weapon_mod == GameConstants.WeaponMod.MEGA_BLAST:
+		_aoe_explosion(8.0, total_damage, Color(1.0, 0.3, 0.3))
+	elif _weapon_mod == GameConstants.WeaponMod.PLASMA_NOVA:
+		_aoe_explosion(6.0, total_damage, Color(1.0, 0.6, 0.9))
+	elif _weapon_mod == GameConstants.WeaponMod.SHRAPNEL_BURST:
+		_shrapnel_burst(total_damage)
+	elif _weapon_mod == GameConstants.WeaponMod.ACID_TRAIL:
+		_spawn_acid_pool(total_damage)
+
 	# Impact effect
 	_impact_effect()
 	queue_free()
+
+## Phase 16: Apply on-hit weapon mod effects (chain lightning, freeze, vampire, etc.)
+func _apply_mod_on_hit(enemy: Node3D, dmg: int) -> void:
+	match _weapon_mod:
+		GameConstants.WeaponMod.CHAIN_LIGHTNING, GameConstants.WeaponMod.QUANTUM_OVERDRIVE:
+			# Chain to nearby enemies
+			_chain_lightning(enemy, dmg)
+		GameConstants.WeaponMod.FREEZE_RAY:
+			# Slow the enemy
+			_freeze_enemy(enemy)
+		GameConstants.WeaponMod.VAMPIRE_BEAM:
+			# Heal Zorp for a portion of damage dealt
+			var heal_amount: int = max(1, int(dmg * 0.25))
+			GameManager.heal(heal_amount)
+		GameConstants.WeaponMod.RICOCHET_PULSE:
+			# Ricochet to nearest other enemy
+			_ricochet_to_next(enemy, dmg)
+		GameConstants.WeaponMod.BLAZE_TRAIL:
+			# Set enemy on fire (burn damage over time)
+			_set_enemy_on_fire(enemy, dmg)
+		GameConstants.WeaponMod.VOID_RAY:
+			# Slow + energy drain (reduce enemy speed)
+			_freeze_enemy(enemy)
+		GameConstants.WeaponMod.REFLECTIVE_SHIELD:
+			# Defensive: no special on-hit, but the mod reduces incoming damage
+			pass
+
+## Phase 16: Chain lightning — hit jumps to nearby enemies.
+func _chain_lightning(source_enemy: Node3D, dmg: int) -> void:
+	var chain_range: float = 8.0
+	var chain_targets: int = 3
+	var chained: Array[Node3D] = [source_enemy]
+	var current: Node3D = source_enemy
+	for i in range(chain_targets):
+		var next: Node3D = null
+		var next_dist: float = chain_range
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if not enemy.is_in_group("enemies"):
+				continue
+			if chained.has(enemy):
+				continue
+			var d: float = current.global_position.distance_to(enemy.global_position)
+			if d < next_dist:
+				next_dist = d
+				next = enemy
+		if next == null:
+			break
+		var chain_dmg: int = int(dmg * (0.6 - i * 0.15))  # Each jump does less
+		if next.has_method("take_damage_from"):
+			next.take_damage_from(chain_dmg, current.global_position)
+		else:
+			next.take_damage(chain_dmg)
+		DamageNumber.spawn(get_parent(), next.global_position, chain_dmg, false, false)
+		# Small lightning particle
+		ParticleEffects.spawn_explosion(get_parent(), next.global_position, Color(0.6, 0.8, 1.0), 10, 0.25)
+		chained.append(next)
+		current = next
+
+## Phase 16: Freeze an enemy (slow them down for 2 seconds).
+func _freeze_enemy(enemy: Node3D) -> void:
+	if "time_scale" in enemy:
+		enemy.set("time_scale", 0.3)
+		# Create a timer to unfreeze
+		var tw := create_tween()
+		tw.tween_interval(2.0)
+		tw.tween_callback(func():
+			if is_instance_valid(enemy) and "time_scale" in enemy:
+				enemy.set("time_scale", 1.0)
+		)
+	# Visual: ice particles
+	ParticleEffects.spawn_explosion(get_parent(), enemy.global_position, Color(0.3, 0.9, 1.0), 12, 0.3)
+
+## Phase 16: Ricochet — bounce damage to the next nearest enemy.
+func _ricochet_to_next(source: Node3D, dmg: int) -> void:
+	var nearest: Node3D = null
+	var nearest_dist: float = 12.0
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if not enemy.is_in_group("enemies"):
+			continue
+		if enemy == source:
+			continue
+		var d: float = source.global_position.distance_to(enemy.global_position)
+		if d < nearest_dist:
+			nearest_dist = d
+			nearest = enemy
+	if nearest:
+		var ricochet_dmg: int = int(dmg * 0.5)
+		if nearest.has_method("take_damage_from"):
+			nearest.take_damage_from(ricochet_dmg, source.global_position)
+		else:
+			nearest.take_damage(ricochet_dmg)
+		DamageNumber.spawn(get_parent(), nearest.global_position, ricochet_dmg, false, false)
+
+## Phase 16: Set enemy on fire (burn damage over 3 seconds).
+func _set_enemy_on_fire(enemy: Node3D, dmg: int) -> void:
+	var burn_dmg: int = max(2, int(dmg * 0.2))
+	var burns_remaining: int = 3
+	# Use a tween for periodic burn damage
+	var tw := create_tween()
+	tw.tween_interval(1.0)
+	for _i in range(burns_remaining):
+		tw.tween_callback(func():
+			if is_instance_valid(enemy) and enemy.has_method("take_damage"):
+				enemy.take_damage(burn_dmg)
+				ParticleEffects.spawn_explosion(enemy.get_parent(), enemy.global_position, Color(1.0, 0.5, 0.2), 8, 0.2)
+		)
+		tw.tween_interval(1.0)
+
+## Phase 16: AoE explosion — damage all enemies within radius.
+func _aoe_explosion(radius: float, dmg: int, col: Color) -> void:
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if not enemy.is_in_group("enemies"):
+			continue
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < radius:
+			var falloff: float = 1.0 - (d / radius) * 0.5  # 100% at center, 50% at edge
+			var aoe_dmg: int = int(dmg * falloff * 0.6)
+			if enemy.has_method("take_damage_from"):
+				enemy.take_damage_from(aoe_dmg, global_position)
+			else:
+				enemy.take_damage(aoe_dmg)
+	# Big explosion visual
+	ParticleEffects.spawn_mega_explosion(get_parent(), global_position, col)
+	# Light flash
+	var flash := OmniLight3D.new()
+	flash.light_color = col
+	flash.light_energy = 5.0
+	flash.omni_range = radius * 2.0
+	get_parent().add_child(flash)
+	var fade_tween := flash.create_tween()
+	fade_tween.tween_property(flash, "light_energy", 0.0, 0.3)
+	fade_tween.tween_callback(flash.queue_free)
+
+## Phase 16: Shrapnel burst — spawn small fragment projectiles in all directions.
+func _shrapnel_burst(base_dmg: int) -> void:
+	var frag_count: int = 6
+	for i in range(frag_count):
+		var angle: float = (TAU * i) / frag_count
+		var frag_dir: Vector3 = Vector3(cos(angle), 0.0, sin(angle)).normalized()
+		# Create a small short-lived projectile (simplified — just damage nearby)
+		var frag_dmg: int = int(base_dmg * 0.3)
+		# Apply damage to enemies in the fragment direction
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if not enemy.is_in_group("enemies"):
+				continue
+			var to_enemy: Vector3 = (enemy.global_position - global_position).normalized()
+			if frag_dir.dot(to_enemy) > 0.7:  # Within ~45° of fragment direction
+				var d: float = global_position.distance_to(enemy.global_position)
+				if d < 5.0 and not _has_hit_enemies.has(enemy):
+					if enemy.has_method("take_damage"):
+						enemy.take_damage(frag_dmg)
+	# Shrapnel particle effect
+	ParticleEffects.spawn_explosion(get_parent(), global_position, Color(0.7, 0.5, 0.2), 20, 0.4)
+
+## Phase 16: Splitter — spawn two angled child projectiles on hit.
+func _spawn_splitter_projectiles(_hit_enemy: Node3D) -> void:
+	# Spawn two small angled projectiles
+	for angle in [0.3, -0.3]:
+		var split_dir: Vector3 = direction.rotated(Vector3.UP, angle)
+		var proj: Area3D = PROJECTILE_SCENE.instantiate()
+		get_parent().add_child(proj)
+		proj.global_position = global_position
+		proj.set("direction", split_dir)
+		proj.set("damage", int(damage * 0.6))
+		proj.set("speed", speed)
+		# Don't make splitter projectiles split again (avoid infinite recursion)
+		# They use the same mod color but NONE behavior
+		if proj.has_method("set_weapon_mod"):
+			proj.set_weapon_mod(GameConstants.WeaponMod.NONE, _mod_color)
+
+## Phase 16: Acid Trail — spawn a lingering acid pool that damages enemies over time.
+func _spawn_acid_pool(base_dmg: int) -> void:
+	# Create an Area3D that damages enemies within it for 3 seconds
+	var pool := Area3D.new()
+	var pool_shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 2.5
+	pool_shape.shape = sphere
+	pool.add_child(pool_shape)
+	get_parent().add_child(pool)
+	pool.global_position = global_position
+	# Visual: green translucent sphere
+	var pool_mesh := MeshInstance3D.new()
+	var pool_sphere_mesh := SphereMesh.new()
+	pool_sphere_mesh.radius = 2.5
+	pool_sphere_mesh.height = 0.5  # Flat pool
+	pool_sphere_mesh.radial_segments = 12
+	pool_mesh.mesh = pool_sphere_mesh
+	var pool_mat := StandardMaterial3D.new()
+	pool_mat.albedo_color = Color(0.4, 0.8, 0.2, 0.4)
+	pool_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	pool_mat.emission_enabled = true
+	pool_mat.emission = Color(0.3, 0.6, 0.1)
+	pool_mat.emission_energy_multiplier = 0.8
+	pool_mesh.material_override = pool_mat
+	pool.add_child(pool_mesh)
+	# Damage over time: check every 0.5s for 3s
+	var ticks: int = 6
+	var tick_dmg: int = max(3, int(base_dmg * 0.2))
+	var tw := pool.create_tween()
+	for _i in range(ticks):
+		tw.tween_callback(func():
+			if not is_instance_valid(pool):
+				return
+			for enemy in GameManager.enemies:
+				if not is_instance_valid(enemy):
+					continue
+				if not enemy.is_in_group("enemies"):
+					continue
+				if pool.global_position.distance_to(enemy.global_position) < 2.5:
+					if enemy.has_method("take_damage"):
+						enemy.take_damage(tick_dmg)
+			# Spawn small acid bubble particles
+			ParticleEffects.spawn_explosion(pool.get_parent(), pool.global_position, Color(0.4, 0.8, 0.2), 5, 0.15)
+		)
+		tw.tween_interval(0.5)
+	# Fade out and free
+	tw.tween_property(pool_mat, "albedo_color:a", 0.0, 0.5)
+	tw.tween_callback(pool.queue_free)
 
 func _impact_effect() -> void:
 	# Spawn impact burst effect

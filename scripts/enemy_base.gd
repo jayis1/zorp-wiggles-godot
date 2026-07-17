@@ -450,6 +450,9 @@ func _die() -> void:
 	# with invalid references over time (performance leak).
 	GameManager.enemies.erase(self)
 
+	# ── Phase 16: Drop crafting materials on death ──
+	_drop_crafting_material()
+
 	# ── Phase 10: Clean up AI controller ──
 	if ai_controller:
 		ai_controller.cleanup()
@@ -547,3 +550,36 @@ func _trigger_camera_trauma(amount: float) -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(amount)
+
+# ─── Phase 16: Weapon Mod Crafting — material drops ───────────────────────────
+
+## The Collectible scene, used for spawning material drops.
+const COLLECTIBLE_DROP_SCENE := preload("res://scenes/entities/collectible.tscn")
+
+## Drop a crafting material when the enemy dies. Chance depends on enemy type
+## (normal enemies have 12% chance, bosses always drop).
+func _drop_crafting_material() -> void:
+	var drop_chance: float = GameConstants.CRAFTING_MATERIAL_DROP_CHANCE
+	# Bosses (Drake, Sentinel) always drop a material
+	if base_scale >= 2.0 or max_hp >= 200:
+		drop_chance = GameConstants.CRAFTING_MATERIAL_DROP_CHANCE_BOSS
+	if randf() > drop_chance:
+		return
+	# Pick a random crafting material type to drop
+	var material_types: Array[int] = GameConstants.CRAFTING_MATERIALS.duplicate()
+	material_types.shuffle()
+	var drop_type: int = material_types[0]
+	# Spawn a collectible at the enemy's position
+	var drop: Area3D = COLLECTIBLE_DROP_SCENE.instantiate()
+	get_parent().add_child(drop)
+	drop.global_position = global_position + Vector3(0, 0.5, 0)
+	# Small random scatter so drops don't stack
+	drop.global_position.x += randf_range(-1.0, 1.0)
+	drop.global_position.z += randf_range(-1.0, 1.0)
+	if drop.has_method("set_type"):
+		drop.set_type(drop_type)
+	# Add to GameManager's collectibles list
+	GameManager.collectibles.append(drop)
+	# Add to collectibles group
+	if not drop.is_in_group("collectibles"):
+		drop.add_to_group("collectibles")

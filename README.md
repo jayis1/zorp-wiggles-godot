@@ -23,6 +23,7 @@ Originally built with the Ursina engine (Python), this is a ground-up rewrite in
 || P | Pause |
 | F | Summon/dismiss companion pet |
 | G | Pet fetch mode (click collectible to fetch) |
+| C | Open weapon mod crafting menu |
 
 ## Building & Running
 
@@ -112,6 +113,8 @@ zorp-wiggles-godot/
 │   ├── dimension_indicator.gd # Dimension HUD indicator + timer (Phase 14)
 │   ├── companion_pet.gd   # Alien companion pet entity (Phase 15)
 │   ├── companion_hud.gd   # Pet HUD indicator (Phase 15)
+│   ├── weapon_mod_system.gd # Weapon mod crafting autoload singleton (Phase 16)
+│   ├── crafting_menu.gd   # Crafting menu UI — combine materials into weapon mods (Phase 16)
 │   └── main_menu.gd        # Menu logic
 ├── assets/
 │   ├── shaders/              # GLSL shaders (.gdshader)
@@ -271,7 +274,39 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Adult pet's 15% damage shield integrated into `GameManager.take_damage()`
 - Pet vanishes when player dies
 
-**Remaining phases:** Weapon mod crafting, dynamic weather, boss arenas, co-op, audio & polish.
+**Phase 16 (Weapon Mod Crafting):** ✅ Complete — 🆕 New Feature
+- Collect **10 crafting material types** that drop from enemy kills (12% drop chance for normal enemies, 100% for bosses)
+- 5 new material types: **Shield Crystal** (blue), **Fireball Scroll** (orange), **Regen Crystal** (green), **Magnet Core** (metallic), **Toxic Extract** (sickly green)
+- Press **C** to open the crafting menu — select 2 materials (or 3 for mega mods) and craft them into a weapon mod
+- **20 unique weapon mods**, each with distinct laser behavior:
+  - **Homing Laser** — bolts track the nearest enemy
+  - **Reflective Shield** — 40% damage reduction, defensive utility
+  - **Chain Lightning** — damage chains to 3 nearby enemies on hit
+  - **Spread Shot** — fires 3 bolts in a fan pattern
+  - **Piercing Beam** — passes through up to 3 enemies
+  - **Bouncing Bolt** — bounces off walls up to 3 times
+  - **Freeze Ray** — slows enemies for 2 seconds
+  - **Acid Trail** — leaves a lingering acid pool that damages enemies over time
+  - **Mega Blast** — massive AoE explosion on impact (3-material recipe)
+  - **Splitter Laser** — splits into two angled projectiles on hit
+  - **Vampire Beam** — drains HP from enemies, healing Zorp for 25% of damage
+  - **Gravity Well Laser** — pulls nearby enemies toward the projectile's path
+  - **Ricochet Pulse** — bounces damage to the next nearest enemy
+  - **Plasma Nova** — explodes in a plasma nova on impact
+  - **Sniper Beam** — 2x damage, 2x speed, long-range single bolt
+  - **Shrapnel Burst** — explodes into 6 directional fragments
+  - **Blaze Trail** — sets enemies on fire, burning over 3 seconds
+  - **Tesla Coil** — electric arcs zap nearby enemies in flight
+  - **Void Ray** — slows enemies and drains energy
+  - **Quantum Overdrive** — triple homing bolts with chain lightning (3-material mega)
+- Each mod has unique **laser color**, **damage multiplier** (0.5x–2.5x), **fire rate multiplier**, and **projectile speed multiplier**
+- **Discovery system**: Try unknown material combinations to discover new mods. Invalid combos refund half the materials
+- **Equip system**: Only 1 mod active at a time. Switch freely between discovered mods in the crafting menu
+- Crafting menu UI: Full-screen overlay with material grid (click to select), craft button, discovered mods panel with equip buttons
+- HUD weapon mod indicator: bottom-center label showing current mod name (color-matched) and total material count
+- `WeaponModSystem` autoload singleton manages inventory, crafting, and equip state
+
+**Remaining phases:** Dynamic weather, boss arenas, co-op, audio & polish.
 
 ## License
 

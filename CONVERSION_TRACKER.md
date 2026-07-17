@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 15 — Alien Companion Pet (COMPLETE)
+## Status: PHASE 16 — Weapon Mod Crafting (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -233,22 +233,40 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Adult pet shields Zorp (15% damage reduction) — integrated into `GameManager.take_damage()`
 - [x] Input actions `summon_pet` (F) and `pet_fetch` (G) added to `project.godot`
 
-### Phase 16: Weapon Mod Crafting (TODO) 🆕 NEW FEATURE
-- [ ] Crafting menu UI (combine 2 items → new weapon mod)
-- [ ] 20 weapon mods (each changes laser behavior):
-  - [ ] Homing Laser (Meteor Shard + Quantum Fuzz)
-  - [ ] Reflective Shield (Shield Crystal + Fireball Scroll)
-  - [ ] Chain Lightning (Nebula Dust + Star Fruit)
-  - [ ] Spread Shot (Fireball Scroll + Quantum Fuzz)
-  - [ ] Piercing Beam (Meteor Shard + Star Fruit)
-  - [ ] Bouncing Bolt (Quantum Fuzz + Space Gloop)
-  - [ ] Freeze Ray (Regen Crystal + Star Fruit)
-  - [ ] Acid Trail (Magnet Core + Toxic extract)
-  - [ ] Mega Blast (all 3 rare items)
-  - [ ] + 11 more combinations
-- [ ] Mod equip system (1 active mod at a time, swap in inventory)
-- [ ] Visual laser changes per mod (color, trail, impact effect)
-- [ ] Crafting discovery system (try unknown combos to discover new mods)
+### Phase 16: Weapon Mod Crafting ✅ COMPLETE 🆕 NEW FEATURE
+- [x] Crafting menu UI (combine 2 items → new weapon mod) — `crafting_menu.gd`, full-screen overlay with material grid, selected materials display, craft button, discovered mods panel
+- [x] 20 weapon mods (each changes laser behavior):
+  - [x] Homing Laser (Meteor Shard + Quantum Fuzz) — tracks nearest enemy
+  - [x] Reflective Shield (Shield Crystal + Fireball Scroll) — 40% damage reduction
+  - [x] Chain Lightning (Nebula Dust + Star Fruit) — chains to 3 nearby enemies
+  - [x] Spread Shot (Fireball Scroll + Quantum Fuzz) — 3-bolt fan pattern
+  - [x] Piercing Beam (Meteor Shard + Star Fruit) — passes through 3 enemies
+  - [x] Bouncing Bolt (Quantum Fuzz + Space Gloop) — bounces off walls 3 times
+  - [x] Freeze Ray (Regen Crystal + Star Fruit) — slows enemies for 2s
+  - [x] Acid Trail (Magnet Core + Toxic Extract) — leaves damaging acid pool
+  - [x] Mega Blast (Meteor Shard + Quantum Fuzz + Nebula Dust) — AoE explosion
+  - [x] Splitter Laser (Star Fruit + Shield Crystal) — splits into 2 on hit
+  - [x] Vampire Beam (Health Fragment + Meteor Shard) — heals Zorp 25% of damage
+  - [x] Gravity Well Laser (Magnet Core + Nebula Dust) — pulls enemies toward bolt
+  - [x] Ricochet Pulse (Shield Crystal + Quantum Fuzz) — bounces to next enemy
+  - [x] Plasma Nova (Fireball Scroll + Nebula Dust) — AoE nova explosion
+  - [x] Sniper Beam (Meteor Shard + Shield Crystal) — 2x damage, 2x speed
+  - [x] Shrapnel Burst (Toxic Extract + Fireball Scroll) — 6-directional fragments
+  - [x] Blaze Trail (Fireball Scroll + Meteor Shard) — burn damage over 3s
+  - [x] Tesla Coil (Regen Crystal + Quantum Fuzz) — electric arcs zap nearby enemies
+  - [x] Void Ray (Nebula Dust + Toxic Extract) — slows enemies
+  - [x] Quantum Overdrive (Meteor Shard + Quantum Fuzz + Star Fruit) — triple homing + chain mega
+- [x] Mod equip system (1 active mod at a time, swap in crafting menu) — equip buttons in discovered mods panel
+- [x] Visual laser changes per mod (color, trail, impact effect) — per-projectile material with mod color, light color matches
+- [x] Crafting discovery system (try unknown combos to discover new mods) — invalid combos refund half materials
+- [x] 5 new collectible types (Shield Crystal, Fireball Scroll, Regen Crystal, Magnet Core, Toxic Extract)
+- [x] Material drops from enemy kills (12% normal, 100% boss)
+- [x] `weapon_mod_system.gd` autoload singleton — inventory, crafting, equip system
+- [x] `crafting_menu.gd` — full crafting UI with material grid, recipe discovery, mod list
+- [x] HUD weapon mod indicator (bottom-center, shows current mod + material count)
+- [x] Per-mod damage/fire-rate/speed multipliers
+- [x] `WeaponModSystem` registered as autoload in `project.godot`
+- [x] Input action `crafting` (C key) added to `project.godot`
 
 ### Phase 17: Dynamic Weather (TODO) 🆕 NEW FEATURE
 - [ ] Weather state machine (clear → rain → storm → fog → flare → clear)
@@ -350,4 +368,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Collectible magnetic pull acceleration curve**: The pull speed now uses a quadratic ease-in curve (proximity²) instead of linear falloff. Items start gentle when far, then accelerate sharply as they close in — feeling more "sticky" and magnetic. The base speed is 30% of max at the pull radius edge, ramping to 100% at the collect radius, for a satisfying "snap" effect.
 
 ## Last Updated
-Phase 15 complete. Alien Companion Pet System: New `companion_pet.gd` + `.tscn` implements a loyal alien creature that follows Zorp (CharacterBody3D with NavigationAgent3D pathfinding). Summon with F key, dismiss with F again. The pet auto-collects nearby items within a stage-scaled radius (8/12/16m), feeding on them to gain evolution points. Three evolution stages: Baby (collect only, light cyan), Adolescent (collect + attack small enemies ≤30 HP, teal, 8-particle aura), Adult (collect + attack all enemies + 15% damage shield for Zorp, blue-purple, 20-particle aura). Evolution thresholds at 100 and 250 points. G key enters fetch mode — click any distant collectible and the pet races to retrieve it at 20 m/s. Pet has 4 random idle animations (bounce, spin, tail-chase, sleep) that trigger every 5-8s when following. Pet can take damage and dies with a 10s respawn timer. `companion_hud.gd` shows pet HP bar, evolution progress bar, stage name, and color-coded state label at bottom-left. Pet appears as cyan-blue diamond on minimap. Adult pet's shield reduction integrated into `GameManager.take_damage()`. Input actions `summon_pet` (F) and `pet_fetch` (G) added to `project.godot`. Phases 16-21 planned.
+Phase 16 complete. Weapon Mod Crafting System: New `weapon_mod_system.gd` autoload singleton manages inventory of 10 crafting material types and 20 discoverable weapon mods. 5 new collectible types added (Shield Crystal, Fireball Scroll, Regen Crystal, Magnet Core, Toxic Extract) — they drop from enemy kills (12% normal, 100% boss rate). `crafting_menu.gd` provides a full-screen crafting UI: select 2-3 materials from a grid, click Craft to combine them into a weapon mod, discover new mods by trying combinations (invalid combos refund half the materials). Discovered mods appear in a side panel with equip buttons. Each mod changes laser behavior: Homing Laser tracks enemies, Chain Lightning jumps to 3 nearby enemies, Spread Shot fires 3 bolts in a fan, Piercing Beam passes through enemies, Bouncing Bolt reflects off walls, Freeze Ray slows enemies, Acid Trail leaves a damaging pool, Mega Blast causes AoE explosions, Splitter Laser spawns child projectiles, Vampire Beam heals Zorp, Gravity Well pulls enemies, Ricochet bounces between enemies, Plasma Nova explodes, Sniper Beam does 2x damage at 2x speed, Shrapnel fires in 6 directions, Blaze Trail burns over time, Tesla Coil zaps with electric arcs, Void Ray slows, Quantum Overdrive fires triple homing+chain bolts. Each mod has unique color, damage multiplier (0.5x-2.5x), fire rate multiplier, and projectile speed multiplier. Reflective Shield also provides 40% damage reduction. `projectile.gd` rewritten with `set_weapon_mod()` method and 15+ mod-specific behavior functions for in-flight and on-hit effects. HUD shows a bottom-center mod indicator with current mod name and total material count. Input action `crafting` (C key) added to `project.godot`. `WeaponModSystem` registered as autoload. Phases 17-21 planned.

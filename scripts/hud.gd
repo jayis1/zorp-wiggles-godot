@@ -69,6 +69,9 @@ var _hp_bar_target_color: Color = Color(0.0, 1.0, 0.0)
 var _boss_bar_target_color: Color = Color(0.0, 1.0, 0.0)
 var _color_smoothing: float = 8.0  # Color lerp speed (slightly slower than bar for soft transition)
 
+# ── Phase 16: Weapon Mod indicator ──
+var _mod_indicator: Label = null
+
 func _ready() -> void:
 	# Connect game manager signals
 	GameManager.hp_changed.connect(_on_hp_changed)
@@ -182,6 +185,31 @@ func _ready() -> void:
 	var ph_ctrl := Control.new()
 	ph_ctrl.set_script(ph_script)
 	add_child(ph_ctrl)
+	
+	# ── Phase 16: Weapon Mod Crafting Menu ──
+	var cm_script := load("res://scripts/crafting_menu.gd")
+	var cm_ctrl := Control.new()
+	cm_ctrl.set_script(cm_script)
+	cm_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cm_ctrl.mouse_filter = Control.MOUSE_FILTER_STOP  # Needs to capture clicks when visible
+	add_child(cm_ctrl)
+	
+	# ── Phase 16: Weapon Mod Indicator (bottom-center, shows current mod) ──
+	_mod_indicator = Label.new()
+	_mod_indicator.offset_left = 440.0
+	_mod_indicator.offset_top = 690.0
+	_mod_indicator.offset_right = 840.0
+	_mod_indicator.offset_bottom = 715.0
+	_mod_indicator.text = "🔫 Standard Laser  |  📦 Materials: 0  |  [C] Craft"
+	_mod_indicator.add_theme_color_override("font_color", Color(0.7, 0.8, 1.0))
+	_mod_indicator.add_theme_font_size_override("font_size", 13)
+	_mod_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(_mod_indicator)
+	
+	# Connect weapon mod signals for indicator updates
+	WeaponModSystem.mod_equipped.connect(_on_mod_equipped_hud)
+	WeaponModSystem.mod_unequipped.connect(_on_mod_unequipped_hud)
+	WeaponModSystem.inventory_changed.connect(_on_inventory_changed_hud)
 
 	# Initialize displays
 	_update_all_displays()
@@ -376,3 +404,31 @@ func _ratio_to_bar_color(ratio: float) -> Color:
 		# Yellow (1,1,0) → Red (1,0,0) as ratio goes 0.5 → 0.0
 		var t: float = ratio * 2.0  # 1 at half, 0 at empty
 		return Color(1.0, t, 0.0)
+
+# ─── Phase 16: Weapon Mod HUD Handlers ────────────────────────────────────────
+
+func _on_mod_equipped_hud(mod_id: int) -> void:
+	_update_mod_indicator()
+
+func _on_mod_unequipped_hud() -> void:
+	_update_mod_indicator()
+
+func _on_inventory_changed_hud() -> void:
+	_update_mod_indicator()
+
+func _update_mod_indicator() -> void:
+	if not _mod_indicator:
+		return
+	var mod_name: String = "Standard Laser"
+	var mod_color: Color = Color(0.7, 0.8, 1.0)
+	if WeaponModSystem:
+		mod_name = WeaponModSystem.get_equipped_name()
+		mod_color = WeaponModSystem.get_equipped_color()
+	# Count total materials
+	var total_mats: int = 0
+	if WeaponModSystem:
+		var inv: Dictionary = WeaponModSystem.get_inventory()
+		for count in inv.values():
+			total_mats += count
+	_mod_indicator.text = "🔫 %s  |  📦 Materials: %d  |  [C] Craft" % [mod_name, total_mats]
+	_mod_indicator.add_theme_color_override("font_color", mod_color)

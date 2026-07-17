@@ -28,6 +28,12 @@ const TYPE_CONFIG := {
 	GameConstants.CollectibleType.METEOR_SHARD: {"color": Color(1.0, 0.5, 0.1), "value": 50, "scale": 0.5},
 	GameConstants.CollectibleType.QUANTUM_FUZZ: {"color": Color(0.5, 0.8, 1.0), "value": 40, "scale": 0.45},
 	GameConstants.CollectibleType.NEBULA_DUST: {"color": Color(0.8, 0.3, 0.9), "value": 35, "scale": 0.4},
+	# ── Phase 16: Crafting materials ──
+	GameConstants.CollectibleType.SHIELD_CRYSTAL: {"color": Color(0.3, 0.5, 1.0), "value": 35, "scale": 0.45},
+	GameConstants.CollectibleType.FIREBALL_SCROLL: {"color": Color(1.0, 0.4, 0.1), "value": 35, "scale": 0.45},
+	GameConstants.CollectibleType.REGEN_CRYSTAL: {"color": Color(0.2, 1.0, 0.4), "value": 35, "scale": 0.45},
+	GameConstants.CollectibleType.MAGNET_CORE: {"color": Color(0.6, 0.6, 0.7), "value": 30, "scale": 0.4},
+	GameConstants.CollectibleType.TOXIC_EXTRACT: {"color": Color(0.5, 0.9, 0.1), "value": 30, "scale": 0.4},
 }
 
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
@@ -83,9 +89,15 @@ func _apply_type_config() -> void:
 		
 		# Rare collectibles get a persistent point light so they glow in
 		# dark biomes and are visible from a distance.
+		# Phase 16: Crafting materials also get the glow (they're valuable).
 		if collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
 				or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
-				or collectible_type == GameConstants.CollectibleType.NEBULA_DUST:
+				or collectible_type == GameConstants.CollectibleType.NEBULA_DUST \
+				or collectible_type == GameConstants.CollectibleType.SHIELD_CRYSTAL \
+				or collectible_type == GameConstants.CollectibleType.FIREBALL_SCROLL \
+				or collectible_type == GameConstants.CollectibleType.REGEN_CRYSTAL \
+				or collectible_type == GameConstants.CollectibleType.MAGNET_CORE \
+				or collectible_type == GameConstants.CollectibleType.TOXIC_EXTRACT:
 			var glow := OmniLight3D.new()
 			glow.light_color = config["color"]
 			glow.light_energy = 1.2
@@ -180,6 +192,11 @@ func _collect() -> void:
 	# Remove from GameManager's collectible list to prevent the array from growing
 	# with invalid references over time (performance leak).
 	GameManager.collectibles.erase(self)
+
+	# ── Phase 16: If this is a crafting material, add it to the weapon mod inventory ──
+	if GameConstants.CRAFTING_MATERIALS.has(collectible_type):
+		if WeaponModSystem:
+			WeaponModSystem.add_material(collectible_type, 1)
 
 	# Award XP
 	if xp_value > 0:

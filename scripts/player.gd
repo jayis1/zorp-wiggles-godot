@@ -482,7 +482,11 @@ func _apply_camera_rotation() -> void:
 func _try_shoot() -> void:
 	if shoot_cooldown_timer > 0:
 		return
-	shoot_cooldown_timer = GameConstants.SHOOT_COOLDOWN
+	# Phase 16: Apply weapon mod fire rate multiplier
+	var cooldown: float = GameConstants.SHOOT_COOLDOWN
+	if WeaponModSystem:
+		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
+	shoot_cooldown_timer = cooldown
 	_spawn_projectile()
 
 ## Try to shoot; if on cooldown, buffer the input so it fires as soon as ready.
@@ -493,18 +497,60 @@ func _try_shoot_or_buffer() -> void:
 		_shoot_buffer_timer = SHOOT_BUFFER_WINDOW
 		return
 	_shoot_buffer_timer = 0.0
-	shoot_cooldown_timer = GameConstants.SHOOT_COOLDOWN
+	# Phase 16: Apply weapon mod fire rate multiplier
+	var cooldown: float = GameConstants.SHOOT_COOLDOWN
+	if WeaponModSystem:
+		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
+	shoot_cooldown_timer = cooldown
 	_spawn_projectile()
 
 func _spawn_projectile() -> void:
 	var shoot_dir := get_shoot_direction()
+	# ── Phase 16: Weapon Mod Crafting — apply mod to projectile spawning ──
+	# The equipped mod changes damage, fire rate, projectile speed, color, and behavior.
+	var mod_id: int = GameConstants.WeaponMod.NONE
+	var mod_color: Color = Color(0.2, 1.0, 0.8)
+	var mod_dmg_mult: float = 1.0
+	var mod_speed_mult: float = 1.0
+	if WeaponModSystem:
+		mod_id = WeaponModSystem.get_equipped_mod()
+		mod_color = WeaponModSystem.get_equipped_color()
+		mod_dmg_mult = WeaponModSystem.get_equipped_damage_mult()
+		mod_speed_mult = WeaponModSystem.get_equipped_speed_mult()
+	
+	# Base damage scales with player level (matches original Ursina: level * bonus)
+	var base_dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + GameManager.player_level * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
+	var mod_dmg: int = int(base_dmg * mod_dmg_mult)
+	var mod_speed: float = GameConstants.PROJECTILE_SPEED * mod_speed_mult
+	
+	# Spawn projectiles based on the equipped mod's behavior pattern
+	match mod_id:
+		GameConstants.WeaponMod.SPREAD_SHOT:
+			# Three bolts in a fan pattern
+			_spawn_single_projectile(shoot_dir, mod_dmg, mod_speed, mod_color)
+			_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, 0.2), mod_dmg, mod_speed, mod_color)
+			_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, -0.2), mod_dmg, mod_speed, mod_color)
+		GameConstants.WeaponMod.QUANTUM_OVERDRIVE:
+			# Triple-bolt with homing + chain (mega mod)
+			_spawn_single_projectile(shoot_dir, mod_dmg, mod_speed, mod_color, mod_id)
+			_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, 0.15), mod_dmg, mod_speed, mod_color, mod_id)
+			_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, -0.15), mod_dmg, mod_speed, mod_color, mod_id)
+		_:
+			# All other mods fire a single projectile (behavior is handled by the projectile itself)
+			_spawn_single_projectile(shoot_dir, mod_dmg, mod_speed, mod_color, mod_id)
+
+## Spawn a single projectile with the given parameters. The mod_id is passed to
+## the projectile so it can apply behavior-specific logic (homing, bouncing, etc.).
+func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Color, mod_id: int = GameConstants.WeaponMod.NONE) -> void:
 	var proj: Area3D = PROJECTILE_SCENE.instantiate()
 	get_parent().add_child(proj)
 	proj.global_position = global_position + Vector3(0, 0.5, 0)
 	proj.set("direction", shoot_dir)
-	# Damage scales with player level (matches original Ursina: level * bonus)
-	var dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + GameManager.player_level * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
 	proj.set("damage", dmg)
+	proj.set("speed", spd)
+	# Pass the weapon mod ID and color to the projectile for behavior/visual changes
+	if proj.has_method("set_weapon_mod"):
+		proj.set_weapon_mod(mod_id, col)
 
 	# Quick scale pulse on shoot for juicy feedback (skip if dashing to avoid tween conflict)
 	if mesh and not is_dashing:
