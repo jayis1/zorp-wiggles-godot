@@ -76,9 +76,20 @@ func _physics_process(delta: float) -> void:
 	if is_dead or GameManager.is_paused or spawn_grace_timer > 0:
 		return
 
+	# Target nearest valid player — in co-op, the graviton should pull
+	# whichever player is closest, not always P1.
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if not player:
 		return
+	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+		var p1_dist: float = global_position.distance_to(player.global_position)
+		var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
+		if GameManager.player_is_downed:
+			p1_dist = 99999.0
+		if CoOpManager.p2_is_downed:
+			p2_dist = 99999.0
+		if p2_dist < p1_dist:
+			player = CoOpManager.p2_node
 
 	var dist_to_player: float = global_position.distance_to(player.global_position)
 
@@ -92,10 +103,13 @@ func _physics_process(delta: float) -> void:
 				(1.0 - dist_to_player / GameConstants.GRAVITON_PULL_RADIUS)
 			player.global_position += pull_dir * pull_strength * delta
 
-			# Damage per second while in pull range
+			# Damage per second while in pull range — route to correct player
 			pull_damage_accum += GameConstants.GRAVITON_PULL_DAMAGE * delta
 			if pull_damage_accum >= 1.0:
-				GameManager.take_damage(int(pull_damage_accum), global_position)
+				if player.is_in_group("player2"):
+					CoOpManager.p2_take_damage(int(pull_damage_accum), global_position)
+				else:
+					GameManager.take_damage(int(pull_damage_accum), global_position)
 				pull_damage_accum = 0.0
 
 		# Animate pull ring pulse

@@ -84,10 +84,17 @@ func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
 	
 	# Check if close enough to trigger fuse (after AI has updated is_alerted)
+	# In co-op, check both players — trigger if either is close enough
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if player and is_alerted:
 		var dist: float = global_position.distance_to(player.global_position)
 		if dist < GameConstants.VOID_BOMBER_FUSE_TRIGGER_RANGE:
+			_activate_fuse()
+			return
+	# ── Phase 19: Co-op — check P2 distance for fuse trigger ──
+	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+		var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
+		if p2_dist < GameConstants.VOID_BOMBER_FUSE_TRIGGER_RANGE:
 			_activate_fuse()
 
 func _activate_fuse() -> void:
@@ -105,11 +112,18 @@ func _explode() -> void:
 	# Phase 20: Audio — explosion SFX
 	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
 
+	# Damage players within explosion radius — check both P1 and P2 in co-op
 	var player: Node3D = get_tree().get_first_node_in_group("player")
-	if player:
+	if player and GameManager.player_is_alive and not GameManager.player_is_downed:
 		var dist: float = global_position.distance_to(player.global_position)
 		if dist < GameConstants.VOID_BOMBER_EXPLOSION_RADIUS:
 			GameManager.take_damage(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE, global_position)
+	# ── Phase 19: Co-op — damage P2 if in range ──
+	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+		if not CoOpManager.p2_is_downed:
+			var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
+			if p2_dist < GameConstants.VOID_BOMBER_EXPLOSION_RADIUS:
+				CoOpManager.p2_take_damage(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE, global_position)
 
 	# Damage nearby enemies too
 	for enemy in get_tree().get_nodes_in_group("enemies"):
