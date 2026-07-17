@@ -77,10 +77,25 @@ func get_weather_spawn_bonus_types() -> Array:
 	return GameConstants.WEATHER_SPAWN_BONUS.get(_current_weather, [])
 
 ## Movement speed multiplier for the current weather (1.0 = normal).
+## Applies to the PLAYER. Sandstorm slows the player (fighting wind).
 func get_speed_multiplier() -> float:
 	match _current_weather:
 		GameConstants.Weather.SNOW_STORM:
 			return GameConstants.SNOW_STORM_SPEED_MULT
+		GameConstants.Weather.SANDSTORM:
+			return GameConstants.SANDSTORM_PLAYER_SPEED_MULT
+		_:
+			return 1.0
+
+## Enhancement: Enemy speed multiplier for the current weather (1.0 = normal).
+## Sandstorm energizes enemies (25% faster). Snow storm slows enemies too (0.7x).
+## Other weather types don't affect enemy speed.
+func get_enemy_speed_multiplier() -> float:
+	match _current_weather:
+		GameConstants.Weather.SNOW_STORM:
+			return GameConstants.SNOW_STORM_SPEED_MULT  # Enemies also slowed in snow
+		GameConstants.Weather.SANDSTORM:
+			return GameConstants.SANDSTORM_SPEED_MULT  # Enemies energized by sand
 		_:
 			return 1.0
 
@@ -218,6 +233,7 @@ func _pick_next_weather() -> int:
 		# Enhancement: New weather types
 		GameConstants.Weather.METEOR_SHOWER,
 		GameConstants.Weather.AURORA,
+		GameConstants.Weather.SANDSTORM,
 	]
 	# Weight: base 1.0, +2.0 if biome-affinity match
 	var biome: int = GameManager.current_biome
@@ -280,6 +296,9 @@ func _tick_weather_effects(delta: float) -> void:
 		# Enhancement: Meteor Shower — telegraphed meteor strikes (bigger than lightning)
 		GameConstants.Weather.METEOR_SHOWER:
 			_tick_meteor_shower(delta)
+		# Enhancement: Sandstorm — periodic sand-scour damage to exposed entities
+		GameConstants.Weather.SANDSTORM:
+			_tick_sandstorm(delta)
 		# SOLAR_FLARE, FOG, SNOW_STORM, AURORA effects are passive (multipliers queried
 		# by other systems); only light + particles are managed here.
 		_:
@@ -499,6 +518,36 @@ func _execute_meteor_strike(pos: Vector3) -> void:
 				if enemy.has_method("take_damage_from"):
 					enemy.take_damage_from(GameConstants.METEOR_DAMAGE, pos)
 
+# ─── Enhancement: Sandstorm ───────────────────────────────────────────────────
+# Sandstorms scour exposed entities with damage over time. Enemies are energized
+# by the storm (speed boost handled via get_enemy_speed_multiplier()). The player
+# is slowed (handled via get_speed_multiplier()). Fog density is increased for
+# reduced visibility. Shelter reduces damage (like acid rain).
+
+var _sandstorm_tick_timer: float = 0.0
+
+func _tick_sandstorm(delta: float) -> void:
+	_sandstorm_tick_timer -= delta
+	if _sandstorm_tick_timer > 0:
+		return
+	_sandstorm_tick_timer = GameConstants.SANDSTORM_TICK_INTERVAL
+	# Damage player if exposed (same shelter check as acid rain)
+	var player: CharacterBody3D = _get_player()
+	if not player or not is_instance_valid(player):
+		return
+	var exposed: bool = _is_player_exposed_to_sky()
+	var dmg: int = GameConstants.SANDSTORM_DAMAGE_PER_TICK
+	if not exposed:
+		dmg = int(dmg * (1.0 - GameConstants.SANDSTORM_SHELTER_REDUCTION))
+	if exposed or dmg > 0:
+		GameManager.take_damage(dmg, player.global_position + Vector3(0, 20, 0))
+	# Damage enemies too (sand is indiscriminate)
+	for enemy in GameManager.enemies:
+		if is_instance_valid(enemy) and not enemy.is_dead:
+			if enemy.has_method("take_damage_from"):
+				enemy.take_damage_from(GameConstants.SANDSTORM_DAMAGE_PER_TICK,
+					player.global_position if player else Vector3.ZERO)
+
 # ─── Weather effects start / end ──────────────────────────────────────────────
 
 func _start_weather_effects(weather: int) -> void:
@@ -545,6 +594,18 @@ func _start_weather_effects(weather: int) -> void:
 			_solar_light.light_energy = GameConstants.AURORA_LIGHT_ENERGY
 			_solar_light.omni_range = 80.0
 			parent.add_child(_solar_light)
+		# Enhancement: Sandstorm — scouring sand particles + dense fog + damage tick
+		GameConstants.Weather.SANDSTORM:
+			_weather_particles = _create_weather_particles("sandstorm")
+			parent.add_child(_weather_particles)
+			_target_fog_density = _base_fog_density * GameConstants.SANDSTORM_FOG_DENSITY_MULT
+			_sandstorm_tick_timer = GameConstants.SANDSTORM_TICK_INTERVAL
+			# Sandy ambient light — dim warm-orange tint
+			_solar_light = OmniLight3D.new()
+			_solar_light.light_color = Color(0.85, 0.65, 0.3)
+			_solar_light.light_energy = 1.5
+			_solar_light.omni_range = 50.0
+			parent.add_child(_solar_light)
 		GameConstants.Weather.CLEAR:
 			pass  # No particles; baseline
 
@@ -588,6 +649,9 @@ func _update_weather_particle_position() -> void:
 			if _current_weather == GameConstants.Weather.AURORA:
 				# Enhancement: Aurora light is higher and wider — it's a sky-wide phenomenon
 				_solar_light.global_position = player.global_position + Vector3(0, 40, 0)
+			elif _current_weather == GameConstants.Weather.SANDSTORM:
+				# Enhancement: Sandstorm light is lower — ground-level haze
+				_solar_light.global_position = player.global_position + Vector3(0, 15, 0)
 			else:
 				_solar_light.global_position = player.global_position + Vector3(0, 25, 0)
 
@@ -697,6 +761,20 @@ func _create_weather_particles(type: String) -> GPUParticles3D:
 			color = Color(0.3, 1.0, 0.6, 0.4)
 			mesh.radius = 2.0  # Large soft globes of light
 			mesh.height = 4.0
+		# Enhancement: Sandstorm particles — fast horizontal sand grains, thick
+		"sandstorm":
+			p.amount = 500
+			p.lifetime = 2.0
+			pmat.direction = Vector3(1, 0, 0.2)  # Strong horizontal wind
+			pmat.spread = 15.0
+			pmat.gravity = Vector3(0, -2, 0)  # Slight settling
+			pmat.initial_velocity_min = 15.0
+			pmat.initial_velocity_max = 25.0
+			pmat.turbulence_enabled = true
+			pmat.turbulence_noise_scale = 0.8
+			color = Color(0.9, 0.75, 0.35, 0.6)
+			mesh.radius = 0.04
+			mesh.height = 0.08
 
 	pmat.color = color
 	pmat.scale_min = 0.5

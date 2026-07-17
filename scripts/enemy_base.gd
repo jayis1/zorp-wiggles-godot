@@ -285,8 +285,9 @@ func _update_ai(delta: float) -> void:
 		effective_speed *= ai_controller.get_enrage_speed_mult()
 		effective_speed *= ai_controller.get_frenzy_speed_mult()
 		effective_speed *= ai_controller.get_ambush_speed_mult()
-	# Phase 17: Snow Storm weather slows all enemies
-	effective_speed *= WeatherSystem.get_speed_multiplier()
+	# Phase 17: Weather affects enemy speed — snow storm slows, sandstorm speeds up
+	# Enhancement: Use enemy-specific multiplier (sandstorm boosts enemies, not slows)
+	effective_speed *= WeatherSystem.get_enemy_speed_multiplier()
 
 	# Movement toward player — compute desired velocity, then smoothly approach
 	# it via exponential lerp for organic acceleration/deceleration.

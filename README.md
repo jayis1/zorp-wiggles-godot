@@ -395,6 +395,18 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - **Meteor Shower** (☄) — Random meteor strikes with 2-second telegraph. Meteors are visible falling from the sky as fiery spinning orbs during the telegraph. 60 damage, 8m radius AoE — bigger and more damaging than lightning. Biome affinity: Lava, Desert, Alien.
 - **Aurora** (🌌) — Colorful shifting sky lights that boost XP gain by 50%. High-altitude light cycles through green-teal-purple hues. Encourages aggressive play during auroras. Biome affinity: Snow, Crystal, Floating Islands.
 
+## Enhancement Pack 2 — More New Content
+
+### New Enemy Type (10 → 11)
+- **Phase Shifter** — An enemy that periodically becomes intangible (immune to damage) for 2 seconds out of every 5.2-second cycle. Cycle: MATERIAL (3.0s, vulnerable, vivid violet) → WARN (0.4s, rapid blink telegraph) → PHASED (2.0s, intangible, translucent blue, still attacks). Players must time their shots. The Spectral Beam weapon mod ignores intangibility. 60 HP, 35 XP per kill. Smart AI with flanking.
+
+### New Weapon Mods (22 → 24)
+- **Spectral Beam** (Quantum Fuzz + Toxic Extract) — Fires translucent violet bolts that phase through walls and terrain — never blocked. Pierces up to 4 enemies. Ignores Phase Shifter intangibility (the ultimate counter). Ghostly semi-transparent visual.
+- **Magnet Mine** (Magnet Core + Fireball Scroll) — Slow-moving mine with strong homing. On impact, pulls nearby enemies toward the center for 0.6s, then detonates for 1.6× AoE damage. Orange-red glowing sphere with pulsing light. Crowd-control mod — seek, pull, detonate.
+
+### New Weather Type (8 → 9)
+- **Sandstorm** (🌪) — Scouring sandstorm that reduces visibility (4× fog density), damages exposed entities (2 dmg/sec, 80% reduction under shelter), slows the player 15% (fighting wind), and speeds up enemies 25% (the storm energizes them). 500 fast horizontal sand grain particles. Biome affinity: Desert, Lava, Alien. Spawn bonus: Phase Shifters + Gravitons.
+
 ## License
 
 Open source — same as the original Zorp Wiggles project.# v0.1.0-godot

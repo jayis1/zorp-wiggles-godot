@@ -215,6 +215,15 @@ func _apply_mod_flight_behavior(delta: float) -> void:
 					var pull_dir: Vector3 = (global_position - enemy.global_position).normalized()
 					var pull_strength: float = 20.0 * (1.0 - d / bh_pull_radius)
 					enemy.global_position += pull_dir * pull_strength * delta
+		# Enhancement: Magnet Mine — strong homing toward nearest enemy
+		GameConstants.WeaponMod.MAGNET_MINE:
+			var mine_target: Node3D = _find_nearest_enemy()
+			if mine_target:
+				var to_target: Vector3 = (mine_target.global_position - global_position).normalized()
+				var current_dir: Vector3 = direction.normalized()
+				# Strong homing — mines are designed to seek targets
+				var new_dir: Vector3 = current_dir.lerp(to_target, 12.0 * delta).normalized()
+				direction = new_dir
 
 ## Find the nearest enemy to the projectile (for homing).
 func _find_nearest_enemy() -> Node3D:
@@ -314,6 +323,11 @@ func _on_body_entered(body: Node3D) -> void:
 		queue_free()
 	else:
 		# Hit terrain/wall
+		# Enhancement: Spectral Beam — phases through walls and terrain, never blocked
+		if _weapon_mod == GameConstants.WeaponMod.SPECTRAL_BEAM:
+			# Pass through terrain — small visual ripple but don't stop
+			ParticleEffects.spawn_explosion(get_parent(), global_position, _mod_color, 4, 0.1)
+			return
 		# Phase 16: Bouncing Bolt bounces off walls
 		if _weapon_mod == GameConstants.WeaponMod.BOUNCING_BOLT and _bounce_count < _max_bounces:
 			_bounce_off_wall(body)
@@ -361,6 +375,11 @@ func _hit_enemy(enemy: Node3D) -> void:
 		# ── Phase 19: Co-op — mark enemy as hit by P2 if this is a P2 projectile ──
 		if has_meta("is_p2_projectile") and enemy.has_method("set_p2_hit"):
 			enemy.set_p2_hit()
+		# Enhancement: Spectral Beam — set the bypass flag so Phase Shifter
+		# enemies take damage even while intangible. The flag is reset after
+		# the hit is processed (in the pierce section below or before queue_free).
+		if _weapon_mod == GameConstants.WeaponMod.SPECTRAL_BEAM:
+			EnemyPhaseShifter.set_spectral_bypass(true)
 		# Phase 8: Use the directional damage variant so enemies get knocked back
 		if enemy.has_method("take_damage_from"):
 			enemy.take_damage_from(total_damage, global_position)
@@ -388,6 +407,20 @@ func _hit_enemy(enemy: Node3D) -> void:
 		_impact_effect()
 		return  # Don't free — continue flying
 
+	# Enhancement: Spectral Beam — pierces through up to 4 enemies and phases
+	# through walls. The spectral bypass flag was already set before calling
+	# take_damage_from above, so Phase Shifter enemies take damage even when
+	# intangible. Reset the flag after the hit.
+	if _weapon_mod == GameConstants.WeaponMod.SPECTRAL_BEAM and _pierce_count < 4:
+		_pierce_count += 1
+		EnemyPhaseShifter.set_spectral_bypass(false)
+		_impact_effect()
+		return  # Don't free — continue flying and phasing
+
+	# Reset spectral bypass flag if it was set (non-pierce spectral hit)
+	if _weapon_mod == GameConstants.WeaponMod.SPECTRAL_BEAM:
+		EnemyPhaseShifter.set_spectral_bypass(false)
+
 	# Phase 16: Splitter Laser — spawn two angled projectiles on hit
 	if _weapon_mod == GameConstants.WeaponMod.SPLITTER_LASER:
 		_spawn_splitter_projectiles(enemy)
@@ -404,6 +437,9 @@ func _hit_enemy(enemy: Node3D) -> void:
 	# Enhancement: Black Hole Beam — create a singularity that sucks enemies in then collapses
 	elif _weapon_mod == GameConstants.WeaponMod.BLACK_HOLE_BEAM:
 		_spawn_black_hole(total_damage)
+	# Enhancement: Magnet Mine — big AoE detonation on impact, pulls enemies in first
+	elif _weapon_mod == GameConstants.WeaponMod.MAGNET_MINE:
+		_spawn_magnet_mine_detonation(total_damage)
 
 	# Impact effect
 	_impact_effect()
@@ -770,3 +806,106 @@ func _spawn_black_hole(base_dmg: int) -> void:
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	tick_tween.tween_property(bh_mat, "albedo_color:a", 0.0, 0.2)
 	tick_tween.tween_callback(singularity.queue_free)
+
+## Enhancement: Magnet Mine — on impact, pull nearby enemies toward the detonation
+## point for 0.6s, then explode for big AoE damage. The mine homes in flight
+## (handled in _apply_mod_flight_behavior), so by the time it hits an enemy it's
+## likely in the middle of a group — the pull + detonation cleans up clusters.
+func _spawn_magnet_mine_detonation(base_dmg: int) -> void:
+	var parent: Node = get_parent()
+	if not parent:
+		return
+	# Pull phase: 0.6s of pulling enemies toward the detonation point
+	var pull_duration: float = 0.6
+	var pull_radius: float = 9.0
+	var mine_pos: Vector3 = global_position
+	# Visual: orange-red glowing sphere that pulses during pull
+	var mine_node := Area3D.new()
+	parent.add_child(mine_node)
+	mine_node.global_position = mine_pos
+	var mine_mesh := MeshInstance3D.new()
+	var mine_sphere := SphereMesh.new()
+	mine_sphere.radius = 0.8
+	mine_sphere.height = 1.6
+	mine_sphere.radial_segments = 12
+	mine_mesh.mesh = mine_sphere
+	var mine_mat := StandardMaterial3D.new()
+	mine_mat.albedo_color = Color(0.9, 0.4, 0.1)
+	mine_mat.emission_enabled = true
+	mine_mat.emission = Color(1.0, 0.5, 0.1)
+	mine_mat.emission_energy_multiplier = 2.5
+	mine_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mine_mesh.material_override = mine_mat
+	mine_node.add_child(mine_mesh)
+	# Pulsing light
+	var mine_light := OmniLight3D.new()
+	mine_light.light_color = Color(1.0, 0.5, 0.1)
+	mine_light.light_energy = 4.0
+	mine_light.omni_range = 10.0
+	mine_node.add_child(mine_light)
+
+	# Pull tween: pulse the light and grow the mesh
+	var pull_tween := mine_node.create_tween()
+	pull_tween.tween_property(mine_mesh, "scale", Vector3(1.8, 1.8, 1.8), pull_duration) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	pull_tween.parallel().tween_property(mine_light, "light_energy", 8.0, pull_duration)
+
+	# Tick pull enemies every 0.15s during the pull phase
+	var ticks: int = int(pull_duration / 0.15)
+	var tick_tween := mine_node.create_tween()
+	for _i in range(ticks):
+		tick_tween.tween_callback(func():
+			if not is_instance_valid(mine_node):
+				return
+			for enemy in GameManager.enemies:
+				if not is_instance_valid(enemy):
+					continue
+				if not enemy.is_in_group("enemies"):
+					continue
+				var d: float = mine_node.global_position.distance_to(enemy.global_position)
+				if d < pull_radius and d > 0.5:
+					var pull_dir: Vector3 = (mine_node.global_position - enemy.global_position).normalized()
+					enemy.global_position += pull_dir * 10.0 * 0.15
+		)
+		tick_tween.tween_interval(0.15)
+
+	# Detonation: big AoE damage
+	tick_tween.tween_callback(func():
+		if not is_instance_valid(mine_node):
+			return
+		var detonation_dmg: int = int(base_dmg * 1.6)
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if not enemy.is_in_group("enemies"):
+				continue
+			var d: float = mine_node.global_position.distance_to(enemy.global_position)
+			if d < pull_radius:
+				var falloff: float = 1.0 - (d / pull_radius) * 0.4
+				var hit_dmg: int = int(detonation_dmg * falloff)
+				if enemy.has_method("take_damage_from"):
+					enemy.take_damage_from(hit_dmg, mine_node.global_position)
+				elif enemy.has_method("take_damage"):
+					enemy.take_damage(hit_dmg)
+		# Big explosion visual
+		ParticleEffects.spawn_mega_explosion(mine_node.get_parent(),
+			mine_node.global_position, Color(1.0, 0.5, 0.1))
+		# Detonation light flash
+		var flash := OmniLight3D.new()
+		flash.light_color = Color(1.0, 0.6, 0.2)
+		flash.light_energy = 10.0
+		flash.omni_range = 15.0
+		mine_node.get_parent().add_child(flash)
+		flash.global_position = mine_node.global_position
+		var flash_tw := flash.create_tween()
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.5)
+		flash_tw.tween_callback(flash.queue_free)
+		# Camera shake
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.45)
+	)
+	# Shrink and fade the mine after detonation
+	tick_tween.tween_property(mine_mesh, "scale", Vector3.ZERO, 0.2) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	tick_tween.tween_property(mine_mat, "albedo_color:a", 0.0, 0.2)
+	tick_tween.tween_callback(mine_node.queue_free)

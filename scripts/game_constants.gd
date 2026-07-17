@@ -110,6 +110,7 @@ enum EnemyType {
 	# ── Enhancement: New enemy types ──
 	SWARM_MITE,       # Tiny, fast, spawns in packs — low HP but overwhelms
 	CRYSTAL_GUARDIAN, # Slow, tanky, fires crystal shard projectiles
+	PHASE_SHIFTER,    # Periodically becomes intangible — must time shots to hit it
 }
 
 # ─── Enemy Spawn & Difficulty ────────────────────────────────────────────────
@@ -218,6 +219,27 @@ const CRYSTAL_GUARDIAN_SHARD_DAMAGE: int = 16
 const CRYSTAL_GUARDIAN_SHARD_LIFETIME: float = 3.5
 const CRYSTAL_GUARDIAN_COLOR: Color = Color(0.0, 0.8, 0.9)  # Cyan
 const CRYSTAL_GUARDIAN_SHARD_COLOR: Color = Color(0.3, 0.9, 1.0)
+
+# ─── Enhancement: Phase Shifter ───────────────────────────────────────────────
+# An enemy that periodically shifts into a spectral phase, becoming intangible
+# (immune to damage) for a brief window. Players must time their shots to land
+# hits while it is in the material phase. Visual telegraph: transparent + bluish
+# shimmer while phasing; solid + vivid color while vulnerable.
+const PHASE_SHIFTER_HP: int = 60
+const PHASE_SHIFTER_SPEED: float = 4.5
+const PHASE_SHIFTER_DAMAGE: int = 14
+const PHASE_SHIFTER_SCALE: float = 0.9
+const PHASE_SHIFTER_XP: int = 35
+const PHASE_SHIFTER_SCORE: int = 120
+const PHASE_SHIFTER_DETECT_RANGE: float = 30.0
+const PHASE_SHIFTER_ATTACK_RANGE: float = 2.0
+const PHASE_SHIFTER_ATTACK_COOLDOWN: float = 1.5
+const PHASE_SHIFTER_COLOR: Color = Color(0.6, 0.3, 0.9)            # Vivid violet
+const PHASE_SHIFTER_PHASE_COLOR: Color = Color(0.3, 0.6, 1.0, 0.3) # Translucent blue while intangible
+const PHASE_SHIFTER_PHASE_DURATION: float = 2.0     # Seconds intangible
+const PHASE_SHIFTER_MATERIAL_DURATION: float = 3.0  # Seconds vulnerable
+const PHASE_SHIFTER_PHASE_WARN_TIME: float = 0.4    # Shimmer telegraph before phasing
+const PHASE_SHIFTER_PHASE_BLINK_SPEED: float = 18.0 # Hz of blink during warn
 
 # ─── Collectible Types ───────────────────────────────────────────────────────
 enum CollectibleType {
@@ -816,6 +838,8 @@ enum WeaponMod {
 	# ── Enhancement: New weapon mods ──
 	BLACK_HOLE_BEAM,     # 21 — Magnet Core + Meteor Shard — creates a black hole that sucks enemies in
 	PHOTON_BEAM,         # 22 — Regen Crystal + Shield Crystal — rapid-fire piercing beam
+	SPECTRAL_BEAM,       # 23 — Quantum Fuzz + Toxic Extract — phases through walls, ignores enemy shields
+	MAGNET_MINE,         # 24 — Magnet Core + Fireball Scroll — homing mine that attaches then detonates
 }
 
 const WEAPON_MOD_NAMES: Array[String] = [
@@ -843,6 +867,8 @@ const WEAPON_MOD_NAMES: Array[String] = [
 	# Enhancement: New weapon mods
 	"Black Hole Beam",
 	"Photon Beam",
+	"Spectral Beam",
+	"Magnet Mine",
 ]
 
 const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
@@ -870,6 +896,8 @@ const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
 	# Enhancement: New weapon mods
 	"Creates a singularity that sucks enemies in, then collapses for damage.",
 	"Rapid-fire piercing photon bolts that pass through enemies.",
+	"Phases through walls and terrain — never blocked. Ignores enemy intangibility.",
+	"Homing mine that attaches to an enemy, then detonates for massive AoE damage.",
 ]
 
 # Colors for each weapon mod (laser color)
@@ -898,6 +926,8 @@ const WEAPON_MOD_COLORS: Array[Color] = [
 	# Enhancement: New weapon mods
 	Color(0.1, 0.0, 0.2),   # Black Hole: near-black with purple tint
 	Color(1.0, 1.0, 0.8),   # Photon: warm white-gold
+	Color(0.4, 0.2, 0.6, 0.7), # Spectral: translucent violet ghost
+	Color(0.9, 0.5, 0.1),   # Magnet Mine: orange-red explosive
 ]
 
 # Damage multiplier per weapon mod
@@ -926,6 +956,8 @@ const WEAPON_MOD_DAMAGE_MULT: Array[float] = [
 	# Enhancement: New weapon mods
 	1.0,   # Black Hole Beam (damage from the collapse, not the bolt)
 	0.5,   # Photon Beam (rapid fire, each bolt is weak but fires 2x as fast)
+	0.9,   # Spectral Beam (phasing is the utility, damage is decent)
+	1.6,   # Magnet Mine (big single-hit AoE detonation)
 ]
 
 # Fire rate multiplier (lower = faster)
@@ -954,6 +986,8 @@ const WEAPON_MOD_FIRE_RATE_MULT: Array[float] = [
 	# Enhancement: New weapon mods
 	2.0,   # Black Hole Beam (slow, powerful singularity)
 	0.5,   # Photon Beam (very rapid fire — 2x as fast as standard)
+	1.3,   # Spectral Beam (slower, deliberate shots)
+	1.8,   # Magnet Mine (slow deploy — big payoff)
 ]
 
 # Projectile speed multiplier
@@ -982,6 +1016,8 @@ const WEAPON_MOD_SPEED_MULT: Array[float] = [
 	# Enhancement: New weapon mods
 	0.6,   # Black Hole Beam (slow bolt — it's heavy, collapsing into a singularity)
 	2.0,   # Photon Beam (very fast light-speed bolts)
+	1.1,   # Spectral Beam (moderate — phasing through everything)
+	0.7,   # Magnet Mine (slow — it's a drifting mine, then homes in)
 ]
 
 # Crafting recipes: maps a sorted key string "typeA,typeB[,typeC]" → WeaponMod enum value
@@ -1012,6 +1048,8 @@ const CRAFTING_RECIPES: Dictionary = {
 	# Enhancement: New weapon mod recipes
 	"MAGNET_CORE,METEOR_SHARD": WeaponMod.BLACK_HOLE_BEAM,
 	"REGEN_CRYSTAL,SHIELD_CRYSTAL": WeaponMod.PHOTON_BEAM,
+	"QUANTUM_FUZZ,TOXIC_EXTRACT": WeaponMod.SPECTRAL_BEAM,
+	"FIREBALL_SCROLL,MAGNET_CORE": WeaponMod.MAGNET_MINE,
 }
 
 # Crafting material type names for recipe key lookup
@@ -1043,6 +1081,7 @@ enum Weather {
 	# ── Enhancement: New weather types ──
 	METEOR_SHOWER, # Random meteor strikes (telegraphed AoE, larger than lightning)
 	AURORA,        # Colorful sky lights, boosts XP gain by 50%
+	SANDSTORM,     # Reduced visibility, damages player, boosts enemy speed
 }
 
 # Weather state duration ranges (seconds): [min, max]
@@ -1077,6 +1116,17 @@ const METEOR_WARN_TIME: float = 2.0                 # Telegraph time (longer tha
 const AURORA_XP_MULT: float = 1.5                   # 50% XP boost during aurora
 const AURORA_LIGHT_ENERGY: float = 1.5              # Ambient aurora light energy
 
+# ── Enhancement: Sandstorm weather ──
+# Sandstorms whip up in desert biomes, scouring everything in sight. Visibility
+# drops (fog density spikes), the player takes periodic sand-scour damage, and
+# enemies gain a speed boost (the storm energizes them). Encourages sheltering.
+const SANDSTORM_SPEED_MULT: float = 1.25             # Enemies 25% faster in sandstorm
+const SANDSTORM_PLAYER_SPEED_MULT: float = 0.85      # Player slowed 15% (fighting wind)
+const SANDSTORM_DAMAGE_PER_TICK: int = 2             # Per-second scour damage
+const SANDSTORM_TICK_INTERVAL: float = 1.0           # How often damage ticks
+const SANDSTORM_FOG_DENSITY_MULT: float = 4.0        # Visibility reduction
+const SANDSTORM_SHELTER_REDUCTION: float = 0.80      # 80% damage reduction under shelter
+
 # Weather → biome affinity (weather more likely in thematic biomes)
 # Each weather type maps to a list of biomes where it has a higher chance of starting.
 const WEATHER_BIOME_AFFINITY: Dictionary = {
@@ -1088,6 +1138,7 @@ const WEATHER_BIOME_AFFINITY: Dictionary = {
 	# Enhancement: New weather biome affinities
 	Weather.METEOR_SHOWER: [GameConstants.Biome.LAVA, GameConstants.Biome.DESERT, GameConstants.Biome.ALIEN],
 	Weather.AURORA: [GameConstants.Biome.SNOW, GameConstants.Biome.CRYSTAL, GameConstants.Biome.FLOATING_ISLANDS],
+	Weather.SANDSTORM: [GameConstants.Biome.DESERT, GameConstants.Biome.LAVA, GameConstants.Biome.ALIEN],
 }
 
 # Weather enemy spawn overrides — weather types that bias spawning toward specific enemies.
@@ -1101,6 +1152,7 @@ const WEATHER_SPAWN_BONUS: Dictionary = {
 	# Enhancement: New weather spawn bonuses
 	Weather.METEOR_SHOWER: [GameConstants.EnemyType.BOMBER, GameConstants.EnemyType.CRYSTAL_GUARDIAN],
 	Weather.AURORA: [GameConstants.EnemyType.SWARM_MITE, GameConstants.EnemyType.WISP],
+	Weather.SANDSTORM: [GameConstants.EnemyType.PHASE_SHIFTER, GameConstants.EnemyType.GRAVITON],
 }
 
 # Weather display info (name, icon emoji, color for UI)
@@ -1114,6 +1166,7 @@ const WEATHER_INFO: Dictionary = {
 	# Enhancement: New weather types
 	Weather.METEOR_SHOWER: {"name": "Meteor Shower", "icon": "☄", "color": Color(1.0, 0.4, 0.2)},
 	Weather.AURORA: {"name": "Aurora", "icon": "🌌", "color": Color(0.3, 1.0, 0.6)},
+	Weather.SANDSTORM: {"name": "Sandstorm", "icon": "🌪", "color": Color(0.9, 0.75, 0.3)},
 }
 
 # ─── Phase 18: Boss Arenas ───────────────────────────────────────────────────

@@ -28,6 +28,7 @@ const MEDIUM_TYPES: Array[int] = [
 	GameConstants.EnemyType.SPITTER,
 	GameConstants.EnemyType.WISP,
 	GameConstants.EnemyType.SWARM_MITE,  # Enhancement: Mites also in medium
+	GameConstants.EnemyType.PHASE_SHIFTER,  # Enhancement: Phase Shifter in medium
 ]
 const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.SERPENT,
@@ -37,6 +38,7 @@ const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.SPITTER,
 	GameConstants.EnemyType.DRAKE,
 	GameConstants.EnemyType.CRYSTAL_GUARDIAN,  # Enhancement: Guardian in hard tier
+	GameConstants.EnemyType.PHASE_SHIFTER,     # Enhancement: Phase Shifter also in hard
 ]
 
 # Enemy scene paths by type
@@ -52,6 +54,7 @@ const ENEMY_SCENES: Dictionary = {
 	# Enhancement: New enemy types
 	GameConstants.EnemyType.SWARM_MITE: "res://scenes/entities/enemy_swarm_mite.tscn",
 	GameConstants.EnemyType.CRYSTAL_GUARDIAN: "res://scenes/entities/enemy_crystal_guardian.tscn",
+	GameConstants.EnemyType.PHASE_SHIFTER: "res://scenes/entities/enemy_phase_shifter.tscn",
 }
 
 # Enemy type enum → name string (for looking up type data from EnemyTypeData)
@@ -67,6 +70,7 @@ const ENEMY_TYPE_NAMES: Dictionary = {
 	# Enhancement: New enemy types
 	GameConstants.EnemyType.SWARM_MITE: "Swarm Mite",
 	GameConstants.EnemyType.CRYSTAL_GUARDIAN: "Crystal Guardian",
+	GameConstants.EnemyType.PHASE_SHIFTER: "Phase Shifter",
 }
 
 func _ready() -> void:

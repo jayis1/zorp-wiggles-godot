@@ -437,3 +437,34 @@ Phase 20 complete. Audio & Polish: AudioManager autoload singleton with 24 proce
 - `WeatherSystem` updated: new candidates in `_pick_next_weather()`, `_tick_meteor_shower()`, `_schedule_meteor_strike()`, `_execute_meteor_strike()` functions, aurora light color shifting in `_process()`, aurora particle type in `_create_weather_particles()`, `get_xp_multiplier()` API method.
 - `GameManager.gain_xp()` updated to apply aurora XP multiplier.
 - Weather indicator HUD automatically displays new weather types via WEATHER_INFO dictionary.
+
+## Enhancement Pack 2 — Phase Shifter, Spectral Beam, Magnet Mine & Sandstorm
+
+### New Enemy Type (expanding beyond 10 → 11)
+- **Phase Shifter** (`enemy_phase_shifter.gd` + `.tscn`) — An enemy that periodically shifts into a spectral phase, becoming intangible (immune to damage) for 2 seconds out of every 5.2-second cycle. The cycle is: MATERIAL phase (3.0s, vulnerable, vivid violet, normal speed) → WARN phase (0.4s, rapid blink telegraph between violet and translucent blue) → PHASED state (2.0s, intangible, translucent blue, still moves and attacks). Players must time their shots to land hits during the MATERIAL window. The Spectral Beam weapon mod ignores intangibility (see below). 60 HP, speed 4.5, 14 damage, 35 XP / 120 score per kill. Smart AI enabled (flanking + retreat make it harder to pin down). Strong rim lighting + emission for a spectral look. Particle bursts on each phase transition.
+- New EnemyType enum value: PHASE_SHIFTER (10).
+- New constants in `game_constants.gd`: PHASE_SHIFTER_* (HP, speed, damage, scale, XP, score, detect/attack range, colors, phase/material/warn durations, blink speed).
+- EnemySpawner updated: PHASE_SHIFTER added to MEDIUM and HARD tier pools, scene path, and type name.
+- `enemy_phase_shifter.gd` — Overrides `take_damage_from()` to block damage while intangible. Uses a static `_spectral_bypass_active` flag set by Spectral Beam projectiles before calling take_damage, allowing them to bypass intangibility. Phase state machine with visual telegraph (blink during warn, shimmer while phased, particle bursts on transitions).
+
+### New Weapon Mods (expanding beyond 22 → 24)
+- **Spectral Beam** (Quantum Fuzz + Toxic Extract) — Fires translucent violet bolts that phase through walls and terrain — never blocked by anything. Pierces through up to 4 enemies. The key feature: ignores Phase Shifter intangibility. Before calling `take_damage_from()`, the projectile sets `EnemyPhaseShifter.set_spectral_bypass(true)` so Phase Shifters take damage even while phased. The bolt itself is semi-transparent (alpha 0.7) for a ghostly look. Moderate fire rate (1.3× cooldown), decent damage (0.9× mult), moderate speed (1.1× mult). The ultimate counter to Phase Shifters — and useful for shooting through terrain in general.
+- **Magnet Mine** (Magnet Core + Fireball Scroll) — Launches a slow-moving mine that strongly homes toward the nearest enemy (12.0 lerp strength vs Homing Laser's 8.0). On impact, it creates a detonation zone that pulls nearby enemies toward the center for 0.6 seconds (9m radius, 10 m/s pull), then explodes for 1.6× AoE damage with falloff. Orange-red glowing sphere visual with pulsing light during the pull phase, then mega explosion + light flash + camera shake (0.45 trauma) on detonation. Slow fire rate (1.8× cooldown), high damage (1.6× mult), slow projectile speed (0.7× mult). Crowd-control mod — the mine seeks a target, pulls enemies together, then detonates the cluster.
+- New WeaponMod enum values: SPECTRAL_BEAM (23), MAGNET_MINE (24).
+- New entries in all parallel WEAPON_MOD_* arrays (names, descriptions, colors, damage/fire-rate/speed multipliers).
+- New crafting recipes: `"QUANTUM_FUZZ,TOXIC_EXTRACT": SPECTRAL_BEAM`, `"FIREBALL_SCROLL,MAGNET_CORE": MAGNET_MINE`.
+- Spectral Beam behaviors in `projectile.gd`:
+  - Wall phasing: `_on_body_entered()` — terrain/wall hits spawn a small ripple particle but don't stop the bolt.
+  - Enemy piercing: `_hit_enemy()` — pierces through up to 4 enemies (like Photon Beam but fewer pierces).
+  - Intangibility bypass: Sets `EnemyPhaseShifter.set_spectral_bypass(true)` before calling `take_damage_from()`, resets after.
+- Magnet Mine behaviors in `projectile.gd`:
+  - Strong homing: `_apply_mod_flight_behavior()` — 12.0 lerp strength homing toward nearest enemy.
+  - Pull + detonation: `_spawn_magnet_mine_detonation()` — 0.6s pull phase (9m radius, 10 m/s), then 1.6× AoE explosion with mega explosion particles + light flash + camera shake.
+
+### New Weather Type (expanding beyond 8 → 9)
+- **Sandstorm** (🌪) — Scouring sandstorm that reduces visibility, damages exposed entities, and energizes enemies. Fast horizontal sand particles (500 grains, 15-25 m/s wind speed, strong turbulence). Dense fog (4× baseline fog density) for reduced visibility. Dim warm-orange ambient light at ground level (15m above player). Player is slowed 15% (fighting wind); enemies are sped up 25% (the storm energizes them). Sand-scour damage ticks every 1 second (2 damage per tick, 80% reduction under shelter). Biome affinity: Desert, Lava, Alien. Spawn bonus: Phase Shifters + Gravitons. Lasts 35-70 seconds like other weather types.
+- New Weather enum value: SANDSTORM (8).
+- New constants: SANDSTORM_SPEED_MULT (1.25 enemy), SANDSTORM_PLAYER_SPEED_MULT (0.85), SANDSTORM_DAMAGE_PER_TICK (2), SANDSTORM_TICK_INTERVAL (1.0), SANDSTORM_FOG_DENSITY_MULT (4.0), SANDSTORM_SHELTER_REDUCTION (0.80).
+- New entries in WEATHER_BIOME_AFFINITY, WEATHER_SPAWN_BONUS, and WEATHER_INFO dictionaries.
+- `WeatherSystem` updated: SANDSTORM candidate in `_pick_next_weather()`, `_tick_sandstorm()` damage tick function, `get_enemy_speed_multiplier()` new API method (returns 1.25 for sandstorm, 0.7 for snow storm, 1.0 otherwise), sandstorm particle type in `_create_weather_particles()`, sandstorm start in `_start_weather_effects()` (particles + fog + ambient light), sandstorm light position in `_update_weather_particle_position()` (lower than other weather — 15m).
+- `enemy_base.gd` updated: Line 289 now uses `WeatherSystem.get_enemy_speed_multiplier()` instead of `get_speed_multiplier()`, so enemies are sped up by sandstorm (not slowed like the player). Snow storm still slows enemies via the same function.
