@@ -246,7 +246,7 @@ func add_score(amount: int) -> void:
 	player_score += amount
 	score_changed.emit(player_score)
 
-func register_kill() -> void:
+func register_kill(enemy_name: String = "", killer_name: String = "Zorp") -> void:
 	player_kills += 1
 	player_combo += 1
 	player_combo_timer = 3.0
@@ -254,6 +254,7 @@ func register_kill() -> void:
 		player_best_combo = player_combo
 	combo_changed.emit(player_combo)
 	add_score(100)
+	enemy_killed.emit(enemy_name, killer_name)
 	
 	# Combo milestone check (every COMBO_MILESTONE_INTERVAL kills)
 	if player_combo > 0 and player_combo % GameConstants.COMBO_MILESTONE_INTERVAL == 0:

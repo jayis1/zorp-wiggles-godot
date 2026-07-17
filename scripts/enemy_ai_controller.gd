@@ -325,9 +325,9 @@ func _determine_pack_slot(enemy: EnemyBase) -> int:
 		var ally_to_player: Vector3 = player.global_position - ally.global_position
 		var ally_angle: float = atan2(ally_to_player.z, ally_to_player.x)
 		angles.append({"angle": ally_angle, "is_self": false})
-	angles.sort_custom(func(a, b): return a.angle < b.angle)
+	angles.sort_custom(func(a, b): return a["angle"] < b["angle"])
 	for i in range(angles.size()):
-		if angles[i].is_self:
+		if angles[i]["is_self"]:
 			return i
 	return 0
 
