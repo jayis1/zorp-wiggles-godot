@@ -298,45 +298,41 @@ func _update_low_hp_heartbeat(delta: float) -> void:
 		var idle_emission: Color = base_color * 0.4
 		_player_material.emission = _player_material.emission.lerp(idle_emission, 1.0 - exp(-8.0 * delta))
 
-		# ── Phase 6: Idle regen sparkle aura ──
-		# When the player is standing still and has high HP, spawn gentle green
-		# sparkles that float around them. When they start moving or take damage,
-		# the aura fades and is removed. Gives a calm "safe moment" visual.
-		func _update_idle_aura(delta: float) -> void:
-		if is_dashing or is_sliding or is_invuln_blinking:
-			_dismiss_idle_aura()
-			return
-
-		var hp_ratio: float = float(GameManager.player_hp) / float(GameManager.player_max_hp) \
-			if GameManager.player_max_hp > 0 else 1.0
-		var speed: float = velocity.length()
-
-		var should_show: bool = hp_ratio >= _IDLE_AURA_HP_THRESHOLD and speed < _IDLE_AURA_SPEED_THRESHOLD
-
-		if should_show:
-			_idle_aura_timer += delta
-			# Only spawn after being idle for 1.5 seconds (avoid flicker on brief stops)
-			if _idle_aura_timer > 1.5 and not _idle_aura:
-				var parent_node: Node = get_parent()
-				if parent_node:
-					_idle_aura = ParticleEffects.spawn_idle_regen_aura(parent_node, global_position)
-			# Follow the player
-			if _idle_aura and is_instance_valid(_idle_aura):
-				_idle_aura.global_position = global_position
-		else:
-			_dismiss_idle_aura()
-			_idle_aura_timer = 0.0
-
-		func _dismiss_idle_aura() -> void:
+# ── Phase 6: Idle regen sparkle aura ──
+# When the player is standing still and has high HP, spawn gentle green
+# sparkles that float around them. When they start moving or take damage,
+# the aura fades and is removed. Gives a calm "safe moment" visual.
+func _update_idle_aura(delta: float) -> void:
+	if is_dashing or is_sliding or is_invuln_blinking:
+		_dismiss_idle_aura()
+		return
+	var hp_ratio: float = float(GameManager.player_hp) / float(GameManager.player_max_hp) \
+		if GameManager.player_max_hp > 0 else 1.0
+	var speed: float = velocity.length()
+	var should_show: bool = hp_ratio >= _IDLE_AURA_HP_THRESHOLD and speed < _IDLE_AURA_SPEED_THRESHOLD
+	if should_show:
+		_idle_aura_timer += delta
+		# Only spawn after being idle for 1.5 seconds (avoid flicker on brief stops)
+		if _idle_aura_timer > 1.5 and not _idle_aura:
+			var parent_node: Node = get_parent()
+			if parent_node:
+				_idle_aura = ParticleEffects.spawn_idle_regen_aura(parent_node, global_position)
+		# Follow the player
 		if _idle_aura and is_instance_valid(_idle_aura):
-			_idle_aura.emitting = false
-			var aura: GPUParticles3D = _idle_aura
-			_idle_aura = null
-			# Let existing particles finish, then free
-			var tree := get_tree()
-			if tree:
-				tree.create_timer(3.0).timeout.connect(aura.queue_free)
-		_idle_aura_timer = 0.0
+			_idle_aura.global_position = global_position
+	else:
+		_dismiss_idle_aura()
+
+func _dismiss_idle_aura() -> void:
+	if _idle_aura and is_instance_valid(_idle_aura):
+		_idle_aura.emitting = false
+		var aura: GPUParticles3D = _idle_aura
+		_idle_aura = null
+		# Let existing particles finish, then free
+		var tree := get_tree()
+		if tree:
+			tree.create_timer(3.0).timeout.connect(aura.queue_free)
+	_idle_aura_timer = 0.0
 
 # ── Movement lean: tilts Zorp's mesh toward the velocity direction for a
 #    sense of weight and momentum. The tilt is proportional to speed and
@@ -621,15 +617,15 @@ func _spawn_dash_afterimage() -> void:
 	ghost.scale = mesh.scale if mesh else Vector3.ONE
 
 	# Fade out + slight scale up for a "dissipating energy" look
+	# Tween the material alpha directly (tween_property on the Resource works
+	# because StandardMaterial3D.albedo_color is a Color and we can write its
+	# 'a' component via a property path). We also scale the ghost up slightly
+	# for a dispersing energy effect.
 	var fade_tween := ghost.create_tween()
 	fade_tween.set_parallel(true)
-	# Tween the alpha channel of the albedo_color to 0
-	fade_tween.tween_method(
-		func(a: float):
-			if is_instance_valid(ghost_mat):
-				ghost_mat.albedo_color.a = a,
-		AFTERIMAGE_MAX_ALPHA, 0.0, AFTERIMAGE_LIFETIME
-	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# Tween alpha: Color.a is a sub-property of albedo_color on the material
+	fade_tween.tween_property(ghost_mat, "albedo_color:a", 0.0, AFTERIMAGE_LIFETIME) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Slightly scale up as it fades (energy dispersing)
 	fade_tween.tween_property(ghost, "scale",
 		ghost.scale * 1.3, AFTERIMAGE_LIFETIME
