@@ -383,11 +383,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
-	if cam_rig and cam_rig.has_method("set_camera_yaw"):
-		cam_rig.set_camera_yaw(camera_yaw)
 	if cam_rig:
-		# Apply pitch by rotating the rig on X axis
-		cam_rig.rotation_degrees.x = camera_pitch
+		# Use the smooth setters so the rig eases toward the new angles
+		# in _process instead of snapping instantly.
+		if cam_rig.has_method("set_camera_yaw"):
+			cam_rig.set_camera_yaw(camera_yaw)
+		if cam_rig.has_method("set_camera_pitch"):
+			cam_rig.set_camera_pitch(camera_pitch)
 
 func _try_shoot() -> void:
 	if shoot_cooldown_timer > 0:

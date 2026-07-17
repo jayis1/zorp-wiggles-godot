@@ -30,6 +30,11 @@ extends Node3D
 @export var default_fov: float = GameConstants.CAMERA_DEFAULT_FOV
 @export var fov_return_speed: float = GameConstants.CAMERA_FOV_RETURN_SPEED
 
+## Smooth rotation — yaw and pitch ease toward their targets instead of
+## snapping instantly. This makes right-click camera dragging feel buttery
+## rather than mechanical. Higher = snappier, lower = smoother.
+@export var rotation_smoothing: float = 12.0
+
 @onready var camera: Camera3D = $Camera3D
 
 var _target_node: Node3D = null
@@ -37,6 +42,10 @@ var _target_node: Node3D = null
 # ─── Dynamic Zoom ─────────────────────────────────────────────────────────────
 var _current_zoom_distance: float = 0.0  # Actual Z offset of the camera
 var _target_zoom_distance: float = 0.0   # Desired Z offset (snaps between normal & boss)
+
+# ─── Smooth Rotation ──────────────────────────────────────────────────────────
+var _target_yaw: float = 0.0
+var _target_pitch: float = 0.0
 
 # ─── Screen Shake (trauma-based) ──────────────────────────────────────────────
 var _trauma: float = 0.0  # 0..1, decays over time
@@ -51,7 +60,10 @@ func _ready() -> void:
 	_target_zoom_distance = orbit_distance
 	camera.position = Vector3(0, 0, _current_zoom_distance)
 	camera.fov = default_fov
-	rotation_degrees = Vector3(-orbit_angle, 0, 0)
+	# Initialize smooth rotation targets to the resting angle
+	_target_pitch = -orbit_angle
+	_target_yaw = 0.0
+	rotation_degrees = Vector3(_target_pitch, _target_yaw, 0)
 
 	# Random seeds for shake noise
 	_shake_seed = Vector3(randf() * 1000.0, randf() * 1000.0, randf() * 1000.0)
@@ -80,6 +92,14 @@ func _process(delta: float) -> void:
 
 	# Apply screen shake offset to the camera child node (shake layers on top of zoom)
 	_apply_screen_shake(delta)
+
+	# ── Smooth rotation: ease yaw and pitch toward their targets ──
+	# This makes right-click camera dragging feel buttery instead of snapping.
+	# The shake system writes to camera.rotation_degrees.z separately, so we
+	# only touch the rig's own x/y rotation here.
+	var rot_weight: float = 1.0 - exp(-rotation_smoothing * delta)
+	rotation_degrees.x = lerpf(rotation_degrees.x, _target_pitch, rot_weight)
+	rotation_degrees.y = lerpf(rotation_degrees.y, _target_yaw, rot_weight)
 
 	# Smoothly return FOV to default (the dash kick sets it above default, then
 	# this eases it back for a natural "settle" feel).
@@ -123,7 +143,12 @@ func kick_fov(kick_amount: float) -> void:
 	camera.fov = default_fov + kick_amount
 
 func set_camera_yaw(yaw_deg: float) -> void:
-	rotation_degrees.y = yaw_deg
+	# Set the target yaw — _process eases the actual rotation toward this.
+	_target_yaw = yaw_deg
+
+## Set the target pitch (X rotation in degrees). Eased in _process.
+func set_camera_pitch(pitch_deg: float) -> void:
+	_target_pitch = pitch_deg
 
 func get_forward_direction() -> Vector3:
 	# Return the camera's forward direction on the XZ plane

@@ -68,7 +68,30 @@ func _apply_type_config() -> void:
 		_mat.emission_enabled = true
 		_mat.emission = config["color"] * 0.3
 		_mat.emission_energy_multiplier = 1.0
+		# Rim lighting so collectibles catch the eye at grazing angles
+		_mat.rim_enabled = true
+		_mat.rim = 0.8
+		_mat.rim_tint = 1.0
 		mesh_instance.material_override = _mat
+		
+		# Spawn pop-in: bounce from scale 0 → 1 with overshoot for a juicy
+		# appearance instead of popping in at full size.
+		scale = Vector3.ZERO
+		var pop_tween := create_tween()
+		pop_tween.tween_property(self, "scale", Vector3.ONE, 0.35) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		
+		# Rare collectibles get a persistent point light so they glow in
+		# dark biomes and are visible from a distance.
+		if collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
+				or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
+				or collectible_type == GameConstants.CollectibleType.NEBULA_DUST:
+			var glow := OmniLight3D.new()
+			glow.light_color = config["color"]
+			glow.light_energy = 1.2
+			glow.omni_range = 4.0
+			glow.omni_attenuation = 1.5
+			add_child(glow)
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:

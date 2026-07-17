@@ -216,6 +216,16 @@ func _update_ai(delta: float) -> void:
 		if alert_indicator:
 			alert_indicator.visible = true
 			alert_indicator.text = "!"
+			# Pop-in bounce: scale from 0 → 1.4 → 1.0 for a juicy "!" appearance.
+			# Kills any prior tween so repeated alerts don't stack.
+			alert_indicator.scale = Vector3.ZERO
+			var alert_tween := create_tween()
+			alert_tween.tween_property(alert_indicator, "scale",
+				Vector3.ONE * GameConstants.ENEMY_ALERT_INDICATOR_SCALE, 0.12) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+			alert_tween.tween_property(alert_indicator, "scale",
+				Vector3.ONE, 0.1) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		# ── Phase 10: Try to start flanking when first alerted ──
 		if ai_controller:
 			ai_controller.try_start_flank()
