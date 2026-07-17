@@ -8,20 +8,20 @@ const TILE_SIZE: float = GameConstants.TILE_SCALE
 const GRID_SIZE: int = GameConstants.WORLD_SIZE
 const HALF_WORLD: float = GameConstants.WORLD_SIZE * GameConstants.TILE_SCALE / 2.0
 
-# ─── Biome Colors (0-1 normalized for Godot) ─────────────────────────────────
+# ─── Biome Colors (0-1 normalized for Godot — converted from Ursina color.rgb 0-255) ─
 const BIOME_COLORS: Dictionary = {
-	GameConstants.Biome.GRASS: Color(0.35, 0.65, 0.25),
-	GameConstants.Biome.DESERT: Color(0.85, 0.75, 0.45),
-	GameConstants.Biome.WATER: Color(0.2, 0.4, 0.8),
-	GameConstants.Biome.LAVA: Color(0.8, 0.2, 0.05),
-	GameConstants.Biome.FOREST: Color(0.15, 0.5, 0.15),
-	GameConstants.Biome.CRYSTAL: Color(0.7, 0.4, 0.9),
-	GameConstants.Biome.SNOW: Color(0.92, 0.95, 1.0),
-	GameConstants.Biome.SWAMP: Color(0.35, 0.5, 0.25),
-	GameConstants.Biome.ALIEN: Color(0.6, 0.2, 0.7),
-	GameConstants.Biome.MUSHROOM: Color(0.9, 0.45, 0.65),
-	GameConstants.Biome.FLOATING_ISLANDS: Color(0.7, 0.65, 0.85),
-	GameConstants.Biome.TOXIC_BOG: Color(0.5, 0.75, 0.15),
+	GameConstants.Biome.GRASS: Color(10.0 / 255.0, 180.0 / 255.0, 80.0 / 255.0),
+	GameConstants.Biome.DESERT: Color(210.0 / 255.0, 170.0 / 255.0, 80.0 / 255.0),
+	GameConstants.Biome.WATER: Color(20.0 / 255.0, 60.0 / 255.0, 180.0 / 255.0),
+	GameConstants.Biome.LAVA: Color(255.0 / 255.0, 80.0 / 255.0, 20.0 / 255.0),
+	GameConstants.Biome.FOREST: Color(0.0, 60.0 / 255.0, 30.0 / 255.0),
+	GameConstants.Biome.CRYSTAL: Color(0.0, 240.0 / 255.0, 255.0 / 255.0),
+	GameConstants.Biome.SNOW: Color(200.0 / 255.0, 210.0 / 255.0, 240.0 / 255.0),
+	GameConstants.Biome.SWAMP: Color(50.0 / 255.0, 80.0 / 255.0, 30.0 / 255.0),
+	GameConstants.Biome.ALIEN: Color(0.0, 230.0 / 255.0, 70.0 / 255.0),
+	GameConstants.Biome.MUSHROOM: Color(200.0 / 255.0, 40.0 / 255.0, 120.0 / 255.0),
+	GameConstants.Biome.FLOATING_ISLANDS: Color(160.0 / 255.0, 120.0 / 255.0, 220.0 / 255.0),
+	GameConstants.Biome.TOXIC_BOG: Color(80.0 / 255.0, 120.0 / 255.0, 20.0 / 255.0),
 }
 
 # ─── State ────────────────────────────────────────────────────────────────────

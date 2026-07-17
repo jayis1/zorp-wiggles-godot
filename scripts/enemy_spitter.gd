@@ -27,6 +27,7 @@ func _ready() -> void:
 	if ai_controller:
 		ai_controller.enable_flanking = false
 		ai_controller.enable_ambush = false
+		ai_controller.enable_retreat = false  # Spitter has its own kite logic
 
 	spit_timer = randf_range(2.0, 4.0)
 

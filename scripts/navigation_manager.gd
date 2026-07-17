@@ -38,7 +38,12 @@ func build_nav_region(world: Node) -> void:
 	# Create a new NavigationRegion3D
 	_nav_region = NavigationRegion3D.new()
 	_nav_region.name = "NavRegion"
-	add_child(_nav_region)
+	# Add the nav region as a child of the WORLD node (not the autoload) so that
+	# SOURCE_GEOMETRY_ROOT_NODE_CHILDREN parses the world's static colliders.
+	if world and is_instance_valid(world):
+		world.add_child(_nav_region)
+	else:
+		add_child(_nav_region)
 
 	# Configure the navigation mesh
 	_nav_mesh = NavigationMesh.new()
@@ -55,13 +60,9 @@ func build_nav_region(world: Node) -> void:
 	_nav_mesh.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_ROOT_NODE_CHILDREN
 	_nav_region.navigation_mesh = _nav_mesh
 
-	# Set the bake source to the world node so its children colliders are parsed
-	# Note: Godot 4.4 bakes from the region's own children by default; we need
-	# to use bake_source_node if available, or simply bake the region in place.
-	# In Godot 4.4, NavigationServer3D.bake_region() parses the source node tree.
-	# We add the world as a child temporarily for baking, then detach.
-	# Actually: the cleaner approach is to call NavigationServer3D.bake_from_source_geometry_data
-	# but for simplicity, we'll use the built-in bake.
+	# When the nav region is a child of the world, SOURCE_GEOMETRY_ROOT_NODE_CHILDREN
+	# will parse all of the world's children (terrain, decorations, destructibles,
+	# monoliths, portals, etc.) for static colliders to bake the nav mesh around.
 	_nav_region.bake_navigation_mesh(false)  # on_thread = false for immediate result
 	_is_baked = true
 	print("[NavigationManager] Nav mesh baked for world: %s" % world.name)

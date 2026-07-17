@@ -39,10 +39,10 @@ func _physics_process(delta: float) -> void:
 	if teleport_cooldown > 0:
 		teleport_cooldown -= delta
 
-func take_damage(amount: int) -> void:
+func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if is_dead:
 		return
-	super.take_damage(amount)
+	super.take_damage_from(amount, source_pos)
 
 	# Teleport chance on hit
 	if not is_dead and teleport_cooldown <= 0:

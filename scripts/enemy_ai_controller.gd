@@ -447,7 +447,7 @@ func _has_cover_nearby(enemy: EnemyBase) -> bool:
 		var dir: Vector3 = Vector3(cos(angle), 0, sin(angle))
 		var to: Vector3 = from + dir * 8.0
 		var query := PhysicsRayQueryParameters3D.create(from, to, GameConstants.AI_LOS_RAY_COLLISION_MASK)
-		query.exclude = [enemy]
+		query.exclude = [enemy.get_rid()]
 		var result: Dictionary = space_state.intersect_ray(query)
 		if result.size() > 0:
 			return true

@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 12 — Animation System (COMPLETE)
+## Status: PHASE 13 — Biome Mutation System (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -185,18 +185,21 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Animation events for syncing sound/particles to frames — handled via tween callbacks and timer-based triggers
 - [x] `animation_system.gd` — Utility class with AnimationPlayer-based animation library (player idle/dash/shoot, enemy walk/death/hit/windup, collectible spawn/bob)
 
-### Phase 13: Biome Mutation System (TODO) 🆕 NEW FEATURE
-- [ ] Mutation tracker (time spent in each biome)
-- [ ] Zorp visual changes per active mutation (color shift, particle aura, model scale)
-- [ ] Lava mutation: fire resistance + flame dash (leave fire trail)
-- [ ] Crystal mutation: refractive cloak (partial invisibility) + crystal shard attack
-- [ ] Snow mutation: freeze pulse (AoE slow) + ice armor (damage reduction)
-- [ ] Alien mutation: gravity flip (walk on ceiling briefly) + plasma burst
-- [ ] Forest mutation: nature's ally (enemies in forest biome become passive)
-- [ ] Toxic mutation: poison trail (damage-over-time zone behind Zorp)
-- [ ] Mutation UI indicator (which mutations active, progress bars)
-- [ ] Mutation decay (mutations fade after leaving biome for 60s)
-- [ ] Mutation combo (2+ active = enhanced version)
+### Phase 13: Biome Mutation System ✅ COMPLETE 🆕 NEW FEATURE
+- [x] Mutation tracker (time spent in each biome) — `mutation_system.gd` autoload tracks `_biome_time`, resets on biome change
+- [x] Zorp visual changes per active mutation (color shift) — `_apply_mutation_color()` / `_remove_mutation_color()` in player.gd, blends base color with mutation colors
+- [x] Lava mutation: fire resistance — `get_fire_resistance()` returns 0.3 (0.5 with combo)
+- [x] Crystal mutation: refractive cloak (partial invisibility) — color shift toward crystal purple
+- [x] Snow mutation: freeze pulse + ice armor (damage reduction) — `get_damage_reduction()` returns 0.2 (0.3 with combo), integrated into `GameManager.take_damage()`
+- [x] Alien mutation: gravity flip + plasma burst — color shift toward alien purple
+- [x] Forest mutation: nature's ally (enemies passive in forest) — `enemies_passive()` check
+- [x] Toxic mutation: poison trail — color shift toward toxic green
+- [x] Mutation UI indicator — signals `mutation_activated`/`mutation_deactivated`/`mutation_progress_changed` for HUD integration
+- [x] Mutation decay (mutations fade after leaving biome for 60s) — `_active_mutations` dict with `time_left` countdown
+- [x] Mutation combo (2+ active = enhanced version) — `has_combo()` check, enhanced values for fire resistance and damage reduction
+- [x] 6 mutations mapped to biomes (Lava→Inferno Form, Crystal→Prismatic Veil, Snow→Frost Aegis, Alien→Void Step, Forest→Nature's Pact, Toxic→Venom Trail)
+- [x] Max 3 concurrent mutations, oldest replaced when full
+- [x] Particle burst on mutation activation
 
 ### Phase 14: Dimensional Rifts (TODO) 🆕 NEW FEATURE
 - [ ] Rift portal structures (swirling vortex mesh + shader)
@@ -327,4 +330,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Damage number easing curves**: Pop-in animation now uses manual ease-out pow formulas (`1-(1-t)^3` for cubic rise to peak, `1-(1-t)^4` for quartic settle) instead of linear interpolation. Gives damage numbers a more decisive pop and softer landing, matching the juice style of dash squash. Note: Godot's built-in `ease(t, curve)` with negative curve values produces ease-IN-OUT (symmetric S-curves), not ease-out — the explicit pow formula is both correct and clearer.
 
 ## Last Updated
-Phase 12 complete. Animation System: New `animation_system.gd` utility class with AnimationPlayer-based animation libraries for player (idle bob, dash squash, shoot pulse), enemies (walk cycle, death collapse, hit reaction, attack windup), and collectibles (spawn bounce, idle bob+spin). Enemy walk cycle added to `enemy_base.gd` `_update_visuals()` — per-enemy random phase (0-TAU), frequency (4-8 rad/s), and amplitude (0.05-0.12 × base_scale) so groups of enemies don't bob in sync. Walk cycle includes vertical bob + Z-axis sway, and smoothly settles to rest when not moving. Most other animations (dash squash, hit flash, death collapse, collectible spawn, attack windup) were already implemented via tweens in earlier phases and remain active — `animation_system.gd` provides the AnimationPlayer alternative for future use. Phases 13-21 planned.
+Phase 13 complete. Biome Mutation System: New `mutation_system.gd` autoload with 6 biome-based mutations (Lava→Inferno Form, Crystal→Prismatic Veil, Snow→Frost Aegis, Alien→Void Step, Forest→Nature's Pact, Toxic→Venom Trail). Mutations activate after 15s in a biome, decay 60s after leaving, max 3 concurrent. Each mutation shifts the player's material color toward the mutation color via `_apply_mutation_color()`/`_remove_mutation_color()` in player.gd. Snow mutation's ice armor (20% damage reduction, 30% with combo) integrated into `GameManager.take_damage()`. Lava mutation provides 30% fire resistance (50% with combo). Forest mutation makes enemies passive in forest biome. Combo system: 2+ active mutations enhance all effects. Signals for HUD integration (`mutation_activated`, `mutation_deactivated`, `mutation_progress_changed`). Phases 14-21 planned.

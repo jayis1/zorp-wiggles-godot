@@ -290,7 +290,7 @@ const FLOATING_ISLAND_HEIGHT_MIN: float = 3.0
 const FLOATING_ISLAND_HEIGHT_MAX: float = 6.0
 const FLOATING_ISLAND_SPAWN_CHANCE: float = 0.15
 const FLOATING_ISLAND_CRYSTAL_CHANCE: float = 0.4
-const FLOATING_ISLAND_COLOR: Color = Color(160.0 / 255.0, 120.0 / 255.0, 200.0 / 255.0)
+const FLOATING_ISLAND_COLOR: Color = Color(160.0 / 255.0, 120.0 / 255.0, 220.0 / 255.0)
 
 # ─── Alien Ruins ─────────────────────────────────────────────────────────────
 const RUINS_PILLAR_CHANCE: float = 0.08

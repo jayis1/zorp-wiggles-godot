@@ -9,22 +9,22 @@ extends Node
 
 static var TYPES: Dictionary = {
 	"Slime Blob": {
-		"color": Color(0.0, 1.0, 0.0),          # color.lime
+		"color": Color(0.5, 1.0, 0.0),           # color.lime = hsv(90,1,1) = (0.5,1,0)
 		"hp": 25,   "speed": 3.0,  "damage": 8,   "scale": 1.0,
 		"model": "sphere",  "decor": "none",   "detect": 32,
 	},
 	"Space Beetle": {
-		"color": Color(0.55, 0.27, 0.07),       # color.brown
+		"color": Color(165.0 / 255.0, 42.0 / 255.0, 42.0 / 255.0),  # color.brown = rgb32(165,42,42)
 		"hp": 45,   "speed": 4.5,  "damage": 12,  "scale": 1.2,
 		"model": "cube",    "decor": "wings",   "detect": 32,
 	},
 	"Void Wraith": {
-		"color": Color(0.54, 0.17, 0.89),       # color.violet
+		"color": Color(0.5, 0.0, 1.0),           # color.violet = hsv(270,1,1) = (0.5,0,1)
 		"hp": 70,   "speed": 4.0,  "damage": 22,  "scale": 1.4,
 		"model": "diamond", "decor": "aura",    "detect": 32,
 	},
 	"Lava Crawler": {
-		"color": Color(1.0, 0.55, 0.0),          # color.orange
+		"color": Color(1.0, 0.5, 0.0),           # color.orange = hsv(30,1,1) = (1,0.5,0)
 		"hp": 100,  "speed": 5.5,  "damage": 28,  "scale": 1.1,
 		"model": "cube",    "decor": "spikes",  "detect": 32,
 	},

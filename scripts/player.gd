@@ -430,3 +430,32 @@ func _trigger_camera_trauma(amount: float) -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(amount)
+
+# ── Phase 13: Biome Mutation System — visual color shifts ─────────────────────
+# Applied by MutationSystem when a mutation activates/deactivates.
+# Each mutation shifts the player's material color slightly toward the mutation color.
+
+var _mutation_colors: Dictionary = {}  # { mutation_id: Color }
+
+func _apply_mutation_color(mutation: int, mut_color: Color) -> void:
+	_mutation_colors[mutation] = mut_color
+	_update_mutation_material()
+
+func _remove_mutation_color(mutation: int) -> void:
+	_mutation_colors.erase(mutation)
+	_update_mutation_material()
+
+func _update_mutation_material() -> void:
+	if not _player_material:
+		return
+	if _mutation_colors.is_empty():
+		# Reset to base color
+		_player_material.albedo_color = base_color
+		_player_material.emission = base_color * 0.4
+		return
+	# Blend base color with all active mutation colors (equal weight)
+	var blended: Color = base_color
+	for mut_color in _mutation_colors.values():
+		blended = blended.lerp(mut_color, 0.3)
+	_player_material.albedo_color = blended
+	_player_material.emission = blended * 0.4

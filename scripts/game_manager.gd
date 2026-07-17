@@ -183,7 +183,14 @@ func _start_game() -> void:
 func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if player_invuln_timer > 0 or player_is_dashing or not player_is_alive:
 		return
-	player_hp = max(0, player_hp - amount)
+	# ── Phase 13: Apply mutation damage reduction ──
+	var actual_amount: int = amount
+	if MutationSystem:
+		# Ice armor (Snow mutation) reduces all damage
+		var dmg_reduction: float = MutationSystem.get_damage_reduction()
+		if dmg_reduction > 0:
+			actual_amount = int(actual_amount * (1.0 - dmg_reduction))
+	player_hp = max(0, player_hp - actual_amount)
 	player_invuln_timer = GameConstants.PLAYER_INVULN_DURATION
 	hp_changed.emit(player_hp, player_max_hp)
 	# Camera shake on taking damage

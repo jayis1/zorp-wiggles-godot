@@ -60,7 +60,10 @@ func _process(delta: float) -> void:
 		else:
 			# Position arrow at screen edge pointing toward enemy
 			var screen_pos: Vector2 = camera.unproject_position(enemy_pos)
-			var is_behind: bool = camera.is_position_behind(enemy_pos)
+			# Godot 4 has no Camera3D.is_position_behind() — check if the position
+			# is behind the camera by comparing Z in camera local space.
+			var to_enemy: Vector3 = enemy_pos - camera.global_position
+			var is_behind: bool = to_enemy.dot(camera.global_basis.z) > 0.0
 			var is_on_screen: bool = (
 				not is_behind and
 				screen_pos.x >= 0 and screen_pos.x <= viewport_size.x and

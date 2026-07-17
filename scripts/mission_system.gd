@@ -121,6 +121,7 @@ func _generate_initial_missions() -> void:
 func _process(_delta: float) -> void:
 	# Check COLLECT missions — track via GameManager.player_kills + pickup streaks
 	# We'll check collect missions via the pickup streak counter
+	var _completed_this_frame: Array[Mission] = []
 	for mission in _active_missions:
 		if mission.completed:
 			continue
@@ -139,9 +140,13 @@ func _process(_delta: float) -> void:
 			MissionType.EXPLORE:
 				mission.current_count = _visited_biomes.size()
 
-		# Check completion
+		# Check completion — defer erase to after the loop to avoid
+		# modifying _active_missions while iterating it.
 		if mission.current_count >= mission.target_count and not mission.completed:
-			_complete_mission(mission)
+			_completed_this_frame.append(mission)
+
+	for mission in _completed_this_frame:
+		_complete_mission(mission)
 
 func _complete_mission(mission: Mission) -> void:
 	mission.completed = true

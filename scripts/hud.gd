@@ -232,11 +232,11 @@ func _process(delta: float) -> void:
 		boss_current_ratio = lerpf(boss_current_ratio, _boss_bar_target_ratio, weight)
 		boss_hp_bar.size.x = boss_bar_width * boss_current_ratio
 		boss_name_text.text = "☠ %s" % boss_ref.enemy_name
-		# Boss bar color: red → orange → yellow
+		# Boss bar color: green → yellow → red (matches player HP bar)
 		if boss_current_ratio > 0.5:
-			boss_hp_bar.color = Color(1.0, (1.0 - boss_current_ratio) * 2.0 * 0.78, 0.0)
+			boss_hp_bar.color = Color(1.0 - (boss_current_ratio - 0.5) * 2.0, 1.0, 0.0)
 		else:
-			boss_hp_bar.color = Color(1.0, boss_current_ratio * 2.0 * 0.39, 0.0)
+			boss_hp_bar.color = Color(1.0, boss_current_ratio * 2.0, 0.0)
 	else:
 		boss_hp_container.visible = false
 		boss_ref = null
