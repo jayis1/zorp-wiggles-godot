@@ -444,8 +444,8 @@ func _spawn_enemy_at(type_name: String, pos: Vector3) -> void:
 		"Shard Golem": "res://scenes/entities/enemy_blob.tscn",
 	}
 	var scene_path: String = scene_map.get(type_name, "res://scenes/entities/enemy_blob.tscn")
-	var enemy_scene := load(scene_path)
-	var enemy := enemy_scene.instantiate()
+	var enemy_scene: PackedScene = load(scene_path)
+	var enemy: CharacterBody3D = enemy_scene.instantiate()
 	enemy.global_position = pos
 	# Configure enemy with type data
 	enemy.enemy_name = type_name

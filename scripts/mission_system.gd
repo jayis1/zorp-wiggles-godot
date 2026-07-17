@@ -9,8 +9,6 @@
 
 extends Node
 
-class_name MissionSystem
-
 # ─── Mission Definition ───────────────────────────────────────────────────────
 class Mission:
 	var id: String
@@ -230,13 +228,13 @@ func _on_boss_defeated(_boss: Node) -> void:
 		if mission.type == MissionType.KILL and not mission.completed:
 			mission.current_count = GameManager.player_kills
 
-func _on_combo_milestone(combo: int, _tier: int, _color: Color) -> void:
+func _on_combo_milestone(_combo: int, _tier: int, _color: Color) -> void:
 	# Combo missions tracked via _process using player_best_combo
-	_ = combo
+	pass
 
-func _on_level_up(level: int) -> void:
+func _on_level_up(_level: int) -> void:
 	# Level missions tracked via _process
-	_ = level
+	pass
 
 func _on_biome_changed(biome_id: int) -> void:
 	_visited_biomes[biome_id] = true
