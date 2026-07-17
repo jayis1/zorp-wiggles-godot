@@ -256,12 +256,22 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	hp -= amount
 	enemy_hit.emit(self, amount)
 
-	# Hit flash
+	# Hit flash — white albedo + emission spike for a punchy combat read.
+	# The albedo snaps to white and the emission energy kicks up, then both
+	# ease back over 0.15s. The combined effect is a bright "strobed" flash
+	# that reads even in dark biomes.
 	_hit_flash_timer = 0.15
 	if _material:
 		_material.albedo_color = Color.WHITE
+		var _prev_emission_energy: float = _material.emission_energy_multiplier
+		_material.emission_energy_multiplier = 4.0
 		var flash_tween := create_tween()
+		flash_tween.set_parallel(true)
 		flash_tween.tween_property(_material, "albedo_color", base_color, 0.15)
+		flash_tween.tween_property(_material, "emission_energy_multiplier",
+			_prev_emission_energy, 0.15) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_QUAD)
 
 	# Alert on hit
 	is_alerted = true

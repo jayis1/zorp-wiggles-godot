@@ -29,11 +29,17 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	age += delta
-	current_radius += expand_speed * delta
+	# Ease-out expansion — fast burst, gentle deceleration. Matches the pulse
+	# wave's feel so both expanding-ring effects share a consistent visual
+	# language. Feels more energetic than a constant linear growth.
+	var progress: float = current_radius / max_radius if max_radius > 0.0 else 0.0
+	progress = clampf(progress, 0.0, 1.0)
+	var speed_mult: float = 1.0 - 0.6 * progress
+	current_radius += expand_speed * speed_mult * delta
 
 	# Scale the shockwave ring
 	var ring_scale: float = current_radius / max_radius
-	scale = Vector3.ONE * ring_scale
+	scale = scale.lerp(Vector3.ONE * ring_scale, 1.0 - exp(-12.0 * delta))
 
 	# Check player hit — damage once when ring passes through
 	if not _has_hit_player:
@@ -45,10 +51,10 @@ func _physics_process(delta: float) -> void:
 				GameManager.take_damage(damage, global_position)
 				_has_hit_player = true
 
-	# Fade out as it reaches max radius
+	# Fade out as it reaches max radius — quadratic fade for a sharper disappear
 	if _material:
-		var fade: float = 1.0 - (current_radius / max_radius)
-		_material.albedo_color.a = 0.6 * fade
+		var fade: float = 1.0 - progress
+		_material.albedo_color.a = 0.6 * fade * fade
 
 	# Destroy when fully expanded
 	if current_radius >= max_radius:

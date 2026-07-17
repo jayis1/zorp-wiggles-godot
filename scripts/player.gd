@@ -40,6 +40,12 @@ const SHOOT_BUFFER_WINDOW: float = 0.12  # Seconds to remember a shoot press
 var base_color: Color = Color(0.3, 0.85, 0.3)  # Alien green
 var is_invuln_blinking: bool = false
 var blink_visible: bool = true
+var _player_material: StandardMaterial3D = null
+var _idle_phase: float = 0.0  # Phase accumulator for idle breathing
+const _IDLE_BOB_AMPLITUDE: float = 0.04  # Subtle vertical bob (meters)
+const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
+const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
+const _IDLE_EMISSION_MAX: float = 1.3    # Idle emission pulse max
 
 # ─── Combat ───────────────────────────────────────────────────────────────────
 var shoot_cooldown_timer: float = 0.0
@@ -63,6 +69,22 @@ func _ready() -> void:
 	# when the game is paused. _physics_process already checks is_paused and returns
 	# early, so the player won't move while paused — only input processing continues.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+
+	# ── Set up player material (the scene ships with the default grey material)
+	# We give Zorp a proper unlit-emissive look: albedo + emission tinted to base_color
+	# plus rim lighting for silhouette pop. The emission pulses subtly via the idle
+	# animation so Zorp feels "alive" even when standing still.
+	if mesh:
+		_player_material = StandardMaterial3D.new()
+		_player_material.albedo_color = base_color
+		_player_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_player_material.emission_enabled = true
+		_player_material.emission = base_color * 0.4
+		_player_material.emission_energy_multiplier = 1.0
+		_player_material.rim_enabled = true
+		_player_material.rim = 0.7
+		_player_material.rim_tint = 0.9
+		mesh.material_override = _player_material
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:
@@ -93,8 +115,30 @@ func _physics_process(delta: float) -> void:
 	_handle_movement(delta)
 	_handle_dash(delta)
 	_handle_invuln_blink(delta)
-	
+	_update_idle_breathing(delta)
+
 	move_and_slide()
+
+# ── Idle breathing animation — a subtle vertical bob + emission pulse so Zorp
+#    feels alive even when standing still. Skipped during dash (the dash tween
+#    controls mesh.scale during squash-and-stretch) and when invuln-blinking
+#    (which toggles mesh visibility and would conflict).
+func _update_idle_breathing(delta: float) -> void:
+	if is_dashing or is_sliding:
+		# Reset any lingering bob offset so dash/slide tweens start from y=0
+		if mesh:
+			mesh.position.y = 0.0
+		return
+	_idle_phase += delta * _IDLE_BOB_SPEED
+	# Only apply visual bob when NOT being tweened by squash/pulse/shoot feedback.
+	# Those tweens set mesh.scale; we only offset y-position to avoid conflicts.
+	if mesh and not is_invuln_blinking:
+		mesh.position.y = sin(_idle_phase) * _IDLE_BOB_AMPLITUDE
+	# Emission pulse synced to bob for a "breathing" glow
+	if _player_material:
+		var pulse: float = 0.5 + 0.5 * sin(_idle_phase)
+		_player_material.emission_energy_multiplier = lerpf(
+			_IDLE_EMISSION_MIN, _IDLE_EMISSION_MAX, pulse)
 
 func _handle_movement(delta: float) -> void:
 	# Read input
