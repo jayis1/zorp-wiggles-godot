@@ -92,6 +92,9 @@ zorp-wiggles-godot/
 │   ├── kill_feed.gd        # Scrolling kill feed on right side
 │   ├── achievement_popup.gd # Achievement unlock popups (12 achievements)
 │   ├── powerup_timer_display.gd # Buff duration bars
+│   ├── particle_effects.gd # GPUParticles3D factory for all particle effects
+│   ├── ambient_particles.gd # Biome ambient particles (snow, embers, spores, etc.)
+│   ├── damage_flash.gd     # Red screen vignette on player damage
 │   └── main_menu.gd        # Menu logic
 ├── assets/                  # Models, textures, audio (TODO)
 └── CONVERSION_TRACKER.md   # Conversion progress tracker
@@ -160,7 +163,18 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Achievement popup system: 12 achievements (First Blood, On a Roll, Killing Spree, Unstoppable, Getting Stronger, Power Surge, Collector, Treasure Hunter, Giant Slayer, Explorer, Wanderer, Cartographer) with slide-in panels
 - Power-up timer display: Buff duration bars for monolith buffs (Speed Surge, Power Surge, Wisdom Aura)
 
-**Remaining phases:** Particles, missions, physics, shaders, AI, GPU particles, animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
+**Phase 6 (Particle Effects & Juice):** 🔄 Partial — 8 of 11 complete
+- ParticleEffects system: Static factory class using GPUParticles3D for all particle effects (explosion, level-up burst, combo fireworks, pickup sparkle, death poof, sky beam, shield break, dash trail, ambient particles)
+- Dash trail particles: Speed-line particles behind Zorp on dash start
+- Level-up shockwave: Expanding golden ring + upward sparkle particles
+- Combo milestone fireworks: Tier-colored particle bursts (6-color palette)
+- Pickup sparkle: Small upward sparkle burst on item collection + sky beam on rare Meteor Shards
+- Enemy death poof: Dark smoke cloud that expands and fades, scaled by enemy size
+- Biome ambient particles: Continuous weather/ambient effects following player (snow in Snow, embers in Lava, spores in Mushroom/Swamp/Toxic, bubbles in Water, dust in Desert/Forest/etc.)
+- Player damage flash: Red screen-edge vignette on damage taken
+- Projectile impact explosion: Small cyan particle burst on hit
+
+**Remaining phases:** Missions, physics, shaders, AI, GPU particles (polish), animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
 
 ## License
 

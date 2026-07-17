@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 5 — HUD Polish (COMPLETE)
+## Status: PHASE 6 — Particle Effects & Juice (PARTIALLY COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -100,18 +100,19 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Dash cooldown indicator (circular ring with ⚡ icon, green when ready)
 - [x] Weapon/power-up icon display (integrated into power-up timer display)
 
-### Phase 6: Particle Effects & Juice (TODO)
-- [ ] Movement trail particles (speed lines behind Zorp)
-- [ ] Idle regen sparkle stream (ambient sparkles)
-- [ ] Level-up shockwave burst (expanding ring + particles)
-- [ ] Combo milestone fireworks (6-color particle bursts)
-- [ ] Pickup lift animation (items float up, spin, shrink)
-- [ ] Sky beam on rare pickup (vertical light column)
-- [ ] Shield break shatter effect (fragment burst)
-- [ ] Player damage flash (red model flash + screen vignette)
-- [ ] Damage number popups (crit = bigger + gold color)
-- [ ] Enemy death poof (scale down + particle burst)
-- [ ] Biome ambient particles (snowflakes, embers, spores, bubbles)
+### Phase 6: Particle Effects & Juice (PARTIAL — 8 of 11 complete)
+- [x] Movement trail particles (speed lines behind Zorp) — dash trail via GPUParticles3D
+- [ ] Idle regen sparkle stream (ambient sparkles) — TODO
+- [x] Level-up shockwave burst (expanding ring + particles) — golden ring + upward sparkles
+- [x] Combo milestone fireworks (6-color particle bursts) — tier-colored sphere bursts
+- [x] Pickup lift animation (items float up, spin, shrink) — already done + sparkle burst added
+- [x] Sky beam on rare pickup (vertical light column) — Meteor Shards get sky beam
+- [ ] Shield break shatter effect (fragment burst) — method exists, needs integration
+- [x] Player damage flash (red model flash + screen vignette) — screen vignette via DamageFlash
+- [x] Damage number popups (crit = bigger + gold color) — already done in Phase 4
+- [x] Enemy death poof (scale down + particle burst) — death poof via GPUParticles3D
+- [x] Biome ambient particles (snowflakes, embers, spores, bubbles, dust) — follows player per biome
+- [x] Projectile impact explosion particles — small cyan burst on hit
 
 ### Phase 7: Missions & Progression (TODO)
 - [ ] Mission system (collect X items, kill Y enemies, explore Z biomes)
@@ -302,4 +303,4 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - **Enemy spawn material fade-in**: `_update_spawn_visuals()` now fades material alpha from 0→target using quadratic ease-in during the 2s grace period, instead of being a no-op. Preserves per-enemy alpha (Void Wisp stays semi-transparent).
 
 ## Last Updated
-Phase 5 complete. HUD Polish: minimap (top-down _draw()-based with biome terrain tiles, player/enemy/boss/collectible/portal/trader dots, facing direction indicator, toggle with M key), damage direction indicators (red arrows pointing toward damage source, fade over 1.5s), boss tension vignette (proximity-scaled pulsing red screen edge), death screen (staggered fade-in with title/stats/restart prompt, score roll-up animation, press R or Space to restart), biome indicator (top-center biome name with color matching terrain, fades to dim after display), dash cooldown indicator (circular ring with ⚡ icon, green when ready with pulse), kill feed (right-side scrolling kill entries, 5 max, 4s lifetime with fade), achievement popup system (12 achievements: first kill, combo x5/x10/x20, level 5/10, pickup streak x10/x20, boss kill, biome explorer 3/6/12 — slide-in panels with icon/title/description), power-up timer display (buff duration bars for monolith buffs: Speed Surge, Power Surge, Wisdom Aura). New signals: damage_taken_from, enemy_killed, biome_changed. GameManager updated: take_damage() now accepts source_pos for damage direction, biome tracking in _process(). All enemy damage sources updated to pass position. Portal added to "portals" group. New scripts: minimap.gd, damage_direction_indicator.gd, boss_tension_vignette.gd, death_screen.gd, biome_indicator.gd, dash_cooldown_indicator.gd, kill_feed.gd, achievement_popup.gd, powerup_timer_display.gd. Phases 6-21 planned.
+Phase 6 partially complete. Particle Effects & Juice: particle_effects.gd (static factory using GPUParticles3D — explosion, level-up burst, combo fireworks, pickup sparkle, death poof, sky beam, shield break, dash trail, ambient particles), dash trail particles on dash start, pickup sparkle burst on collect + sky beam on rare Meteor Shards, death poof on enemy death, level-up golden shockwave ring + upward sparkles, combo milestone tier-colored fireworks, ambient biome particles (snow/embers/spores/bubbles/dust following player per biome), projectile impact explosion, player damage flash (red screen vignette on damage taken). New scripts: particle_effects.gd, ambient_particles.gd, damage_flash.gd. AmbientParticles node added to main.tscn. Phases 7-21 planned.

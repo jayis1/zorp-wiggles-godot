@@ -159,3 +159,5 @@ func _impact_effect() -> void:
 		var burst: Node3D = IMPACT_SCENE.instantiate()
 		get_parent().add_child(burst)
 		burst.global_position = global_position
+	# Phase 6: Small explosion particles on impact
+	ParticleEffects.spawn_explosion(get_parent(), global_position, Color(0.2, 1.0, 0.8), 12, 0.4)

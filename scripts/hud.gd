@@ -154,7 +154,13 @@ func _ready() -> void:
 	var pud_ctrl := Control.new()
 	pud_ctrl.set_script(pud_script)
 	add_child(pud_ctrl)
-	
+
+	# ── Phase 6: Player Damage Flash ──
+	var df_script := load("res://scripts/damage_flash.gd")
+	var df_ctrl := Control.new()
+	df_ctrl.set_script(df_script)
+	add_child(df_ctrl)
+
 	# Initialize displays
 	_update_all_displays()
 
