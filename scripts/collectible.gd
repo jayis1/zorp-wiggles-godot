@@ -236,7 +236,20 @@ func _collect() -> void:
 
 	# ── Phase 14: Mirror dimension — collectibles are hostile, damage the player ──
 	if DimensionSystem.collectibles_hostile():
-		GameManager.take_damage(GameConstants.MIRROR_COLLECTIBLE_DAMAGE, global_position)
+		# In co-op, damage the closest player
+		var damage_target_is_p2: bool = false
+		if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+			var p1_dist: float = 99999.0
+			var p2_dist: float = 99999.0
+			if GameManager.player and is_instance_valid(GameManager.player) and not GameManager.player_is_downed:
+				p1_dist = global_position.distance_to(GameManager.player.global_position)
+			if not CoOpManager.p2_is_downed:
+				p2_dist = global_position.distance_to(CoOpManager.p2_node.global_position)
+			damage_target_is_p2 = p2_dist < p1_dist
+		if damage_target_is_p2:
+			CoOpManager.p2_take_damage(GameConstants.MIRROR_COLLECTIBLE_DAMAGE, global_position)
+		else:
+			GameManager.take_damage(GameConstants.MIRROR_COLLECTIBLE_DAMAGE, global_position)
 		# Flash red and knock back instead of collecting
 		if _mat:
 			_mat.albedo_color = Color.RED
@@ -246,6 +259,8 @@ func _collect() -> void:
 				0.3).set_ease(Tween.EASE_OUT)
 		# Small knockback away from player
 		var player: Node3D = _cached_player
+		if damage_target_is_p2 and CoOpManager.p2_node:
+			player = CoOpManager.p2_node
 		if player and is_instance_valid(player):
 			var away_dir: Vector3 = (global_position - player.global_position).normalized()
 			away_dir.y = 0
