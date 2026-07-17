@@ -216,8 +216,8 @@ func _update_boss_enrage_target() -> void:
 		return
 	# Only activate enrage shader if the boss has an enrage threshold
 	# We check the boss's HP ratio; Drake has enrage at 30% HP
-	var boss_hp: int = _boss_ref.get("hp")
-	var boss_max_hp: int = _boss_ref.get("max_hp")
+	var boss_hp = _boss_ref.get("hp")
+	var boss_max_hp = _boss_ref.get("max_hp")
 	if boss_hp == null or boss_max_hp == null or boss_max_hp <= 0:
 		_boss_enrage_target = 0.0
 		return
