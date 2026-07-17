@@ -147,8 +147,11 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 		return
 
 	var enemy: CharacterBody3D = scene.instantiate()
+	# Set position BEFORE add_child so _ready() sees the correct global_position.
+	# This is important for enemies like the Plasma Serpent whose _ready()
+	# initializes segment positions from global_position.
+	enemy.position = pos
 	get_parent().add_child(enemy)
-	enemy.global_position = pos
 	GameManager.enemies.append(enemy)
 
 	# Emit spawn direction signal for HUD arrows

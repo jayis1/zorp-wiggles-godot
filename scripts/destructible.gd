@@ -34,7 +34,11 @@ func _ready() -> void:
 	add_to_group("destructibles")
 	if hit_area:
 		hit_area.body_entered.connect(_on_body_entered)
-		hit_area.area_entered.connect(_on_area_entered)
+		# Note: area_entered is NOT connected here. Player projectiles are Area3D
+		# nodes that already call take_damage_from() directly via their own
+		# body_entered handler when they hit the destructible's StaticBody3D.
+		# Connecting area_entered would cause double-damage (once from the
+		# projectile's body_entered, once from the HitArea's area_entered).
 	# Setup material with flash capability
 	if mesh_instance:
 		_mat = StandardMaterial3D.new()
@@ -60,7 +64,7 @@ func take_damage_from(amount: int, _source_pos: Vector3 = Vector3.ZERO) -> void:
 func take_damage(amount: int) -> void:
 	take_damage_from(amount)
 
-# ─── Collision entry (projectiles are Area3D, enemies/player are bodies) ───────
+# ─── Collision entry (player dashing into destructible smashes it) ─────────
 func _on_body_entered(body: Node3D) -> void:
 	if _is_broken:
 		return
@@ -70,14 +74,6 @@ func _on_body_entered(body: Node3D) -> void:
 		if player_script.get("is_dashing") == true:
 			_shatter()
 			return
-
-func _on_area_entered(area: Area3D) -> void:
-	if _is_broken:
-		return
-	# Projectiles are Area3D — they call take_damage_from directly, but if they
-	# don't (e.g. generic area), apply a small hit
-	if area.is_in_group("player_projectiles") or area.is_in_group("projectiles"):
-		take_damage_from(GameConstants.PROJECTILE_BASE_DAMAGE, area.global_position)
 
 # ─── Shatter into physics fragments ───────────────────────────────────────────
 func _shatter() -> void:
