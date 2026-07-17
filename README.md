@@ -83,6 +83,15 @@ zorp-wiggles-godot/
 │   ├── pulse_wave.gd       # Q ability
 │   ├── damage_number.gd    # Floating 3D damage/XP/heal numbers
 │   ├── spawn_direction_indicator.gd  # HUD arrows for off-screen enemies
+│   ├── minimap.gd          # Top-down minimap with biome tiles & entity dots
+│   ├── damage_direction_indicator.gd # Red arrows pointing to damage source
+│   ├── boss_tension_vignette.gd     # Pulsing red vignette near boss
+│   ├── death_screen.gd     # Death screen with stats & restart prompt
+│   ├── biome_indicator.gd  # Current biome name display
+│   ├── dash_cooldown_indicator.gd   # Dash cooldown ring with ⚡ icon
+│   ├── kill_feed.gd        # Scrolling kill feed on right side
+│   ├── achievement_popup.gd # Achievement unlock popups (12 achievements)
+│   ├── powerup_timer_display.gd # Buff duration bars
 │   └── main_menu.gd        # Menu logic
 ├── assets/                  # Models, textures, audio (TODO)
 └── CONVERSION_TRACKER.md   # Conversion progress tracker
@@ -140,7 +149,18 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Enemy attack windup telegraph, spawn fade-in, and alert indicator (already from Phase 2)
 - Dash invulnerability frames (partially done — blink effect needs polish)
 
-**Remaining phases:** HUD polish, particles, missions, physics, shaders, AI, GPU particles, animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
+**Phase 5 (HUD Polish):** ✅ Complete
+- Minimap: Top-down _draw()-based minimap in bottom-right corner with biome terrain tiles, player/enemy/boss/collectible/portal/trader dots, facing direction indicator (toggle with M)
+- Damage direction indicators: Red arrows on screen pointing toward damage source, fade over 1.5s
+- Boss tension vignette: Pulsing red screen-edge vignette that intensifies with boss proximity
+- Death screen: Staggered fade-in with "ZORP HAS FALLEN" title, stats (score with roll-up animation, kills, best combo, max pickup streak, time survived), press R/Space to restart
+- Biome indicator: Top-center biome name display, color-matched to terrain, fades to dim after showing
+- Dash cooldown indicator: Circular ring with ⚡ icon in bottom-left, green when ready with pulse animation
+- Kill feed: Right-side scrolling kill entries ("Zorp ▸ EnemyName"), 5 max, 4s lifetime with fade
+- Achievement popup system: 12 achievements (First Blood, On a Roll, Killing Spree, Unstoppable, Getting Stronger, Power Surge, Collector, Treasure Hunter, Giant Slayer, Explorer, Wanderer, Cartographer) with slide-in panels
+- Power-up timer display: Buff duration bars for monolith buffs (Speed Surge, Power Surge, Wisdom Aura)
+
+**Remaining phases:** Particles, missions, physics, shaders, AI, GPU particles, animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
 
 ## License
 
