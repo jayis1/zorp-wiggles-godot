@@ -77,6 +77,9 @@ var _nav_path_timer: float = 0.0  # Time until next repath
 # ── Phase 14: Dimensional Rifts — time scale (Time-Slow dimension) ──
 var _time_scale: float = 1.0
 
+# ── Phase 19: Co-op — track which player killed this enemy ──
+var _killed_by_p2: bool = false
+
 # ─── Node References ─────────────────────────────────────────────────────────
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var alert_indicator: Label3D = $AlertIndicator
@@ -197,7 +200,23 @@ func _update_ai(delta: float) -> void:
 	if not _cached_player:
 		return
 
+	# ── Phase 19: Co-op — target the nearest player ──
 	var player: Node3D = _cached_player
+	if CoOpManager.is_coop_active():
+		var p1: Node3D = _cached_player
+		var p2: Node3D = CoOpManager.p2_node
+		# Target the closest valid player. Downed players are deprioritized.
+		var p1_dist: float = global_position.distance_to(p1.global_position) if is_instance_valid(p1) else 99999.0
+		var p2_dist: float = global_position.distance_to(p2.global_position) if is_instance_valid(p2) else 99999.0
+		# If P1 is downed, prefer P2 (and vice versa)
+		if GameManager.player_is_downed:
+			p1_dist = 99999.0
+		if CoOpManager.p2_is_downed:
+			p2_dist = 99999.0
+		if p2_dist < p1_dist:
+			player = p2
+		else:
+			player = p1
 	var dist_to_player := global_position.distance_to(player.global_position)
 
 	# ── Phase 10: Ambush behavior ──
@@ -372,8 +391,13 @@ func _try_attack(player: Node3D) -> void:
 
 func _execute_attack(player: Node3D) -> void:
 	is_windup = false
-	# Deal damage (pass enemy position for damage direction indicator)
-	GameManager.take_damage(damage, global_position)
+	# ── Phase 19: Co-op — damage the correct player ──
+	# Check if the target is P2 (Zerp) by checking if it's in the player2 group
+	if player and is_instance_valid(player) and player.is_in_group("player2"):
+		CoOpManager.p2_take_damage(damage, global_position)
+	else:
+		# Deal damage to P1 (pass enemy position for damage direction indicator)
+		GameManager.take_damage(damage, global_position)
 
 	# Camera shake on player hit
 	_trigger_camera_trauma(0.2)
@@ -429,6 +453,10 @@ func take_damage(amount: int) -> void:
 func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if is_dead:
 		return
+	# ── Phase 19: Co-op — mark if this is a P2 projectile hit ──
+	# The projectile sets a meta flag on itself; we check via get_meta on the
+	# caller. Since we can't access the caller here, P2 projectiles call
+	# set_p2_hit() before take_damage_from().
 	hp -= amount
 	enemy_hit.emit(self, amount)
 
@@ -482,14 +510,22 @@ func apply_knockback(direction: Vector3, force: float) -> void:
 func set_time_scale(scale: float) -> void:
 	_time_scale = scale
 
+# ── Phase 19: Co-op — mark this enemy as hit by P2 ──
+func set_p2_hit() -> void:
+	_killed_by_p2 = true
+
 func _die() -> void:
 	is_dead = true
-	GameManager.register_kill()
+	var killer_name: String = GameConstants.P2_NAME if _killed_by_p2 else "Zorp"
+	GameManager.register_kill("", killer_name)
 	GameManager.gain_xp(xp_reward)
-	GameManager.add_score(score_reward)
+	if _killed_by_p2:
+		CoOpManager.p2_add_score(score_reward)
+	else:
+		GameManager.add_score(score_reward)
 	enemy_died.emit(self)
 	# Phase 5: Kill feed signal
-	GameManager.enemy_killed.emit(enemy_name, "Zorp")
+	GameManager.enemy_killed.emit(enemy_name, killer_name)
 	# ── Phase 18: Boss Arena — emit boss_defeated for arena-promoted bosses ──
 	if is_arena_boss:
 		GameManager.boss_defeated.emit(self)

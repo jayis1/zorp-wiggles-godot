@@ -219,6 +219,14 @@ func _ready() -> void:
 	wi_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(wi_ctrl)
 
+	# ── Phase 19: Co-op HUD ──
+	var coop_script := load("res://scripts/co_op_hud.gd")
+	var coop_ctrl := Control.new()
+	coop_ctrl.set_script(coop_script)
+	coop_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	coop_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(coop_ctrl)
+
 	# Initialize displays
 	_update_all_displays()
 

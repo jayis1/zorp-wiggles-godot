@@ -24,6 +24,13 @@ Originally built with the Ursina engine (Python), this is a ground-up rewrite in
 | F | Summon/dismiss companion pet |
 | G | Pet fetch mode (click collectible to fetch) |
 | C | Open weapon mod crafting menu |
+| Enter | Player 2 (Zerp) drop-in / hold to drop-out |
+| Arrow Keys | P2 movement |
+| / | P2 shoot |
+| Enter | P2 dash |
+| Right Shift | P2 pulse wave |
+| . | P2 revive Zorp |
+| E | P1 revive Zerp (when close) |
 
 ## Building & Running
 
@@ -341,7 +348,22 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Non-Drake bosses (Serpent, Graviton) are promoted to boss-tier with boosted HP (250 + player level × 20) and the `is_arena_boss` flag
 - Navigation mesh is rebuilt after arena construction and removal so enemy pathfinding accounts for walls and cover
 
-**Remaining phases:** Co-op, audio & polish.
+**Phase 19 (Local Co-op):** ✅ Complete — 🆕 New Feature
+- **Player 2 "Zerp"** drops in with **Enter** key for shared-screen local co-op — a magenta-purple alien with 100 HP, 0.9× damage, and 1.05× dash range
+- **Controls:** Arrow keys (move), `/` (shoot), Enter (dash), Right Shift (pulse wave), `.` (revive Zorp), hold Enter 2s (drop out)
+- **Shared camera** dynamically zooms from 22m → 42m based on player spacing, targeting the midpoint between both players so both stay on-screen
+- **Co-op enemy scaling:** 2× HP, 1.5× damage, 30% faster spawns, +15 max enemies — the planet fights back harder with two players
+- **Shared combo system:** Both players contribute to the same combo counter, with a +1s window bonus in co-op so the streak lasts longer
+- **Revive system:** When a player's HP hits 0, they enter a **downed state** with a 30-second bleed-out timer. The partner must get within 3.5m and hold the revive key for 3 seconds. Revive restores 60 HP + 2s invulnerability. If the timer runs out, the player dies for real
+- **Co-op mega pulse wave:** If both players fire their pulse wave (Q / RShift) within a 1-second sync window, a **mega pulse** triggers — 1.8× radius, 2.5× damage, 3 overlapping magenta pulse rings, particle spectacle, and heavy camera shake
+- **Drop-in / drop-out:** Player 2 can join or leave at any time — press Enter to drop in, hold Enter for 2 seconds to drop out
+- **7 co-op achievements:** First co-op kill, 50 co-op kills, first revive, 5 revives, first mega pulse, 3 mega pulses
+- Enemies intelligently target the **nearest valid player** (downed players are deprioritized), collectibles pull toward the nearest player, and P2 kills track to P2's score
+- **Co-op HUD** shows P2 HP bar, score, downed/revive overlays for both players, drop-in prompt, and milestone popups
+- P2 appears on the **minimap** as a magenta dot with facing direction
+- Weather and enemy spawning continue when P1 is downed but P2 is still alive
+
+**Remaining phases:** Audio & polish (Phase 20).
 
 ## License
 

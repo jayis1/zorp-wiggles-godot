@@ -98,8 +98,28 @@ func _process(delta: float) -> void:
 		if not _target_node:
 			return
 
-	# Smoothly follow player using exponential lerp (frame-rate independent)
-	var target_pos := _target_node.global_position
+	# ── Phase 19: Co-op dual-target mode ──
+	# When P2 is active, the camera targets the midpoint between both players
+	# and dynamically zooms out based on their spacing so both stay on-screen.
+	var coop_active: bool = CoOpManager.is_coop_active()
+	var target_pos: Vector3
+	if coop_active:
+		# Use midpoint between P1 and P2
+		var p2_node: CharacterBody3D = CoOpManager.p2_node
+		target_pos = (_target_node.global_position + p2_node.global_position) * 0.5
+		# Dynamic zoom based on player spacing
+		var spacing: float = _target_node.global_position.distance_to(p2_node.global_position)
+		var zoom_frac: float = clampf(spacing / GameConstants.COOP_CAMERA_PLAYER_SPACING_THRESH, 0.0, 1.0)
+		_target_zoom_distance = lerpf(
+			GameConstants.COOP_CAMERA_MIN_DISTANCE,
+			GameConstants.COOP_CAMERA_MAX_DISTANCE,
+			zoom_frac
+		)
+	else:
+		target_pos = _target_node.global_position
+		# ── Boss zoom takes priority over normal (non-coop) distance ──
+		# (Co-op zoom is handled in the coop_active branch above, and boss
+		#  zoom doesn't override co-op since co-op needs to see both players)
 	# ── Look-ahead: shift the follow target in the player's velocity direction
 	# so the camera leads slightly, giving the player more forward visibility.
 	# Only uses horizontal velocity (no Y drift from gravity/reverse-gravity).

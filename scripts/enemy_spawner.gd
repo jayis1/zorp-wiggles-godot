@@ -64,8 +64,13 @@ func _ready() -> void:
 	spawn_timer = 2.0  # Initial delay before first spawn
 
 func _process(delta: float) -> void:
-	if GameManager.is_paused or not GameManager.player_is_alive:
+	if GameManager.is_paused:
 		return
+	# ── Phase 19: Co-op — keep spawning if either player is alive ──
+	if not GameManager.player_is_alive and not CoOpManager.p2_active:
+		return
+	if not GameManager.player_is_alive and CoOpManager.p2_active and CoOpManager.p2_is_downed:
+		return  # Both players downed — stop spawning
 
 	# Update pending spawns (spawn warnings)
 	_update_pending_spawns(delta)
@@ -93,7 +98,9 @@ func _try_spawn() -> void:
 			alive_count += 1
 
 	# Check spawn cap (alive + pending)
-	if alive_count + pending_spawns.size() >= GameConstants.MAX_ACTIVE_ENEMIES:
+	# ── Phase 19: Co-op increases spawn cap ──
+	var spawn_cap: int = GameConstants.MAX_ACTIVE_ENEMIES + CoOpManager.get_max_enemies_bonus()
+	if alive_count + pending_spawns.size() >= spawn_cap:
 		return
 
 	# Check nearby density throttle
@@ -228,9 +235,13 @@ func _scale_enemy_to_player_level(enemy: Node3D) -> void:
 
 		if enemy is EnemyBase:
 			var new_hp: int = int(enemy.max_hp * hp_mult)
+			var new_dmg: int = int(enemy.damage * dmg_mult)
+			# ── Phase 19: Co-op enemy scaling — 2x HP, 1.5x damage ──
+			new_hp = int(new_hp * CoOpManager.get_enemy_hp_mult())
+			new_dmg = int(new_dmg * CoOpManager.get_enemy_damage_mult())
 			enemy.max_hp = new_hp
 			enemy.hp = new_hp
-			enemy.damage = int(enemy.damage * dmg_mult)
+			enemy.damage = new_dmg
 
 func _reset_spawn_timer() -> void:
 	# Base interval decreases with player level
@@ -239,6 +250,8 @@ func _reset_spawn_timer() -> void:
 		GameConstants.MIN_SPAWN_INTERVAL,
 		GameConstants.ENEMY_SPAWN_INTERVAL - level_tiers * GameConstants.ENEMY_SPAWN_INTERVAL_LEVEL_DECAY
 	)
+	# ── Phase 19: Co-op — 30% faster spawns ──
+	interval /= CoOpManager.get_spawn_rate_mult()
 
 	# Throttle if too many nearby enemies
 	var player: Node3D = get_tree().get_first_node_in_group("player")

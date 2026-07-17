@@ -50,6 +50,19 @@ func _ready() -> void:
 	_light.omni_attenuation = 1.5
 	add_child(_light)
 
+# ── Phase 19: Co-op mega pulse wave — override radius/damage ──
+func set_mega_params(mega_radius: float, mega_damage: int) -> void:
+	max_radius = mega_radius
+	damage = mega_damage
+	expand_speed *= 1.3  # Slightly faster expansion for mega wave
+	if _light:
+		_light.light_color = Color(1.0, 0.6, 1.0)  # Magenta for mega
+		_light.light_energy = 5.0
+		_light.omni_range = 12.0
+	if _material:
+		_material.albedo_color = Color(1.0, 0.6, 1.0, 0.8)
+		_material.emission = Color(1.0, 0.6, 1.0) * 0.8
+
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused:
 		return

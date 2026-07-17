@@ -343,6 +343,9 @@ func _hit_enemy(enemy: Node3D) -> void:
 		# ── Hit-stop on kill blows: even heftier freeze for the killing hit ──
 		if will_kill:
 			_trigger_hitstop()
+		# ── Phase 19: Co-op — mark enemy as hit by P2 if this is a P2 projectile ──
+		if has_meta("is_p2_projectile") and enemy.has_method("set_p2_hit"):
+			enemy.set_p2_hit()
 		# Phase 8: Use the directional damage variant so enemies get knocked back
 		if enemy.has_method("take_damage_from"):
 			enemy.take_damage_from(total_damage, global_position)

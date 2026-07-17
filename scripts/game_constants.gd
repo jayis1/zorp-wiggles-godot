@@ -1083,3 +1083,53 @@ const ARENA_WALL_COLOR: Color = Color(0.3, 0.3, 0.35)
 # Boss arena trigger: time between boss spawns if none active (seconds)
 const BOSS_ARENA_SPAWN_INTERVAL: float = 120.0  # 2 minutes between boss spawns
 const BOSS_ARENA_SPAWN_MIN_SCORE: int = 500     # Minimum score before first boss arena
+
+# ─── Phase 19: Local Co-op ────────────────────────────────────────────────────
+# Player 2 "Zerp" drops in for shared-screen co-op with Zorp.
+# Uses arrow keys + numpad for movement/shooting, Enter for dash, RShift for pulse.
+
+# P2 character visual
+const P2_NAME: String = "Zerp"
+const P2_BASE_COLOR: Color = Color(0.85, 0.3, 0.9)  # Magenta-purple (distinct from Zorp green)
+const P2_EMISSION_COLOR: Color = Color(0.5, 0.1, 0.6)
+const P2_SPAWN_OFFSET: Vector3 = Vector3(3.0, 0.5, 0.0)  # Spawn next to P1
+
+# P2 stat tweaks (slightly different feel from Zorp)
+const P2_SPEED_MULT: float = 1.0       # Same base speed
+const P2_DASH_MULT: float = 1.05       # Slightly longer dash
+const P2_DAMAGE_MULT: float = 0.9      # Slightly less damage (utility character)
+const P2_HP: int = 100                 # Less HP than Zorp (120) — glass cannon lean
+
+# Co-op enemy scaling
+const COOP_ENEMY_HP_MULT: float = 2.0       # 2x health
+const COOP_ENEMY_DAMAGE_MULT: float = 1.5   # 1.5x damage
+const COOP_ENEMY_SPAWN_RATE_MULT: float = 1.3  # 30% faster spawns
+const COOP_MAX_ENEMIES_BONUS: int = 15      # Extra spawn cap with 2 players
+
+# Shared combo system
+const COOP_COMBO_SHARED: bool = true        # Both players contribute to same combo
+const COOP_COMBO_WINDOW_BONUS: float = 1.0  # Extra seconds on combo timer in co-op
+
+# Revive system
+const COOP_REVIVE_DURATION: float = 3.0       # Seconds to hold revive
+const COOP_REVIVE_RANGE: float = 3.5          # Max distance to revive
+const COOP_REVIVE_HP_RESTORE: int = 60        # HP on revive
+const COOP_REVIVE_INVULN_DURATION: float = 2.0 # Invuln after revive
+const COOP_DOWNED_SPEED: float = 0.0          # Downed player can't move
+const COOP_DOWNED_TIMER_MAX: float = 30.0     # Bleed-out timer (auto-die after this)
+const COOP_DOWNED_REVIVE_PROGRESS_TICK: float = 0.034  # Progress per tick (~30/sec → ~3s)
+
+# Co-op mega pulse wave (both players Q within sync window)
+const COOP_PULSE_SYNC_WINDOW: float = 1.0     # Seconds for both players to press Q
+const COOP_PULSE_RADIUS_MULT: float = 1.8     # Mega wave radius multiplier
+const COOP_PULSE_DAMAGE_MULT: float = 2.5     # Mega wave damage multiplier
+
+# Co-op camera: dynamic zoom pulls back to frame both players
+const COOP_CAMERA_MIN_DISTANCE: float = 22.0  # When players close together
+const COOP_CAMERA_MAX_DISTANCE: float = 42.0  # When players far apart
+const COOP_CAMERA_ZOOM_SMOOTHING: float = 2.5
+const COOP_CAMERA_PLAYER_SPACING_THRESH: float = 15.0  # Distance at which max zoom kicks in
+
+# Drop-in / drop-out
+const COOP_DROP_IN_KEY: String = "p2_start"   # Input action name for P2 drop-in
+const COOP_DROP_OUT_HOLD_TIME: float = 2.0     # Hold drop-in key this long to drop out

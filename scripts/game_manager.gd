@@ -40,6 +40,10 @@ var player_is_dashing: bool = false
 var player_dash_timer: float = 0.0
 var player_is_paused: bool = false
 var player_is_alive: bool = true
+# ── Phase 19: Co-op — P1 downed state (can be revived by P2) ──
+var player_is_downed: bool = false
+var p1_downed_timer: float = 0.0
+var p1_revive_progress: float = 0.0
 
 # ─── Combo Milestone Signal ───────────────────────────────────────────────────
 signal combo_milestone(combo: int, tier: int, color: Color)
@@ -49,6 +53,7 @@ signal enemy_spawned_near(pos: Vector3, enemy_type: int)
 signal damage_taken_from(source_pos: Vector3)  # Phase 5: damage direction indicator
 signal enemy_killed(enemy_name: String, killer_name: String)  # Phase 5: kill feed
 signal biome_changed(biome_id: int)  # Phase 5: biome indicator
+signal p1_downed()  # Phase 19: P1 downed in co-op (can be revived by P2)
 
 # ─── World State ──────────────────────────────────────────────────────────────
 var world_seed: int = 0
@@ -91,12 +96,56 @@ func _resolve_scene_refs() -> void:
 	hud = main.get_node_or_null("HUD")
 
 func _process(delta: float) -> void:
-	if is_paused or not player_is_alive:
+	if is_paused:
+		return
+	if not player_is_alive:
+		# ── Phase 19: Co-op — tick P1 downed state ──
+		if player_is_downed:
+			_update_p1_downed(delta)
 		return
 	
 	game_time += delta
 	_update_timers(delta)
 	_update_biome_tracking()
+
+# ── Phase 19: P1 downed state (co-op revive) ──
+func _update_p1_downed(delta: float) -> void:
+	p1_downed_timer -= delta
+	if p1_downed_timer <= 0:
+		# Bleed out — die for real
+		player_is_downed = false
+		_die()
+		return
+	# Check if P2 is close enough and holding revive key
+	if CoOpManager.p2_active and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+		if player and is_instance_valid(player):
+			var dist: float = CoOpManager.p2_node.global_position.distance_to(player.global_position)
+			if dist <= GameConstants.COOP_REVIVE_RANGE and Input.is_action_pressed("p2_revive"):
+				p1_revive_progress += GameConstants.COOP_DOWNED_REVIVE_PROGRESS_TICK * 60.0 * delta
+				if p1_revive_progress >= 1.0:
+					_revive_p1()
+			else:
+				p1_revive_progress = max(0.0, p1_revive_progress - delta * 0.5)
+
+func _revive_p1() -> void:
+	player_is_alive = true
+	player_is_downed = false
+	player_hp = GameConstants.COOP_REVIVE_HP_RESTORE
+	player_invuln_timer = GameConstants.COOP_REVIVE_INVULN_DURATION
+	p1_downed_timer = 0.0
+	p1_revive_progress = 0.0
+	hp_changed.emit(player_hp, player_max_hp)
+	add_message("✨ Zorp revived by %s! Back in action!" % GameConstants.P2_NAME)
+	# Reset player mesh visibility/position
+	if player and is_instance_valid(player):
+		var mesh_node: MeshInstance3D = player.get_node_or_null("BodyMesh")
+		if mesh_node:
+			mesh_node.visible = true
+			mesh_node.position.y = 0.0
+		ParticleEffects.spawn_levelup_burst(player.get_parent(), player.global_position)
+	# Track co-op revive
+	CoOpManager._coop_revives += 1
+	CoOpManager._check_coop_milestones()
 
 func _update_timers(delta: float) -> void:
 	# Invulnerability timer
@@ -175,6 +224,9 @@ func _start_game() -> void:
 	player_dash_timer = 0.0
 	player_is_paused = false
 	player_is_alive = true
+	player_is_downed = false
+	p1_downed_timer = 0.0
+	p1_revive_progress = 0.0
 	game_time = 0.0
 	is_paused = false
 	active_buffs.clear()
@@ -249,7 +301,10 @@ func add_score(amount: int) -> void:
 func register_kill(enemy_name: String = "", killer_name: String = "Zorp") -> void:
 	player_kills += 1
 	player_combo += 1
-	player_combo_timer = 3.0
+	# ── Phase 19: Co-op shared combo — longer window when P2 is active ──
+	player_combo_timer = 3.0 + CoOpManager.get_combo_window_bonus()
+	# ── Phase 19: Track co-op kills ──
+	CoOpManager.register_coop_kill(killer_name != GameConstants.P2_NAME)
 	if player_combo > player_best_combo:
 		player_best_combo = player_combo
 	combo_changed.emit(player_combo)
@@ -263,7 +318,19 @@ func register_kill(enemy_name: String = "", killer_name: String = "Zorp") -> voi
 			_check_combo_milestone(player_combo)
 
 func _die() -> void:
+	# ── Phase 19: Co-op — P1 goes down instead of dying if P2 is active ──
+	if CoOpManager.p2_active and not player_is_downed:
+		player_is_downed = true
+		player_is_alive = false  # Stops normal processing but doesn't emit player_died
+		p1_downed_timer = GameConstants.COOP_DOWNED_TIMER_MAX
+		p1_revive_progress = 0.0
+		p1_downed.emit()
+		add_message("💔 Zorp is down! %s can revive with [.] key!" % GameConstants.P2_NAME)
+		print("[GameManager] P1 downed in co-op — awaiting revive")
+		return
+	# If already downed and bleed-out timer expired, or no co-op partner → actual death
 	player_is_alive = false
+	player_is_downed = false
 	player_died.emit()
 	print("[ZorpWiggles] Zorp died! Score: %d, Kills: %d, Best Combo: %d" % [player_score, player_kills, player_best_combo])
 
@@ -281,12 +348,18 @@ func restart_game() -> void:
 	enemies.clear()
 	collectibles.clear()
 	projectiles.clear()
+	# ── Phase 19: Reset co-op state ──
+	player_is_downed = false
+	p1_downed_timer = 0.0
+	p1_revive_progress = 0.0
+	CoOpManager.reset()
 	_start_game()
 	game_restarted.emit()
 
 func add_combo() -> void:
 	player_combo += 1
-	player_combo_timer = 3.0
+	# ── Phase 19: Co-op shared combo — longer window ──
+	player_combo_timer = 3.0 + CoOpManager.get_combo_window_bonus()
 	if player_combo > player_best_combo:
 		player_best_combo = player_combo
 	combo_changed.emit(player_combo)

@@ -161,6 +161,19 @@ func _physics_process(delta: float) -> void:
 	if not _cached_player or not is_instance_valid(_cached_player):
 		_cached_player = get_tree().get_first_node_in_group("player")
 	var player: Node3D = _cached_player
+	# ── Phase 19: Co-op — pull toward nearest player ──
+	if CoOpManager.is_coop_active():
+		var p1: Node3D = _cached_player
+		var p2: Node3D = CoOpManager.p2_node
+		if is_instance_valid(p1) and is_instance_valid(p2):
+			var d1: float = global_position.distance_to(p1.global_position)
+			var d2: float = global_position.distance_to(p2.global_position)
+			# Downed players can't collect
+			if GameManager.player_is_downed:
+				d1 = 99999.0
+			if CoOpManager.p2_is_downed:
+				d2 = 99999.0
+			player = p2 if d2 < d1 else p1
 	if not player:
 		# No player — still apply a gentle X/Z wobble for ambient float
 		if not is_popping:
@@ -247,25 +260,44 @@ func _collect() -> void:
 	# with invalid references over time (performance leak).
 	GameManager.collectibles.erase(self)
 
+	# ── Phase 19: Co-op — track which player collected ──
+	# Determine if P2 collected this item (by checking who's closest)
+	var collected_by_p2: bool = false
+	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+		var p1_dist: float = 99999.0
+		var p2_dist: float = 99999.0
+		if GameManager.player and is_instance_valid(GameManager.player) and not GameManager.player_is_downed:
+			p1_dist = global_position.distance_to(GameManager.player.global_position)
+		if not CoOpManager.p2_is_downed:
+			p2_dist = global_position.distance_to(CoOpManager.p2_node.global_position)
+		collected_by_p2 = p2_dist < p1_dist
+
 	# ── Phase 16: If this is a crafting material, add it to the weapon mod inventory ──
 	if GameConstants.CRAFTING_MATERIALS.has(collectible_type):
 		if WeaponModSystem:
 			WeaponModSystem.add_material(collectible_type, 1)
 
-	# Award XP
+	# Award XP (shared in co-op — both players benefit from the same XP pool)
 	if xp_value > 0:
 		GameManager.gain_xp(xp_value)
 		# Spawn XP gain popup (cyan-blue "+N XP")
 		_spawn_xp_popup(xp_value)
 
-	# Health fragments heal
+	# Health fragments heal the collecting player
 	if collectible_type == GameConstants.CollectibleType.HEALTH_FRAGMENT:
-		GameManager.heal(25)
+		if collected_by_p2:
+			CoOpManager.p2_heal(25)
+		else:
+			GameManager.heal(25)
 		# Spawn heal popup (green "+25")
 		_spawn_heal_popup(25)
 
-	# Pickup streak
+	# Pickup streak (shared in co-op)
 	GameManager.add_pickup_streak()
+
+	# ── Phase 19: Award score to the collecting player ──
+	if collected_by_p2:
+		CoOpManager.p2_add_score(10)
 
 	# Phase 6: Pickup sparkle burst
 	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])

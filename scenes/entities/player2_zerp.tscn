@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3 uid="uid://p2zerp"]
+
+[ext_resource type="Script" path="res://scripts/player2_zerp.gd" id="1_p2"]
+
+[sub_resource type="SphereShape3D" id="P2Sphere"]
+radius = 0.5
+
+[sub_resource type="SphereMesh" id="P2Mesh"]
+radius = 0.5
+height = 1.0
+
+[node name="Player2" type="CharacterBody3D"]
+script = ExtResource("1_p2")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("P2Mesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("P2Sphere")
+
+[node name="ShootOrigin" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)

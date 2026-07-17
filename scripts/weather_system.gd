@@ -138,7 +138,10 @@ func _resolve_world_env() -> void:
 		_target_fog_density = _base_fog_density
 
 func _process(delta: float) -> void:
-	if GameManager.is_paused or not GameManager.player_is_alive:
+	if GameManager.is_paused:
+		return
+	# ── Phase 19: Co-op — keep weather running if either player is alive ──
+	if not GameManager.player_is_alive and not (CoOpManager.p2_active and not CoOpManager.p2_is_downed):
 		return
 
 	# Smooth fog density toward target

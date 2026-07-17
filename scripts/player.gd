@@ -110,7 +110,15 @@ func _ready() -> void:
 		mesh.material_override = _player_material
 
 func _physics_process(delta: float) -> void:
-	if GameManager.is_paused or not GameManager.player_is_alive:
+	if GameManager.is_paused:
+		return
+	if not GameManager.player_is_alive:
+		# ── Phase 19: Co-op — if downed, still blink but don't move ──
+		if GameManager.player_is_downed and mesh:
+			# Show downed state — semi-transparent blinking
+			var blink_phase = fmod(Time.get_ticks_msec() * 0.005, 1.0)
+			mesh.visible = blink_phase < 0.7
+			mesh.position.y = -0.2  # Slumped down
 		return
 	
 	# ── Phase 14: Reverse Gravity dimension — walk on ceiling ──
@@ -639,6 +647,8 @@ func _use_pulse_wave() -> void:
 	if pulse_wave_cooldown_timer > 0:
 		return
 	pulse_wave_cooldown_timer = GameConstants.PULSE_WAVE_COOLDOWN
+	# ── Phase 19: Co-op — report pulse wave for mega pulse sync ──
+	CoOpManager.report_pulse_wave(true, global_position)
 	# Spawn pulse wave at player position
 	var pulse: Node3D = PULSE_WAVE_SCENE.instantiate()
 	get_parent().add_child(pulse)

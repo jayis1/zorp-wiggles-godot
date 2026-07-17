@@ -224,6 +224,23 @@ func _draw_entity_dots(rect: Rect2) -> void:
 	var dir_end := center + facing * 8.0
 	draw_line(center, dir_end, Color.WHITE, 1.5)
 
+	# ── Phase 19: Co-op — P2 dot (magenta) ──
+	if CoOpManager.is_coop_active():
+		var p2_rel := CoOpManager.p2_node.global_position - player.global_position
+		var p2_pos := center + Vector2(p2_rel.x, p2_rel.z) * _scale
+		# Clamp to minimap edge
+		var p2_offset := p2_pos - center
+		if p2_offset.length() > _half_size - 2:
+			p2_pos = center + p2_offset.normalized() * (_half_size - 2)
+		draw_circle(p2_pos, 3.0, GameConstants.P2_BASE_COLOR)
+		# P2 facing direction
+		var p2_facing := Vector2(0, -1)
+		if CoOpManager.p2_node.has_method("_get_shoot_direction"):
+			var p2_shoot: Vector3 = CoOpManager.p2_node._get_shoot_direction()
+			p2_facing = Vector2(p2_shoot.x, p2_shoot.z).normalized()
+		var p2_dir_end := p2_pos + p2_facing * 6.0
+		draw_line(p2_pos, p2_dir_end, GameConstants.P2_BASE_COLOR, 1.0)
+
 	# ── Phase 15: Companion pet dot (cyan-blue diamond) ──
 	for pet in get_tree().get_nodes_in_group("companion_pet"):
 		if not is_instance_valid(pet):

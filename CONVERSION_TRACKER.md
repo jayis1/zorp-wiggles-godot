@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 18 — Boss Arenas (COMPLETE)
+## Status: PHASE 19 — Local Co-op (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -304,15 +304,26 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Hazard telegraph system — 1.5s pulsing ground circle warning before activation, falling crystal visible during telegraph (drops from 25m)
 - [x] `BossArena` node added to `main.tscn`
 
-### Phase 19: Local Co-op (TODO) 🆕 NEW FEATURE
-- [ ] Player 2 character "Zerp" (different color, slightly different abilities)
-- [ ] Split-screen camera or shared camera with dynamic zoom
-- [ ] Co-op enemy scaling (2x health, 1.5x damage)
-- [ ] Shared combo system (both players contribute to combo counter)
-- [ ] Revive system (downed player can be revived by partner)
-- [ ] Co-op pulse wave (both players Q at same time = mega wave)
-- [ ] Drop-in/drop-out (Player 2 presses Start anytime)
-- [ ] Co-op achievement milestones
+### Phase 19: Local Co-op ✅ COMPLETE 🆕 NEW FEATURE
+- [x] Player 2 character "Zerp" (magenta-purple color, different stats) — `player2_zerp.gd` + `.tscn`, CharacterBody3D with 100 HP, 0.9x damage, 1.05x dash, shares weapon mods
+- [x] Shared camera with dynamic zoom (frames both players) — `camera_rig.gd` dual-target mode, targets midpoint, zooms 22→42m based on spacing (COOP_CAMERA_MIN/MAX_DISTANCE)
+- [x] Co-op enemy scaling (2x health, 1.5x damage) — `enemy_spawner.gd` applies COOP_ENEMY_HP_MULT/DAMAGE_MULT, 30% faster spawns, +15 max enemies
+- [x] Shared combo system (both players contribute, +1s window bonus) — `GameManager.register_kill()` uses `CoOpManager.get_combo_window_bonus()`, shared XP pool
+- [x] Revive system (downed player can be revived by partner) — P1: `GameManager._update_p1_downed()`, P2: `CoOpManager._update_downed()`, 3s hold, 30s bleed-out, 60 HP restore + 2s invuln
+- [x] Co-op pulse wave (both players Q within sync window = mega wave) — `CoOpManager.report_pulse_wave()`, 1s sync window, 1.8x radius + 2.5x damage + 3 overlapping pulse rings + particle spectacle
+- [x] Drop-in/drop-out (Player 2 presses Enter anytime, hold to drop out) — `CoOpManager.drop_in_p2()`/`drop_out_p2()`, 2s hold to drop out
+- [x] Co-op achievement milestones (7 milestones: first kill, 50 kills, first revive, 5 revives, first mega pulse, 3 mega pulses) — `CoOpManager._check_coop_milestones()`
+- [x] P2 input actions (arrow keys, [/] shoot, [Enter] dash, [RShift] pulse, [.] revive, [Enter] start) — 10 new input actions in `project.godot`
+- [x] `CoOpManager` registered as autoload in `project.godot`
+- [x] Enemies target nearest player in co-op — `enemy_base.gd` `_update_ai()` finds closest valid player, downed players deprioritized
+- [x] Collectibles pull toward nearest player — `collectible.gd` finds nearest player, P2 score tracked separately
+- [x] P2 projectiles tagged with `is_p2_projectile` meta — kills register to P2 score via `enemy_base.set_p2_hit()`
+- [x] Co-op HUD (`co_op_hud.gd`) — P2 HP bar, score, downed/revive overlays for both players, drop-in prompt, milestone popups
+- [x] P2 on minimap (magenta dot with facing direction) — integrated into `minimap.gd`
+- [x] Weather system continues when P1 downed but P2 alive — `weather_system.gd` checks co-op state
+- [x] Enemy spawner continues when P1 downed but P2 alive — `enemy_spawner.gd` checks co-op state
+- [x] P1 downed visual (slumped + blinking mesh) — `player.gd` `_physics_process` shows downed state
+- [x] Co-op reset on game restart — `CoOpManager.reset()` + `GameManager.restart_game()` clears all co-op state
 
 ### Phase 20: Audio & Polish (TODO)
 - [ ] Sound effects (shoot, dash, pickup, level-up, damage, death)
@@ -390,4 +401,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Camera micro-recoil on shoot**: Each shot now adds a tiny camera trauma (0.015) for a subtle kick that makes shooting feel punchy. At ~9 shots/sec this stays well below the shake decay threshold (trauma² curve + 1.5/s decay) so it never accumulates into a wobble — it's a feather-touch that adds weight to every trigger pull. Multi-bolt weapon mods (Spread Shot, Quantum Overdrive) stack proportionally, making them feel slightly more powerful.
 
 ## Last Updated
-Phase 18 complete. Boss Arena System: New `boss_arena.gd` controller builds an enclosed arena around the player when any boss spawns, with 12 wall segments (StaticBody3D) that rise from the ground via tween animation, a colored floor disc overlay, and 6 destructible cover pillars. Three arena types determined by boss: LAVA_ARENA (Drake — lava geysers + shrinking floor every 15s), CRYSTAL_ARENA (Serpent King — falling crystal stalactites), VOID_ARENA (Graviton Prime — expanding void shockwaves). New `arena_hazard.gd` with 3 hazard types: LAVA_GEYSER (tall column, 30 damage + knockback), FALLING_CRYSTAL (drops from 25m, 45 damage + shatter), VOID_SHOCKWAVE (expanding ring, continuous damage). Each hazard has a 1.5s telegraph warning (pulsing ground circle), activation particle burst, and fade-out. BossArena auto-spawns bosses every 120s if player score ≥500, rotating through Drake/Serpent/Graviton. Non-Drake bosses promoted with `is_arena_boss` flag + boosted HP (250 + level*20). On boss death, walls sink, floor fades, exit portal spawns at center (30s lifetime). Navigation mesh rebuilt after arena construction/removal. `GameManager.set_current_boss()`/`clear_current_boss()` for proper boss tracking. Phase 19-20 planned.
+Phase 19 complete. Local Co-op System: Player 2 "Zerp" drops in with Enter key for shared-screen co-op. Magenta-purple CharacterBody3D with 100 HP, 0.9x damage multiplier, 1.05x dash, shares P1's equipped weapon mod. Arrow keys for movement, [/] for shoot, [Enter] for dash, [RShift] for pulse wave, [.] for revive. Camera dynamically zooms 22→42m based on player spacing, targeting the midpoint. Co-op enemy scaling: 2x HP, 1.5x damage, 30% faster spawns, +15 max enemies. Shared combo with +1s window bonus. Revive system: downed players have 30s bleed-out timer, partner must be within 3.5m and hold revive key for 3s, restores 60 HP + 2s invuln. Mega pulse wave: both players fire Q within 1s sync window → 1.8x radius, 2.5x damage, 3 overlapping rings, particle spectacle, camera shake. Drop-in/drop-out: hold Enter 2s to drop out. 7 co-op achievements. CoOpManager autoload singleton. Enemies target nearest player, collectibles pull toward nearest, P2 kills tracked via is_p2_projectile meta + set_p2_hit(). Co-op HUD with P2 HP/score, downed overlays, milestone popups, drop-in prompt. P2 on minimap. Weather/spawner continue when P1 downed but P2 alive. Phase 20 planned.
