@@ -17,14 +17,32 @@ var _has_hit_player: bool = false
 
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
+# ─── Shared Resources ──────────────────────────────────────────────────────────
+# Shockwaves are fired repeatedly by Sentinels. Share the mesh geometry
+# to avoid per-shot allocation. Material is per-instance (alpha/emission tween).
+static var _shared_mesh: CylinderMesh = null
+
+static func _ensure_shared_mesh() -> void:
+	if _shared_mesh == null:
+		_shared_mesh = CylinderMesh.new()
+		_shared_mesh.top_radius = 0.5
+		_shared_mesh.bottom_radius = 0.5
+		_shared_mesh.height = 0.1
+		_shared_mesh.radial_segments = 24
+		_shared_mesh.rings = 2
+
 func _ready() -> void:
 	# Set up material
 	if mesh:
+		_ensure_shared_mesh()
+		mesh.mesh = _shared_mesh
 		_material = StandardMaterial3D.new()
 		_material.albedo_color = Color(1.0, 200.0 / 255.0, 50.0 / 255.0, 0.6)
+		_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		_material.emission_enabled = true
 		_material.emission = Color(1.0, 0.8, 0.2) * 0.5
+		_material.emission_energy_multiplier = 1.5
 		mesh.material_override = _material
 
 func _physics_process(delta: float) -> void:
@@ -55,6 +73,8 @@ func _physics_process(delta: float) -> void:
 	if _material:
 		var fade: float = 1.0 - progress
 		_material.albedo_color.a = 0.6 * fade * fade
+		# Emission fades alongside alpha for a coherent dissipating glow
+		_material.emission_energy_multiplier = 1.5 * fade * fade
 
 	# Destroy when fully expanded
 	if current_radius >= max_radius:

@@ -13,12 +13,50 @@ var speed: float = GameConstants.PROJECTILE_SPEED
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 
+# ─── Shared Resources ──────────────────────────────────────────────────────────
+# Projectiles are spawned at ~9/sec during combat. Creating a new
+# StandardMaterial3D per shot causes unnecessary GPU resource allocation
+# and GC pressure. These static materials are created once and reused.
+static var _shared_mesh: SphereMesh = null
+static var _shared_material: StandardMaterial3D = null
+static var _shared_trail_mesh: SphereMesh = null
+static var _shared_trail_material: StandardMaterial3D = null
+
+static func _ensure_shared_resources() -> void:
+	if _shared_mesh == null:
+		_shared_mesh = SphereMesh.new()
+		_shared_mesh.radius = 0.15
+		_shared_mesh.height = 0.3
+		_shared_mesh.radial_segments = 6
+		_shared_mesh.rings = 3
+	if _shared_material == null:
+		_shared_material = StandardMaterial3D.new()
+		_shared_material.albedo_color = Color(0.2, 1.0, 0.8)  # Cyan laser
+		_shared_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_shared_material.emission_enabled = true
+		_shared_material.emission = Color(0.2, 1.0, 0.8) * 0.8
+		_shared_material.emission_energy_multiplier = 1.5
+	if _shared_trail_mesh == null:
+		_shared_trail_mesh = SphereMesh.new()
+		_shared_trail_mesh.radius = 0.1
+		_shared_trail_mesh.height = 0.2
+		_shared_trail_mesh.radial_segments = 4
+		_shared_trail_mesh.rings = 2
+	if _shared_trail_material == null:
+		_shared_trail_material = StandardMaterial3D.new()
+		_shared_trail_material.albedo_color = Color(0.2, 1.0, 0.8, 0.5)
+		_shared_trail_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_shared_trail_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_shared_trail_material.emission_enabled = true
+		_shared_trail_material.emission = Color(0.2, 1.0, 0.8) * 0.3
+
 # ─── Trail ────────────────────────────────────────────────────────────────────
 var _trail_positions: Array[Vector3] = []
 const TRAIL_MAX_POINTS: int = 6
 const TRAIL_INTERVAL: float = 0.02
 var _trail_timer: float = 0.0
 var _trail_meshes: Array[MeshInstance3D] = []
+var _trail_materials: Array[StandardMaterial3D] = []  # Per-trail-node mat for alpha fade
 
 # ─── Impact Effect ────────────────────────────────────────────────────────────
 const IMPACT_SCENE := preload("res://scenes/entities/impact_burst.tscn")
@@ -27,22 +65,11 @@ func _ready() -> void:
 	# Connect body_entered signal — fires when a PhysicsBody3D (enemy) enters
 	body_entered.connect(_on_body_entered)
 
-	# Create projectile visual
+	# Use shared mesh + material (created once, reused across all projectiles)
+	_ensure_shared_resources()
 	if mesh_instance:
-		var sphere := SphereMesh.new()
-		sphere.radius = 0.15
-		sphere.height = 0.3
-		sphere.radial_segments = 6
-		sphere.rings = 3
-		mesh_instance.mesh = sphere
-
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.2, 1.0, 0.8)  # Cyan laser
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.emission_enabled = true
-		mat.emission = Color(0.2, 1.0, 0.8) * 0.8
-		mat.emission_energy_multiplier = 1.5
-		mesh_instance.material_override = mat
+		mesh_instance.mesh = _shared_mesh
+		mesh_instance.material_override = _shared_material
 
 	# Add a small point light for real-time glow
 	var light := OmniLight3D.new()
@@ -83,22 +110,17 @@ func _record_trail_point(pos: Vector3) -> void:
 		_trail_positions.pop_back()
 
 func _update_trail_visuals(delta: float) -> void:
-	# Lazily create trail mesh instances
+	# Lazily create trail mesh instances (using shared mesh + per-node material clones)
+	# Each trail node gets its own material clone so we can fade alpha independently.
+	# The mesh itself is shared (static geometry) to save GPU memory.
 	while _trail_meshes.size() < TRAIL_MAX_POINTS:
 		var m := MeshInstance3D.new()
-		var sphere := SphereMesh.new()
-		sphere.radius = 0.1
-		sphere.height = 0.2
-		sphere.radial_segments = 4
-		sphere.rings = 2
-		m.mesh = sphere
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.2, 1.0, 0.8, 0.5)
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.emission_enabled = true
-		mat.emission = Color(0.2, 1.0, 0.8) * 0.3
+		_ensure_shared_resources()
+		m.mesh = _shared_trail_mesh
+		# Clone the shared trail material so each trail node can fade independently
+		var mat := _shared_trail_material.duplicate() as StandardMaterial3D
 		m.material_override = mat
+		_trail_materials.append(mat)
 		add_child(m)
 		m.visible = false
 		_trail_meshes.append(m)
@@ -112,7 +134,7 @@ func _update_trail_visuals(delta: float) -> void:
 			tm.global_position = _trail_positions[i]
 			# Fade and shrink with distance from head
 			var fade: float = 1.0 - float(i) / float(TRAIL_MAX_POINTS)
-			var mat := tm.material_override as StandardMaterial3D
+			var mat: StandardMaterial3D = _trail_materials[i]
 			if mat:
 				mat.albedo_color.a = fade * 0.5
 			tm.scale = Vector3.ONE * fade

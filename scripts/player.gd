@@ -53,6 +53,14 @@ const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
 const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
 const _IDLE_EMISSION_MAX: float = 1.3    # Idle emission pulse max
 
+# ── Movement lean: Zorp's mesh tilts subtly toward the direction of motion,
+#    giving a sense of weight and momentum. The lean is smoothed via exponential
+#    lerp so it eases in/out rather than snapping. Skipped during dash/slide
+#    (those have their own scale tweens that would conflict with rotation).
+var _lean_current: Vector3 = Vector3.ZERO  # Current lean rotation (radians)
+const _LEAN_MAX_ANGLE: float = 0.12        # Max tilt ~7° in any direction
+const _LEAN_SMOOTHING: float = 10.0        # How fast lean eases (higher = snappier)
+
 # ─── Combat ───────────────────────────────────────────────────────────────────
 var shoot_cooldown_timer: float = 0.0
 var pulse_wave_cooldown_timer: float = 0.0
@@ -150,6 +158,7 @@ func _physics_process(delta: float) -> void:
 	_handle_dash(delta)
 	_handle_invuln_blink(delta)
 	_update_idle_breathing(delta)
+	_update_movement_lean(delta)
 
 	move_and_slide()
 
@@ -173,6 +182,58 @@ func _update_idle_breathing(delta: float) -> void:
 		var pulse: float = 0.5 + 0.5 * sin(_idle_phase)
 		_player_material.emission_energy_multiplier = lerpf(
 			_IDLE_EMISSION_MIN, _IDLE_EMISSION_MAX, pulse)
+
+# ── Movement lean: tilts Zorp's mesh toward the velocity direction for a
+#    sense of weight and momentum. The tilt is proportional to speed and
+#    smoothed via exponential lerp. Skipped during dash/slide (their tweens
+#    control mesh.scale and would conflict with rotation writes).
+func _update_movement_lean(delta: float) -> void:
+	# Skip lean during reverse-gravity dimension (mesh is flipped 180° on X)
+	if DimensionSystem.gravity_reversed():
+		return
+	if is_dashing or is_sliding:
+		# Ease back to upright when dash/slide starts
+		var weight: float = 1.0 - exp(-_LEAN_SMOOTHING * delta)
+		_lean_current = _lean_current.lerp(Vector3.ZERO, weight)
+		if mesh:
+			mesh.rotation.x = _lean_current.x
+			mesh.rotation.z = _lean_current.z
+		return
+
+	# Desired lean: tilt around X (forward/back) and Z (left/right) based on
+	# the horizontal velocity relative to the player's facing.
+	# We use the *camera-relative* velocity so the lean matches what the
+	# player sees, not world-space directions.
+	var vel_horiz := Vector2(velocity.x, velocity.z)
+	var speed_frac: float = clampf(vel_horiz.length() / GameConstants.PLAYER_SPEED, 0.0, 1.0)
+
+	# Get camera right and forward on XZ plane for camera-relative lean
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	var target_x: float = 0.0
+	var target_z: float = 0.0
+	if cam and speed_frac > 0.01:
+		var fwd := -cam.global_basis.z
+		fwd.y = 0
+		fwd = fwd.normalized()
+		var right := cam.global_basis.x
+		right.y = 0
+		right = right.normalized()
+		# Project velocity onto camera axes
+		var vel_xz := Vector3(velocity.x, 0, velocity.z)
+		var forward_component: float = vel_xz.dot(fwd) / GameConstants.PLAYER_SPEED
+		var right_component: float = vel_xz.dot(right) / GameConstants.PLAYER_SPEED
+		# Tilt forward when moving forward (negative X rotation = lean forward)
+		# Tilt sideways when strafing (positive Z rotation = lean right)
+		target_x = -forward_component * _LEAN_MAX_ANGLE
+		target_z = -right_component * _LEAN_MAX_ANGLE
+
+	var w: float = 1.0 - exp(-_LEAN_SMOOTHING * delta)
+	_lean_current.x = lerpf(_lean_current.x, target_x, w)
+	_lean_current.z = lerpf(_lean_current.z, target_z, w)
+
+	if mesh:
+		mesh.rotation.x = _lean_current.x
+		mesh.rotation.z = _lean_current.z
 
 func _handle_movement(delta: float) -> void:
 	# Read input

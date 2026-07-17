@@ -133,7 +133,13 @@ func _physics_process(delta: float) -> void:
 	# Normal pull radius (skip if emergency magnet already handled)
 	if not is_emergency_magnet and dist < GameConstants.COLLECT_PULL_RADIUS and not is_popping:
 		is_magnetic = true
-		var pull_speed := GameConstants.COLLECT_PULL_SPEED * (1.0 - dist / GameConstants.COLLECT_PULL_RADIUS)
+		# Exponential acceleration: pull starts gentle when far, then ramps up
+		# sharply as the item closes in. The ease-in curve (t²) makes items
+		# feel "sticky" — they hesitate, then snap toward the player for a
+		# satisfying pickup. This replaces the previous linear falloff.
+		var proximity: float = 1.0 - dist / GameConstants.COLLECT_PULL_RADIUS  # 0..1
+		var accel_curve: float = proximity * proximity  # Quadratic ease-in
+		var pull_speed: float = GameConstants.COLLECT_PULL_SPEED * (0.3 + 0.7 * accel_curve)
 		var dir := (player.global_position - global_position).normalized()
 		global_position += dir * pull_speed * delta
 	

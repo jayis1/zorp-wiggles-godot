@@ -10,19 +10,37 @@ var damage: int = GameConstants.PULSE_WAVE_DAMAGE
 var expand_speed: float = 30.0
 var has_hit: Dictionary = {}  # Track which enemies we've already hit
 var _light: OmniLight3D = null
+var _material: StandardMaterial3D = null
 
 @onready var ring_mesh: MeshInstance3D = $RingMesh
+
+# ─── Shared Ring Mesh ──────────────────────────────────────────────────────────
+# The pulse wave ring mesh is the same every cast. Share it to avoid
+# per-cast geometry allocation. The material is per-instance (alpha tweens).
+static var _shared_ring_mesh: CylinderMesh = null
+
+static func _ensure_shared_mesh() -> void:
+	if _shared_ring_mesh == null:
+		_shared_ring_mesh = CylinderMesh.new()
+		_shared_ring_mesh.top_radius = 0.5
+		_shared_ring_mesh.bottom_radius = 0.5
+		_shared_ring_mesh.height = 0.1
+		_shared_ring_mesh.radial_segments = 32
+		_shared_ring_mesh.rings = 2
 
 func _ready() -> void:
 	# Create expanding ring visual
 	if ring_mesh:
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.3, 0.8, 1.0, 0.6)  # Cyan ring
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.emission_enabled = true
-		mat.emission = Color(0.3, 0.8, 1.0) * 0.5
-		ring_mesh.material_override = mat
+		_ensure_shared_mesh()
+		ring_mesh.mesh = _shared_ring_mesh
+		_material = StandardMaterial3D.new()
+		_material.albedo_color = Color(0.3, 0.8, 1.0, 0.6)  # Cyan ring
+		_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_material.emission_enabled = true
+		_material.emission = Color(0.3, 0.8, 1.0) * 0.5
+		_material.emission_energy_multiplier = 1.5
+		ring_mesh.material_override = _material
 
 	# Center light flash — illuminates the area as the wave fires, fading as it expands
 	_light = OmniLight3D.new()
@@ -53,7 +71,12 @@ func _physics_process(delta: float) -> void:
 		# Fade out as it expands — ease-in so it stays visible early then fades fast
 		var alpha := 1.0 - progress
 		alpha = alpha * alpha  # Quadratic fade for a sharper disappear at the edge
-		mat_override_albedo_alpha(alpha)
+		if _material:
+			_material.albedo_color.a = alpha * 0.6
+			# Emission energy also fades with the ring so the glow diminishes
+			# naturally as the shockwave dissipates — more visually coherent than
+			# keeping full emission while the ring fades to transparent.
+			_material.emission_energy_multiplier = 1.5 * alpha
 
 	# Fade the center light as the wave expands (punchy flash → gentle glow → off)
 	if _light:
@@ -85,9 +108,3 @@ func _physics_process(delta: float) -> void:
 	# Remove when fully expanded
 	if radius >= max_radius:
 		queue_free()
-
-func mat_override_albedo_alpha(alpha: float) -> void:
-	if ring_mesh and ring_mesh.material_override:
-		var mat := ring_mesh.material_override as StandardMaterial3D
-		if mat:
-			mat.albedo_color.a = alpha
