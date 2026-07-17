@@ -421,7 +421,30 @@ func _random_collectible_type() -> int:
 func _spawn_enemy_at(type_name: String, pos: Vector3) -> void:
 	"""Spawn an enemy of the given type at the given position."""
 	var type_data: Dictionary = EnemyTypeData.get_type(type_name)
-	var enemy_scene := preload("res://scenes/entities/enemy_blob.tscn")
+	# Map enemy names to their specialized scenes
+	var scene_map: Dictionary = {
+		"Slime Blob": "res://scenes/entities/enemy_blob.tscn",
+		"Space Beetle": "res://scenes/entities/enemy_blob.tscn",
+		"Void Wraith": "res://scenes/entities/enemy_blob.tscn",
+		"Lava Crawler": "res://scenes/entities/enemy_blob.tscn",
+		"Crystal Guardian": "res://scenes/entities/enemy_blob.tscn",
+		"Plasma Drake": "res://scenes/entities/enemy_drake.tscn",
+		"Phase Shifter": "res://scenes/entities/enemy_blob.tscn",
+		"Spore Spitter": "res://scenes/entities/enemy_spitter.tscn",
+		"Swarm Mite": "res://scenes/entities/enemy_blob.tscn",
+		"Void Bomber": "res://scenes/entities/enemy_bomber.tscn",
+		"Nebula Phantom": "res://scenes/entities/enemy_blob.tscn",
+		"Starburst Sentinel": "res://scenes/entities/enemy_sentinel.tscn",
+		"Cosmic Leech": "res://scenes/entities/enemy_blob.tscn",
+		"Void Stalker": "res://scenes/entities/enemy_blob.tscn",
+		"Plasma Serpent": "res://scenes/entities/enemy_serpent.tscn",
+		"Graviton": "res://scenes/entities/enemy_graviton.tscn",
+		"Void Wisp": "res://scenes/entities/enemy_wisp.tscn",
+		"Echo Wraith": "res://scenes/entities/enemy_blob.tscn",
+		"Shard Golem": "res://scenes/entities/enemy_blob.tscn",
+	}
+	var scene_path: String = scene_map.get(type_name, "res://scenes/entities/enemy_blob.tscn")
+	var enemy_scene := load(scene_path)
 	var enemy := enemy_scene.instantiate()
 	enemy.global_position = pos
 	# Configure enemy with type data

@@ -107,10 +107,13 @@ func _explode() -> void:
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy == self or not is_instance_valid(enemy):
 			continue
-		if enemy.has_method("take_damage"):
+		if enemy.has_method("take_damage_from") or enemy.has_method("take_damage"):
 			var edist: float = global_position.distance_to(enemy.global_position)
 			if edist < GameConstants.VOID_BOMBER_EXPLOSION_RADIUS:
-				enemy.take_damage(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE / 2)
+				if enemy.has_method("take_damage_from"):
+					enemy.take_damage_from(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE / 2, global_position)
+				else:
+					enemy.take_damage(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE / 2)
 
 	# Visual explosion effect — flash and scale
 	if _material:
@@ -132,6 +135,8 @@ func _explode() -> void:
 	GameManager.gain_xp(xp_reward)
 	GameManager.add_score(score_reward)
 	enemy_died.emit(self)
+	# Phase 5: Kill feed signal (must emit here since _die() is overridden)
+	GameManager.enemy_killed.emit(enemy_name, "Zorp")
 
 func _die() -> void:
 	# Override: if not already exploded, do normal death

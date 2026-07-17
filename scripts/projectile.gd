@@ -118,6 +118,12 @@ func _on_body_entered(body: Node3D) -> void:
 	# Check if it's an enemy
 	if body.is_in_group("enemies"):
 		_hit_enemy(body)
+	elif body.is_in_group("destructibles"):
+		# Hit a destructible prop — damage it
+		if body.has_method("take_damage_from"):
+			body.take_damage_from(damage, global_position)
+		_impact_effect()
+		queue_free()
 	else:
 		# Hit terrain/wall — destroy projectile
 		_impact_effect()

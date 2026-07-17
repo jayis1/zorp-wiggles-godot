@@ -210,7 +210,9 @@ func gain_xp(amount: int) -> void:
 func _level_up() -> void:
 	player_level += 1
 	player_max_hp += GameConstants.PLAYER_LEVEL_HP_BONUS
-	player_hp = player_max_hp  # Full heal on level up
+	# Heal on level up: base amount or 15% of max HP, whichever is higher (matches original)
+	var heal_amount: int = max(40, int(player_max_hp * 0.15))
+	player_hp = min(player_max_hp, player_hp + heal_amount)
 	player_xp_to_next = int(player_xp_to_next * GameConstants.PLAYER_LEVEL_XP_MULT)
 	level_up.emit(player_level)
 	print("[ZorpWiggles] Level up! Now level %d" % player_level)

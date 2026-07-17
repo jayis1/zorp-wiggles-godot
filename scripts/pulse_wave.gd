@@ -52,12 +52,15 @@ func _physics_process(delta: float) -> void:
 			# Only hit enemies within the ring's current band
 			if dist <= radius and dist >= radius - 2.0:
 				has_hit[enemy_node.get_instance_id()] = true
-				if enemy_node.has_method("take_damage"):
+				if enemy_node.has_method("take_damage_from"):
+					enemy_node.take_damage_from(damage, global_position)
+				elif enemy_node.has_method("take_damage"):
 					enemy_node.take_damage(damage)
 				# Knockback
-				var knock_dir: Vector3 = (enemy_node.global_position - global_position).normalized()
-				knock_dir.y = 0
-				enemy_node.global_position += knock_dir * 3.0
+				if enemy_node.has_method("apply_knockback"):
+					var knock_dir: Vector3 = (enemy_node.global_position - global_position).normalized()
+					knock_dir.y = 0
+					enemy_node.apply_knockback(knock_dir, GameConstants.KNOCKBACK_FORCE_EXPLOSION)
 	
 	# Remove when fully expanded
 	if radius >= max_radius:

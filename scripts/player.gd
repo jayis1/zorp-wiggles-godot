@@ -278,6 +278,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Pulse wave
 	if event.is_action_pressed("pulse_wave") and GameManager.player_is_alive:
 		_use_pulse_wave()
+	
+	# Pause toggle
+	if event.is_action_pressed("pause"):
+		GameManager.is_paused = not GameManager.is_paused
+		get_tree().paused = GameManager.is_paused
 
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig

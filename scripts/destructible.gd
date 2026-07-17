@@ -76,7 +76,7 @@ func _on_area_entered(area: Area3D) -> void:
 		return
 	# Projectiles are Area3D — they call take_damage_from directly, but if they
 	# don't (e.g. generic area), apply a small hit
-	if area.is_in_group("projectiles"):
+	if area.is_in_group("player_projectiles") or area.is_in_group("projectiles"):
 		take_damage_from(GameConstants.PROJECTILE_BASE_DAMAGE, area.global_position)
 
 # ─── Shatter into physics fragments ───────────────────────────────────────────

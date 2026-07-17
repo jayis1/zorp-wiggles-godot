@@ -69,3 +69,4 @@ pause={
 
 GameManager="*res://scripts/game_manager.gd"
 EnemyTypeData="*res://scripts/enemy_types.gd"
+MissionSystem="*res://scripts/mission_system.gd"
