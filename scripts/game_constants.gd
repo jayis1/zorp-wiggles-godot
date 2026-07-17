@@ -642,3 +642,85 @@ const RIFT_COLLECTIBLE_TYPES: Array[int] = [
 	GameConstants.CollectibleType.QUANTUM_FUZZ,
 	GameConstants.CollectibleType.NEBULA_DUST,
 ]
+
+# ─── Phase 15: Alien Companion Pet ────────────────────────────────────────────
+# Pet evolution stages
+enum PetStage {
+	BABY,        # Stage 0: collect only, small radius
+	ADOLESCENT,  # Stage 1: collect + attack small enemies
+	ADULT,       # Stage 2: collect + attack all + shield Zorp
+}
+
+const PET_STAGE_NAMES: Array[String] = ["Baby", "Adolescent", "Adult"]
+
+# Evolution points needed to advance to each stage
+const PET_EVOLVE_TO_ADOLESCENT: int = 100   # Points needed: Baby → Adolescent
+const PET_EVOLVE_TO_ADULT: int = 250        # Points needed: Adolescent → Adult
+
+# Feeding values — how many evolution points each collectible type grants
+const PET_FEED_VALUES: Dictionary = {
+	GameConstants.CollectibleType.XP_ORB: 5,
+	GameConstants.CollectibleType.SPACE_GLOOP: 10,
+	GameConstants.CollectibleType.STAR_FRUIT: 15,
+	GameConstants.CollectibleType.HEALTH_FRAGMENT: 8,
+	GameConstants.CollectibleType.METEOR_SHARD: 40,
+	GameConstants.CollectibleType.QUANTUM_FUZZ: 35,
+	GameConstants.CollectibleType.NEBULA_DUST: 30,
+}
+
+# Pet stats per stage
+const PET_STAGE_CONFIG: Array[Dictionary] = [
+	{  # BABY
+		"scale": 0.3,
+		"color": Color(0.4, 0.9, 1.0),          # Light cyan
+		"emission": Color(0.2, 0.6, 1.0),
+		"collect_radius": 8.0,
+		"attack_range": 0.0,                      # Can't attack
+		"attack_damage": 0,
+		"attack_cooldown": 0.0,
+		"shield_reduction": 0.0,                  # No shield
+		"follow_distance": 3.0,
+		"speed": 10.0,
+		"hp": 30,
+	},
+	{  # ADOLESCENT
+		"scale": 0.5,
+		"color": Color(0.3, 0.7, 0.9),           # Teal
+		"emission": Color(0.15, 0.5, 0.8),
+		"collect_radius": 12.0,
+		"attack_range": 4.0,
+		"attack_damage": 8,
+		"attack_cooldown": 1.5,
+		"shield_reduction": 0.0,
+		"follow_distance": 4.0,
+		"speed": 12.0,
+		"hp": 60,
+	},
+	{  # ADULT
+		"scale": 0.7,
+		"color": Color(0.5, 0.4, 0.9),           # Blue-purple
+		"emission": Color(0.3, 0.2, 0.7),
+		"collect_radius": 16.0,
+		"attack_range": 6.0,
+		"attack_damage": 15,
+		"attack_cooldown": 1.0,
+		"shield_reduction": 0.15,                 # 15% damage reduction for Zorp
+		"follow_distance": 5.0,
+		"speed": 14.0,
+		"hp": 100,
+	},
+]
+
+# Pet movement and behavior
+const PET_FOLLOW_LERP_SPEED: float = 6.0       # How fast pet lerps toward follow position
+const PET_HEIGHT_OFFSET: float = 1.5           # Floats above player's shoulder
+const PET_BOB_AMPLITUDE: float = 0.15          # Idle bob height
+const PET_BOB_SPEED: float = 3.0               # Idle bob frequency
+const PET_FETCH_SPEED: float = 20.0            # Speed when fetching a specific item
+const PET_FETCH_RANGE: float = 60.0            # Max distance for fetch command
+const PET_HEAL_PER_PICKUP: float = 2.0         # Pet heals itself per item collected
+const PET_IDLE_ANIMATION_INTERVAL: float = 5.0 # Seconds between random idle anims
+const PET_SPAWN_OFFSET: Vector3 = Vector3(2.0, 1.0, 0.0)  # Initial spawn offset from player
+
+# Pet aura particle counts per stage
+const PET_AURA_PARTICLE_COUNTS: Array[int] = [0, 8, 20]  # Baby: none, Adolescent: few, Adult: many

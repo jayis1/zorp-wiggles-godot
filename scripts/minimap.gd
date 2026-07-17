@@ -224,6 +224,23 @@ func _draw_entity_dots(rect: Rect2) -> void:
 	var dir_end := center + facing * 8.0
 	draw_line(center, dir_end, Color.WHITE, 1.5)
 
+	# ── Phase 15: Companion pet dot (cyan-blue diamond) ──
+	for pet in get_tree().get_nodes_in_group("companion_pet"):
+		if not is_instance_valid(pet):
+			continue
+		var ppos: Vector2 = _world_to_mini(pet.global_position.x, pet.global_position.z, px, pz, pixel_per_world)
+		if _is_in_rect(ppos, rect):
+			# Draw a small diamond for the pet
+			var pet_color: Color = Color(0.4, 0.8, 1.0)
+			var s: float = 3.0
+			var pts := PackedVector2Array([
+				Vector2(ppos.x, ppos.y - s),
+				Vector2(ppos.x + s, ppos.y),
+				Vector2(ppos.x, ppos.y + s),
+				Vector2(ppos.x - s, ppos.y),
+			])
+			draw_colored_polygon(pts, pet_color)
+
 func _is_in_rect(pos: Vector2, rect: Rect2) -> bool:
 	return pos.x >= rect.position.x and pos.x <= rect.position.x + rect.size.x \
 		and pos.y >= rect.position.y and pos.y <= rect.position.y + rect.size.y

@@ -190,6 +190,13 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		var dmg_reduction: float = MutationSystem.get_damage_reduction()
 		if dmg_reduction > 0:
 			actual_amount = int(actual_amount * (1.0 - dmg_reduction))
+	# ── Phase 15: Adult companion pet shields Zorp ──
+	if player and is_instance_valid(player) and "pet" in player:
+		var pet: Node = player.pet
+		if pet and is_instance_valid(pet) and pet.has_method("get_shield_reduction"):
+			var pet_shield: float = pet.get_shield_reduction()
+			if pet_shield > 0:
+				actual_amount = int(actual_amount * (1.0 - pet_shield))
 	player_hp = max(0, player_hp - actual_amount)
 	player_invuln_timer = GameConstants.PLAYER_INVULN_DURATION
 	hp_changed.emit(player_hp, player_max_hp)

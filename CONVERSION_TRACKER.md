@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 14 — Dimensional Rifts (COMPLETE)
+## Status: PHASE 15 — Alien Companion Pet (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -216,16 +216,22 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Rift portals on minimap (pulsing purple diamonds) — integrated into `minimap.gd`
 - [x] `DimensionSystem` registered as autoload in `project.godot`
 
-### Phase 15: Alien Companion Pet (TODO) 🆕 NEW FEATURE
-- [ ] Pet companion entity (follows Zorp with smooth pathfinding)
-- [ ] Auto-collect nearby items (increased vacuum radius when pet is out)
-- [ ] Send-to-fetch command (click distant item, pet fetches it)
-- [ ] Pet evolution system (3 stages: baby → adolescent → adult)
-- [ ] Pet feeding (feed collectibles to evolve, different items = different evolution paths)
-- [ ] Pet abilities per evolution: baby (collect only), adolescent (attack small enemies), adult (shield + attack)
-- [ ] Pet visual evolution (color, size, particle aura changes)
-- [ ] Pet idle animations (bounce, spin, chase tail, sleep)
-- [ ] Pet HUD indicator (pet HP, evolution progress, current ability)
+### Phase 15: Alien Companion Pet ✅ COMPLETE 🆕 NEW FEATURE
+- [x] Pet companion entity (follows Zorp with smooth pathfinding) — `companion_pet.gd` + `.tscn`, CharacterBody3D with NavigationAgent3D, smooth lerp following at `PET_HEIGHT_OFFSET` above player
+- [x] Auto-collect nearby items (increased vacuum radius when pet is out) — `_auto_collect()` vacuums collectibles within stage-scaled radius (8/12/16m), pulls items toward pet and collects them
+- [x] Send-to-fetch command (click distant item, pet fetches it) — G key enters fetch mode, next left-click raycasts to find nearest collectible within 5m of click, pet races to it at `PET_FETCH_SPEED`
+- [x] Pet evolution system (3 stages: baby → adolescent → adult) — `PetStage` enum, evolution points accumulate from feeding, thresholds at 100 (Adolescent) and 250 (Adult) points
+- [x] Pet feeding (feed collectibles to evolve, different items = different evolution paths) — `feed()` method grants evolution points per collectible type (XP_ORB=5, STAR_FRUIT=15, METEOR_SHARD=40, etc.)
+- [x] Pet abilities per evolution: baby (collect only), adolescent (attack small enemies ≤30 HP), adult (shield + attack all enemies) — `_auto_attack()` with stage-gated enemy filtering, `get_shield_reduction()` returns 0.15 for Adult
+- [x] Pet visual evolution (color, size, particle aura changes) — `_apply_stage_config()` updates mesh scale, material color/emission, glow light range/energy, aura particle count (0/8/20) per stage
+- [x] Pet idle animations (bounce, spin, chase tail, sleep) — `_start_idle_anim()` picks random animation every 5-8s when following, 4 animation types with smooth reset
+- [x] Pet HUD indicator (pet HP, evolution progress, current ability/state) — `companion_hud.gd`, bottom-left panel with HP bar, evolution bar, stage name, state label, color-coded state
+- [x] Pet on minimap (cyan-blue diamond) — integrated into `minimap.gd`
+- [x] Summon/dismiss pet (F key) — `_toggle_pet()` in player.gd, materialize particle burst on summon, death poof on dismiss
+- [x] Pet death and respawn (10s respawn timer) — `take_damage()`, `_die()`, `_respawn()` with is_dead flag, visual hide/show, materialize effect on respawn
+- [x] Pet vanishes when player dies — connects to `player_died` signal
+- [x] Adult pet shields Zorp (15% damage reduction) — integrated into `GameManager.take_damage()`
+- [x] Input actions `summon_pet` (F) and `pet_fetch` (G) added to `project.godot`
 
 ### Phase 16: Weapon Mod Crafting (TODO) 🆕 NEW FEATURE
 - [ ] Crafting menu UI (combine 2 items → new weapon mod)
@@ -340,4 +346,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Collectible spawn pop-in + rare glow**: Collectibles now bounce in from scale 0 → 1 with TRANS_BACK overshoot (0.35s) instead of appearing at full size. Rare items (Meteor Shard, Quantum Fuzz, Nebula Dust) get a persistent OmniLight3D (1.2 energy, 4m range) so they glow in dark biomes and are visible from afar. All collectibles also get rim lighting (rim=0.8, tint=1.0) for silhouette pop.
 
 ## Last Updated
-Phase 14 complete. Dimensional Rift System: New `dimension_system.gd` autoload with 4 alternate dimensions (Void, Mirror, Time-Slow, Reverse Gravity). Rift portals (`dimensional_rift.gd` + `.tscn`) spawn randomly every 25-45s near the player with swirling vortex shader (`rift_vortex.gdshader`). Entering a rift triggers a screen-wipe transition (`dimension_transition.gdshader` in ShaderManager). Each dimension lasts 30s then auto-returns: Void spawns a shadow clone mini-boss (`shadow_clone.gd` + `.tscn`, 80 HP, strafes + shoots dark projectiles); Mirror makes collectibles hostile (damage + knockback) and enemies passive; Time-Slow slows enemies/projectiles to 0.3x and player to 0.5x via `set_time_scale()`; Reverse Gravity lifts everything to a 20m ceiling with player mesh flipping upside-down. Exiting a dimension has 50% chance to spawn 2-4 rare collectibles. Dimension indicator HUD shows current dimension + timer bar. Rifts shown as purple diamonds on minimap. Phases 15-21 planned.
+Phase 15 complete. Alien Companion Pet System: New `companion_pet.gd` + `.tscn` implements a loyal alien creature that follows Zorp (CharacterBody3D with NavigationAgent3D pathfinding). Summon with F key, dismiss with F again. The pet auto-collects nearby items within a stage-scaled radius (8/12/16m), feeding on them to gain evolution points. Three evolution stages: Baby (collect only, light cyan), Adolescent (collect + attack small enemies ≤30 HP, teal, 8-particle aura), Adult (collect + attack all enemies + 15% damage shield for Zorp, blue-purple, 20-particle aura). Evolution thresholds at 100 and 250 points. G key enters fetch mode — click any distant collectible and the pet races to retrieve it at 20 m/s. Pet has 4 random idle animations (bounce, spin, tail-chase, sleep) that trigger every 5-8s when following. Pet can take damage and dies with a 10s respawn timer. `companion_hud.gd` shows pet HP bar, evolution progress bar, stage name, and color-coded state label at bottom-left. Pet appears as cyan-blue diamond on minimap. Adult pet's shield reduction integrated into `GameManager.take_damage()`. Input actions `summon_pet` (F) and `pet_fetch` (G) added to `project.godot`. Phases 16-21 planned.

@@ -59,6 +59,11 @@ var pulse_wave_cooldown_timer: float = 0.0
 const PROJECTILE_SCENE := preload("res://scenes/entities/projectile.tscn")
 const PULSE_WAVE_SCENE := preload("res://scenes/entities/pulse_wave.tscn")
 
+# ── Phase 15: Alien Companion Pet ─────────────────────────────────────────────
+const PET_SCENE := preload("res://scenes/entities/companion_pet.tscn")
+var pet: CharacterBody3D = null
+var _fetch_mode: bool = false  # When true, next left-click sends pet to fetch
+
 # ─── Camera ────────────────────────────────────────────────────────────────────
 var camera_yaw: float = 0.0
 var camera_pitch: float = -55.0  # Looking down
@@ -370,6 +375,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Shoot on left click
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		if not GameManager.is_paused and GameManager.player_is_alive:
+			# ── Phase 15: If in fetch mode, left-click targets a collectible ──
+			if _fetch_mode:
+				_try_fetch_click()
+				_fetch_mode = false
+				return
 			_try_shoot_or_buffer()
 	
 	# Pulse wave
@@ -380,6 +390,23 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		GameManager.is_paused = not GameManager.is_paused
 		get_tree().paused = GameManager.is_paused
+	
+	# ── Phase 15: Summon companion pet (F key) ──
+	if event.is_action_pressed("summon_pet") and not GameManager.is_paused and GameManager.player_is_alive:
+		_toggle_pet()
+	
+	# ── Phase 15: Pet fetch command (G key) ──
+	# Pressing G enters "fetch mode" — the next left-click targets a collectible
+	# for the pet to fetch. Pressing G again cancels fetch mode.
+	if event.is_action_pressed("pet_fetch") and not GameManager.is_paused and GameManager.player_is_alive:
+		if pet and is_instance_valid(pet):
+			_fetch_mode = not _fetch_mode
+			if _fetch_mode:
+				GameManager.add_message("🐾 Click a collectible to send pet to fetch")
+			else:
+				GameManager.add_message("🐾 Fetch cancelled")
+		else:
+			GameManager.add_message("🐾 No pet to fetch with! Press F to summon.")
 
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
@@ -502,3 +529,61 @@ func _update_mutation_material() -> void:
 		blended = blended.lerp(mut_color, 0.3)
 	_player_material.albedo_color = blended
 	_player_material.emission = blended * 0.4
+
+
+# ── Phase 15: Alien Companion Pet — summon/fetch logic ────────────────────────
+
+## Toggle the pet on/off. Pressing F summons the pet if none exists, or
+## dismisses it if one is already active.
+func _toggle_pet() -> void:
+	if pet and is_instance_valid(pet):
+		# Dismiss existing pet
+		ParticleEffects.spawn_death_poof(get_parent(), pet.global_position, Color(0.5, 0.7, 1.0), 0.8)
+		pet.queue_free()
+		pet = null
+		_fetch_mode = false
+		GameManager.add_message("🐾 Pet dismissed")
+	else:
+		# Summon a new pet
+		pet = PET_SCENE.instantiate() as CharacterBody3D
+		get_parent().add_child(pet)
+		pet.global_position = global_position + GameConstants.PET_SPAWN_OFFSET
+		GameManager.add_message("🐾 Companion pet summoned! Press F to dismiss, G to fetch.")
+		print("[Player] Pet summoned at %s" % pet.global_position)
+
+
+## When in fetch mode, left-click raycasts to find a collectible under the
+## cursor and sends the pet to fetch it.
+func _try_fetch_click() -> void:
+	if not pet or not is_instance_valid(pet):
+		_fetch_mode = false
+		return
+	# Raycast from camera through mouse to find a collectible
+	var camera_3d: Camera3D = get_viewport().get_camera_3d()
+	if not camera_3d:
+		return
+	var mouse_pos := get_viewport().get_mouse_position()
+	var from := camera_3d.project_ray_origin(mouse_pos)
+	var dir := camera_3d.project_ray_normal(mouse_pos)
+	# Check intersection with collectibles by projecting to ground plane
+	# then finding the nearest collectible within a small radius
+	if abs(dir.y) > 0.001:
+		var t := -from.y / dir.y
+		if t > 0:
+			var hit_point := from + dir * t
+			# Find nearest collectible to the hit point
+			var nearest: Node3D = null
+			var nearest_dist: float = 5.0  # Max click radius
+			for col in GameManager.collectibles:
+				if not is_instance_valid(col):
+					continue
+				if not col.is_in_group("collectibles"):
+					continue
+				var d: float = hit_point.distance_to(col.global_position)
+				if d < nearest_dist:
+					nearest_dist = d
+					nearest = col
+			if nearest:
+				pet.send_to_fetch(nearest)
+			else:
+				GameManager.add_message("🐾 No collectible found at click location")

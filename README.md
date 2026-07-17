@@ -20,7 +20,9 @@ Originally built with the Ursina engine (Python), this is a ground-up rewrite in
 | E | Trade (near Trader) |
 | M | Toggle minimap |
 | Tab | Toggle missions panel |
-| P | Pause |
+|| P | Pause |
+| F | Summon/dismiss companion pet |
+| G | Pet fetch mode (click collectible to fetch) |
 
 ## Building & Running
 
@@ -55,7 +57,8 @@ zorp-wiggles-godot/
 │       ├── healing_shrine.tscn # Healing crystal shrine
 │       ├── destructible.tscn # Breakable crates & crystal clusters (Phase 8)
 │       ├── dimensional_rift.tscn # Rift portal to alternate dimensions (Phase 14)
-│       └── shadow_clone.tscn     # Void dimension shadow clone mini-boss (Phase 14)
+│       ├── shadow_clone.tscn     # Void dimension shadow clone mini-boss (Phase 14)
+│       └── companion_pet.tscn    # Alien companion pet (Phase 15)
 ├── scripts/
 │   ├── game_constants.gd   # All game constants
 │   ├── game_manager.gd     # Autoload singleton — game state
@@ -107,6 +110,8 @@ zorp-wiggles-godot/
 │   ├── dimensional_rift.gd # Rift portal entity (Phase 14)
 │   ├── shadow_clone.gd    # Void dimension shadow clone mini-boss (Phase 14)
 │   ├── dimension_indicator.gd # Dimension HUD indicator + timer (Phase 14)
+│   ├── companion_pet.gd   # Alien companion pet entity (Phase 15)
+│   ├── companion_hud.gd   # Pet HUD indicator (Phase 15)
 │   └── main_menu.gd        # Menu logic
 ├── assets/
 │   ├── shaders/              # GLSL shaders (.gdshader)
@@ -249,7 +254,24 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Dimension indicator HUD: top-center label with dimension name (color-matched) + countdown timer bar
 - Rift portals visible on minimap as purple diamonds
 
-**Remaining phases:** Companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
+**Phase 15 (Alien Companion Pet):** ✅ Complete — 🆕 New Feature
+- Summon a loyal alien companion with **F key** (dismiss with F again)
+- Pet follows Zorp using NavigationAgent3D pathfinding, floating at shoulder height
+- **Auto-collect**: Pet vacuums nearby collectibles within a stage-scaled radius (8/12/16m) — items are pulled toward the pet and collected automatically
+- **Fetch command**: Press **G** to enter fetch mode, then click any distant collectible to send the pet racing to retrieve it (20 m/s, 60m range)
+- **3 evolution stages** (Baby → Adolescent → Adult), evolved by feeding on collected items:
+  - **Baby** (light cyan, 0.3 scale): Collect only, 8m radius, 30 HP
+  - **Adolescent** (teal, 0.5 scale, 8-particle aura): Collect + attack small enemies (≤30 HP), 12m radius, 60 HP
+  - **Adult** (blue-purple, 0.7 scale, 20-particle aura): Collect + attack all enemies + 15% damage shield for Zorp, 16m radius, 100 HP
+- Evolution thresholds: 100 points for Adolescent, 250 for Adult. Different collectible types grant different evolution points (XP_ORB=5, STAR_FRUIT=15, METEOR_SHARD=40, etc.)
+- **Idle animations**: Pet randomly performs bounce, spin, tail-chase, or sleep animations every 5-8s when following
+- Pet can take damage from enemies and dies with a 10s respawn timer
+- Pet HUD: Bottom-left panel showing pet HP bar, evolution progress bar, stage name, and color-coded state (Follow/Fetch/Attack/Idle)
+- Pet visible on minimap as a cyan-blue diamond
+- Adult pet's 15% damage shield integrated into `GameManager.take_damage()`
+- Pet vanishes when player dies
+
+**Remaining phases:** Weapon mod crafting, dynamic weather, boss arenas, co-op, audio & polish.
 
 ## License
 

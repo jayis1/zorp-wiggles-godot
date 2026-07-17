@@ -177,6 +177,12 @@ func _ready() -> void:
 	di_ctrl.set_script(di_script)
 	add_child(di_ctrl)
 
+	# ── Phase 15: Companion Pet HUD ──
+	var ph_script := load("res://scripts/companion_hud.gd")
+	var ph_ctrl := Control.new()
+	ph_ctrl.set_script(ph_script)
+	add_child(ph_ctrl)
+
 	# Initialize displays
 	_update_all_displays()
 
