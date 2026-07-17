@@ -710,7 +710,7 @@ func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Col
 	#    muzzle position instead of traveling with the bolt. Color matches the
 	#    equipped weapon mod for cohesive visual language.
 	var muzzle_light := OmniLight3D.new()
-	muzzle_light.light_color = mod_color if mod_id != GameConstants.WeaponMod.NONE else Color(0.2, 1.0, 0.8)
+	muzzle_light.light_color = col if mod_id != GameConstants.WeaponMod.NONE else Color(0.2, 1.0, 0.8)
 	muzzle_light.light_energy = 4.0
 	muzzle_light.omni_range = 3.5
 	muzzle_light.omni_attenuation = 1.5
