@@ -126,7 +126,7 @@ func _update_active(delta: float) -> void:
 
 	# Lava geyser: flicker light
 	if hazard_type == HazardType.LAVA_GEYSER and _hazard_light:
-		_hazard_light.energy = 4.0 + randf() * 2.0
+		_hazard_light.light_energy = 4.0 + randf() * 2.0
 
 	if _timer <= 0:
 		_state = State.FADING
@@ -140,7 +140,7 @@ func _update_fading(delta: float) -> void:
 		_mat.albedo_color.a = fade_frac
 		_mat.emission_energy_multiplier = fade_frac * 2.0
 	if _hazard_light:
-		_hazard_light.energy = fade_frac * 3.0
+		_hazard_light.light_energy = fade_frac * 3.0
 	if _damage_area:
 		_damage_area.monitoring = false
 	if _timer <= 0:
@@ -273,8 +273,8 @@ func _build_visuals() -> void:
 	# ── Light ──
 	_hazard_light = OmniLight3D.new()
 	_hazard_light.light_color = glow_color
-	_hazard_light.energy = 0.0  # Off during telegraph
-	_hazard_light.range = 12.0
+	_hazard_light.light_energy = 0.0  # Off during telegraph
+	_hazard_light.omni_range = 12.0
 	_hazard_light.position = Vector3(0, 2.0, 0)
 	add_child(_hazard_light)
 
@@ -302,15 +302,15 @@ func _spawn_activation_effect() -> void:
 	match hazard_type:
 		HazardType.LAVA_GEYSER:
 			ParticleEffects.spawn_explosion(get_parent(), global_position, color, 40, 1.0)
-			_hazard_light.energy = 5.0
+			_hazard_light.light_energy = 5.0
 		HazardType.FALLING_CRYSTAL:
 			ParticleEffects.spawn_explosion(get_parent(), global_position, color, 35, 0.8)
-			_hazard_light.energy = 4.0
+			_hazard_light.light_energy = 4.0
 			# Shatter effect
 			ParticleEffects.spawn_shield_break(get_parent(), global_position, color)
 		HazardType.VOID_SHOCKWAVE:
 			ParticleEffects.spawn_explosion(get_parent(), global_position, color, 30, 0.6)
-			_hazard_light.energy = 3.0
+			_hazard_light.light_energy = 3.0
 
 func _get_hazard_color() -> Color:
 	match hazard_type:
