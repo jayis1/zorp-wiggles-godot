@@ -330,7 +330,7 @@ func _level_up() -> void:
 	var hp_bonus: int = GameConstants.PLAYER_LEVEL_HP_BONUS + tier * GameConstants.PLAYER_LEVEL_HP_TIER_BONUS
 	player_max_hp += hp_bonus
 	# Heal on level up: base amount or percentage of max HP, whichever is higher
-	var heal_amount: int = max(40, int(player_max_hp * GameConstants.PLAYER_HEAL_PERCENT))
+	var heal_amount: int = max(40, int(player_max_hp * GameConstants.PLAYER_LEVEL_HEAL_PERCENT))
 	player_hp = min(player_max_hp, player_hp + heal_amount)
 	# XP curve: exponential growth using the curve exponent
 	player_xp_to_next = int(GameConstants.PLAYER_LEVEL_XP_CURVE_BASE * pow(GameConstants.PLAYER_LEVEL_XP_CURVE_EXP, player_level - 1))
