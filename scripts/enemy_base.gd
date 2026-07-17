@@ -45,6 +45,11 @@ var current_color: Color = Color.RED
 @export var base_scale: float = 1.0
 var _material: StandardMaterial3D = null
 
+# ─── Movement Smoothing ──────────────────────────────────────────────────────
+## Higher = snappier velocity changes. ~8 = smooth organic, ~20 = tight.
+@export var velocity_smoothing: float = 8.0
+var _cached_player: Node3D = null
+
 # ─── Node References ─────────────────────────────────────────────────────────
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var alert_indicator: Label3D = $AlertIndicator
@@ -143,10 +148,12 @@ func _apply_enemy_separation(delta: float) -> void:
 			global_position += push_dir * strength * delta
 
 func _update_ai(delta: float) -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
-	if not player:
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	if not _cached_player:
 		return
 
+	var player: Node3D = _cached_player
 	var dist_to_player := global_position.distance_to(player.global_position)
 
 	# Detection
@@ -163,17 +170,26 @@ func _update_ai(delta: float) -> void:
 		if alert_indicator_timer <= 0 and alert_indicator:
 			alert_indicator.visible = false
 
-	# Movement toward player
+	# Movement toward player — compute desired velocity, then smoothly approach
+	# it via exponential lerp for organic acceleration/deceleration. This avoids
+	# the previous frame-1 snap from wander (0.3×speed) to full chase speed.
+	var desired_velocity: Vector3 = Vector3.ZERO
 	if is_alerted and dist_to_player > attack_range:
 		var dir := (player.global_position - global_position).normalized()
 		dir.y = 0
-		velocity = dir * speed
+		desired_velocity = dir * speed
 	elif is_alerted and dist_to_player <= attack_range:
-		velocity = Vector3.ZERO
+		desired_velocity = Vector3.ZERO
 		_try_attack(player)
 	else:
 		# Wander behavior
 		_wander(delta)
+		return  # _wander sets velocity directly
+
+	# Frame-rate independent smoothing
+	var weight: float = 1.0 - exp(-velocity_smoothing * delta)
+	velocity = velocity.lerp(desired_velocity, weight)
+	velocity.y = 0
 
 func _wander(delta: float) -> void:
 	wander_timer -= delta

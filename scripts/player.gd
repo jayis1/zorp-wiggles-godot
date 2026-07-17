@@ -212,6 +212,12 @@ func _start_dash() -> void:
 	# Camera shake on dash for punch
 	_trigger_camera_trauma(0.15)
 
+	# FOV kick — briefly widen the camera FOV for a speed sensation. The camera
+	# eases the FOV back to default in _process, so this is a one-shot nudge.
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("kick_fov"):
+		cam_rig.kick_fov(GameConstants.CAMERA_DASH_FOV_KICK)
+
 	# Phase 6: Dash trail particles
 	ParticleEffects.spawn_dash_trail(get_parent(), global_position, base_color)
 

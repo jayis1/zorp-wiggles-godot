@@ -23,6 +23,13 @@ extends Node3D
 @export var max_shake_rotation: float = 4.0  # Max rotation offset in degrees
 @export var shake_decay_rate: float = 1.5  # How fast trauma decays (per second)
 
+## FOV kick — briefly widens the camera FOV on dash for a speed sensation.
+## Classic "juice" technique that makes dashing feel punchy without changing
+## gameplay. FOV tweens out then eases back to the default.
+@export var dash_fov_kick: float = GameConstants.CAMERA_DASH_FOV_KICK
+@export var default_fov: float = GameConstants.CAMERA_DEFAULT_FOV
+@export var fov_return_speed: float = GameConstants.CAMERA_FOV_RETURN_SPEED
+
 @onready var camera: Camera3D = $Camera3D
 
 var _target_node: Node3D = null
@@ -43,6 +50,7 @@ func _ready() -> void:
 	_current_zoom_distance = orbit_distance
 	_target_zoom_distance = orbit_distance
 	camera.position = Vector3(0, 0, _current_zoom_distance)
+	camera.fov = default_fov
 	rotation_degrees = Vector3(-orbit_angle, 0, 0)
 
 	# Random seeds for shake noise
@@ -73,6 +81,12 @@ func _process(delta: float) -> void:
 	# Apply screen shake offset to the camera child node (shake layers on top of zoom)
 	_apply_screen_shake(delta)
 
+	# Smoothly return FOV to default (the dash kick sets it above default, then
+	# this eases it back for a natural "settle" feel).
+	if abs(camera.fov - default_fov) > 0.01:
+		var fov_weight: float = 1.0 - exp(-fov_return_speed * delta)
+		camera.fov = lerpf(camera.fov, default_fov, fov_weight)
+
 func _apply_screen_shake(delta: float) -> void:
 	# Decay trauma
 	if _trauma > 0.0:
@@ -102,6 +116,11 @@ func _apply_screen_shake(delta: float) -> void:
 ## Add screen shake trauma (0..1). Clamps to 1.0. Multiple calls stack additively.
 func add_trauma(amount: float) -> void:
 	_trauma = clampf(_trauma + amount, 0.0, 1.0)
+
+## Kick the camera FOV up by `kick_amount` degrees for a speed sensation.
+## Called on dash. The FOV then eases back to `default_fov` in _process.
+func kick_fov(kick_amount: float) -> void:
+	camera.fov = default_fov + kick_amount
 
 func set_camera_yaw(yaw_deg: float) -> void:
 	rotation_degrees.y = yaw_deg

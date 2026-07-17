@@ -65,6 +65,9 @@ const PULSE_WAVE_DAMAGE: int = 60
 const CAMERA_DISTANCE: float = 22.0
 const CAMERA_ANGLE: float = 55.0
 const CAMERA_ROTATE_SPEED: float = 200.0
+const CAMERA_DEFAULT_FOV: float = 70.0
+const CAMERA_DASH_FOV_KICK: float = 8.0    # Degrees added to FOV on dash
+const CAMERA_FOV_RETURN_SPEED: float = 6.0 # How fast FOV eases back to default
 
 # ─── HUD Colors (0-1 normalized for Godot) ──────────────────────────────────
 # In Ursina, color.rgb() used 0-255. In Godot, Color uses 0-1.
