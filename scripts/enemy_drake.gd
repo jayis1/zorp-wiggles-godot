@@ -87,7 +87,19 @@ func _enter_enrage() -> void:
 	GameManager.add_message("Plasma Drake is enraged!")
 
 func _update_boss_attacks(delta: float) -> void:
+	# In co-op, target the nearest valid player (base class logic handles this
+	# for normal AI, but boss attacks have their own targeting)
 	var player: Node3D = get_tree().get_first_node_in_group("player")
+	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+		var p1_dist: float = global_position.distance_to(player.global_position) if player else 99999.0
+		var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
+		# Prefer the closer player, but skip downed players
+		if GameManager.player_is_downed:
+			p1_dist = 99999.0
+		if CoOpManager.p2_is_downed:
+			p2_dist = 99999.0
+		if p2_dist < p1_dist:
+			player = CoOpManager.p2_node
 	if not player:
 		return
 
@@ -97,9 +109,19 @@ func _update_boss_attacks(delta: float) -> void:
 	if is_charging:
 		charge_duration -= delta
 		velocity = charge_dir * GameConstants.DRAKE_CHARGE_SPEED
-		# Check collision with player
+		# Check collision with player — route to correct player in co-op
 		if dist_to_player < 2.0:
-			GameManager.take_damage(GameConstants.DRAKE_CHARGE_DAMAGE, global_position)
+			# In co-op, determine which player the drake is charging at
+			# by checking if the target from _update_ai was P2. Since we
+			# don't have that here, check P2 distance if active.
+			if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+				var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
+				if p2_dist < 2.0 and p2_dist < dist_to_player:
+					CoOpManager.p2_take_damage(GameConstants.DRAKE_CHARGE_DAMAGE, global_position)
+				else:
+					GameManager.take_damage(GameConstants.DRAKE_CHARGE_DAMAGE, global_position)
+			else:
+				GameManager.take_damage(GameConstants.DRAKE_CHARGE_DAMAGE, global_position)
 			is_charging = false
 			charge_timer = GameConstants.DRAKE_CHARGE_COOLDOWN
 		if charge_duration <= 0:

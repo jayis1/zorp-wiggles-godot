@@ -32,9 +32,19 @@ func _ready() -> void:
 	spit_timer = randf_range(2.0, 4.0)
 
 func _update_ai(delta: float) -> void:
+	# In co-op, target the nearest valid player (matches base class co-op logic)
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if not player:
 		return
+	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+		var p1_dist: float = global_position.distance_to(player.global_position)
+		var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
+		if GameManager.player_is_downed:
+			p1_dist = 99999.0
+		if CoOpManager.p2_is_downed:
+			p2_dist = 99999.0
+		if p2_dist < p1_dist:
+			player = CoOpManager.p2_node
 
 	var dist_to_player := global_position.distance_to(player.global_position)
 
