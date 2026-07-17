@@ -41,6 +41,26 @@ const TYPE_CONFIG := {
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 
+# ─── Shared Resources ──────────────────────────────────────────────────────────
+# Collectibles are spawned frequently (enemy drops, world scatter, rift exits).
+# Each type has a fixed mesh radius, so we cache one SphereMesh per type config
+# key and reuse it across all instances. The material is still per-instance
+# because the emission pulse and mirror-dimension flash tween its properties
+# independently. This eliminates per-spawn geometry allocation for the most
+# common pickup types.
+static var _shared_meshes: Dictionary = {}  # { type_key: SphereMesh }
+
+static func _get_shared_mesh(type_key: int, radius: float) -> SphereMesh:
+	if _shared_meshes.has(type_key):
+		return _shared_meshes[type_key]
+	var sphere := SphereMesh.new()
+	sphere.radius = radius
+	sphere.height = radius * 2.0
+	sphere.radial_segments = 8
+	sphere.rings = 4
+	_shared_meshes[type_key] = sphere
+	return sphere
+
 func _ready() -> void:
 	# Connect area signals
 	body_entered.connect(_on_body_entered)
@@ -63,15 +83,11 @@ func _apply_type_config() -> void:
 	xp_value = config["value"]
 	
 	if mesh_instance:
-		# Create sphere mesh for collectible
-		var sphere := SphereMesh.new()
-		sphere.radius = config["scale"]
-		sphere.height = config["scale"] * 2.0
-		sphere.radial_segments = 8
-		sphere.rings = 4
-		mesh_instance.mesh = sphere
+		# Use the shared (cached) sphere mesh for this collectible type —
+		# avoids allocating a new SphereMesh on every spawn.
+		mesh_instance.mesh = _get_shared_mesh(collectible_type, config["scale"])
 		
-		# Unlit material with the type color
+		# Unlit material with the type color (per-instance — tweens emission/alpha)
 		_mat = StandardMaterial3D.new()
 		_mat.albedo_color = config["color"]
 		_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

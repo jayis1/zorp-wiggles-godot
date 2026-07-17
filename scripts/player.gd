@@ -609,6 +609,12 @@ func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Col
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_ELASTIC)
 
+	# Subtle camera micro-recoil on each shot — a tiny trauma kick that makes
+	# shooting feel punchy without being distracting. At ~9 shots/sec this stays
+	# well below the shake decay threshold so it never accumulates into a wobble.
+	# Dash already triggers a larger 0.15 trauma, so this 0.015 is a feather-touch.
+	_trigger_camera_trauma(0.015)
+
 func get_shoot_direction() -> Vector3:
 	var camera_3d: Camera3D = get_viewport().get_camera_3d()
 	if not camera_3d:

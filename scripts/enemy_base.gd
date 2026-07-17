@@ -390,6 +390,27 @@ func _execute_attack(player: Node3D) -> void:
 		global_position + lunge_dir * lunge_dist,
 		GameConstants.ENEMY_ATTACK_LUNGE_DURATION)
 
+	# ── Lunge stretch: stretch the body mesh along the lunge direction for a
+	# committed, forceful attack read. The windup compressed the enemy (squash);
+	# the lunge stretches it (stretch) — classic squash-and-stretch juice.
+	# Uses body_mesh.scale (local) so it doesn't conflict with self.scale
+	# (which the windup/restore tweens control). Snaps to the stretched pose
+	# then eases back to base with an elastic rebound for a wobbly recovery.
+	if body_mesh:
+		# Stretch on Y (vertical) and squash X/Z equally so it reads as a
+		# "coiled spring" lunge regardless of the horizontal lunge angle.
+		var stretch_scale := Vector3(
+			1.0 - 0.15,  # narrow perpendicular (X)
+			1.0 + 0.3,   # tall along motion (Y)
+			1.0 - 0.15)  # narrow perpendicular (Z)
+		var lunge_stretch := create_tween()
+		lunge_stretch.tween_property(body_mesh, "scale",
+			Vector3.ONE * base_scale * stretch_scale, 0.06) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		lunge_stretch.tween_property(body_mesh, "scale",
+			Vector3.ONE * base_scale, 0.18) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+
 	# Restore scale
 	var restore_tween := create_tween()
 	restore_tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15)
