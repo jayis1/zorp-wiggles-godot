@@ -1266,6 +1266,7 @@ const COOP_MAX_ENEMIES_BONUS: int = 15      # Extra spawn cap with 2 players
 # Shared combo system
 const COOP_COMBO_SHARED: bool = true        # Both players contribute to same combo
 const COOP_COMBO_WINDOW_BONUS: float = 1.0  # Extra seconds on combo timer in co-op
+const COMBO_TIMEOUT: float = 3.0            # Base combo window duration (seconds)
 
 # Revive system
 const COOP_REVIVE_DURATION: float = 3.0       # Seconds to hold revive

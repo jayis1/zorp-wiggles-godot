@@ -355,7 +355,7 @@ func register_kill(enemy_name: String = "", killer_name: String = "Zorp") -> voi
 	player_kills += 1
 	player_combo += 1
 	# ── Phase 19: Co-op shared combo — longer window when P2 is active ──
-	player_combo_timer = 3.0 + CoOpManager.get_combo_window_bonus()
+	player_combo_timer = GameConstants.COMBO_TIMEOUT + CoOpManager.get_combo_window_bonus()
 	# ── Phase 19: Track co-op kills ──
 	CoOpManager.register_coop_kill(killer_name != GameConstants.P2_NAME)
 	if player_combo > player_best_combo:
@@ -412,7 +412,7 @@ func restart_game() -> void:
 func add_combo() -> void:
 	player_combo += 1
 	# ── Phase 19: Co-op shared combo — longer window ──
-	player_combo_timer = 3.0 + CoOpManager.get_combo_window_bonus()
+	player_combo_timer = GameConstants.COMBO_TIMEOUT + CoOpManager.get_combo_window_bonus()
 	if player_combo > player_best_combo:
 		player_best_combo = player_combo
 	combo_changed.emit(player_combo)

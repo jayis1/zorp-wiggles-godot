@@ -115,8 +115,8 @@ func _process(delta: float) -> void:
 		var mut_biome: int = _find_biome_for_mutation(mut)
 		if mut_biome != _current_biome:
 			# Decay this mutation
-			_active_mutations[mut].time_left -= delta
-			if _active_mutations[mut].time_left <= 0:
+			_active_mutations[mut]["time_left"] -= delta
+			if _active_mutations[mut]["time_left"] <= 0:
 				mutations_to_remove.append(mut)
 
 	for mut in mutations_to_remove:
@@ -182,7 +182,7 @@ func has_mutation(mutation: int) -> bool:
 func get_mutation_strength(mutation: int) -> float:
 	if not _active_mutations.has(mutation):
 		return 0.0
-	return _active_mutations[mutation].strength
+	return _active_mutations[mutation]["strength"]
 
 ## Get all active mutations as an array.
 func get_active_mutations() -> Array:

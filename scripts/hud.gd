@@ -309,8 +309,9 @@ func _process(delta: float) -> void:
 	# Combo timer bar
 	if GameManager.player_combo > 0:
 		combo_timer_bar.visible = true
-		var ratio := GameManager.player_combo_timer / 3.0
-		combo_timer_bar.size.x = 200.0 * ratio
+		var combo_max: float = GameConstants.COMBO_TIMEOUT + CoOpManager.get_combo_window_bonus()
+		var ratio := GameManager.player_combo_timer / combo_max
+		combo_timer_bar.size.x = 200.0 * clampf(ratio, 0.0, 1.0)
 		# Color: green → yellow → red
 		if ratio > 0.5:
 			combo_timer_bar.color = Color(1.0, 1.0, 0.0)
