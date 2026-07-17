@@ -551,8 +551,9 @@ func _spawn_splitter_projectiles(_hit_enemy: Node3D) -> void:
 	for angle in [0.3, -0.3]:
 		var split_dir: Vector3 = direction.rotated(Vector3.UP, angle)
 		var proj: Area3D = PROJECTILE_SCENE.instantiate()
-		get_parent().add_child(proj)
-		proj.global_position = global_position
+		# Set properties BEFORE adding to tree so _ready() picks them up.
+		# set_weapon_mod must be called before _ready() so the per-projectile
+		# material is created with the correct mod color.
 		proj.set("direction", split_dir)
 		proj.set("damage", int(damage * 0.6))
 		proj.set("speed", speed)
@@ -560,6 +561,8 @@ func _spawn_splitter_projectiles(_hit_enemy: Node3D) -> void:
 		# They use the same mod color but NONE behavior
 		if proj.has_method("set_weapon_mod"):
 			proj.set_weapon_mod(GameConstants.WeaponMod.NONE, _mod_color)
+		get_parent().add_child(proj)
+		proj.global_position = global_position
 
 ## Phase 16: Acid Trail — spawn a lingering acid pool that damages enemies over time.
 func _spawn_acid_pool(base_dmg: int) -> void:

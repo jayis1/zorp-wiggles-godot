@@ -585,14 +585,19 @@ func _spawn_projectile() -> void:
 ## the projectile so it can apply behavior-specific logic (homing, bouncing, etc.).
 func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Color, mod_id: int = GameConstants.WeaponMod.NONE) -> void:
 	var proj: Area3D = PROJECTILE_SCENE.instantiate()
-	get_parent().add_child(proj)
-	proj.global_position = global_position + Vector3(0, 0.5, 0)
+	# Set properties BEFORE adding to tree so _ready() picks them up.
+	# This is critical for set_weapon_mod() — _ready() checks _weapon_mod
+	# and _mod_color to decide whether to create a per-projectile material
+	# with the mod color. If we set these after add_child(), _ready() runs
+	# with defaults (NONE / cyan) and the mod color is never applied to the
+	# projectile's visual material.
 	proj.set("direction", shoot_dir)
 	proj.set("damage", dmg)
 	proj.set("speed", spd)
-	# Pass the weapon mod ID and color to the projectile for behavior/visual changes
 	if proj.has_method("set_weapon_mod"):
 		proj.set_weapon_mod(mod_id, col)
+	get_parent().add_child(proj)
+	proj.global_position = global_position + Vector3(0, 0.5, 0)
 
 	# Quick scale pulse on shoot for juicy feedback (skip if dashing to avoid tween conflict)
 	if mesh and not is_dashing:
