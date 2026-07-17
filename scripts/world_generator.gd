@@ -57,7 +57,18 @@ func _generate_world() -> void:
 	# Spawn special structures (monoliths, traders, portals)
 	_spawn_structures()
 	
+	# ── Phase 10: Build navigation mesh AFTER all static colliders exist ──
+	# This allows enemies to use NavigationAgent3D for pathfinding around
+	# obstacles (decorations, destructibles, monoliths, portals, etc.).
+	call_deferred("_build_nav_mesh")
+	
 	print("[WorldGenerator] World generation complete!")
+
+# ── Phase 10: Build the navigation mesh after the world is fully populated ──
+# Uses call_deferred so all StaticBody3D colliders are in the scene tree first.
+func _build_nav_mesh() -> void:
+	if NavigationManager:
+		NavigationManager.build_nav_region(self)
 
 func _generate_biome_grid() -> void:
 	# Use noise-based biome assignment matching the original Ursina logic.

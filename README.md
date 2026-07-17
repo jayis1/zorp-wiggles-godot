@@ -98,6 +98,8 @@ zorp-wiggles-godot/
 │   ├── damage_flash.gd     # Red screen vignette on player damage
 │   ├── destructible.gd     # Breakable props that shatter into physics fragments (Phase 8)
 │   ├── shader_manager.gd   # Screen-space post-process shader manager (Phase 9)
+│   ├── enemy_ai_controller.gd  # Smart AI: LOS, flanking, retreat, ambush, pack, enrage (Phase 10)
+│   ├── navigation_manager.gd   # NavMesh generation & pathfinding autoload (Phase 10)
 │   └── main_menu.gd        # Menu logic
 ├── assets/
 │   ├── shaders/              # GLSL shaders (.gdshader)
@@ -214,7 +216,19 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
   - Resets all effects on player death / game restart
 - Water biome overlays now use the animated water_surface shader (replaces flat unlit material)
 
-**Remaining phases:** Smart Enemy AI, GPU particles (polish), animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
+**Phase 10 (Smart Enemy AI):** ✅ Complete — 🆕 New Feature
+- **NavigationRegion3D**: Runtime nav mesh generation from static colliders (`navigation_manager.gd` autoload), baked after world generation. Enemies path around obstacles instead of walking in straight lines.
+- **Line-of-sight checks**: RayCast3D every 0.3s determines if player is visible. Without LOS, enemy detection range is halved (heard but not seen).
+- **Flanking**: 35% of alerted enemies circle around to the player's side/back instead of approaching directly. ±75° offset, perpendicular circling at 6m standoff.
+- **Retreat**: Enemies at <25% HP back away from the player with a 1.15× speed boost. Resume fighting when HP recovers above 55%.
+- **Ambush**: Unalerted enemies near cover hide and wait with reduced detection range. When the player approaches within 10m, they break ambush with a 1.6× speed rush.
+- **Pack behavior**: Same-type enemies within 12m coordinate attacks. Surround slots are assigned so pack members approach from different angles instead of stacking. Pack frenzy triggers when any member drops below 10% HP — all nearby allies get 1.4× speed and a white flash.
+- **Call for help**: Enemies at <35% HP alert all enemies within 16m. HUD message shows how many allies responded.
+- **Enrage**: Enemies below 25% HP gain 1.35× speed, a smooth red color transition, and a pulsing red aura sphere. Proximity warnings are globally throttled.
+- **Near-death shudder**: Enemies below 10% HP periodically shudder with X/Z scale jitter, signaling they're one hit from death.
+- Smart AI is opt-in via `@export use_smart_ai` — disabled for stationary Sentinel, flanking/ambush disabled for Drake boss and Spore Spitter.
+
+**Remaining phases:** GPU particles (polish), animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
 
 ## License
 

@@ -50,6 +50,19 @@ var _material: StandardMaterial3D = null
 @export var velocity_smoothing: float = 8.0
 var _cached_player: Node3D = null
 
+# ── Phase 10: Smart Enemy AI ──────────────────────────────────────────────────
+# The AI controller handles advanced behaviors: LOS, flanking, retreat, ambush,
+# pack behavior, call-for-help, enrage, and near-death shudder.
+# Subclasses can disable specific behaviors by setting these flags to false
+# in their _ready() before calling super._ready().
+@export var use_smart_ai: bool = true
+var ai_controller: EnemyAIController = null
+
+# Navigation agent for pathfinding around obstacles (Phase 10).
+# Lazily created when the nav mesh is ready and the enemy needs to path.
+var _nav_agent: NavigationAgent3D = null
+var _nav_path_timer: float = 0.0  # Time until next repath
+
 # ─── Node References ─────────────────────────────────────────────────────────
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var alert_indicator: Label3D = $AlertIndicator
@@ -57,6 +70,11 @@ var _cached_player: Node3D = null
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("enemies")
+
+	# ── Phase 10: Create AI controller for advanced behaviors ──
+	if use_smart_ai:
+		ai_controller = EnemyAIController.new()
+		ai_controller.setup(self)
 
 	# Spawn grace period — enemy can't detect player for a bit
 	spawn_grace_timer = GameConstants.ENEMY_SPAWN_GRACE_PERIOD
@@ -114,6 +132,10 @@ func _physics_process(delta: float) -> void:
 	_update_timers(delta)
 	_update_visuals(delta)
 
+	# ── Phase 10: Update smart AI controller (LOS, enrage, shudder, pack, etc.)
+	if ai_controller:
+		ai_controller.update(delta, self)
+
 	# ── Phase 8: Apply knockback velocity (impulse-style, decays over time)
 	if knockback_vel.length_squared() > 0.01:
 		global_position += knockback_vel * delta
@@ -156,13 +178,30 @@ func _update_ai(delta: float) -> void:
 	var player: Node3D = _cached_player
 	var dist_to_player := global_position.distance_to(player.global_position)
 
-	# Detection
-	if not is_alerted and dist_to_player < detect_range:
+	# ── Phase 10: Ambush behavior ──
+	# If the AI controller is in ambush mode, it overrides velocity to zero
+	# and uses a reduced detection range until the player gets close.
+	var ambush_detect_mult: float = 1.0
+	if ai_controller:
+		ambush_detect_mult = ai_controller.get_ambush_detect_mult()
+
+	# Detection — line-of-sight aware (Phase 10)
+	# If we have LOS check enabled and don't currently have LOS, we only detect
+	# at half range (heard but not seen). With LOS, full detection range applies.
+	var effective_detect_range: float = detect_range * ambush_detect_mult
+	if ai_controller and ai_controller.enable_los:
+		if not ai_controller.has_los:
+			effective_detect_range *= 0.5  # Reduced detection without visual
+
+	if not is_alerted and dist_to_player < effective_detect_range:
 		is_alerted = true
 		alert_indicator_timer = GameConstants.ENEMY_ALERT_INDICATOR_DURATION
 		if alert_indicator:
 			alert_indicator.visible = true
 			alert_indicator.text = "!"
+		# ── Phase 10: Try to start flanking when first alerted ──
+		if ai_controller:
+			ai_controller.try_start_flank()
 
 	# Alert indicator fade
 	if alert_indicator_timer > 0:
@@ -170,14 +209,70 @@ func _update_ai(delta: float) -> void:
 		if alert_indicator_timer <= 0 and alert_indicator:
 			alert_indicator.visible = false
 
+	# ── Phase 10: Retreat check ──
+	# If the enemy is at low HP, it may retreat instead of attacking
+	if ai_controller:
+		ai_controller.check_retreat(self)
+		if ai_controller.is_fleeing():
+			var flee_dir: Vector3 = ai_controller.get_retreat_direction(self, player)
+			var flee_speed: float = speed * GameConstants.AI_RETREAT_SPEED_MULT
+			var flee_weight: float = 1.0 - exp(-velocity_smoothing * delta)
+			velocity = velocity.lerp(flee_dir * flee_speed, flee_weight)
+			velocity.y = 0
+			return
+
+	# ── Phase 10: Ambush overrides movement ──
+	if ai_controller and ai_controller.is_ambushing:
+		velocity = Vector3.ZERO
+		return
+
+	# Compute effective speed with enrage + frenzy + ambush rush multipliers
+	var effective_speed: float = speed
+	if ai_controller:
+		effective_speed *= ai_controller.get_enrage_speed_mult()
+		effective_speed *= ai_controller.get_frenzy_speed_mult()
+		effective_speed *= ai_controller.get_ambush_speed_mult()
+
 	# Movement toward player — compute desired velocity, then smoothly approach
-	# it via exponential lerp for organic acceleration/deceleration. This avoids
-	# the previous frame-1 snap from wander (0.3×speed) to full chase speed.
+	# it via exponential lerp for organic acceleration/deceleration.
 	var desired_velocity: Vector3 = Vector3.ZERO
 	if is_alerted and dist_to_player > attack_range:
-		var dir := (player.global_position - global_position).normalized()
-		dir.y = 0
-		desired_velocity = dir * speed
+		# ── Phase 10: Flanking behavior ──
+		# If the enemy is flanking, use a circular approach direction instead
+		# of a direct line to the player. This makes enemies harder to predict.
+		var move_dir: Vector3
+		if ai_controller and ai_controller.should_flank():
+			move_dir = ai_controller.get_flank_direction(self, player)
+			if move_dir == Vector3.ZERO:
+				move_dir = (player.global_position - global_position).normalized()
+		else:
+			move_dir = (player.global_position - global_position).normalized()
+		move_dir.y = 0
+		move_dir = move_dir.normalized()
+
+		# ── Phase 10: Pack surround behavior ──
+		# If in a pack with a surround slot, adjust direction to approach from
+		# an angular offset so pack members don't all converge on the same point.
+		if ai_controller and ai_controller._pack_slot_index >= 0:
+			var pack_count: int = ai_controller.pack_allies.size() + 1
+			var slot_angle: float = (float(ai_controller._pack_slot_index) / float(pack_count)) * TAU
+			var surround_offset: Vector3 = Vector3(cos(slot_angle), 0, sin(slot_angle)) * GameConstants.AI_PACK_SURROUND_SPACING
+			var surround_target: Vector3 = player.global_position + surround_offset
+			var to_surround: Vector3 = surround_target - global_position
+			to_surround.y = 0
+			if to_surround.length() > 0.5:
+				move_dir = to_surround.normalized()
+
+		# ── Phase 10: Navigation-based pathfinding ──
+		# If the nav mesh is ready, use it to avoid obstacles instead of
+		# walking in a straight line. We query the next waypoint and steer
+		# toward it. This is especially useful when LOS is blocked.
+		if NavigationManager.is_ready():
+			var nav_dir: Vector3 = _get_nav_direction(player.global_position, delta)
+			if nav_dir != Vector3.ZERO:
+				move_dir = nav_dir
+
+		desired_velocity = move_dir * effective_speed
 	elif is_alerted and dist_to_player <= attack_range:
 		desired_velocity = Vector3.ZERO
 		_try_attack(player)
@@ -190,6 +285,23 @@ func _update_ai(delta: float) -> void:
 	var weight: float = 1.0 - exp(-velocity_smoothing * delta)
 	velocity = velocity.lerp(desired_velocity, weight)
 	velocity.y = 0
+
+# ── Phase 10: Navigation-based pathfinding ────────────────────────────────────
+# Queries the NavigationManager for a path to the target and returns the
+# direction to the next waypoint. Falls back to direct line if no path.
+func _get_nav_direction(target_pos: Vector3, delta: float) -> Vector3:
+	# Repath periodically
+	_nav_path_timer -= delta
+	if _nav_path_timer <= 0:
+		_nav_path_timer = GameConstants.AI_NAV_PATH_UPDATE_INTERVAL
+		var next_pos: Vector3 = NavigationManager.get_next_position(global_position, target_pos)
+		# Store as a member by using the navigation agent if we have one,
+		# or just return the direction directly
+		var dir: Vector3 = (next_pos - global_position)
+		dir.y = 0
+		if dir.length() > 0.1:
+			return dir.normalized()
+	return Vector3.ZERO  # No new path this frame; rely on direct line
 
 func _wander(delta: float) -> void:
 	wander_timer -= delta
@@ -297,6 +409,11 @@ func _die() -> void:
 	# Phase 5: Kill feed signal
 	GameManager.enemy_killed.emit(enemy_name, "Zorp")
 
+	# ── Phase 10: Clean up AI controller ──
+	if ai_controller:
+		ai_controller.cleanup()
+		ai_controller = null
+
 	# Camera shake on enemy death (bigger for larger enemies)
 	_trigger_camera_trauma(clampf(base_scale * 0.15, 0.08, 0.35))
 
@@ -339,7 +456,11 @@ func _update_visuals(delta: float) -> void:
 
 	# Low-HP warning pulse — only when not currently being hit-flashed
 	# (hit flash tween controls _material.albedo_color during its 0.15s duration)
-	if ratio < 0.25 and ratio > 0 and _material and not is_windup and _hit_flash_timer <= 0:
+	# ── Phase 10: Skip if the AI controller is managing enrage color ──
+	var enrage_active: bool = false
+	if ai_controller and ai_controller.is_enraged:
+		enrage_active = true
+	if ratio < 0.25 and ratio > 0 and _material and not is_windup and _hit_flash_timer <= 0 and not enrage_active:
 		# Don't override while a hit-flash tween is active
 		if _material.albedo_color != Color.WHITE:
 			var pulse := 0.5 + 0.5 * sin(GameManager.game_time * 8.0)

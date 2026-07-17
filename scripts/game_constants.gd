@@ -517,3 +517,65 @@ const BOSS_ENRAGE_SHADER_FADE_SPEED: float = 4.0
 
 # Shader cross-fade speed (biome transition)
 const SHADER_TRANSITION_SPEED: float = 2.5
+
+# ─── Phase 10: Smart Enemy AI ─────────────────────────────────────────────────
+# Navigation & pathfinding
+const AI_NAV_TARGET_DESIRED_DISTANCE: float = 2.5     # Stopping distance at nav target
+const AI_NAV_PATH_UPDATE_INTERVAL: float = 0.4        # Seconds between repathing
+const AI_NAV_RAYCAST_LENGTH: float = 80.0             # Max LOS check distance
+
+# Line-of-sight detection
+const AI_LOS_CHECK_INTERVAL: float = 0.3              # Seconds between LOS rechecks
+const AI_LOS_RAY_COLLISION_MASK: int = 0b0001         # Only check against world/static layer
+
+# Flanking — enemies try to circle around to the player's side/back
+const AI_FLANK_CHANCE: float = 0.35                   # Probability an alerted enemy flanks
+const AI_FLANK_ANGLE: float = 75.0                    # Degrees offset from direct approach
+const AI_FLANK_DISTANCE: float = 6.0                  # Ideal flanking standoff distance
+const AI_FLANK_REPOSITION_INTERVAL: float = 3.0       # Seconds between new flank angle picks
+
+# Retreat — enemies back off at low HP
+const AI_RETREAT_HP_THRESHOLD: float = 0.25           # HP ratio below which enemy retreats
+const AI_RETREAT_DISTANCE: float = 14.0               # How far to back away
+const AI_RETREAT_SPEED_MULT: float = 1.15             # Speed boost while fleeing
+const AI_RETREAT_HEAL_THRESHOLD: float = 0.55         # HP ratio above which enemy resumes fighting
+
+# Ambush — enemies hide behind the nearest cover until player is close
+const AI_AMBUSH_DETECT_RANGE_MULT: float = 0.5        # Detection range multiplier while ambushing
+const AI_AMBUSH_TRIGGER_RANGE: float = 10.0           # Player distance that breaks ambush
+const AI_AMBUSH_COOLDOWN: float = 20.0                # Cooldown before re-ambush
+const AI_AMBUSH_RUSH_SPEED_MULT: float = 1.6          # Speed boost when ambush breaks
+
+# Pack behavior — nearby same-type allies coordinate
+const AI_PACK_RADIUS: float = 12.0                    # Distance to find pack allies
+const AI_PACK_MIN_ALLIES: int = 2                     # Min allies to form a pack
+const AI_PACK_SYNC_INTERVAL: float = 1.5              # Seconds between pack sync checks
+const AI_PACK_SURROUND_SPACING: float = 3.0           # Ideal spacing between surrounders
+const AI_PACK_FRENZY_HP_THRESHOLD: float = 0.10       # HP ratio that triggers pack frenzy
+const AI_PACK_FRENZY_RADIUS: float = 8.0              # How far frenzy spreads to allies
+const AI_PACK_FRENZY_DURATION: float = 1.5            # Seconds of frenzy speed boost
+const AI_PACK_FRENZY_SPEED_MULT: float = 1.4          # Speed multiplier during frenzy
+const AI_PACK_FRENZY_FLASH_DURATION: float = 0.3      # Seconds of bright flash on frenzied allies
+const AI_PACK_FRENZY_MIN_ALLIES: int = 2              # Min allies to trigger frenzy
+const AI_PACK_FRENZY_COOLDOWN: float = 3.0            # Cooldown before frenzy retrigger
+
+# Call for help — wounded enemy alerts nearby allies
+const AI_CALL_HELP_HP_THRESHOLD: float = 0.35         # HP ratio below which enemy calls for help
+const AI_CALL_HELP_RADIUS: float = 16.0               # Ally alert radius
+const AI_CALL_HELP_COOLDOWN: float = 8.0              # Cooldown before calling again
+const AI_CALL_HELP_ALERT_DURATION: float = 4.0        # Seconds alerted allies stay aggressive
+
+# Enrage — when HP drops below threshold, enemy speeds up + red tint
+const AI_ENRAGE_HP_THRESHOLD: float = 0.25            # HP ratio below which enrage triggers
+const AI_ENRAGE_SPEED_MULT: float = 1.35              # Speed multiplier while enraged
+const AI_ENRAGE_COLOR_MIX: float = 0.6                # Lerp factor toward red
+const AI_ENRAGE_PROXIMITY_RADIUS: float = 25.0        # Distance for proximity warning
+const AI_ENRAGE_PROXIMITY_NOTIFY_COOLDOWN: float = 4.0 # Min seconds between enrage warnings
+const AI_ENRAGE_COLOR_TRANSITION: float = 0.3         # Seconds for color transition
+
+# Near-death shudder
+const AI_SHUDDER_HP_THRESHOLD: float = 0.10           # HP ratio below which shudder activates
+const AI_SHUDDER_INTERVAL_MIN: float = 0.4            # Min seconds between shudder bursts
+const AI_SHUDDER_INTERVAL_MAX: float = 0.9            # Max seconds between shudder bursts
+const AI_SHUDDER_DURATION: float = 0.15               # How long a shudder burst lasts
+const AI_SHUDDER_AMPLITUDE: float = 0.08              # X/Z scale jitter magnitude

@@ -27,7 +27,13 @@ func _ready() -> void:
 	xp_reward = 200
 	score_reward = 1000
 	base_color = Color.MAGENTA
+	# ── Phase 10: Boss has its own AI — disable flanking/retreat/ambush but
+	# keep enrage and pack behavior (drake can still enrage at low HP).
 	super._ready()
+	if ai_controller:
+		ai_controller.enable_flanking = false
+		ai_controller.enable_retreat = false
+		ai_controller.enable_ambush = false
 
 	fire_breath_timer = GameConstants.DRAKE_FIRE_BREATH_COOLDOWN
 	charge_timer = GameConstants.DRAKE_CHARGE_COOLDOWN

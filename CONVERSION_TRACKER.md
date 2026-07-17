@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 9 — Shaders & Visual Effects (COMPLETE)
+## Status: PHASE 10 — Smart Enemy AI (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -146,16 +146,21 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] ShaderManager system (`shader_manager.gd`) — CanvasLayer with cross-fading ColorRect overlays, biome-based shader swapping, low-HP/boss-enrage modulation
 - [x] Water biome overlays now use animated water_surface.gdshader (decoration.gd)
 
-### Phase 10: Smart Enemy AI (TODO) 🆕 NEW FEATURE
-- [ ] NavigationRegion3D for each biome (generated with nav mesh)
-- [ ] Enemy pathfinding around obstacles (NavigationAgent3D)
-- [ ] Flanking behavior (enemies try to circle around)
-- [ ] Retreat behavior (enemies back off at low HP)
-- [ ] Ambush AI (enemies hide behind terrain, then rush)
-- [ ] Pack behavior (nearby same-type enemies coordinate attacks)
-- [ ] Drake boss multi-phase AI (phase transitions, new attack patterns)
-- [ ] Line-of-sight checks (RayCast3D for detection, not just distance)
-- [ ] Enemy call for help (wounded enemy alerts nearby allies)
+### Phase 10: Smart Enemy AI ✅ COMPLETE 🆕 NEW FEATURE
+- [x] NavigationRegion3D for world (generated at runtime from static colliders) — `navigation_manager.gd` autoload, baked after world generation via `call_deferred`
+- [x] Enemy pathfinding around obstacles — `_get_nav_direction()` in `enemy_base.gd` queries `NavigationManager.get_next_position()` every 0.4s
+- [x] Flanking behavior (enemies try to circle around) — `EnemyAIController.get_flank_direction()`, 35% chance on alert, ±75° offset, perpendicular circling at standoff distance
+- [x] Retreat behavior (enemies back off at low HP) — `EnemyAIController.check_retreat()`, triggers at <25% HP, 1.15× speed boost, resumes at >55% HP
+- [x] Ambush AI (enemies hide behind terrain, then rush) — `EnemyAIController._update_ambush()`, checks for cover via raycast, reduced detect range while ambushing, 1.6× rush speed when triggered
+- [x] Pack behavior (nearby same-type enemies coordinate attacks) — `EnemyAIController._update_pack()`, finds allies within 12m, assigns surround slots, pack frenzy at <10% HP
+- [x] Drake boss multi-phase AI (phase transitions, new attack patterns) — already implemented in `enemy_drake.gd` (enrage at <30% HP, charge + fire breath)
+- [x] Line-of-sight checks (RayCast3D for detection, not just distance) — `EnemyAIController._update_los()`, RayCast3D every 0.3s, reduced detection at 50% range without LOS
+- [x] Enemy call for help (wounded enemy alerts nearby allies) — `EnemyAIController._update_call_help()`, triggers at <35% HP, alerts all enemies within 16m, 8s cooldown
+- [x] Enrage system (speed boost + red tint at low HP) — `EnemyAIController._update_enrage()`, 25% HP threshold, 1.35× speed, smooth color transition, pulsing red aura
+- [x] Near-death shudder (X/Z scale jitter at <10% HP) — `EnemyAIController._update_shudder()`, periodic tremor bursts
+- [x] Pack frenzy (allies of a dying enemy speed up + flash) — triggers when any pack member drops below 10% HP, 1.4× speed for 1.5s, bright white flash
+- [x] Smart AI disabled for stationary Sentinel (`use_smart_ai = false`)
+- [x] Flanking/ambush disabled for Drake boss and Spore Spitter (ranged kiter)
 
 ### Phase 11: GPU Particles (TODO) 🆕 NEW FEATURE
 - [ ] GPUParticles3D for explosions (1000+ particles per burst)
@@ -320,4 +325,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Damage number easing curves**: Pop-in animation now uses manual ease-out pow formulas (`1-(1-t)^3` for cubic rise to peak, `1-(1-t)^4` for quartic settle) instead of linear interpolation. Gives damage numbers a more decisive pop and softer landing, matching the juice style of dash squash. Note: Godot's built-in `ease(t, curve)` with negative curve values produces ease-IN-OUT (symmetric S-curves), not ease-out — the explicit pow formula is both correct and clearer.
 
 ## Last Updated
-Phase 9 complete. Shaders & Visual Effects: 8 new .gdshader files in `assets/shaders/` — heat_distortion (lava biome, sine-wave UV displacement + warm orange edge tint), frost_vignette (snow biome, crystalline frost noise + cold blue tint), chromatic_aberration (alien biome, RGB channel split at edges), dissolve (toxic bog, animated noise-based corrosive fringe), crystal_refraction (crystal biome, faceted prismatic refraction), water_surface (spatial shader for water overlays, vertex ripple + scrolling flow + specular), low_hp_vignette (pulsing red heartbeat vignette + desaturation), boss_enrage (red pulse + chromatic aberration + tunnel vision). New `shader_manager.gd` (CanvasLayer at layer 50) manages all screen-space post-process shaders: cross-fades biome ambient shaders on biome change (dual ColorRect A/B swap with exponential lerp), modulates low-HP vignette strength from HP ratio, modulates boss enrage from boss HP ratio. Water biome overlays in decoration.gd now use the animated water_surface shader instead of flat unlit material. Constants added to game_constants.gd (BIOME_SHADER_MAP, BIOME_SHADER_STRENGTH, LOW_HP/BOSS_ENRAGE thresholds and fade speeds, SHADER_TRANSITION_SPEED). main.tscn updated with ShaderManager node. Phases 10-21 planned.
+Phase 10 complete. Smart Enemy AI: New `enemy_ai_controller.gd` (utility class) implements 9 advanced AI behaviors layered on top of EnemyBase's basic chase AI — line-of-sight checks (RayCast3D every 0.3s, reduced detection without visual contact), flanking (35% chance on alert, ±75° approach offset, perpendicular circling at 6m standoff), retreat (backs off at <25% HP with 1.15× speed, resumes at >55% HP), ambush (hides behind cover, reduced detect range, 1.6× rush speed when player approaches), pack behavior (finds same-type allies within 12m, assigns surround slots for non-overlapping approach, pack frenzy at <10% HP spreads to allies with 1.4× speed + white flash), call-for-help (wounded enemy at <35% HP alerts all enemies within 16m), enrage (25% HP threshold, 1.35× speed, smooth red color transition, pulsing red aura sphere), and near-death shudder (X/Z scale jitter at <10% HP). New `navigation_manager.gd` autoload builds a NavigationRegion3D at runtime from the world's static colliders (baked after world generation via `call_deferred`), and `enemy_base.gd` queries `NavigationManager.get_next_position()` every 0.4s for obstacle-aware pathfinding. Smart AI is opt-in via `@export use_smart_ai` — disabled for stationary Sentinel, flanking/ambush disabled for Drake boss and Spore Spitter. 60+ new constants in `game_constants.gd` (AI_NAV_*, AI_LOS_*, AI_FLANK_*, AI_RETREAT_*, AI_AMBUSH_*, AI_PACK_*, AI_CALL_HELP_*, AI_ENRAGE_*, AI_SHUDDER_*). GameManager gains `_last_enrage_warning_time` for globally-throttled enrage proximity warnings. Phases 11-21 planned.

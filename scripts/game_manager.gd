@@ -64,6 +64,9 @@ var messages: Array[String] = []
 var game_time: float = 0.0
 var is_paused: bool = false
 
+# ── Phase 10: Smart Enemy AI — global enrage warning throttle ──
+var _last_enrage_warning_time: float = -100.0
+
 # ─── References (lazily populated — autoload _ready runs before main scene) ──
 var world: Node3D = null
 var player: CharacterBody3D = null

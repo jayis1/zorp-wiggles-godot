@@ -21,6 +21,8 @@ func _ready() -> void:
 	xp_reward = 35
 	score_reward = 150
 	base_color = Color(1.0, 200.0 / 255.0, 50.0 / 255.0)  # Gold-orange
+	# ── Phase 10: Stationary turret — disable movement-based AI behaviors
+	use_smart_ai = false  # Sentinel doesn't move, so AI behaviors are irrelevant
 	super._ready()
 
 	shockwave_timer = randf_range(
