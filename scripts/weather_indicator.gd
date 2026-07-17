@@ -85,12 +85,12 @@ func _ready() -> void:
 	add_child(_transition_label)
 
 	# Connect to WeatherSystem signals
-	if Engine.has_singleton("WeatherSystem") or true:
-		# Autoload singletons are accessed directly by name, not Engine.has_singleton
-		WeatherSystem.weather_changed.connect(_on_weather_changed)
-		WeatherSystem.weather_transition_started.connect(_on_transition_started)
-		WeatherSystem.weather_transition_ended.connect(_on_transition_ended)
-		WeatherSystem.weather_timer_changed.connect(_on_timer_changed)
+	# WeatherSystem is an autoload singleton — accessed directly by name,
+	# not via Engine.has_singleton() (which is for engine-registered singletons).
+	WeatherSystem.weather_changed.connect(_on_weather_changed)
+	WeatherSystem.weather_transition_started.connect(_on_transition_started)
+	WeatherSystem.weather_transition_ended.connect(_on_transition_ended)
+	WeatherSystem.weather_timer_changed.connect(_on_timer_changed)
 
 	# Initialize display with current weather
 	_update_display(WeatherSystem.get_current_weather())

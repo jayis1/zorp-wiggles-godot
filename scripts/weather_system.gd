@@ -318,12 +318,12 @@ func _execute_lightning_strike(pos: Vector3) -> void:
 		var flash: OmniLight3D = OmniLight3D.new()
 		flash.light_color = Color(0.7, 0.8, 1.0)
 		flash.light_energy = 8.0
-		flash.range = 20.0
+		flash.omni_range = 20.0
 		parent.add_child(flash)
 		flash.global_position = pos + Vector3(0, 8, 0)
 		var tw: Tween = create_tween()
 		tw.tween_property(flash, "light_energy", 0.0, 0.4).set_trans(Tween.TRANS_QUAD)
-		tw.parallel().tween_property(flash, "range", 5.0, 0.4)
+		tw.parallel().tween_property(flash, "omni_range", 5.0, 0.4)
 		tw.chain().tween_callback(flash.queue_free)
 		# Particle burst (electrical spark column)
 		ParticleEffects.spawn_explosion(parent, pos + Vector3(0, 2, 0), Color(0.6, 0.7, 1.0), 80, 0.6)
@@ -362,7 +362,7 @@ func _start_weather_effects(weather: int) -> void:
 			_solar_light = OmniLight3D.new()
 			_solar_light.light_color = Color(1.0, 0.55, 0.15)
 			_solar_light.light_energy = GameConstants.SOLAR_FLARE_LIGHT_ENERGY
-			_solar_light.range = 60.0
+			_solar_light.omni_range = 60.0
 			parent.add_child(_solar_light)
 		GameConstants.Weather.FOG:
 			_weather_particles = _create_weather_particles("fog")

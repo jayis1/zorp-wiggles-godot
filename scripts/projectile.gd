@@ -429,14 +429,16 @@ func _chain_lightning(source_enemy: Node3D, dmg: int) -> void:
 
 ## Phase 16: Freeze an enemy (slow them down for 2 seconds).
 func _freeze_enemy(enemy: Node3D) -> void:
-	if "time_scale" in enemy:
-		enemy.set("time_scale", 0.3)
+	# Use the public set_time_scale() method (EnemyBase and ShadowClone both have it).
+	# The private variable is _time_scale, so we must use the setter, not set("time_scale").
+	if enemy.has_method("set_time_scale"):
+		enemy.set_time_scale(0.3)
 		# Create a timer to unfreeze
 		var tw := create_tween()
 		tw.tween_interval(2.0)
 		tw.tween_callback(func():
-			if is_instance_valid(enemy) and "time_scale" in enemy:
-				enemy.set("time_scale", 1.0)
+			if is_instance_valid(enemy) and enemy.has_method("set_time_scale"):
+				enemy.set_time_scale(1.0)
 		)
 	# Visual: ice particles
 	ParticleEffects.spawn_explosion(get_parent(), enemy.global_position, Color(0.3, 0.9, 1.0), 12, 0.3)
