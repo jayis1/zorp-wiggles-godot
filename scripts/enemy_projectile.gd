@@ -104,12 +104,18 @@ func _physics_process(delta: float) -> void:
 		_material.emission_energy_multiplier = pulse
 
 	# Check distance to player (cached reference, refreshed if stale)
+	# In co-op, check both P1 and P2 so the projectile hits whoever is closest
 	if not _cached_player or not is_instance_valid(_cached_player):
 		_cached_player = get_tree().get_first_node_in_group("player")
 	if _cached_player and GameManager.player_is_alive:
 		var dist: float = global_position.distance_to(_cached_player.global_position)
 		if dist < GameConstants.ENEMY_PROJECTILE_HIT_RADIUS:
-			_on_hit_player()
+			_on_hit_player(_cached_player)
+	# ── Phase 19: Co-op — also check P2 if active ──
+	if CoOpManager.is_coop_active() and not CoOpManager.p2_is_downed:
+		var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
+		if p2_dist < GameConstants.ENEMY_PROJECTILE_HIT_RADIUS:
+			_on_hit_player(CoOpManager.p2_node)
 
 # ── Phase 14: Set time scale (called by DimensionSystem) ──
 func set_time_scale(scale: float) -> void:
@@ -117,14 +123,20 @@ func set_time_scale(scale: float) -> void:
 
 func _on_body_entered(body: Node3D) -> void:
 	if body.is_in_group("player"):
-		_on_hit_player()
+		_on_hit_player(body)
 	elif not body.is_in_group("enemies"):
 		# Hit terrain/wall — small impact flash, no damage
 		_spawn_impact(projectile_color)
 		queue_free()
 
-func _on_hit_player() -> void:
-	GameManager.take_damage(damage, global_position)
+## Hit a player — route damage to the correct player in co-op.
+## `target` is the CharacterBody3D that was hit (P1 or P2).
+func _on_hit_player(target: Node3D = null) -> void:
+	# Default to P1 if no target specified (backward compatibility)
+	if target and target.is_in_group("player2"):
+		CoOpManager.p2_take_damage(damage, global_position)
+	else:
+		GameManager.take_damage(damage, global_position)
 	_spawn_impact(projectile_color)
 	queue_free()
 
