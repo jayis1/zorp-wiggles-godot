@@ -314,6 +314,8 @@ func _update_pending_lightning(delta: float) -> void:
 			_pending_strikes.remove_at(i)
 
 func _execute_lightning_strike(pos: Vector3) -> void:
+	# Phase 20: Audio — thunder SFX
+	AudioManager.play_sfx(AudioManager.SFX_THUNDER)
 	# Visual: bright white-blue OmniLight flash + particle burst
 	var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
 	if parent:

@@ -20,18 +20,47 @@ var _is_shown: bool = false
 var _stat_anim_timer: float = 0.0
 var _displayed_score: int = 0  # For score roll-up animation
 var _time_survived: float = 0.0
+# Phase 20: Try Again button
+var _try_again_btn: Button = null
+var _quit_btn: Button = null
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Connect to player death signal
 	GameManager.player_died.connect(_on_player_died)
 	GameManager.game_restarted.connect(_on_game_restarted)
+	# Phase 20: Create Try Again and Quit buttons
+	_try_again_btn = Button.new()
+	_try_again_btn.offset_left = 390.0
+	_try_again_btn.offset_top = 520.0
+	_try_again_btn.offset_right = 620.0
+	_try_again_btn.offset_bottom = 570.0
+	_try_again_btn.text = "↻ Try Again"
+	_try_again_btn.add_theme_font_size_override("font_size", 22)
+	_try_again_btn.visible = false
+	_try_again_btn.process_mode = Node.PROCESS_MODE_ALWAYS
+	_try_again_btn.pressed.connect(_on_try_again)
+	add_child(_try_again_btn)
+
+	_quit_btn = Button.new()
+	_quit_btn.offset_left = 660.0
+	_quit_btn.offset_top = 520.0
+	_quit_btn.offset_right = 890.0
+	_quit_btn.offset_bottom = 570.0
+	_quit_btn.text = "✖ Quit to Menu"
+	_quit_btn.add_theme_font_size_override("font_size", 22)
+	_quit_btn.visible = false
+	_quit_btn.process_mode = Node.PROCESS_MODE_ALWAYS
+	_quit_btn.pressed.connect(_on_quit)
+	add_child(_quit_btn)
 
 func _on_player_died() -> void:
 	_is_shown = true
 	visible = true
+	mouse_filter = Control.MOUSE_FILTER_STOP  # Accept clicks
 	_fade_progress = 0.0
 	_title_alpha = 0.0
 	_stats_alpha = 0.0
@@ -39,10 +68,30 @@ func _on_player_died() -> void:
 	_stat_anim_timer = 0.0
 	_displayed_score = 0
 	_time_survived = GameManager.game_time
+	# Phase 20: Show buttons after fade-in (delayed via _process)
+	_try_again_btn.visible = false
+	_quit_btn.visible = false
+	# Unpause the tree so buttons are clickable (death screen uses PROCESS_MODE_ALWAYS)
+	get_tree().paused = false
+	GameManager.is_paused = false
 
 func _on_game_restarted() -> void:
 	_is_shown = false
 	visible = false
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _try_again_btn:
+		_try_again_btn.visible = false
+	if _quit_btn:
+		_quit_btn.visible = false
+
+func _on_try_again() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	GameManager.restart_game()
+
+func _on_quit() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	AudioManager.stop_music()
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 func _process(delta: float) -> void:
 	if not _is_shown:
@@ -63,6 +112,13 @@ func _process(delta: float) -> void:
 		_displayed_score = int(lerpf(_displayed_score, target_score, 5.0 * delta))
 		if abs(_displayed_score - target_score) < 5:
 			_displayed_score = target_score
+
+	# Phase 20: Show buttons when prompt fades in
+	if _prompt_alpha > 0.5:
+		if _try_again_btn and not _try_again_btn.visible:
+			_try_again_btn.visible = true
+		if _quit_btn and not _quit_btn.visible:
+			_quit_btn.visible = true
 
 	queue_redraw()
 

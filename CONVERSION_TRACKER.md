@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 19 — Local Co-op (COMPLETE)
+## Status: PHASE 20 — Audio & Polish (COMPLETE) — ALL PHASES 1-20 DONE
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -325,15 +325,15 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] P1 downed visual (slumped + blinking mesh) — `player.gd` `_physics_process` shows downed state
 - [x] Co-op reset on game restart — `CoOpManager.reset()` + `GameManager.restart_game()` clears all co-op state
 
-### Phase 20: Audio & Polish (TODO)
-- [ ] Sound effects (shoot, dash, pickup, level-up, damage, death)
-- [ ] Background music per biome
-- [ ] Boss fight music
-- [ ] Screen shake on big hits and explosions
-- [ ] Smooth camera follow (lerp-based, not instant snap)
-- [ ] Pause menu (resume, settings, quit)
-- [ ] Settings menu (resolution, volume, controls)
-- [ ] Death screen with full stats and "Try Again" button
+### Phase 20: Audio & Polish ✅ COMPLETE
+- [x] Sound effects (shoot, dash, pickup, level-up, damage, death) — `audio_manager.gd` autoload singleton, 24 procedurally generated SFX (no external files needed), 12-player SFX pool for overlapping sounds
+- [x] Background music per biome — 12 unique looping ambient drone tracks, one per biome, auto-switches on `biome_changed` signal
+- [x] Boss fight music — intense driving 8-second loop with bass pulse + dissonant tension layer, auto-starts on `boss_spawned`, stops on `boss_defeated`
+- [x] Screen shake on big hits and explosions — already done (trauma-based screen shake in `camera_rig.gd`, triggered on dash/damage/enemy death/pulse wave/explosion)
+- [x] Smooth camera follow (lerp-based, not instant snap) — already done (exponential lerp in `camera_rig.gd`)
+- [x] Pause menu (resume, settings, quit) — `pause_menu.gd` + `.tscn` node in main scene, P key toggles, `PROCESS_MODE_ALWAYS` so buttons work while paused
+- [x] Settings menu (resolution, volume, controls) — `settings_menu.gd` with Master/SFX/Music volume sliders (real-time), controls reference, accessible from pause menu and main menu
+- [x] Death screen with full stats and "Try Again" button — enhanced `death_screen.gd` with clickable "Try Again" + "Quit to Menu" buttons (appear after fade-in), still supports R/Space restart
 
 ### Phase 21: Export & Distribution (SKIP — not scheduled)
 - [ ] Windows export (.exe)
@@ -405,4 +405,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Collectible pickup light flash**: Pickups now spawn a brief OmniLight3D at the collection point that flashes the item's color and fades over 0.25s. Rare items (Meteor Shard, Quantum Fuzz, Nebula Dust, crafting materials) get a brighter (3.5 energy) and wider (5m range) flash for a juicier reward feel. Gives pickups extra punch in dark biomes where sparkle particles alone can be subtle.
 
 ## Last Updated
-Phase 19 complete. Local Co-op System: Player 2 "Zerp" drops in with Enter key for shared-screen co-op. Magenta-purple CharacterBody3D with 100 HP, 0.9x damage multiplier, 1.05x dash, shares P1's equipped weapon mod. Arrow keys for movement, [/] for shoot, [Enter] for dash, [RShift] for pulse wave, [.] for revive. Camera dynamically zooms 22→42m based on player spacing, targeting the midpoint. Co-op enemy scaling: 2x HP, 1.5x damage, 30% faster spawns, +15 max enemies. Shared combo with +1s window bonus. Revive system: downed players have 30s bleed-out timer, partner must be within 3.5m and hold revive key for 3s, restores 60 HP + 2s invuln. Mega pulse wave: both players fire Q within 1s sync window → 1.8x radius, 2.5x damage, 3 overlapping rings, particle spectacle, camera shake. Drop-in/drop-out: hold Enter 2s to drop out. 7 co-op achievements. CoOpManager autoload singleton. Enemies target nearest player, collectibles pull toward nearest, P2 kills tracked via is_p2_projectile meta + set_p2_hit(). Co-op HUD with P2 HP/score, downed overlays, milestone popups, drop-in prompt. P2 on minimap. Weather/spawner continue when P1 downed but P2 alive. Phase 20 planned.
+Phase 20 complete. Audio & Polish: AudioManager autoload singleton with 24 procedurally generated sound effects (no external audio files needed — all synthesized at runtime as AudioStreamWAV with raw PCM data). 12-player SFX pool for overlapping sounds. Per-biome ambient music (12 unique looping drone tracks, auto-switches on biome_changed). Boss fight music (intense driving 8-second loop, auto-starts/stops with boss events). SFX integrated into all key gameplay events: shoot, dash, pulse wave, dash bump, pickup (rare items get distinct sound), level up, combo milestone, damage, heal, death, enemy hit, enemy death, boss spawn/defeated, explosion, thunder, arena rise, mutation, rift, revive, pet summon, craft, UI click. Pause menu (pause_menu.gd): P key toggles, Resume/Settings/Quit buttons, PROCESS_MODE_ALWAYS so UI works while tree is paused. Settings menu (settings_menu.gd): Master/SFX/Music volume sliders with real-time adjustment, controls reference, accessible from both pause menu and main menu. Death screen enhanced with clickable "Try Again" and "Quit to Menu" buttons (appear after fade-in). Main menu updated with Settings button. Screen shake and smooth camera follow were already implemented in camera_rig.gd (trauma-based shake, exponential lerp follow). AudioManager registered as autoload in project.godot. ALL PHASES 1-20 COMPLETE — Phase 21 (Export) intentionally skipped per instructions.

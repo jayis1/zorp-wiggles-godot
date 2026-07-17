@@ -286,6 +286,8 @@ func _revive_p2() -> void:
 	p2_revived.emit()
 	p2_hp_changed.emit(p2_hp, p2_max_hp)
 	revive_progress_changed.emit(0.0)
+	# Phase 20: Audio — revive SFX
+	AudioManager.play_sfx(AudioManager.SFX_REVIVE)
 	GameManager.add_message("✨ %s revived! Back in action!" % GameConstants.P2_NAME)
 	# Heal particles
 	if p2_node and is_instance_valid(p2_node):

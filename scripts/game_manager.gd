@@ -257,6 +257,8 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	player_hp = max(0, player_hp - actual_amount)
 	player_invuln_timer = GameConstants.PLAYER_INVULN_DURATION
 	hp_changed.emit(player_hp, player_max_hp)
+	# Phase 20: Audio — damage SFX
+	AudioManager.play_sfx(AudioManager.SFX_DAMAGE)
 	# Camera shake on taking damage
 	_trigger_camera_trauma(0.35)
 	# Phase 5: Emit damage direction signal (if source_pos is non-zero)
@@ -273,6 +275,8 @@ func _trigger_camera_trauma(amount: float) -> void:
 func heal(amount: int) -> void:
 	player_hp = min(player_max_hp, player_hp + amount)
 	hp_changed.emit(player_hp, player_max_hp)
+	# Phase 20: Audio — heal SFX
+	AudioManager.play_sfx(AudioManager.SFX_HEAL)
 
 func gain_xp(amount: int) -> void:
 	player_xp += amount

@@ -46,12 +46,20 @@ offset_right = 790.0
 offset_bottom = 410.0
 text = "START GAME"
 
-[node name="QuitButton" type="Button" parent="."]
+[node name="SettingsButton" type="Button" parent="."]
 layout_mode = 0
 offset_left = 490.0
 offset_top = 430.0
 offset_right = 790.0
 offset_bottom = 490.0
+text = "⚙ SETTINGS"
+
+[node name="QuitButton" type="Button" parent="."]
+layout_mode = 0
+offset_left = 490.0
+offset_top = 510.0
+offset_right = 790.0
+offset_bottom = 570.0
 text = "QUIT"
 
 [node name="Controls" type="Label" parent="."]

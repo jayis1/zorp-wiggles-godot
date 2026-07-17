@@ -459,6 +459,8 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# set_p2_hit() before take_damage_from().
 	hp -= amount
 	enemy_hit.emit(self, amount)
+	# Phase 20: Audio — enemy hit SFX
+	AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
 
 	# Hit flash — white albedo + emission spike for a punchy combat read.
 	# The albedo snaps to white and the emission energy kicks up, then both
@@ -524,6 +526,8 @@ func _die() -> void:
 	else:
 		GameManager.add_score(score_reward)
 	enemy_died.emit(self)
+	# Phase 20: Audio — enemy death SFX
+	AudioManager.play_sfx(AudioManager.SFX_ENEMY_DEATH)
 	# Phase 5: Kill feed signal
 	GameManager.enemy_killed.emit(enemy_name, killer_name)
 	# ── Phase 18: Boss Arena — emit boss_defeated for arena-promoted bosses ──

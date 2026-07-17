@@ -345,6 +345,16 @@ func _collect() -> void:
 	tween.tween_callback(queue_free)
 
 	collected.emit(collectible_type, xp_value)
+	# Phase 20: Audio — pickup SFX (rare items get a different sound)
+	var is_rare: bool = collectible_type in [
+		GameConstants.CollectibleType.METEOR_SHARD,
+		GameConstants.CollectibleType.QUANTUM_FUZZ,
+		GameConstants.CollectibleType.NEBULA_DUST,
+	]
+	if is_rare:
+		AudioManager.play_sfx(AudioManager.SFX_PICKUP_RARE)
+	else:
+		AudioManager.play_sfx(AudioManager.SFX_PICKUP)
 
 func _spawn_xp_popup(amount: int) -> void:
 	var parent: Node = get_parent()

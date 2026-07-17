@@ -409,6 +409,8 @@ func _start_dash() -> void:
 
 	# Phase 6: Dash trail particles
 	ParticleEffects.spawn_dash_trail(get_parent(), global_position, base_color)
+	# Phase 20: Audio — dash SFX
+	AudioManager.play_sfx(AudioManager.SFX_DASH)
 
 	# Squash-and-stretch: compress vertically, stretch horizontally, then bounce back
 	if mesh:
@@ -441,6 +443,8 @@ func _dash_bump_enemies() -> void:
 			# Also deal a small bump damage
 			if enemy.has_method("take_damage_from"):
 				enemy.take_damage_from(5, global_position)
+				# Phase 20: Audio — dash bump SFX
+				AudioManager.play_sfx(AudioManager.SFX_DASH_BUMP)
 
 # ── Phase 8: Smash destructibles in dash path ──────────────────────────────────
 func _dash_smash_destructibles() -> void:
@@ -495,10 +499,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pulse_wave") and GameManager.player_is_alive and not GameManager.is_paused:
 		_try_pulse_wave_or_buffer()
 	
-	# Pause toggle
-	if event.is_action_pressed("pause"):
-		GameManager.is_paused = not GameManager.is_paused
-		get_tree().paused = GameManager.is_paused
+	# Pause toggle is handled by the PauseMenu node (Phase 20)
 	
 	# ── Phase 15: Summon companion pet (F key) ──
 	if event.is_action_pressed("summon_pet") and not GameManager.is_paused and GameManager.player_is_alive:
@@ -607,6 +608,8 @@ func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Col
 	get_parent().add_child(proj)
 	proj.global_position = global_position + Vector3(0, 0.5, 0)
 
+	# Phase 20: Audio — shoot SFX
+	AudioManager.play_sfx(AudioManager.SFX_SHOOT)
 	# Quick scale pulse on shoot for juicy feedback (skip if dashing to avoid tween conflict)
 	if mesh and not is_dashing:
 		var pulse_tween := create_tween()
@@ -655,6 +658,8 @@ func _use_pulse_wave() -> void:
 	pulse.global_position = global_position
 	# Camera shake on pulse wave
 	_trigger_camera_trauma(0.25)
+	# Phase 20: Audio — pulse wave SFX
+	AudioManager.play_sfx(AudioManager.SFX_PULSE_WAVE)
 
 ## Try to fire the pulse wave; if on cooldown, buffer the input so it fires
 ## as soon as ready. Mirrors the dash and shoot buffering pattern so all three
@@ -719,6 +724,8 @@ func _toggle_pet() -> void:
 		get_parent().add_child(pet)
 		pet.global_position = global_position + GameConstants.PET_SPAWN_OFFSET
 		GameManager.add_message("🐾 Companion pet summoned! Press F to dismiss, G to fetch.")
+		# Phase 20: Audio — pet summon SFX
+		AudioManager.play_sfx(AudioManager.SFX_PET)
 		print("[Player] Pet summoned at %s" % pet.global_position)
 
 

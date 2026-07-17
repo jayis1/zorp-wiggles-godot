@@ -119,11 +119,15 @@ func _check_player_proximity() -> void:
 	var dist: float = global_position.distance_to(player.global_position)
 	if dist < GameConstants.RIFT_INTERACT_RANGE:
 		# Enter the rift!
+		# Phase 20: Audio — rift SFX
+		AudioManager.play_sfx(AudioManager.SFX_RIFT)
 		DimensionSystem.enter_dimension(target_dimension)
 		_dissolve_and_expire()
 
 func _on_body_entered(body: Node3D) -> void:
 	if body.is_in_group("player"):
+		# Phase 20: Audio — rift SFX
+		AudioManager.play_sfx(AudioManager.SFX_RIFT)
 		DimensionSystem.enter_dimension(target_dimension)
 		_dissolve_and_expire()
 

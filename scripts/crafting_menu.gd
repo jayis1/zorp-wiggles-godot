@@ -359,6 +359,8 @@ func _on_craft_pressed() -> void:
 	var result: int = WeaponModSystem.craft_mod(_selected_materials.duplicate())
 	if result >= 0:
 		# Success
+		# Phase 20: Audio — craft SFX
+		AudioManager.play_sfx(AudioManager.SFX_CRAFT)
 		var mod_name: String = GameConstants.WEAPON_MOD_NAMES[result]
 		if WeaponModSystem.is_mod_discovered(result):
 			# Was already discovered, just re-crafted

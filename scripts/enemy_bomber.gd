@@ -102,6 +102,8 @@ func _explode() -> void:
 	if has_exploded:
 		return
 	has_exploded = true
+	# Phase 20: Audio — explosion SFX
+	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
 
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if player:

@@ -176,6 +176,8 @@ func _on_boss_defeated(boss: Node) -> void:
 # ─── Arena Construction ───────────────────────────────────────────────────────
 func _build_arena() -> void:
 	_current_radius = GameConstants.ARENA_RADIUS
+	# Phase 20: Audio — arena rise SFX
+	AudioManager.play_sfx(AudioManager.SFX_ARENA)
 	var arena_color: Color = _get_arena_color()
 	var glow_color: Color = _get_arena_glow()
 

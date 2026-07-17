@@ -625,3 +625,5 @@ func _impact_effect() -> void:
 		burst.global_position = global_position
 	# Phase 6: Small explosion particles on impact
 	ParticleEffects.spawn_explosion(get_parent(), global_position, Color(0.2, 1.0, 0.8), 12, 0.4)
+	# Phase 20: Audio — explosion SFX on impact
+	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)

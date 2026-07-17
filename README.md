@@ -124,6 +124,9 @@ zorp-wiggles-godot/
 │   ├── crafting_menu.gd   # Crafting menu UI — combine materials into weapon mods (Phase 16)
 │   ├── weather_system.gd  # Dynamic weather autoload singleton (Phase 17)
 │   ├── weather_indicator.gd # Weather HUD indicator (Phase 17)
+│   ├── audio_manager.gd    # Procedural SFX + biome/boss music autoload (Phase 20)
+│   ├── pause_menu.gd       # Pause menu — Resume/Settings/Quit (Phase 20)
+│   ├── settings_menu.gd    # Settings — volume sliders, controls (Phase 20)
 │   └── main_menu.gd        # Menu logic
 ├── assets/
 │   ├── shaders/              # GLSL shaders (.gdshader)
@@ -363,7 +366,19 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - P2 appears on the **minimap** as a magenta dot with facing direction
 - Weather and enemy spawning continue when P1 is downed but P2 is still alive
 
-**Remaining phases:** Audio & polish (Phase 20).
+**Phase 20 (Audio & Polish):** ✅ Complete — 🆕 New Feature
+- **24 procedurally generated sound effects** — all SFX synthesized at runtime as AudioStreamWAV with raw PCM data (no external audio files needed). Includes: shoot, dash, dash bump, pickup, rare pickup, level up, combo milestone, damage, heal, death, enemy hit, enemy death, boss spawn, boss defeated, explosion, pulse wave, thunder, arena rise, mutation, rift, revive, pet summon, craft, UI click
+- **12-player SFX pool** allows overlapping sounds without cutting each other off (important for rapid-fire combat)
+- **Per-biome ambient music** — 12 unique looping drone tracks, one per biome, each with a distinct base frequency and harmonic set. Music auto-switches when the player crosses biome boundaries (via `biome_changed` signal)
+- **Boss fight music** — intense driving 8-second loop with a bass pulse on every beat, dissonant tension layer, and percussive noise hits. Auto-starts on `boss_spawned`, stops on `boss_defeated`, biome music resumes afterward
+- **Pause menu** (P key): Full-screen overlay with Resume, Settings, and Quit to Menu buttons. Uses `PROCESS_MODE_ALWAYS` so the UI remains responsive while the scene tree is paused
+- **Settings menu**: Master/SFX/Music volume sliders with real-time adjustment via `AudioServer`. Full controls reference (single + co-op). Accessible from both the pause menu and the main menu
+- **Death screen enhanced** with clickable "Try Again" and "Quit to Menu" buttons that appear after the fade-in animation. Still supports R/Space keyboard restart
+- **Main menu** updated with a Settings button for pre-game volume configuration
+- Screen shake (trauma-based) and smooth camera follow (exponential lerp) were already implemented in `camera_rig.gd` from earlier phases
+- `AudioManager` registered as autoload singleton in `project.godot`
+
+**All Phases 1–20 Complete!** Phase 21 (Export & Distribution) is intentionally skipped.
 
 ## License
 

@@ -136,6 +136,8 @@ func _activate_mutation(mutation: int) -> void:
 	var name: String = MUTATION_NAMES.get(mutation, "Unknown")
 	mutation_activated.emit(mutation, name)
 	GameManager.add_message("✦ Mutation acquired: %s" % name)
+	# Phase 20: Audio — mutation SFX
+	AudioManager.play_sfx(AudioManager.SFX_MUTATION)
 
 	# Apply visual changes to player
 	_apply_mutation_visuals(mutation)
