@@ -22,6 +22,14 @@ var is_dashing: bool = false
 var dash_timer: float = 0.0
 var dash_direction: Vector3 = Vector3.ZERO
 
+# ── Phase 9: Dash afterimage (ghost trail) ──
+# Spawns semi-transparent mesh copies at intervals during dash that fade
+# out quickly, creating a ghost trail / afterimage effect.
+var _afterimage_timer: float = 0.0
+const AFTERIMAGE_INTERVAL: float = 0.03  # Spawn a ghost every 30ms during dash
+const AFTERIMAGE_LIFETIME: float = 0.35  # Each ghost lives 350ms
+const AFTERIMAGE_MAX_ALPHA: float = 0.5  # Starting transparency
+
 # ── Phase 8: Physics-based dash slide ─────────────────────────────────────────
 var is_sliding: bool = false
 var slide_velocity: Vector3 = Vector3.ZERO
@@ -460,6 +468,11 @@ func _handle_dash(delta: float) -> void:
 
 	if is_dashing:
 		dash_timer -= delta
+		# ── Phase 9: Dash afterimage — spawn ghost copies at intervals ──
+		_afterimage_timer -= delta
+		if _afterimage_timer <= 0.0:
+			_spawn_dash_afterimage()
+			_afterimage_timer = AFTERIMAGE_INTERVAL
 		if dash_timer <= 0:
 			is_dashing = false
 			GameManager.player_is_dashing = false
@@ -525,6 +538,13 @@ func _update_slide(delta: float) -> void:
 	if randf() < 0.3:
 		ParticleEffects.spawn_dash_trail(get_parent(), global_position, base_color)
 
+	# ── Phase 9: Dash afterimage during slide — spawn ghosts while sliding fast
+	if slide_velocity.length() > GameConstants.DASH_SLIDE_MIN_SPEED * 2.0:
+		_afterimage_timer -= delta
+		if _afterimage_timer <= 0.0:
+			_spawn_dash_afterimage()
+			_afterimage_timer = AFTERIMAGE_INTERVAL * 1.5  # Slightly slower during slide
+
 func _start_dash() -> void:
 	is_dashing = true
 	dash_timer = GameConstants.PLAYER_DASH_DURATION
@@ -563,6 +583,59 @@ func _start_dash() -> void:
 
 	# ── Phase 8: Destructibles smashed by dash
 	_dash_smash_destructibles()
+
+# ── Phase 9: Dash afterimage (ghost trail) ─────────────────────────────────────
+## Spawns a semi-transparent mesh copy at the player's current position that
+## fades out over AFTERIMAGE_LIFETIME seconds. The ghost uses the player's
+## base color with decreasing alpha, creating a trailing afterimage effect
+## during dash. Each ghost is a simple MeshInstance3D with an unlit material
+## that tweens alpha to 0, then queue_free()s itself.
+func _spawn_dash_afterimage() -> void:
+	var parent_node: Node = get_parent()
+	if not parent_node:
+		return
+
+	# Create the ghost mesh — a sphere matching the player's approximate shape
+	var ghost := MeshInstance3D.new()
+	var ghost_sphere := SphereMesh.new()
+	ghost_sphere.radius = 0.5
+	ghost_sphere.height = 1.0
+	ghost_sphere.radial_segments = 8
+	ghost_sphere.rings = 4
+	ghost.mesh = ghost_sphere
+
+	# Unlit transparent material in the player's color
+	var ghost_mat := StandardMaterial3D.new()
+	ghost_mat.albedo_color = Color(base_color.r, base_color.g, base_color.b, AFTERIMAGE_MAX_ALPHA)
+	ghost_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ghost_mat.emission_enabled = true
+	ghost_mat.emission = base_color * 0.3
+	ghost_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ghost_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	ghost.material_override = ghost_mat
+
+	# Position at player's current location, matching scale
+	parent_node.add_child(ghost)
+	ghost.global_position = global_position
+	ghost.global_rotation = global_rotation
+	ghost.scale = mesh.scale if mesh else Vector3.ONE
+
+	# Fade out + slight scale up for a "dissipating energy" look
+	var fade_tween := ghost.create_tween()
+	fade_tween.set_parallel(true)
+	# Tween the alpha channel of the albedo_color to 0
+	fade_tween.tween_method(
+		func(a: float):
+			if is_instance_valid(ghost_mat):
+				ghost_mat.albedo_color.a = a,
+		AFTERIMAGE_MAX_ALPHA, 0.0, AFTERIMAGE_LIFETIME
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# Slightly scale up as it fades (energy dispersing)
+	fade_tween.tween_property(ghost, "scale",
+		ghost.scale * 1.3, AFTERIMAGE_LIFETIME
+	).set_ease(Tween.EASE_OUT)
+	# Free after fade completes
+	fade_tween.chain().tween_callback(ghost.queue_free)
 
 # ── Phase 8: Knock back enemies in the dash path ───────────────────────────────
 func _dash_bump_enemies() -> void:

@@ -55,6 +55,18 @@ var _dimension_transition_rect: ColorRect = null
 var _dimension_transition_active: bool = false
 var _dimension_transition_progress: float = 0.0
 
+# ── Phase 9: Biome transition fog overlay ──
+# A screen-space fog overlay that smoothly cross-fades between biome fog
+# colors and densities when the player crosses biome boundaries. Gives a
+# visible "fog roll" effect during transitions.
+var _biome_fog_rect: ColorRect = null
+var _fog_current_color: Color = Color(0.1, 0.1, 0.2, 1.0)
+var _fog_target_color: Color = Color(0.1, 0.1, 0.2, 1.0)
+var _fog_current_density: float = 0.02
+var _fog_target_density: float = 0.02
+var _fog_transition_progress: float = 1.0  # 1 = fully on target
+var _fog_elapsed: float = 0.0
+
 # ─── Shader file paths ───────────────────────────────────────────────────────
 const SHADER_PATHS: Dictionary = {
 	"heat_distortion": "res://assets/shaders/heat_distortion.gdshader",
@@ -65,6 +77,7 @@ const SHADER_PATHS: Dictionary = {
 	"low_hp_vignette": "res://assets/shaders/low_hp_vignette.gdshader",
 	"boss_enrage": "res://assets/shaders/boss_enrage.gdshader",
 	"dimension_transition": "res://assets/shaders/dimension_transition.gdshader",
+	"biome_transition_fog": "res://assets/shaders/biome_transition_fog.gdshader",
 }
 
 func _ready() -> void:
@@ -98,6 +111,17 @@ func _ready() -> void:
 	_dimension_transition_rect.material = _create_shader_material("dimension_transition", 0.0)
 	_dimension_transition_rect.visible = false
 	add_child(_dimension_transition_rect)
+
+	# ── Phase 9: Biome transition fog rect ──
+	_biome_fog_rect = _create_overlay_rect()
+	_biome_fog_rect.material = _create_shader_material("biome_transition_fog", 0.0)
+	if _biome_fog_rect.material is ShaderMaterial:
+		var fm: ShaderMaterial = _biome_fog_rect.material as ShaderMaterial
+		fm.set_shader_parameter("fog_color", _fog_current_color)
+		fm.set_shader_parameter("fog_density", _fog_current_density)
+		fm.set_shader_parameter("transition_progress", 1.0)
+	_biome_fog_rect.visible = false
+	add_child(_biome_fog_rect)
 
 	# Connect signals
 	GameManager.biome_changed.connect(_on_biome_changed)
@@ -179,8 +203,30 @@ func _process(delta: float) -> void:
 			var mat: ShaderMaterial = _dimension_transition_rect.material as ShaderMaterial
 			mat.set_shader_parameter("progress", _dimension_transition_progress)
 			# Sin wave for in-and-out effect: 0→1→0 over the transition
-			var visual_progress: float = sin(_dimension_transition_progress * PI) 
+			var visual_progress: float = sin(_dimension_transition_progress * PI)
 			mat.set_shader_parameter("progress", visual_progress)
+
+	# ── Phase 9: Biome transition fog ──
+	_fog_elapsed += delta
+	if _fog_transition_progress < 1.0:
+		_fog_transition_progress = minf(_fog_transition_progress + delta / GameConstants.SHADER_TRANSITION_SPEED, 1.0)
+		# Cross-fade color and density
+		var t: float = _fog_transition_progress
+		# Ease-in-out for smooth fog roll
+		t = t * t * (3.0 - 2.0 * t)
+		var blended_color: Color = _fog_current_color.lerp(_fog_target_color, t)
+		var blended_density: float = lerpf(_fog_current_density, _fog_target_density, t)
+		if _biome_fog_rect and _biome_fog_rect.material is ShaderMaterial:
+			var fm: ShaderMaterial = _biome_fog_rect.material as ShaderMaterial
+			fm.set_shader_parameter("fog_color", blended_color)
+			fm.set_shader_parameter("fog_density", blended_density)
+			fm.set_shader_parameter("transition_progress", t)
+		if _fog_transition_progress >= 1.0:
+			_fog_current_color = _fog_target_color
+			_fog_current_density = _fog_target_density
+	# Update time uniform for animated fog drift
+	if _biome_fog_rect and _biome_fog_rect.material is ShaderMaterial:
+		(_biome_fog_rect.material as ShaderMaterial).set_shader_parameter("time", _fog_elapsed)
 
 # ─── Biome shader application ─────────────────────────────────────────────────
 func _apply_biome_strength(rect_idx: int, strength: float) -> void:
@@ -215,6 +261,23 @@ func _on_biome_changed(biome_id: int) -> void:
 	# Start cross-fade
 	_cross_fade = 0.0
 	_is_cross_fading = true
+
+	# ── Phase 9: Biome transition fog ──
+	# Update fog target color and density from the new biome's fog config.
+	# The fog cross-fades smoothly via _process() using an ease-in-out curve.
+	var fog_config: Dictionary = GameConstants.BIOME_FOG.get(biome_id, {})
+	if not fog_config.is_empty():
+		_fog_target_color = fog_config.get("color", Color(0.1, 0.1, 0.2))
+		_fog_target_density = fog_config.get("density", 0.02)
+	else:
+		_fog_target_color = Color(0.1, 0.1, 0.2)
+		_fog_target_density = 0.01
+	_fog_transition_progress = 0.0
+	# Show the fog rect with a moderate strength
+	if _biome_fog_rect:
+		_biome_fog_rect.visible = true
+		if _biome_fog_rect.material is ShaderMaterial:
+			(_biome_fog_rect.material as ShaderMaterial).set_shader_parameter("strength", 0.35)
 
 # ─── Low-HP vignette ──────────────────────────────────────────────────────────
 func _on_hp_changed(new_hp: int, max_hp: int) -> void:
@@ -285,6 +348,16 @@ func _on_game_restarted() -> void:
 	if _boss_enrage_rect and _boss_enrage_rect.material is ShaderMaterial:
 		(_boss_enrage_rect.material as ShaderMaterial).set_shader_parameter("strength", 0.0)
 		_boss_enrage_rect.visible = false
+	# ── Phase 9: Reset biome fog ──
+	_fog_current_color = Color(0.1, 0.1, 0.2, 1.0)
+	_fog_target_color = Color(0.1, 0.1, 0.2, 1.0)
+	_fog_current_density = 0.02
+	_fog_target_density = 0.02
+	_fog_transition_progress = 1.0
+	if _biome_fog_rect:
+		_biome_fog_rect.visible = false
+		if _biome_fog_rect.material is ShaderMaterial:
+			(_biome_fog_rect.material as ShaderMaterial).set_shader_parameter("strength", 0.0)
 
 # ── Phase 14: Dimension transition handlers ───────────────────────────────────
 

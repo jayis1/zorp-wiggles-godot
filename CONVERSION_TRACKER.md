@@ -22,7 +22,7 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 | `mouse.world_point` | RayCast from camera to ground plane | DONE |
 | Single Game class | Multiple nodes + autoload singleton | DONE |
 | `combine()` on terrain | NEVER — single merged ArrayMesh instead | N/A |
-| Individual Entity particles | `GPUParticles3D` | TODO |
+| Individual Entity particles | `GPUParticles3D` | DONE |
 
 ## Phase Progress
 
@@ -123,13 +123,13 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] XP curve and level-up stat scaling — exponential XP curve (base * 1.35^level), tier-based stat scaling: HP +12+3/5lvls, damage +2+1/5lvls, speed +0.5/5lvls, level-up shockwave + message with stat breakdown
 - [x] Difficulty scaling over time (more enemies, stronger, faster) — time-based difficulty tiers every 60s, +8% HP/+5% damage/+3% speed per tier, 12% faster spawns per tier, +10 max enemies cap, tier-up notification with screen shake
 
-### Phase 8: Physics & Interaction (PARTIAL — 5 of 7 complete) 🆕 NEW FEATURE
-- [ ] Ragdoll death for player and enemies (Skeleton + PhysicalBone3D) — TODO (requires character models with skeletons)
+### Phase 8: Physics & Interaction (COMPLETE — 7 of 7 complete) 🆕 NEW FEATURE
+- [x] Ragdoll death for player and enemies (RigidBody3D proxy) — `_spawn_physics_corpse()` in enemy_base.gd spawns a RigidBody3D sphere corpse with initial impulse + angular velocity, PhysicsMaterial bounce, fades out after 2s settle + 1s fade
 - [x] Enemy knockback with physics impulse (enemies push each other) — `take_damage_from()` applies directional knockback; `_apply_enemy_separation()` pushes overlapping enemies apart
-- [ ] Collectible bounce and tumble (RigidBody3D with bounce material) — TODO (collectibles are Area3D, converting to RigidBody would break pickup logic)
+- [x] Collectible bounce and tumble (RigidBody3D with bounce material) — `start_tumble()` in collectible.gd spawns RigidBody3D proxy with PhysicsMaterial bounce (0.4), initial impulse + angular velocity, transitions to normal Area3D float after 1.2s; enemy drops auto-trigger tumble
 - [x] Destructible environment objects (crates, crystals shatter into pieces) — `destructible.gd` + `destructible.tscn`, spawns RigidBody3D fragments with PhysicsMaterial bounce
 - [x] Physics-based dash (Zorp slides and bounces off walls) — `_start_slide()`/`_update_slide()` in player.gd, friction decay + `velocity.bounce(normal)` on wall collision
-- [ ] Enemy corpse physics (tumble and settle realistically) — TODO (current death uses tween scale-down; physics corpse needs RigidBody3D conversion)
+- [x] Enemy corpse physics (tumble and settle realistically) — `_spawn_physics_corpse()` in enemy_base.gd, RigidBody3D with collision mask 1 (world only), fade-out after settle
 - [x] Graviton gravity well uses actual physics force (Area3D gravity point) — `gravity_well` Area3D with `gravity_point = true` pulls RigidBody3D fragments; manual pull still handles CharacterBody3D player
 
 ### Phase 9: Shaders & Visual Effects ✅ COMPLETE 🆕 NEW FEATURE
@@ -141,8 +141,8 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Water surface shader (vertex ripple displacement + scrolling flow + specular) — `water_surface.gdshader`
 - [x] Boss enrage screen effect (red pulse + chromatic aberration + tunnel vision) — `boss_enrage.gdshader`
 - [x] Low-HP warning shader (pulsing red vignette, heartbeat throb + desaturation) — `low_hp_vignette.gdshader`
-- [ ] Biome transition fog (exponential fog with per-biome color) — handled by existing WorldEnvironment fog, not a shader
-- [ ] Dash afterimage shader (ghost trail with fade) — TODO (requires multi-pass or frame buffer tricks)
+- [x] Biome transition fog (exponential fog with per-biome color) — `biome_transition_fog.gdshader` screen-space canvas_item shader with depth-based exponential fog, animated drift, per-biome color/density cross-fade via ShaderManager `_on_biome_changed()` with ease-in-out blending
+- [x] Dash afterimage shader (ghost trail with fade) — `_spawn_dash_afterimage()` in player.gd spawns semi-transparent MeshInstance3D copies every 30ms during dash + slide, fade alpha 0.5→0 via tween_method over 350ms, slight scale-up for dissipating energy look
 - [x] ShaderManager system (`shader_manager.gd`) — CanvasLayer with cross-fading ColorRect overlays, biome-based shader swapping, low-HP/boss-enrage modulation
 - [x] Water biome overlays now use animated water_surface.gdshader (decoration.gd)
 
@@ -405,7 +405,7 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Collectible pickup light flash**: Pickups now spawn a brief OmniLight3D at the collection point that flashes the item's color and fades over 0.25s. Rare items (Meteor Shard, Quantum Fuzz, Nebula Dust, crafting materials) get a brighter (3.5 energy) and wider (5m range) flash for a juicier reward feel. Gives pickups extra punch in dark biomes where sparkle particles alone can be subtle.
 
 ## Last Updated
-Phase 7 (Missions & Progression), Phase 4 (Combat), and Phase 6 (Particles) TODO items completed. Phase 7: Mission system fully implemented with 6 mission types (COLLECT, KILL, EXPLORE, LEVEL, COMBO, SURVIVE) and auto-replacement on completion. Quest log UI (quest_log.gd) — Tab key toggles mission board panel with progress bars and rewards. Trader trade menu (trade_menu.gd) — E key opens click-to-buy trade menu with 8 items purchasable with Space Gloop. Monolith buff system — 3 buff types (Speed Surge 1.5x, Power Surge 1.4x, Wisdom Aura 2.0x XP) with particle activation effects, integrated into player speed/damage/XP via GameManager.get_speed_buff_mult()/get_damage_buff_mult()/get_xp_buff_mult(). XP curve — exponential growth (base * 1.35^level) with tier-based stat scaling (HP/damage/speed bonuses every 5 levels). Difficulty scaling — time-based tiers every 60s with +8% HP, +5% damage, +3% speed, 12% faster spawns, +10 max enemies, tier-up notification with screen shake. Phase 4: Dash invuln blink polished — smooth sinusoidal blink with cyan emission shimmer instead of crude visibility toggle. Phase 6: Idle regen sparkle aura — green sparkles orbit Zorp when idle and HP > 80%. Shield break shatter — 40 shard fragment burst + light flash on monolith buff expiration, color-matched to buff type.
+Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy corpse physics — `_spawn_physics_corpse()` in enemy_base.gd spawns RigidBody3D sphere corpse with impulse + angular velocity, PhysicsMaterial bounce (0.3), collision mask world-only, fades out after 2s settle. Collectible bounce and tumble — `start_tumble()` in collectible.gd spawns RigidBody3D proxy with bounce PhysicsMaterial (0.4), initial scatter impulse + random angular velocity, transitions to normal Area3D float mode after 1.2s; enemy crafting material drops auto-trigger tumble. Ragdoll death uses same RigidBody3D proxy approach. Phase 9: Biome transition fog — `biome_transition_fog.gdshader` screen-space canvas_item shader with depth-based exponential fog, animated drift noise, per-biome fog color/density cross-fade with ease-in-out blending, integrated into ShaderManager with dedicated fog overlay rect. Dash afterimage — `_spawn_dash_afterimage()` in player.gd spawns semi-transparent MeshInstance3D ghost copies every 30ms during dash and slide (at 2× min slide speed), alpha tweens from 0.5→0 over 350ms with slight scale-up for dissipating energy effect. All 20 phases now fully complete with zero remaining TODO items.
 
 ## Enhancement Pack 1 — New Enemies, Weapon Mods & Weather
 

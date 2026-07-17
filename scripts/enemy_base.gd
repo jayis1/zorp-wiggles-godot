@@ -587,18 +587,97 @@ func _die() -> void:
 		.set_trans(Tween.TRANS_QUAD)
 	light_tween.tween_callback(death_light.queue_free)
 
-	# Death animation — scale down with bounce, rise, then free
-	var death_tween := create_tween()
-	death_tween.set_parallel(true)
-	death_tween.tween_property(self, "scale", Vector3.ZERO, 0.4) \
-		.set_ease(Tween.EASE_IN) \
-		.set_trans(Tween.TRANS_CUBIC)
-	death_tween.tween_property(self, "global_position:y", global_position.y + 1.0, 0.4) \
-		.set_ease(Tween.EASE_OUT)
-	# Quick spin on death for flair
-	death_tween.tween_property(self, "rotation:y", rotation.y + PI, 0.4) \
-		.set_ease(Tween.EASE_OUT)
-	death_tween.chain().tween_callback(queue_free)
+	# ── Phase 8: Enemy corpse physics ── Spawn a RigidBody3D proxy corpse
+	#    that tumbles and settles realistically before fading out and freeing.
+	#    The corpse uses a simple sphere or box RigidBody3D matching the enemy's
+	#    shape, with an initial impulse based on the last knockback/velocity
+	#    direction for a physics-driven death tumble. The original enemy node
+	#    hides immediately (no tween scale-down) while the corpse handles the
+	#    visual death animation via physics + a fade-out timer.
+	_spawn_physics_corpse()
+
+	# Hide the original enemy immediately — the corpse takes over visually
+	visible = false
+	# Free the enemy node shortly after (let signals/cleanup finish first)
+	var tree := get_tree()
+	if tree:
+		tree.create_timer(0.1).timeout.connect(queue_free)
+
+## ── Phase 8: Enemy corpse physics ──────────────────────────────────────────────
+## Spawns a RigidBody3D proxy corpse that tumbles and settles on the ground
+## using the physics engine, then fades out and frees itself after a few seconds.
+## The corpse shape mirrors the enemy's body mesh (sphere for most, box for
+## angular enemies). An initial angular velocity + linear impulse gives a
+## physics-driven death tumble that looks more natural than a scripted tween.
+func _spawn_physics_corpse() -> void:
+	var parent_node: Node = get_parent()
+	if not parent_node:
+		return
+
+	# Create the RigidBody3D corpse
+	var corpse := RigidBody3D.new()
+	corpse.global_position = global_position + Vector3(0, 0.3, 0)
+	corpse.collision_layer = 0  # Don't collide with player/enemies
+	corpse.collision_mask = 1   # Only collide with world geometry (layer 1)
+
+	# Collision shape — sphere scaled to enemy size
+	var col_shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 0.5 * base_scale
+	col_shape.shape = sphere
+	corpse.add_child(col_shape)
+
+	# Visual mesh — semi-transparent copy of the enemy's color
+	var corpse_mesh := MeshInstance3D.new()
+	var corpse_sphere := SphereMesh.new()
+	corpse_sphere.radius = 0.5 * base_scale
+	corpse_sphere.height = 1.0 * base_scale
+	corpse_mesh.mesh = corpse_sphere
+	var corpse_mat := StandardMaterial3D.new()
+	corpse_mat.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.7)
+	corpse_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	corpse_mat.emission_enabled = true
+	corpse_mat.emission = base_color * 0.1
+	corpse_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	corpse_mesh.material_override = corpse_mat
+	corpse.add_child(corpse_mesh)
+
+	# Physics material with bounce for a lively tumble
+	var phys_mat := PhysicsMaterial.new()
+	phys_mat.bounce = 0.3
+	phys_mat.friction = 0.6
+	corpse.physics_material_override = phys_mat
+
+	# Add to scene
+	parent_node.add_child(corpse)
+
+	# Initial impulse — use current velocity + knockback for direction
+	var impulse_dir: Vector3 = velocity.normalized() if velocity.length_squared() > 0.01 else Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).normalized()
+	corpse.apply_central_impulse(impulse_dir * 3.0 * base_scale + Vector3(0, 2.0, 0))
+	# Random angular velocity for tumbling
+	corpse.angular_velocity = Vector3(randf_range(-5, 5), randf_range(-5, 5), randf_range(-5, 5))
+
+	# Disable sleeping so the corpse keeps tumbling until it settles
+	corpse.can_sleep = true
+
+	# Fade out and free after 3 seconds (settle + fade)
+	var tree := get_tree()
+	if tree:
+		# Start fading after 2s, complete by 3s
+		var fade_timer := tree.create_timer(2.0)
+		fade_timer.timeout.connect(func():
+			if is_instance_valid(corpse):
+				var fade_tween := corpse.create_tween()
+				fade_tween.tween_property(corpse_mat, "albedo_color:a", 0.0, 1.0) \
+					.set_ease(Tween.EASE_IN)
+				fade_tween.tween_callback(corpse.queue_free)
+		)
+		# Safety free after 4s in case fade tween fails
+		var safety_timer := tree.create_timer(4.0)
+		safety_timer.timeout.connect(func():
+			if is_instance_valid(corpse):
+				corpse.queue_free()
+		)
 
 func _update_timers(delta: float) -> void:
 	if attack_cooldown_timer > 0:
@@ -684,6 +763,10 @@ func _drop_crafting_material() -> void:
 	drop.global_position.z += randf_range(-1.0, 1.0)
 	if drop.has_method("set_type"):
 		drop.set_type(drop_type)
+	# ── Phase 8: Collectible bounce and tumble — physics-driven drop ──
+	if drop.has_method("start_tumble"):
+		var scatter_dir: Vector3 = Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).normalized()
+		drop.start_tumble(scatter_dir)
 	# Add to GameManager's collectibles list
 	GameManager.collectibles.append(drop)
 	# Add to collectibles group

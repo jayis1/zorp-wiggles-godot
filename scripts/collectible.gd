@@ -12,6 +12,15 @@ var xp_value: int = 10
 var is_magnetic: bool = false
 var is_popping: bool = false  # Pickup lift animation
 
+# ── Phase 8: Collectible bounce and tumble ──
+# When true, the collectible is in physics bounce mode (just spawned/dropped).
+# A RigidBody3D proxy handles the tumble; once it settles, we switch to
+# normal Area3D floating/bobbing behavior.
+var _is_tumbling: bool = false
+var _tumble_timer: float = 0.0
+var _tumble_rigid: RigidBody3D = null
+const TUMBLE_DURATION: float = 1.2  # Seconds before settling into float mode
+
 # ─── Visual ──────────────────────────────────────────────────────────────────
 var base_y: float = 0.0
 var base_pos_x: float = 0.0
@@ -78,6 +87,87 @@ func set_type(type: int) -> void:
 	collectible_type = type
 	_apply_type_config()
 
+## ── Phase 8: Collectible bounce and tumble ──────────────────────────────────────
+## Call this right after adding the collectible to the scene tree to give it
+## a physics-driven bounce and tumble. The collectible spawns a temporary
+## RigidBody3D that bounces off the ground, then after TUMBLE_DURATION seconds
+## settles into the normal Area3D floating/bobbing mode.
+## [param impulse_dir] — direction to launch the collectible (e.g., away from enemy)
+func start_tumble(impulse_dir: Vector3 = Vector3.ZERO) -> void:
+	if _is_tumbling:
+		return
+	_is_tumbling = true
+	_tumble_timer = TUMBLE_DURATION
+
+	# Create a RigidBody3D proxy that handles physics bounce
+	_tumble_rigid = RigidBody3D.new()
+	_tumble_rigid.global_position = global_position
+	_tumble_rigid.collision_layer = 0  # Don't collide with player/enemy
+	_tumble_rigid.collision_mask = 1   # Only collide with world geometry
+
+	# Collision shape matching collectible size
+	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
+	var col_scale: float = config.get("scale", 0.3)
+	var col_shape := CollisionShape3D.new()
+	var sphere_shape := SphereShape3D.new()
+	sphere_shape.radius = col_scale
+	col_shape.shape = sphere_shape
+	_tumble_rigid.add_child(col_shape)
+
+	# Visual mesh copy for the tumble body
+	var tumble_mesh := MeshInstance3D.new()
+	tumble_mesh.mesh = _get_shared_mesh(collectible_type, col_scale)
+	var tumble_mat := StandardMaterial3D.new()
+	tumble_mat.albedo_color = config["color"]
+	tumble_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	tumble_mat.emission_enabled = true
+	tumble_mat.emission = config["color"] * 0.3
+	tumble_mat.rim_enabled = true
+	tumble_mat.rim = 0.8
+	tumble_mat.rim_tint = 1.0
+	tumble_mesh.material_override = tumble_mat
+	_tumble_rigid.add_child(tumble_mesh)
+
+	# Physics material with bounce
+	var phys_mat := PhysicsMaterial.new()
+	phys_mat.bounce = 0.4
+	phys_mat.friction = 0.5
+	_tumble_rigid.physics_material_override = phys_mat
+
+	# Add to parent scene
+	var parent_node: Node = get_parent()
+	if parent_node:
+		parent_node.add_child(_tumble_rigid)
+
+	# Apply initial impulse — random scatter if no direction given
+	if impulse_dir.length_squared() < 0.01:
+		impulse_dir = Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).normalized()
+	_tumble_rigid.apply_central_impulse(impulse_dir * 4.0 + Vector3(0, 3.0, 0))
+	_tumble_rigid.angular_velocity = Vector3(randf_range(-8, 8), randf_range(-8, 8), randf_range(-8, 8))
+
+	# Hide the Area3D visual while tumbling — the RigidBody handles the look
+	if mesh_instance:
+		mesh_instance.visible = false
+
+## End tumble mode — snap Area3D to the RigidBody's settled position, free
+## the RigidBody, and resume normal floating/bobbing behavior.
+func _end_tumble() -> void:
+	if not _is_tumbling:
+		return
+	_is_tumbling = false
+	if _tumble_rigid and is_instance_valid(_tumble_rigid):
+		# Snap Area3D to the settled position
+		global_position = _tumble_rigid.global_position
+		_tumble_rigid.queue_free()
+	_tumble_rigid = null
+	# Update base positions for bobbing/wobble
+	base_y = global_position.y
+	base_pos_x = global_position.x
+	base_pos_z = global_position.z
+	# Restore the Area3D visual
+	if mesh_instance:
+		mesh_instance.visible = true
+
 func _apply_type_config() -> void:
 	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
 	xp_value = config["value"]
@@ -127,6 +217,29 @@ func _apply_type_config() -> void:
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:
+		return
+
+	# ── Phase 8: Tumble mode — RigidBody3D physics bounce ──
+	# While tumbling, the Area3D follows the RigidBody proxy. When the tumble
+	# timer expires, we snap to the RigidBody's settled position, free it,
+	# and resume normal floating/bobbing behavior.
+	if _is_tumbling:
+		_tumble_timer -= delta
+		if _tumble_rigid and is_instance_valid(_tumble_rigid):
+			# Follow the rigid body so pickup area tracks it
+			global_position = _tumble_rigid.global_position
+			# Still allow pickup while tumbling
+			if not _cached_player or not is_instance_valid(_cached_player):
+				_cached_player = get_tree().get_first_node_in_group("player")
+			if _cached_player:
+				var dist: float = global_position.distance_to(_cached_player.global_position)
+				if dist < GameConstants.COLLECT_RADIUS:
+					_end_tumble()
+					_collect()
+					return
+			# Check body_entered too (Area3D is following the rigid position)
+		if _tumble_timer <= 0:
+			_end_tumble()
 		return
 
 	# Bob up and down + gentle spin + lateral wobble for an organic float
