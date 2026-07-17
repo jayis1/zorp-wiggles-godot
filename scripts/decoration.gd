@@ -29,7 +29,7 @@ const RUINS_COLORS: Array[Color] = [
 # ─── Public API ──────────────────────────────────────────────────────────────
 
 func spawn_all_decorations(grid: Array[int], grid_size: int, tile_scale: float) -> void:
-	"""Main entry point — iterates over the biome grid and spawns decorations."""
+	# Main entry point — iterates over the biome grid and spawns decorations.
 	var half_grid: float = grid_size / 2.0
 	for x in range(grid_size):
 		for z in range(grid_size):

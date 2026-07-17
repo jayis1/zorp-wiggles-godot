@@ -247,5 +247,6 @@ func get_completed_count() -> int:
 	return _completed_missions.size()
 
 func get_total_pickups() -> int:
-	# This is tracked externally — the mission system reads it from GameManager
-	return GameManager.player_kills  # Placeholder; real tracking needs a pickup counter
+	# Track total pickups using the max pickup streak as a proxy
+	# TODO: Add a dedicated player_total_pickups counter to GameManager
+	return GameManager.player_max_pickup_streak

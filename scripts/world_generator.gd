@@ -60,7 +60,7 @@ func _generate_world() -> void:
 	print("[WorldGenerator] World generation complete!")
 
 func _generate_biome_grid() -> void:
-	"""Use noise-based biome assignment matching the original Ursina logic."""
+	# Use noise-based biome assignment matching the original Ursina logic.
 	grid.resize(GRID_SIZE * GRID_SIZE)
 	
 	# Simplex-like noise for biome distribution
@@ -92,7 +92,7 @@ func _generate_biome_grid() -> void:
 			grid[idx] = biome
 
 func _classify_biome(elevation: float, moisture: float, temperature: float) -> int:
-	"""Classify a tile into a biome based on noise values."""
+	# Classify a tile into a biome based on noise values.
 	# Water/low elevation
 	if elevation < -0.3:
 		if temperature > 0.3:
@@ -131,7 +131,7 @@ func _classify_biome(elevation: float, moisture: float, temperature: float) -> i
 	return GameConstants.Biome.GRASS
 
 func _build_terrain_mesh() -> void:
-	"""Build a single merged terrain mesh with vertex colors for biomes."""
+	# Build a single merged terrain mesh with vertex colors for biomes.
 	# Using ArrayMesh for efficient terrain rendering
 	# Each tile is a quad with the biome color as vertex color
 	var surface_tool := SurfaceTool.new()
@@ -176,7 +176,7 @@ func _build_terrain_mesh() -> void:
 	add_child(terrain_mesh)
 
 func _create_terrain_material() -> Material:
-	"""Create unlit material for terrain (matching Ursina's unlit_with_fog_shader)."""
+	# Create unlit material for terrain (matching Ursina's unlit_with_fog_shader).
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -184,7 +184,7 @@ func _create_terrain_material() -> Material:
 	return mat
 
 func _get_tile_height(biome: int, x: int, z: int) -> float:
-	"""Return height offset for a tile based on biome type."""
+	# Return height offset for a tile based on biome type.
 	match biome:
 		GameConstants.Biome.WATER:
 			return -0.3
@@ -198,7 +198,7 @@ func _get_tile_height(biome: int, x: int, z: int) -> float:
 			return 0.0
 
 func _build_ground_collision() -> void:
-	"""Create a single flat collision plane for the entire world."""
+	# Create a single flat collision plane for the entire world.
 	ground_collision = StaticBody3D.new()
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -209,7 +209,7 @@ func _build_ground_collision() -> void:
 	add_child(ground_collision)
 
 func _spawn_decorations() -> void:
-	"""Spawn biome-appropriate decorations (trees, crystals, mushrooms, etc.)."""
+	# Spawn biome-appropriate decorations (trees, crystals, mushrooms, etc.).
 	var deco_node := DecorationSystem.new()
 	deco_node.name = "Decorations"
 	deco_node.spawn_all_decorations(grid, GRID_SIZE, TILE_SIZE)
@@ -217,7 +217,7 @@ func _spawn_decorations() -> void:
 	print("[WorldGenerator] Spawned %d decorations" % deco_node.get_decoration_count())
 
 func _spawn_initial_enemies() -> void:
-	"""Spawn initial wave of enemies across the world."""
+	# Spawn initial wave of enemies across the world.
 	var spawn_count := 15 + GameManager.player_level * 2
 	for i in range(spawn_count):
 		var pos := _random_world_position()
@@ -225,7 +225,7 @@ func _spawn_initial_enemies() -> void:
 		_spawn_enemy_at(enemy_type, pos)
 
 func _spawn_collectibles() -> void:
-	"""Spawn collectible items across the world."""
+	# Spawn collectible items across the world.
 	var spawn_count := 25
 	for i in range(spawn_count):
 		var pos := _random_world_position()
@@ -233,7 +233,7 @@ func _spawn_collectibles() -> void:
 		_spawn_collectible_at(type, pos)
 
 func _spawn_structures() -> void:
-	"""Spawn monoliths, traders, portals, healing shrines, and destructibles."""
+	# Spawn monoliths, traders, portals, healing shrines, and destructibles.
 	_spawn_portal_pairs()
 	_spawn_initial_traders()
 	_spawn_monoliths()
@@ -272,7 +272,7 @@ func _spawn_destructibles() -> void:
 	print("[WorldGenerator] Spawned %d destructibles" % count)
 
 func _spawn_portal_pairs() -> void:
-	"""Create linked portal pairs at walkable locations around the world."""
+	# Create linked portal pairs at walkable locations around the world.
 	var spawn_center: float = GRID_SIZE / 2.0 * TILE_SIZE
 	var portal_scene := preload("res://scenes/entities/portal.tscn")
 
@@ -315,7 +315,7 @@ func _spawn_portal_pairs() -> void:
 					break
 
 func _spawn_initial_traders() -> void:
-	"""Spawn initial wandering traders at walkable locations."""
+	# Spawn initial wandering traders at walkable locations.
 	var trader_scene := preload("res://scenes/entities/trader.tscn")
 	for _i in range(GameConstants.TRADER_INITIAL_COUNT):
 		for _attempt in range(50):
@@ -334,7 +334,7 @@ func _spawn_initial_traders() -> void:
 				break
 
 func _spawn_monoliths() -> void:
-	"""Spawn Alien Monoliths in crystal and snow biomes."""
+	# Spawn Alien Monoliths in crystal and snow biomes.
 	var monolith_scene := preload("res://scenes/entities/monolith.tscn")
 	var half_grid: float = GRID_SIZE / 2.0
 
@@ -359,7 +359,7 @@ func _spawn_monoliths() -> void:
 				monolith.global_position = Vector3(wx, 0, wz)
 
 func _spawn_healing_shrines() -> void:
-	"""Spawn Healing Crystal Shrines in mushroom and swamp biomes."""
+	# Spawn Healing Crystal Shrines in mushroom and swamp biomes.
 	var shrine_scene := preload("res://scenes/entities/healing_shrine.tscn")
 	var half_grid: float = GRID_SIZE / 2.0
 
@@ -384,17 +384,17 @@ func _spawn_healing_shrines() -> void:
 				shrine.global_position = Vector3(wx, 0, wz)
 
 func _is_biome_walkable(biome: int) -> bool:
-	"""Check if a biome type is walkable (not water or lava)."""
+	# Check if a biome type is walkable (not water or lava).
 	return biome != GameConstants.Biome.WATER and biome != GameConstants.Biome.LAVA
 
 func _random_world_position() -> Vector3:
-	"""Random position within the world bounds."""
+	# Random position within the world bounds.
 	var x := randf_range(-HALF_WORLD + 10, HALF_WORLD - 10)
 	var z := randf_range(-HALF_WORLD + 10, HALF_WORLD - 10)
 	return Vector3(x, 0.5, z)
 
 func _random_enemy_type() -> String:
-	"""Pick a random enemy type based on distance from spawn (difficulty scaling)."""
+	# Pick a random enemy type based on distance from spawn (difficulty scaling).
 	# Use player position for distance-based difficulty
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	var dist := 0.0
@@ -419,7 +419,7 @@ func _random_collectible_type() -> int:
 	return GameConstants.CollectibleType.NEBULA_DUST
 
 func _spawn_enemy_at(type_name: String, pos: Vector3) -> void:
-	"""Spawn an enemy of the given type at the given position."""
+	# Spawn an enemy of the given type at the given position.
 	var type_data: Dictionary = EnemyTypeData.get_type(type_name)
 	# Map enemy names to their specialized scenes
 	var scene_map: Dictionary = {
@@ -461,7 +461,7 @@ func _spawn_enemy_at(type_name: String, pos: Vector3) -> void:
 	GameManager.enemies.append(enemy)
 
 func _spawn_collectible_at(type: int, pos: Vector3) -> void:
-	"""Spawn a collectible of the given type at the given position."""
+	# Spawn a collectible of the given type at the given position.
 	var collectible_scene := preload("res://scenes/entities/collectible.tscn")
 	var collectible := collectible_scene.instantiate()
 	collectible.global_position = pos
@@ -470,7 +470,7 @@ func _spawn_collectible_at(type: int, pos: Vector3) -> void:
 	GameManager.collectibles.append(collectible)
 
 func get_biome_at(world_pos: Vector3) -> int:
-	"""Get the biome type at a world position."""
+	# Get the biome type at a world position.
 	var x := int((world_pos.x / TILE_SIZE) + GRID_SIZE / 2.0)
 	var z := int((world_pos.z / TILE_SIZE) + GRID_SIZE / 2.0)
 	x = clampi(x, 0, GRID_SIZE - 1)

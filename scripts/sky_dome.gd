@@ -50,7 +50,7 @@ func _create_materials() -> void:
 	_star_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 
 func _build_sky_dome() -> void:
-	"""Build 3 layers × 8 billboard quads = 24 sky panels forming a gradient dome."""
+	# Build 3 layers × 8 billboard quads = 24 sky panels forming a gradient dome.
 	var sky_layers: Array = [
 		{"t": 0.0, "y": GameConstants.SKY_HEIGHT_MAX + 20.0, "radius": GameConstants.SKY_RADIUS * 0.5},
 		{"t": 0.5, "y": (GameConstants.SKY_HEIGHT_MAX + GameConstants.SKY_HEIGHT_MIN) / 2.0, "radius": GameConstants.SKY_RADIUS * 0.75},
@@ -77,7 +77,7 @@ func _build_sky_dome() -> void:
 			add_child(quad)
 
 func _build_stars() -> void:
-	"""Spawn twinkling stars with varied colors across the sky."""
+	# Spawn twinkling stars with varied colors across the sky.
 	for i in range(GameConstants.STAR_COUNT):
 		var angle_h: float = randf() * TAU
 		var angle_v: float = randf_range(0.15, PI * 0.45)
@@ -117,7 +117,7 @@ func _build_stars() -> void:
 		_stars.append(data)
 
 func _build_nebula() -> void:
-	"""Spawn large translucent nebula clouds for atmospheric depth."""
+	# Spawn large translucent nebula clouds for atmospheric depth.
 	for i in range(GameConstants.NEBULA_CLOUD_COUNT):
 		var angle_h: float = randf() * TAU
 		var ny: float = randf_range(GameConstants.NEBULA_HEIGHT_MIN, GameConstants.NEBULA_HEIGHT_MAX)
@@ -143,7 +143,7 @@ func _build_nebula() -> void:
 		_nebula_clouds.append(data)
 
 func _build_horizon_glow() -> void:
-	"""Spawn horizon glow band — translucent colored quads at low altitude."""
+	# Spawn horizon glow band — translucent colored quads at low altitude.
 	var horizon_palette: Array[Color] = GameConstants.NEBULA_COLORS  # reuse same palette
 
 	for i in range(GameConstants.HORIZON_GLOW_COUNT):
@@ -164,7 +164,7 @@ func _build_horizon_glow() -> void:
 		_horizon_glows.append(glow)
 
 func _create_billboard_quad(pos: Vector3, size: Vector2, col: Color) -> MeshInstance3D:
-	"""Create a simple billboard quad mesh at the given position with the given color."""
+	# Create a simple billboard quad mesh at the given position with the given color.
 	var quad_mesh := PlaneMesh.new()
 	quad_mesh.size = size
 	# Rotate to face up (for ground-lying quads) or keep vertical for billboard
