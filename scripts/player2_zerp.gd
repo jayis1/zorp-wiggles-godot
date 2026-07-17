@@ -181,7 +181,10 @@ func _handle_dash(delta: float) -> void:
 		return
 
 	# Buffer or fire dash
-	if _dash_buffer_timer > 0 and pulse_wave_cooldown_timer <= 0:
+	# P2 dash has no cooldown (design choice for co-op accessibility), so we
+	# only need to check the buffer timer. (P1 uses GameManager.player_dash_cooldown_timer
+	# here, but P2 doesn't track dash cooldown in GameManager.)
+	if _dash_buffer_timer > 0:
 		_dash_buffer_timer = 0.0
 		_start_dash()
 	elif Input.is_action_just_pressed("p2_dash"):

@@ -195,7 +195,7 @@ func _apply_knockback(target: Node3D, source: Vector3, force: float) -> void:
 		var cb: CharacterBody3D = target as CharacterBody3D
 		cb.velocity += dir * force
 	elif target.has_method("apply_knockback"):
-		target.apply_knockback(dir * force)
+		target.apply_knockback(dir, force)
 
 # ─── Visual Construction ──────────────────────────────────────────────────────
 func _build_visuals() -> void:
