@@ -45,10 +45,15 @@ func _physics_process(delta: float) -> void:
 	if is_dead or GameManager.is_paused:
 		return
 	
+	# ── Phase 14: Apply dimension time scale for boss-specific timers ──
+	# (The base class also scales delta, so we pass the original to super
+	#  to avoid double-scaling the movement/AI delta.)
+	var scaled_delta: float = delta * _time_scale
+	
 	# Spawn grace period — decrement timer ourselves since we return before super
 	if spawn_grace_timer > 0:
-		spawn_grace_timer -= delta
-		_update_spawn_visuals(delta)
+		spawn_grace_timer -= scaled_delta
+		_update_spawn_visuals(scaled_delta)
 		return
 	
 	# Check enrage threshold
@@ -57,7 +62,7 @@ func _physics_process(delta: float) -> void:
 	
 	# Handle boss attacks first — this may set velocity for charging
 	if is_alerted and not is_dead:
-		_update_boss_attacks(delta)
+		_update_boss_attacks(scaled_delta)
 	
 	# If charging, skip normal AI (which would overwrite velocity) but still
 	# need move_and_slide to apply the charge velocity
@@ -66,6 +71,7 @@ func _physics_process(delta: float) -> void:
 		return
 	
 	# Normal AI behavior via base class (handles detection, movement, timers, move_and_slide)
+	# Pass the original delta — the base class applies _time_scale internally.
 	super._physics_process(delta)
 
 func _enter_enrage() -> void:

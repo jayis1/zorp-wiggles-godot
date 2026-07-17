@@ -49,15 +49,20 @@ func _physics_process(delta: float) -> void:
 	if is_dead or GameManager.is_paused:
 		return
 	
+	# ── Phase 14: Apply dimension time scale for fuse-specific timers ──
+	# (The base class also scales delta, so we pass the original to super
+	#  to avoid double-scaling the movement/AI delta.)
+	var scaled_delta: float = delta * _time_scale
+	
 	# Spawn grace period — decrement timer ourselves since we return before super
 	if spawn_grace_timer > 0:
-		spawn_grace_timer -= delta
-		_update_spawn_visuals(delta)
+		spawn_grace_timer -= scaled_delta
+		_update_spawn_visuals(scaled_delta)
 		return
 	
 	# If fuse is active, handle fuse logic but skip normal AI movement
 	if fuse_active:
-		fuse_timer -= delta
+		fuse_timer -= scaled_delta
 		# Pulse the warning ring faster as fuse counts down
 		if warning_ring and warning_ring.visible:
 			var pulse_speed: float = 10.0 + (1.0 - fuse_timer / GameConstants.VOID_BOMBER_FUSE_DURATION) * 20.0
@@ -75,6 +80,7 @@ func _physics_process(delta: float) -> void:
 		return
 	
 	# Normal AI behavior via base class (handles detection, movement, timers)
+	# Pass the original delta — the base class applies _time_scale internally.
 	super._physics_process(delta)
 	
 	# Check if close enough to trigger fuse (after AI has updated is_alerted)

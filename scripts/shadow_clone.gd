@@ -6,6 +6,7 @@
 extends CharacterBody3D
 
 # ─── Stats ────────────────────────────────────────────────────────────────────
+var enemy_name: String = "Void Shadow Clone"
 var hp: int = 80
 var max_hp: int = 80
 var damage: int = 12

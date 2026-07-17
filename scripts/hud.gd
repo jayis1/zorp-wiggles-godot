@@ -249,7 +249,10 @@ func _process(delta: float) -> void:
 		var boss_current_ratio: float = boss_hp_bar.size.x / boss_bar_width if boss_bar_width > 0 else 0.0
 		boss_current_ratio = lerpf(boss_current_ratio, _boss_bar_target_ratio, weight)
 		boss_hp_bar.size.x = boss_bar_width * boss_current_ratio
-		boss_name_text.text = "☠ %s" % boss_ref.enemy_name
+		var display_name: String = "Boss"
+		if "enemy_name" in boss_ref:
+			display_name = boss_ref.enemy_name
+		boss_name_text.text = "☠ %s" % display_name
 		# Smooth boss bar color toward target (eases green → yellow → red)
 		_boss_bar_target_color = _ratio_to_bar_color(_boss_bar_target_ratio)
 		boss_hp_bar.color = boss_hp_bar.color.lerp(_boss_bar_target_color, 1.0 - exp(-_color_smoothing * delta))
@@ -331,7 +334,10 @@ func _on_boss_defeated(boss: Node) -> void:
 	boss_ref = null
 	GameManager.current_boss = null
 	boss_hp_container.visible = false
-	show_message("%s defeated!" % boss.enemy_name, 3.0)
+	var display_name: String = "Boss"
+	if "enemy_name" in boss:
+		display_name = boss.enemy_name
+	show_message("%s defeated!" % display_name, 3.0)
 
 func _on_message_added(text: String) -> void:
 	show_message(text, 2.5)
