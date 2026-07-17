@@ -125,15 +125,31 @@ func _physics_process(delta: float) -> void:
 			if not _trade_prompt_shown:
 				_trade_prompt_shown = true
 				trade_available.emit(true)
+				GameManager.add_message("🛒 Press [E] to trade with %s" % trader_name)
 		else:
 			_glow_light.light_energy = 0.0
 			if _trade_prompt_shown:
 				_trade_prompt_shown = false
 				trade_available.emit(false)
 
-		# Check for trade input
+		# Check for trade input — opens trade menu UI
 		if _can_trade and Input.is_action_just_pressed("trade"):
-			_try_trade()
+			_open_trade_menu()
+
+func _open_trade_menu() -> void:
+	# Find the trade menu in the HUD and open it
+	var hud: CanvasLayer = GameManager.hud
+	if not hud:
+		# Fallback to old instant trade if HUD not available
+		_try_trade()
+		return
+	# Find TradeMenu control
+	for child in hud.get_children():
+		if child is Control and child.has_method("open"):
+			child.open(self)
+			return
+	# Fallback to old instant trade
+	_try_trade()
 
 func _try_trade() -> void:
 	# Check if player has enough Space Gloop

@@ -112,7 +112,8 @@ func _try_spawn() -> void:
 
 	# Check spawn cap (alive + pending)
 	# ── Phase 19: Co-op increases spawn cap ──
-	var spawn_cap: int = GameConstants.MAX_ACTIVE_ENEMIES + CoOpManager.get_max_enemies_bonus()
+	# ── Phase 7: Time-based difficulty increases max enemies ──
+	var spawn_cap: int = GameConstants.MAX_ACTIVE_ENEMIES + CoOpManager.get_max_enemies_bonus() + GameManager.get_time_max_enemy_bonus()
 	if alive_count + pending_spawns.size() >= spawn_cap:
 		return
 
@@ -275,9 +276,15 @@ func _scale_enemy_to_player_level(enemy: Node3D) -> void:
 			# ── Phase 19: Co-op enemy scaling — 2x HP, 1.5x damage ──
 			new_hp = int(new_hp * CoOpManager.get_enemy_hp_mult())
 			new_dmg = int(new_dmg * CoOpManager.get_enemy_damage_mult())
+			# ── Phase 7: Time-based difficulty scaling — stronger enemies over time ──
+			new_hp = int(new_hp * GameManager.get_time_enemy_hp_mult())
+			new_dmg = int(new_dmg * GameManager.get_time_enemy_damage_mult())
 			enemy.max_hp = new_hp
 			enemy.hp = new_hp
 			enemy.damage = new_dmg
+			# ── Phase 7: Time-based speed scaling ──
+			if "speed" in enemy:
+				enemy.speed *= GameManager.get_time_enemy_speed_mult()
 
 func _reset_spawn_timer() -> void:
 	# Base interval decreases with player level
@@ -288,6 +295,8 @@ func _reset_spawn_timer() -> void:
 	)
 	# ── Phase 19: Co-op — 30% faster spawns ──
 	interval /= CoOpManager.get_spawn_rate_mult()
+	# ── Phase 7: Time-based difficulty — faster spawns over time ──
+	interval *= GameManager.get_time_spawn_interval_mult()
 
 	# Throttle if too many nearby enemies
 	var player: Node3D = get_tree().get_first_node_in_group("player")

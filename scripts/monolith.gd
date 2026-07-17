@@ -190,17 +190,25 @@ func _on_body_entered(body: Node3D) -> void:
 
 	var buff_name: String = BUFF_NAMES[buff]
 	var buff_key: String = ["speed", "damage", "xp"][buff]
-	GameManager.add_message("Monolith activated: %s!" % buff_name)
+	var buff_color: Color = BUFF_COLORS[buff]
+	GameManager.add_message("🔮 Monolith activated: %s! (+%ds)" % [buff_name, int(GameConstants.MONOLITH_BUFF_DURATION)])
 
 	# Apply buff to GameManager
 	GameManager.active_buffs[buff_key] = GameConstants.MONOLITH_BUFF_DURATION
 
 	# Flash body with buff color
 	if _body:
-		var bc: Color = BUFF_COLORS[buff]
 		var mat: StandardMaterial3D = _body.material_override
 		if mat:
-			mat.albedo_color = bc
+			mat.albedo_color = buff_color
+
+	# ── Phase 7: Buff activation visual effect ──
+	# Spawn an upward beam of particles in the buff color + light flash
+	_spawn_buff_activation_effect(buff_color)
+
+	# Apply buff to player if the method exists
+	if body.has_method("apply_monolith_buff"):
+		body.apply_monolith_buff(buff_key, GameConstants.MONOLITH_BUFF_DURATION)
 
 	buff_activated.emit(buff_key, GameConstants.MONOLITH_BUFF_DURATION)
 
@@ -208,6 +216,58 @@ func _on_body_entered(body: Node3D) -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.15)
+
+func _spawn_buff_activation_effect(color: Color) -> void:
+	# Upward beam of buff-colored particles
+	var particles := GPUParticles3D.new()
+	particles.amount = 40
+	particles.lifetime = 1.2
+	particles.one_shot = true
+	particles.emitting = true
+	particles.explosiveness = 0.8
+	particles.local_coords = false
+
+	var pmat := ParticleProcessMaterial.new()
+	pmat.direction = Vector3(0, 1, 0)
+	pmat.spread = 25.0
+	pmat.gravity = Vector3(0, -3.0, 0)
+	pmat.initial_velocity_min = 6.0
+	pmat.initial_velocity_max = 12.0
+	pmat.scale_min = 0.15
+	pmat.scale_max = 0.35
+	pmat.color = color
+	particles.process_material = pmat
+
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.2
+	sphere.height = 0.4
+	var smat := StandardMaterial3D.new()
+	smat.albedo_color = color
+	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	smat.emission_enabled = true
+	smat.emission = color * 0.8
+	sphere.material = smat
+	particles.draw_pass_1 = sphere
+
+	add_child(particles)
+	particles.global_position = global_position + Vector3(0, 1, 0)
+
+	# Auto-free after particles expire
+	var tree := get_tree()
+	if tree:
+		tree.create_timer(2.0).timeout.connect(particles.queue_free)
+
+	# Brief light flash in buff color
+	var light := OmniLight3D.new()
+	light.light_color = color
+	light.light_energy = 4.0
+	light.omni_range = 8.0
+	add_child(light)
+	light.global_position = global_position + Vector3(0, 4, 0)
+	var light_tween := create_tween()
+	light_tween.tween_property(light, "light_energy", 0.0, 1.0).set_ease(Tween.EASE_OUT)
+	light_tween.parallel().tween_property(light, "omni_range", 2.0, 1.0).set_ease(Tween.EASE_IN)
+	light_tween.tween_callback(light.queue_free)
 
 # ─── Mesh helpers ────────────────────────────────────────────────────────────
 

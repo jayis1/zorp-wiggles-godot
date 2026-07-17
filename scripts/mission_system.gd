@@ -17,11 +17,13 @@ class Mission:
 	var type: int  # MissionType enum
 	var target_count: int
 	var current_count: int
+	var prev_count: int = -1  # For detecting progress changes
 	var reward_xp: int
 	var reward_score: int
 	var completed: bool
 	var collectible_type: int = -1  # For collect missions
 	var enemy_type: int = -1        # For kill missions
+	var _survive_start_time: float = 0.0  # For survive missions
 
 enum MissionType {
 	COLLECT,
@@ -137,6 +139,8 @@ func _process(_delta: float) -> void:
 				mission.current_count = GameManager.player_best_combo
 			MissionType.EXPLORE:
 				mission.current_count = _visited_biomes.size()
+			MissionType.SURVIVE:
+				mission.current_count = int(GameManager.game_time - mission._survive_start_time)
 
 		# Check completion — defer erase to after the loop to avoid
 		# modifying _active_missions while iterating it.
@@ -145,6 +149,14 @@ func _process(_delta: float) -> void:
 
 	for mission in _completed_this_frame:
 		_complete_mission(mission)
+
+	# ── Emit progress update for missions that changed ──
+	for mission in _active_missions:
+		if mission.completed:
+			continue
+		if mission.current_count != mission.prev_count:
+			mission.prev_count = mission.current_count
+			mission_progress_updated.emit(mission)
 
 func _complete_mission(mission: Mission) -> void:
 	mission.completed = true
@@ -202,7 +214,7 @@ func _generate_random_mission() -> void:
 		m.current_count = GameManager.player_best_combo
 		m.reward_xp = 100 + count * 5
 		m.reward_score = 400 + count * 15
-	else:
+	elif roll < 0.9:
 		# Level mission
 		var target: int = GameManager.player_level + 3
 		m.id = "level_%d" % target
@@ -213,6 +225,18 @@ func _generate_random_mission() -> void:
 		m.current_count = GameManager.player_level
 		m.reward_xp = 150 + target * 10
 		m.reward_score = 500 + target * 20
+	else:
+		# Survive mission — survive for X more seconds
+		var target_time: int = 120 + GameManager.player_level * 30
+		m.id = "survive_%d" % target_time
+		m.title = "Survivor"
+		m.description = "Survive for %d seconds" % target_time
+		m.type = MissionType.SURVIVE
+		m.target_count = target_time
+		m.current_count = 0
+		m._survive_start_time = GameManager.game_time
+		m.reward_xp = 80 + target_time
+		m.reward_score = 300 + target_time * 2
 
 	_active_missions.append(m)
 	GameManager.add_message("✦ New Mission: %s" % m.title)

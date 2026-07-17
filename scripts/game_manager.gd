@@ -95,6 +95,8 @@ func _resolve_scene_refs() -> void:
 	camera_rig = main.get_node_or_null("CameraRig")
 	hud = main.get_node_or_null("HUD")
 
+var _last_difficulty_tier: int = 0
+
 func _process(delta: float) -> void:
 	if is_paused:
 		return
@@ -107,6 +109,16 @@ func _process(delta: float) -> void:
 	game_time += delta
 	_update_timers(delta)
 	_update_biome_tracking()
+	_check_difficulty_tier_change()
+
+func _check_difficulty_tier_change() -> void:
+	var current_tier: int = get_time_difficulty_tier()
+	if current_tier > _last_difficulty_tier:
+		_last_difficulty_tier = current_tier
+		if current_tier > 0:
+			add_message("⚠ Difficulty Up! Tier %d — Enemies growing stronger..." % current_tier)
+			# Screen shake to emphasize the shift
+			_trigger_camera_trauma(0.2)
 
 # ── Phase 19: P1 downed state (co-op revive) ──
 func _update_p1_downed(delta: float) -> void:
@@ -187,6 +199,16 @@ func _update_timers(delta: float) -> void:
 	for key in expired_buffs:
 		active_buffs.erase(key)
 		add_message("%s expired" % key.capitalize())
+		# ── Phase 6: Shield break shatter effect on buff expiration ──
+		# Spawn a fragment burst at the player's position when a buff expires,
+		# color-matched to the buff type for visual feedback.
+		if player and is_instance_valid(player):
+			var break_color: Color = Color(0.5, 0.5, 0.5)
+			match key:
+				"speed": break_color = Color(50.0 / 255.0, 1.0, 50.0 / 255.0)
+				"damage": break_color = Color(1.0, 100.0 / 255.0, 50.0 / 255.0)
+				"xp": break_color = Color(100.0 / 255.0, 200.0 / 255.0, 1.0)
+			ParticleEffects.spawn_shield_break_shatter(player.get_parent(), player.global_position, break_color)
 
 func _update_biome_tracking() -> void:
 	# Phase 5: Detect biome changes and emit signal for biome indicator
@@ -229,6 +251,7 @@ func _start_game() -> void:
 	p1_revive_progress = 0.0
 	game_time = 0.0
 	is_paused = false
+	_last_difficulty_tier = 0
 	active_buffs.clear()
 	current_boss = null
 	hp_changed.emit(player_hp, player_max_hp)
@@ -291,6 +314,8 @@ func gain_xp(amount: int) -> void:
 		var xp_mult: float = WeatherSystem.get_xp_multiplier()
 		if xp_mult != 1.0:
 			actual_amount = int(amount * xp_mult)
+	# ── Phase 7: Monolith XP buff (Wisdom Aura) ──
+	actual_amount = int(actual_amount * get_xp_buff_mult())
 	player_xp += actual_amount
 	while player_xp >= player_xp_to_next:
 		player_xp -= player_xp_to_next
@@ -299,16 +324,28 @@ func gain_xp(amount: int) -> void:
 
 func _level_up() -> void:
 	player_level += 1
-	player_max_hp += GameConstants.PLAYER_LEVEL_HP_BONUS
-	# Heal on level up: base amount or 15% of max HP, whichever is higher (matches original)
-	var heal_amount: int = max(40, int(player_max_hp * 0.15))
+	# ── Phase 7: XP curve and level-up stat scaling ──
+	# HP scales with base bonus + tier bonus every 5 levels
+	var tier: int = (player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
+	var hp_bonus: int = GameConstants.PLAYER_LEVEL_HP_BONUS + tier * GameConstants.PLAYER_LEVEL_HP_TIER_BONUS
+	player_max_hp += hp_bonus
+	# Heal on level up: base amount or percentage of max HP, whichever is higher
+	var heal_amount: int = max(40, int(player_max_hp * GameConstants.PLAYER_HEAL_PERCENT))
 	player_hp = min(player_max_hp, player_hp + heal_amount)
-	player_xp_to_next = int(player_xp_to_next * GameConstants.PLAYER_LEVEL_XP_MULT)
+	# XP curve: exponential growth using the curve exponent
+	player_xp_to_next = int(GameConstants.PLAYER_LEVEL_XP_CURVE_BASE * pow(GameConstants.PLAYER_LEVEL_XP_CURVE_EXP, player_level - 1))
 	level_up.emit(player_level)
-	print("[ZorpWiggles] Level up! Now level %d" % player_level)
+	# Inform player of stat increases
+	GameManager.add_message("⬆ Level %d! HP: %d (+%d) | DMG: +%d | Speed: +%.1f" % [
+		player_level, player_max_hp, hp_bonus,
+		GameConstants.PLAYER_LEVEL_DMG_BONUS + tier * GameConstants.PLAYER_LEVEL_DMG_TIER_BONUS,
+		tier * GameConstants.PLAYER_LEVEL_SPEED_TIER_BONUS
+	])
+	print("[ZorpWiggles] Level up! Now level %d (HP: %d, XP next: %d)" % [player_level, player_max_hp, player_xp_to_next])
 	# Phase 6: Level-up shockwave + particle burst
 	if player and is_instance_valid(player):
 		ParticleEffects.spawn_levelup_burst(player.get_parent(), player.global_position)
+		ParticleEffects.spawn_levelup_shockwave(player.get_parent(), player.global_position)
 
 func add_score(amount: int) -> void:
 	player_score += amount
@@ -430,3 +467,49 @@ func set_current_boss(boss: Node) -> void:
 
 func clear_current_boss() -> void:
 	current_boss = null
+
+# ── Phase 7: Monolith buff multiplier queries ──
+# These let player.gd, projectile.gd, and gain_xp() apply active monolith buffs
+# without each system needing to know the buff dictionary structure.
+
+func get_speed_buff_mult() -> float:
+	if active_buffs.has("speed"):
+		return GameConstants.MONOLITH_SPEED_MULT
+	return 1.0
+
+func get_damage_buff_mult() -> float:
+	if active_buffs.has("damage"):
+		return GameConstants.MONOLITH_DAMAGE_MULT
+	return 1.0
+
+func get_xp_buff_mult() -> float:
+	if active_buffs.has("xp"):
+		return GameConstants.MONOLITH_XP_MULT
+	return 1.0
+
+# ── Phase 7: Difficulty scaling over time ──
+# Returns the current time-based difficulty tier (0-based, capped at MAX_TIER).
+# Each tier = DIFFICULTY_TIME_INTERVAL seconds survived.
+func get_time_difficulty_tier() -> int:
+	return int(min(GameConstants.DIFFICULTY_TIME_MAX_TIER, game_time / GameConstants.DIFFICULTY_TIME_INTERVAL))
+
+# Time-based enemy HP multiplier (1.0 + tier * HP_SCALE)
+func get_time_enemy_hp_mult() -> float:
+	return 1.0 + get_time_difficulty_tier() * GameConstants.DIFFICULTY_TIME_HP_SCALE
+
+# Time-based enemy damage multiplier
+func get_time_enemy_damage_mult() -> float:
+	return 1.0 + get_time_difficulty_tier() * GameConstants.DIFFICULTY_TIME_DAMAGE_SCALE
+
+# Time-based enemy speed multiplier
+func get_time_enemy_speed_mult() -> float:
+	return 1.0 + get_time_difficulty_tier() * GameConstants.DIFFICULTY_TIME_SPEED_SCALE
+
+# Time-based spawn interval multiplier (< 1.0 = faster spawns)
+func get_time_spawn_interval_mult() -> float:
+	return max(0.3, 1.0 - get_time_difficulty_tier() * GameConstants.DIFFICULTY_TIME_SPAWN_ACCEL)
+
+# Time-based max enemy count bonus
+func get_time_max_enemy_bonus() -> int:
+	var tier: int = get_time_difficulty_tier()
+	return int(float(tier) / float(GameConstants.DIFFICULTY_TIME_MAX_TIER) * GameConstants.DIFFICULTY_TIME_MAX_ENEMY_BONUS)

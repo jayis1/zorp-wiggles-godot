@@ -955,3 +955,122 @@ static func spawn_levelup_shockwave(parent: Node, pos: Vector3) -> void:
 	parent.add_child(sparkles)
 	sparkles.global_position = pos
 	_free_after_lifetime(sparkles, 1.5)
+
+## ── Phase 6: Idle regen sparkle stream ──
+## Ambient sparkles that orbit the player when idle and healthy.
+## Returns the GPUParticles3D node so the caller can position it each frame.
+## The caller should move it to follow the player and free it when done.
+static func spawn_idle_regen_aura(parent: Node, pos: Vector3) -> GPUParticles3D:
+	var particles := GPUParticles3D.new()
+	particles.amount = 12
+	particles.lifetime = 2.5
+	particles.one_shot = false
+	particles.emitting = true
+	particles.explosiveness = 0.0
+	particles.randomness = 0.8
+	particles.local_coords = false
+
+	var pmat := ParticleProcessMaterial.new()
+	pmat.direction = Vector3(0, 1, 0)
+	pmat.spread = 30.0
+	pmat.gravity = Vector3(0, -1.0, 0)  # Gentle float
+	pmat.initial_velocity_min = 0.3
+	pmat.initial_velocity_max = 0.8
+	pmat.scale_min = 0.08
+	pmat.scale_max = 0.18
+	pmat.angular_velocity_min = 2.0
+	pmat.angular_velocity_max = 5.0
+	pmat.color = Color(0.4, 1.0, 0.6, 0.7)
+	# Fade in and out via color ramp
+	var ramp := Gradient.new()
+	ramp.add_point(0.0, Color(0.4, 1.0, 0.6, 0.0))
+	ramp.add_point(0.3, Color(0.4, 1.0, 0.6, 0.8))
+	ramp.add_point(0.7, Color(0.6, 1.0, 0.8, 0.6))
+	ramp.add_point(1.0, Color(0.4, 1.0, 0.6, 0.0))
+	var ramp_tex := GradientTexture1D.new()
+	ramp_tex.gradient = ramp
+	pmat.color_ramp = ramp_tex
+	particles.process_material = pmat
+
+	# Small glowing sphere particles
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.12
+	mesh.height = 0.24
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	var smat := StandardMaterial3D.new()
+	smat.albedo_color = Color(0.4, 1.0, 0.6)
+	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	smat.emission_enabled = true
+	smat.emission = Color(0.3, 1.0, 0.5)
+	smat.emission_energy_multiplier = 2.0
+	mesh.material = smat
+	particles.draw_pass_1 = mesh
+
+	parent.add_child(particles)
+	particles.global_position = pos
+	return particles
+
+## ── Phase 6: Shield break shatter effect ──
+## Fragment burst when a shield buff is broken — larger and more dramatic
+## than the existing spawn_shield_break. Spawns sharp box fragments that
+## fly outward and tumble, plus a bright light flash.
+static func spawn_shield_break_shatter(parent: Node, pos: Vector3, color: Color = Color(0.3, 0.8, 1.0)) -> void:
+	# Main fragment burst — 40 shards flying outward with tumble
+	var particles := GPUParticles3D.new()
+	particles.amount = 40
+	particles.lifetime = 1.0
+	particles.one_shot = true
+	particles.emitting = true
+	particles.explosiveness = 1.0
+	particles.randomness = 0.5
+	particles.local_coords = false
+
+	var pmat := ParticleProcessMaterial.new()
+	pmat.direction = Vector3(0, 0, 0)
+	pmat.spread = 180.0
+	pmat.gravity = Vector3(0, -8, 0)
+	pmat.initial_velocity_min = 10.0
+	pmat.initial_velocity_max = 22.0
+	pmat.scale_min = 0.15
+	pmat.scale_max = 0.45
+	pmat.angular_velocity_min = 15.0
+	pmat.angular_velocity_max = 30.0
+	pmat.color = color
+	# Fade out via ramp
+	var ramp := Gradient.new()
+	ramp.add_point(0.0, Color(color.r, color.g, color.b, 1.0))
+	ramp.add_point(0.6, Color(color.r, color.g, color.b, 0.7))
+	ramp.add_point(1.0, Color(0.1, 0.1, 0.15, 0.0))
+	var ramp_tex := GradientTexture1D.new()
+	ramp_tex.gradient = ramp
+	pmat.color_ramp = ramp_tex
+	particles.process_material = pmat
+
+	# Sharp box fragments
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.2, 0.2, 0.2)
+	var smat := StandardMaterial3D.new()
+	smat.albedo_color = color
+	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	smat.emission_enabled = true
+	smat.emission = color * 0.8
+	smat.emission_energy_multiplier = 2.0
+	mesh.material = smat
+	particles.draw_pass_1 = mesh
+
+	parent.add_child(particles)
+	particles.global_position = pos
+	_free_after_lifetime(particles, 1.5)
+
+	# Bright light flash
+	var light := OmniLight3D.new()
+	light.light_color = color
+	light.light_energy = 6.0
+	light.omni_range = 10.0
+	parent.add_child(light)
+	light.global_position = pos
+	var tween := light.create_tween()
+	tween.tween_property(light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(light, "omni_range", 1.0, 0.4).set_ease(Tween.EASE_IN)
+	tween.tween_callback(light.queue_free)

@@ -75,12 +75,12 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Biome fog colors and density values (per-biome, 0-1 normalized)
 - [x] Horizon glow band (8 translucent colored quads at low altitude)
 
-### Phase 4: Full Combat & Abilities (PARTIAL — 5 of 10 complete)
+### Phase 4: Full Combat & Abilities (COMPLETE — 10 of 10)
 - [x] Damage numbers (floating 3D Label3D that rises and fades, with pop-in animation)
 - [x] Kill combo system with milestones (x5, x10, x15... bonus XP + screen flash)
 - [x] Pickup streak system with bonus XP (every 5 pickups = milestone XP)
 - [x] Crit chain bonus (3x damage at 3+ consecutive crits, using constants)
-- [ ] Dash invulnerability frames with blink effect (partially done — invuln exists, blink needs polish)
+- [x] Dash invulnerability frames with blink effect — smooth sinusoidal blink with cyan emission shimmer
 - [x] Enemy attack windup telegraph (squash + brighten) — already done in enemy_base.gd
 - [x] Enemy spawn animation (fade-in + bounce scale) — already done in enemy_base.gd
 - [x] Enemy alert indicator ("!" above head) — already done in enemy_base.gd
@@ -100,28 +100,28 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Dash cooldown indicator (circular ring with ⚡ icon, green when ready)
 - [x] Weapon/power-up icon display (integrated into power-up timer display)
 
-### Phase 6: Particle Effects & Juice (PARTIAL — 8 of 11 complete)
+### Phase 6: Particle Effects & Juice (COMPLETE — 11 of 11)
 - [x] Movement trail particles (speed lines behind Zorp) — dash trail via GPUParticles3D
-- [ ] Idle regen sparkle stream (ambient sparkles) — TODO
+- [x] Idle regen sparkle stream (ambient sparkles) — green sparkle aura when idle and HP > 80%
 - [x] Level-up shockwave burst (expanding ring + particles) — golden ring + upward sparkles
 - [x] Combo milestone fireworks (6-color particle bursts) — tier-colored sphere bursts
 - [x] Pickup lift animation (items float up, spin, shrink) — already done + sparkle burst added
 - [x] Sky beam on rare pickup (vertical light column) — Meteor Shards get sky beam
-- [ ] Shield break shatter effect (fragment burst) — method exists, needs integration
+- [x] Shield break shatter effect (fragment burst) — 40 shard fragments + light flash, triggers on buff expiration
 - [x] Player damage flash (red model flash + screen vignette) — screen vignette via DamageFlash
 - [x] Damage number popups (crit = bigger + gold color) — already done in Phase 4
 - [x] Enemy death poof (scale down + particle burst) — death poof via GPUParticles3D
 - [x] Biome ambient particles (snowflakes, embers, spores, bubbles, dust) — follows player per biome
 - [x] Projectile impact explosion particles — small cyan burst on hit
 
-### Phase 7: Missions & Progression (TODO)
-- [ ] Mission system (collect X items, kill Y enemies, explore Z biomes)
-- [ ] Mission board / quest log UI
-- [ ] Trader NPC with trade menu (buy items with Space Gloop)
-- [ ] Monolith buff system (activate for temporary buffs)
-- [ ] Achievement system (first kill, combo milestones, biome explorer)
-- [ ] XP curve and level-up stat scaling
-- [ ] Difficulty scaling over time (more enemies, stronger, faster)
+### Phase 7: Missions & Progression (COMPLETE)
+- [x] Mission system (collect X items, kill Y enemies, explore Z biomes) — mission_system.gd with 6 mission types (COLLECT, KILL, EXPLORE, LEVEL, COMBO, SURVIVE), auto-generates replacement missions on completion, progress tracking via GameManager signals
+- [x] Mission board / quest log UI — quest_log.gd, Tab key toggles semi-transparent panel showing active missions with progress bars, descriptions, and rewards
+- [x] Trader NPC with trade menu (buy items with Space Gloop) — trade_menu.gd, E key opens trade menu near trader, 8 items purchasable with Space Gloop, click-to-buy interface
+- [x] Monolith buff system (activate for temporary buffs) — monolith.gd with buff activation on player contact, 3 buff types (Speed Surge 1.5x, Power Surge 1.4x, Wisdom Aura 2.0x XP), particle beam effect + light flash on activation, integrated into player speed/damage/XP calculations
+- [x] Achievement system (first kill, combo milestones, biome explorer) — achievement_popup.gd with 12 achievements, signal-based tracking, slide-in/out popup animations
+- [x] XP curve and level-up stat scaling — exponential XP curve (base * 1.35^level), tier-based stat scaling: HP +12+3/5lvls, damage +2+1/5lvls, speed +0.5/5lvls, level-up shockwave + message with stat breakdown
+- [x] Difficulty scaling over time (more enemies, stronger, faster) — time-based difficulty tiers every 60s, +8% HP/+5% damage/+3% speed per tier, 12% faster spawns per tier, +10 max enemies cap, tier-up notification with screen shake
 
 ### Phase 8: Physics & Interaction (PARTIAL — 5 of 7 complete) 🆕 NEW FEATURE
 - [ ] Ragdoll death for player and enemies (Skeleton + PhysicalBone3D) — TODO (requires character models with skeletons)
@@ -405,7 +405,7 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Collectible pickup light flash**: Pickups now spawn a brief OmniLight3D at the collection point that flashes the item's color and fades over 0.25s. Rare items (Meteor Shard, Quantum Fuzz, Nebula Dust, crafting materials) get a brighter (3.5 energy) and wider (5m range) flash for a juicier reward feel. Gives pickups extra punch in dark biomes where sparkle particles alone can be subtle.
 
 ## Last Updated
-Phase 20 complete. Audio & Polish: AudioManager autoload singleton with 24 procedurally generated sound effects (no external audio files needed — all synthesized at runtime as AudioStreamWAV with raw PCM data). 12-player SFX pool for overlapping sounds. Per-biome ambient music (12 unique looping drone tracks, auto-switches on biome_changed). Boss fight music (intense driving 8-second loop, auto-starts/stops with boss events). SFX integrated into all key gameplay events: shoot, dash, pulse wave, dash bump, pickup (rare items get distinct sound), level up, combo milestone, damage, heal, death, enemy hit, enemy death, boss spawn/defeated, explosion, thunder, arena rise, mutation, rift, revive, pet summon, craft, UI click. Pause menu (pause_menu.gd): P key toggles, Resume/Settings/Quit buttons, PROCESS_MODE_ALWAYS so UI works while tree is paused. Settings menu (settings_menu.gd): Master/SFX/Music volume sliders with real-time adjustment, controls reference, accessible from both pause menu and main menu. Death screen enhanced with clickable "Try Again" and "Quit to Menu" buttons (appear after fade-in). Main menu updated with Settings button. Screen shake and smooth camera follow were already implemented in camera_rig.gd (trauma-based shake, exponential lerp follow). AudioManager registered as autoload in project.godot. ALL PHASES 1-20 COMPLETE — Phase 21 (Export) intentionally skipped per instructions.
+Phase 7 (Missions & Progression), Phase 4 (Combat), and Phase 6 (Particles) TODO items completed. Phase 7: Mission system fully implemented with 6 mission types (COLLECT, KILL, EXPLORE, LEVEL, COMBO, SURVIVE) and auto-replacement on completion. Quest log UI (quest_log.gd) — Tab key toggles mission board panel with progress bars and rewards. Trader trade menu (trade_menu.gd) — E key opens click-to-buy trade menu with 8 items purchasable with Space Gloop. Monolith buff system — 3 buff types (Speed Surge 1.5x, Power Surge 1.4x, Wisdom Aura 2.0x XP) with particle activation effects, integrated into player speed/damage/XP via GameManager.get_speed_buff_mult()/get_damage_buff_mult()/get_xp_buff_mult(). XP curve — exponential growth (base * 1.35^level) with tier-based stat scaling (HP/damage/speed bonuses every 5 levels). Difficulty scaling — time-based tiers every 60s with +8% HP, +5% damage, +3% speed, 12% faster spawns, +10 max enemies, tier-up notification with screen shake. Phase 4: Dash invuln blink polished — smooth sinusoidal blink with cyan emission shimmer instead of crude visibility toggle. Phase 6: Idle regen sparkle aura — green sparkles orbit Zorp when idle and HP > 80%. Shield break shatter — 40 shard fragment burst + light flash on monolith buff expiration, color-matched to buff type.
 
 ## Enhancement Pack 1 — New Enemies, Weapon Mods & Weather
 

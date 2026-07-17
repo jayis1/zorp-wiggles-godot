@@ -66,6 +66,14 @@ const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
 const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
 const _IDLE_EMISSION_MAX: float = 1.3    # Idle emission pulse max
 
+# ── Phase 6: Idle regen sparkle aura ──
+# Ambient green sparkles that orbit Zorp when standing still and healthy.
+# Conveys a sense of regeneration and calm — the player feels safe.
+var _idle_aura: GPUParticles3D = null
+var _idle_aura_timer: float = 0.0
+const _IDLE_AURA_HP_THRESHOLD: float = 0.8  # Only show when HP > 80%
+const _IDLE_AURA_SPEED_THRESHOLD: float = 1.5  # Only when moving < 1.5 m/s
+
 # ── Low-HP heartbeat: when HP drops below 25%, Zorp's mesh pulses with a
 #    rhythmic "thump-thump" scale animation synced to a heartbeat interval.
 #    This communicates danger through motion — the player feels the urgency
@@ -211,6 +219,7 @@ func _physics_process(delta: float) -> void:
 	_update_idle_breathing(delta)
 	_update_movement_lean(delta)
 	_update_low_hp_heartbeat(delta)
+	_update_idle_aura(delta)
 
 	move_and_slide()
 
@@ -280,6 +289,46 @@ func _update_low_hp_heartbeat(delta: float) -> void:
 		# Between beats, ease emission back to the idle color
 		var idle_emission: Color = base_color * 0.4
 		_player_material.emission = _player_material.emission.lerp(idle_emission, 1.0 - exp(-8.0 * delta))
+
+		# ── Phase 6: Idle regen sparkle aura ──
+		# When the player is standing still and has high HP, spawn gentle green
+		# sparkles that float around them. When they start moving or take damage,
+		# the aura fades and is removed. Gives a calm "safe moment" visual.
+		func _update_idle_aura(delta: float) -> void:
+		if is_dashing or is_sliding or is_invuln_blinking:
+			_dismiss_idle_aura()
+			return
+
+		var hp_ratio: float = float(GameManager.player_hp) / float(GameManager.player_max_hp) \
+			if GameManager.player_max_hp > 0 else 1.0
+		var speed: float = velocity.length()
+
+		var should_show: bool = hp_ratio >= _IDLE_AURA_HP_THRESHOLD and speed < _IDLE_AURA_SPEED_THRESHOLD
+
+		if should_show:
+			_idle_aura_timer += delta
+			# Only spawn after being idle for 1.5 seconds (avoid flicker on brief stops)
+			if _idle_aura_timer > 1.5 and not _idle_aura:
+				var parent_node: Node = get_parent()
+				if parent_node:
+					_idle_aura = ParticleEffects.spawn_idle_regen_aura(parent_node, global_position)
+			# Follow the player
+			if _idle_aura and is_instance_valid(_idle_aura):
+				_idle_aura.global_position = global_position
+		else:
+			_dismiss_idle_aura()
+			_idle_aura_timer = 0.0
+
+		func _dismiss_idle_aura() -> void:
+		if _idle_aura and is_instance_valid(_idle_aura):
+			_idle_aura.emitting = false
+			var aura: GPUParticles3D = _idle_aura
+			_idle_aura = null
+			# Let existing particles finish, then free
+			var tree := get_tree()
+			if tree:
+				tree.create_timer(3.0).timeout.connect(aura.queue_free)
+		_idle_aura_timer = 0.0
 
 # ── Movement lean: tilts Zorp's mesh toward the velocity direction for a
 #    sense of weight and momentum. The tilt is proportional to speed and
@@ -387,8 +436,13 @@ func _handle_movement(delta: float) -> void:
 	var speed_mult: float = DimensionSystem.get_player_time_scale()
 	# ── Phase 17: Dynamic Weather — snow storm slows movement ──
 	speed_mult *= WeatherSystem.get_speed_multiplier()
+	# ── Phase 7: Monolith Speed Surge buff ──
+	speed_mult *= GameManager.get_speed_buff_mult()
+	# ── Phase 7: Tier-based speed bonus (+0.5 m/s per 5 levels) ──
+	var tier: int = (GameManager.player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
+	var base_speed: float = GameConstants.PLAYER_SPEED + tier * GameConstants.PLAYER_LEVEL_SPEED_TIER_BONUS
 	if move_direction.length_squared() > 0.01:
-		velocity_target = move_direction * GameConstants.PLAYER_SPEED * speed_mult
+		velocity_target = move_direction * base_speed * speed_mult
 		# Snap Y velocity to zero (no vertical movement)
 		velocity_target.y = 0
 	else:
@@ -547,14 +601,32 @@ func get_forward_dir_fallback() -> Vector3:
 
 func _handle_invuln_blink(delta: float) -> void:
 	if GameManager.player_invuln_timer > 0:
-		# Blink effect — toggle visibility rapidly
-		var blink_phase = fmod(GameManager.player_invuln_timer * GameConstants.PLAYER_BLINK_RATE, 1.0)
-		blink_visible = blink_phase < 0.5
+		is_invuln_blinking = true
+		# ── Phase 4: Dash invulnerability blink effect polish ──
+		# Instead of a crude 50/50 visibility toggle, use a smooth sinusoidal
+		# blink that eases in/out, plus an emission flash on the mesh material
+		# for a "phasing through danger" shimmer effect.
+		var blink_phase: float = fmod(GameManager.player_invuln_timer * GameConstants.PLAYER_BLINK_RATE, 1.0)
+		# Smooth sine-wave blink: visible most of the time, brief dips to ~20% opacity
+		var blink_t: float = 0.5 + 0.5 * sin(blink_phase * TAU)
+		blink_visible = blink_t > 0.15
+
 		if mesh:
 			mesh.visible = blink_visible
+			# Emission flash during invuln — pulsing white-cyan shimmer
+			if _player_material:
+				var flash_intensity: float = 0.5 + 0.5 * sin(blink_phase * TAU * 2.0)
+				_player_material.emission_energy_multiplier = 1.0 + flash_intensity * 2.5
+				# Tint emission slightly cyan during invuln
+				_player_material.emission = Color(0.6, 1.0, 1.0)
 	else:
+		is_invuln_blinking = false
 		if mesh:
 			mesh.visible = true
+		# Reset emission to normal
+		if _player_material:
+			_player_material.emission_energy_multiplier = 1.0
+			_player_material.emission = base_color
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Right-click camera rotation
@@ -652,7 +724,12 @@ func _spawn_projectile() -> void:
 		mod_speed_mult = WeaponModSystem.get_equipped_speed_mult()
 	
 	# Base damage scales with player level (matches original Ursina: level * bonus)
-	var base_dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + GameManager.player_level * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
+	# ── Phase 7: Tier-based damage scaling (+1 per 5 levels) ──
+	var tier: int = (GameManager.player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
+	var level_dmg: int = GameManager.player_level * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS + tier * GameConstants.PLAYER_LEVEL_DMG_TIER_BONUS
+	var base_dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + level_dmg
+	# ── Phase 7: Monolith Power Surge damage buff ──
+	base_dmg = int(base_dmg * GameManager.get_damage_buff_mult())
 	var mod_dmg: int = int(base_dmg * mod_dmg_mult)
 	var mod_speed: float = GameConstants.PROJECTILE_SPEED * mod_speed_mult
 	

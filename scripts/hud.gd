@@ -227,6 +227,21 @@ func _ready() -> void:
 	coop_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(coop_ctrl)
 
+	# ── Phase 7: Quest Log / Mission Board ──
+	var ql_script := load("res://scripts/quest_log.gd")
+	var ql_ctrl := Control.new()
+	ql_ctrl.set_script(ql_script)
+	ql_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ql_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(ql_ctrl)
+
+	# ── Phase 7: Trader Trade Menu ──
+	var tm_script := load("res://scripts/trade_menu.gd")
+	var tm_ctrl := Control.new()
+	tm_ctrl.set_script(tm_script)
+	tm_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(tm_ctrl)
+
 	# Initialize displays
 	_update_all_displays()
 

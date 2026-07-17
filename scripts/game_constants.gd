@@ -27,6 +27,18 @@ const PLAYER_DASH_INVULN_DURATION: float = 0.3
 const PLAYER_LEVEL_XP_MULT: float = 1.35
 const PLAYER_LEVEL_HP_BONUS: int = 12
 const PLAYER_LEVEL_DMG_BONUS: int = 2
+# ── Phase 7: XP curve and level-up stat scaling ──
+# XP follows a quadratic curve: xp_to_next = base * (1.35^level) with a minimum
+# floor so early levels still progress smoothly. Stat scaling per level:
+#   HP: +12 base, plus +3 per 5 levels (tier bonus)
+#   Damage: +2 base, plus +1 per 5 levels (tier bonus)
+#   Speed: +0.5 m/s per 5 levels (subtle, keeps mobility relevant)
+const PLAYER_LEVEL_XP_CURVE_BASE: int = 80
+const PLAYER_LEVEL_XP_CURVE_EXP: float = 1.35
+const PLAYER_LEVEL_HP_TIER_BONUS: int = 3   # Extra HP per 5 levels
+const PLAYER_LEVEL_DMG_TIER_BONUS: int = 1  # Extra damage per 5 levels
+const PLAYER_LEVEL_SPEED_TIER_BONUS: float = 0.5  # Extra speed per 5 levels
+const PLAYER_LEVEL_HEAL_PERCENT: float = 0.15  # Heal 15% max HP on level up
 
 # ─── Combat ──────────────────────────────────────────────────────────────────
 const SHOOT_COOLDOWN: float = 0.11
@@ -127,6 +139,16 @@ const DIFFICULTY_SCALE_DISTANCE: float = 100.0
 const SPAWN_DENSITY_NEAR_RADIUS: float = 25.0
 const SPAWN_DENSITY_NEAR_THRESHOLD: int = 8
 const SPAWN_DENSITY_SLOWDOWN: float = 0.5
+# ── Phase 7: Difficulty scaling over time ──
+# As game_time increases, enemies spawn faster, get stronger, and more can be active.
+# These are applied ON TOP of the player-level-based scaling.
+const DIFFICULTY_TIME_INTERVAL: float = 60.0  # Every 60 seconds, difficulty tier increases
+const DIFFICULTY_TIME_SPAWN_ACCEL: float = 0.12  # Spawn interval reduced by 12% per time-tier
+const DIFFICULTY_TIME_HP_SCALE: float = 0.08  # +8% enemy HP per time-tier
+const DIFFICULTY_TIME_DAMAGE_SCALE: float = 0.05  # +5% enemy damage per time-tier
+const DIFFICULTY_TIME_SPEED_SCALE: float = 0.03  # +3% enemy speed per time-tier
+const DIFFICULTY_TIME_MAX_TIER: int = 10  # Cap at 10 time-tiers (10 minutes)
+const DIFFICULTY_TIME_MAX_ENEMY_BONUS: int = 10  # Max +10 additional enemies from time scaling
 const ENEMY_SPAWN_WARNING_DURATION: float = 1.2
 
 # ─── Plasma Serpent ───────────────────────────────────────────────────────────
