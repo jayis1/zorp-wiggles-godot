@@ -33,7 +33,8 @@ func _ready() -> void:
 		disc.radial_segments = 48
 		disc.rings = 4
 		vortex_plane.mesh = disc
-		vortex_plane.rotate_x(deg_to_rad(90))  # Lay flat on ground
+		# CylinderMesh axis is along Y; with height=0.1 it's already a flat
+		# disc lying on the XZ plane. No rotation needed.
 
 		# Apply the rift vortex shader
 		var shader: Shader = load("res://assets/shaders/rift_vortex.gdshader")

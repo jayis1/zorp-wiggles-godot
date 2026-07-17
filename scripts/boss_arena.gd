@@ -198,7 +198,8 @@ func _build_arena() -> void:
 	_floor_mat.emission_energy_multiplier = 0.8
 	_floor_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_floor_disc.material_override = _floor_mat
-	_floor_disc.rotate_x(deg_to_rad(90))
+	# CylinderMesh is already vertical (axis along Y) — no rotation needed
+	# for a flat floor disc. The top/bottom circular faces are already horizontal.
 	get_parent().add_child(_floor_disc)
 	_floor_disc.global_position = _center + Vector3(0, 0.08, 0)
 
@@ -353,9 +354,8 @@ func _shrink_arena() -> void:
 	# Shrink floor disc
 	if _floor_disc:
 		var floor_tween := _floor_disc.create_tween()
-		var new_scale := Vector3(new_radius / _current_radius, 1.0, new_radius / _current_radius)
-		# We need to account for the rotated disc (rotated 90° on X)
-		# Scale on local Z maps to world Y, but since it's flat, X/Z scale is what matters
+		# CylinderMesh axis is along Y; circular faces are in the XZ plane.
+		# Scale X/Z to shrink the radius, keep Y (thickness) unchanged.
 		floor_tween.tween_property(_floor_disc, "scale",
 			Vector3(new_radius / _current_radius, 1.0, new_radius / _current_radius), 1.5) \
 			.set_ease(Tween.EASE_IN_OUT)

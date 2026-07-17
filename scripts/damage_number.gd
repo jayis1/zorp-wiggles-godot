@@ -55,6 +55,30 @@ func _process(delta: float) -> void:
 	global_position.x += _drift_x * delta
 	global_position.z += _drift_z * delta
 
+	# ── Crit / kill jitter ── Critical and killing hits get a brief horizontal
+	# micro-jitter (a fast side-to-side wobble) on top of the drift, so they
+	# feel more visceral than normal hits. The jitter is driven by a decaying
+	# envelope that's strongest right after the pop-in completes (when the
+	# number has "landed" at its base scale) and eases to zero over ~0.4s so
+	# the number settles smoothly before the fade-out begins. The wobble uses
+	# a high-frequency sine (28 Hz) so it reads as a rapid "impact vibration"
+	# rather than a slow sway. Normal (non-crit) hits skip this entirely to
+	# preserve visual hierarchy — only big hits vibrate.
+	if (is_crit or is_kill) and popin_timer <= 0.0:
+		# Time since pop-in finished, clamped to the jitter envelope window.
+		var since_popin: float = clampf(
+			(max_lifetime - lifetime) - GameConstants.DMG_NUMBER_POPIN_DURATION,
+			0.0, 0.4)
+		if since_popin < 0.4:
+			var env: float = 1.0 - (since_popin / 0.4)  # 1 → 0 linear decay
+			var env_eased: float = env * env  # quadratic so it starts strong
+			var jitter_amp: float = 0.18 * env_eased  # Max ~18cm sideways
+			# Incoherent X/Z frequencies so the wobble isn't a clean circle
+			var wob_x: float = sin(since_popin * 28.0) * jitter_amp
+			var wob_z: float = sin(since_popin * 31.0 + 1.7) * jitter_amp * 0.6
+			global_position.x += wob_x * delta * 10.0
+			global_position.z += wob_z * delta * 10.0
+
 	# Fade out in the second half of life
 	var life_frac: float = lifetime / max_lifetime
 	if life_frac < GameConstants.DMG_NUMBER_FADE_START:

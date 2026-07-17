@@ -78,12 +78,14 @@ static func spawn_levelup_burst(parent: Node, pos: Vector3) -> void:
 	mat.emission_enabled = true
 	mat.emission = Color(1.0, 0.8, 0.0) * 0.5
 	ring.material_override = mat
-	ring.rotate_x(deg_to_rad(90))  # Lay flat
+	# CylinderMesh axis is along Y; with height=0.1 it's already a flat disc
+	# lying on the XZ plane. No rotation needed.
 	parent.add_child(ring)
 	ring.global_position = pos
 
 	var ring_tween := ring.create_tween()
-	ring_tween.tween_property(ring, "scale", Vector3(8, 8, 1), 0.5) \
+	# Scale X and Z (the radius in the XZ plane), keep Y (thickness) at 1
+	ring_tween.tween_property(ring, "scale", Vector3(8, 1, 8), 0.5) \
 		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_CUBIC)
 	ring_tween.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.5)
@@ -279,7 +281,8 @@ static func spawn_death_shockwave(parent: Node, pos: Vector3, color: Color = Col
 	mat.emission = color * 0.6
 	mat.emission_energy_multiplier = 2.0
 	ring.material_override = mat
-	ring.rotate_x(deg_to_rad(90))  # Lay flat on ground
+	# CylinderMesh axis is along Y; with height=0.08 it's already a flat disc
+	# lying on the XZ plane. No rotation needed.
 	parent.add_child(ring)
 	ring.global_position = pos + Vector3(0, 0.05, 0)
 	ring.scale = Vector3.ONE * 0.3
@@ -287,7 +290,8 @@ static func spawn_death_shockwave(parent: Node, pos: Vector3, color: Color = Col
 	# Expand + fade with ease-out for a sharp burst that decelerates
 	var ring_tween := ring.create_tween()
 	ring_tween.set_parallel(true)
-	ring_tween.tween_property(ring, "scale", Vector3(max_radius, max_radius, 1.0), 0.4) \
+	# Scale X and Z (radius in XZ plane), keep Y (thickness) at 1
+	ring_tween.tween_property(ring, "scale", Vector3(max_radius, 1.0, max_radius), 0.4) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	ring_tween.tween_property(mat, "albedo_color:a", 0.0, 0.4) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)

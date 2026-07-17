@@ -232,7 +232,8 @@ func _build_visuals() -> void:
 	_telegraph_mat.emission_energy_multiplier = 1.5
 	_telegraph_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_telegraph_mesh.material_override = _telegraph_mat
-	_telegraph_mesh.rotate_x(deg_to_rad(90))  # Lay flat on ground
+	# CylinderMesh axis is along Y; with height=0.1 it's already a flat disc
+	# lying on the XZ plane. No rotation needed.
 	add_child(_telegraph_mesh)
 	_telegraph_mesh.position = Vector3(0, 0.06, 0)  # Slightly above ground
 
@@ -273,7 +274,8 @@ func _build_visuals() -> void:
 			ring.radial_segments = 32
 			_hazard_mesh.mesh = ring
 			_hazard_mesh.position = Vector3(0, 0.5, 0)
-			_hazard_mesh.rotate_x(deg_to_rad(90))
+			# CylinderMesh axis is along Y; with height=0.3 it's already a flat ring
+			# lying on the XZ plane. No rotation needed.
 
 	_hazard_mesh.material_override = _mat
 	_hazard_mesh.visible = false  # Hidden during telegraph (except falling crystal anim)

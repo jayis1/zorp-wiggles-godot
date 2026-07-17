@@ -78,7 +78,9 @@ func _physics_process(delta: float) -> void:
 	# to reach the desired physical size. Previously this scaled by the
 	# ratio (0→1), making the ring only 0.5m at max — nearly invisible.
 	var ring_scale: float = current_radius / _BASE_MESH_RADIUS
-	var target_scale := Vector3(ring_scale, ring_scale, 1.0)
+	# CylinderMesh axis is along Y; radius is in the XZ plane.
+	# Scale X and Z to expand the ring radius; keep Y (thickness) at 1.
+	var target_scale := Vector3(ring_scale, 1.0, ring_scale)
 	scale = scale.lerp(target_scale, 1.0 - exp(-12.0 * delta))
 
 	# Check player hit — damage once when ring passes through

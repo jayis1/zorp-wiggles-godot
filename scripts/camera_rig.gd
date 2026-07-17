@@ -189,11 +189,30 @@ func _apply_screen_shake(delta: float) -> void:
 	var shake_amount: float = _trauma * _trauma
 
 	if shake_amount > 0.001:
-		# Use time-based pseudo-noise for shake (sin with different frequencies)
+		# Multi-octave pseudo-noise for shake. A single sine has visible
+		# periodicity — the shake looks mechanical and rhythmic rather than
+		# chaotic. Adding a high-frequency second octave (3.7x faster, lower
+		# amplitude) breaks up the pattern into organic, non-repeating noise
+		# that better resembles a physical camera impact. A third sub-octave
+		# (0.37x) adds a slow drift so heavy shakes have weighty sway on top
+		# of the rattle. This is the standard "1/f-ish noise" trick used in
+		# Vlambeer-style juice.
 		var t: float = Time.get_ticks_msec() * 0.05
-		var noise_x: float = sin(t + _shake_seed.x) * max_shake_offset * shake_amount
-		var noise_y: float = sin(t * 1.3 + _shake_seed.y) * max_shake_offset * shake_amount
-		var rot_z: float = sin(t * 0.9 + _shake_seed.z) * max_shake_rotation * shake_amount
+		var noise_x: float = (
+			sin(t + _shake_seed.x) * 0.65
+			+ sin(t * 3.7 + _shake_seed.x * 1.7) * 0.25
+			+ sin(t * 0.37 + _shake_seed.x * 0.5) * 0.10
+		) * max_shake_offset * shake_amount
+		var noise_y: float = (
+			sin(t * 1.3 + _shake_seed.y) * 0.65
+			+ sin(t * 4.1 + _shake_seed.y * 2.3) * 0.25
+			+ sin(t * 0.51 + _shake_seed.y * 0.6) * 0.10
+		) * max_shake_offset * shake_amount
+		var rot_z: float = (
+			sin(t * 0.9 + _shake_seed.z) * 0.65
+			+ sin(t * 3.3 + _shake_seed.z * 1.9) * 0.25
+			+ sin(t * 0.43 + _shake_seed.z * 0.4) * 0.10
+		) * max_shake_rotation * shake_amount
 
 		# Directional bias: blend the noise with a directional offset that
 		# pushes the camera toward the impact source. The bias fades with

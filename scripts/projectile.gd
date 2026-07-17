@@ -168,13 +168,25 @@ func _physics_process(delta: float) -> void:
 ## self-bound tween would be killed and time_scale would stay frozen forever.
 ## We restore to 1.0 (not a saved value) because DimensionSystem uses per-node
 ## `_time_scale` multipliers, so Engine.time_scale should always be 1.0.
+##
+## IMPORTANT: `SceneTree.create_timer()` respects `Engine.time_scale` by
+## default. If we set time_scale=0.08 and then schedule a 0.045s restore
+## timer without `ignore_time_scale`, the timer fires in SCALED time — i.e.
+## after 0.045/0.08 ≈ 0.56s of real time. The freeze would last ~12x longer
+## than intended, making crits feel like the game is stuttering instead of
+## delivering a punchy 45ms freeze. Passing `ignore_time_scale=true` makes the
+## timer count real-time seconds regardless of the current time scale, so
+## the freeze restores exactly when intended.
 func _trigger_hitstop() -> void:
 	if _hitstop_cooldown > 0.0:
 		return
 	_hitstop_cooldown = HITSTOP_COOLDOWN
 	Engine.time_scale = HITSTOP_TIME_SCALE
-	# Schedule restore on the scene tree — survives self queue_free()
-	var timer := get_tree().create_timer(HITSTOP_DURATION)
+	# Schedule restore on the scene tree — survives self queue_free().
+	# `ignore_time_scale=true` is critical: without it the restore timer
+	# ticks at 8% speed (the freeze time scale), so the "brief" freeze
+	# would last over half a second — far too long.
+	var timer := get_tree().create_timer(HITSTOP_DURATION, true, false, true)
 	timer.timeout.connect(func():
 		Engine.time_scale = 1.0
 	)
