@@ -273,12 +273,14 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [ ] Settings menu (resolution, volume, controls)
 - [ ] Death screen with full stats and "Try Again" button
 
-### Phase 21: Export & Distribution (TODO)
+### Phase 21: Export & Distribution (SKIP — not scheduled)
 - [ ] Windows export (.exe)
 - [ ] Linux export (.x86_64)
 - [ ] macOS export (.app)
 - [ ] Web export (HTML5 via Emscripten)
 - [ ] Export presets configured in project.godot
+
+NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (export). Stop after Phase 20 is complete.
 
 ## Notes
 - All Ursina color.rgb() 0-255 values converted to Godot Color() 0-1 range
