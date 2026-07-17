@@ -193,6 +193,7 @@ func _die() -> void:
 
 	# Boss defeated signal
 	GameManager.boss_defeated.emit(self)
+	GameManager.clear_current_boss()
 	GameManager.register_kill()
 	GameManager.add_score(500)
 	GameManager.add_message("🌑 Shadow Clone defeated! +500 score")

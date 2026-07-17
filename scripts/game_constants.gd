@@ -1033,3 +1033,53 @@ const WEATHER_INFO: Dictionary = {
 	Weather.THUNDERSTORM: {"name": "Thunderstorm", "icon": "⚡", "color": Color(0.5, 0.6, 1.0)},
 	Weather.SNOW_STORM: {"name": "Snow Storm", "icon": "❄", "color": Color(0.8, 0.9, 1.0)},
 }
+
+# ─── Phase 18: Boss Arenas ───────────────────────────────────────────────────
+# Arena types — each morphs the terrain into an enclosed battlefield
+enum ArenaType {
+	LAVA_ARENA,        # Drake — lava geysers, shrinking floor
+	CRYSTAL_ARENA,     # Serpent King — falling stalactites, crystal walls
+	VOID_ARENA,        # Graviton Prime — gravity shifts, void shockwaves
+}
+
+# Arena geometry
+const ARENA_RADIUS: float = 28.0              # Initial radius of the arena floor
+const ARENA_WALL_HEIGHT: float = 12.0         # Height of arena walls
+const ARENA_WALL_THICKNESS: float = 2.0       # Wall collider thickness
+const ARENA_RISE_DURATION: float = 2.0        # Time for walls to rise from ground
+const ARENA_SHRINK_INTERVAL: float = 15.0     # Seconds between shrink stages
+const ARENA_SHRINK_AMOUNT: float = 4.0        # Meters of radius lost per shrink stage
+const ARENA_MIN_RADIUS: float = 10.0          # Minimum radius (walls stop shrinking)
+const ARENA_TRANSITION_PARTICLES: int = 200   # Particle count for arena rise effect
+
+# Hazard timing
+const ARENA_HAZARD_INTERVAL_MIN: float = 4.0  # Min seconds between hazard spawns
+const ARENA_HAZARD_INTERVAL_MAX: float = 8.0  # Max seconds between hazard spawns
+const ARENA_HAZARD_TELEGRAPH_TIME: float = 1.5  # Warning before hazard activates
+const ARENA_HAZARD_DAMAGE: int = 30           # Base damage from arena hazards
+const ARENA_HAZARD_RADIUS: float = 4.0        # AoE radius for hazard damage
+const ARENA_HAZARD_LIFETIME: float = 3.0      # How long a hazard remains active
+
+# Hazard-specific
+const LAVA_GEYSER_HEIGHT: float = 10.0        # Height of lava geyser column
+const LAVA_GEYSER_KNOCKBACK: float = 20.0     # Knockback force from geyser eruption
+const FALLING_CRYSTAL_HEIGHT: float = 25.0    # Drop height for falling crystals
+const FALLING_CRYSTAL_DAMAGE: int = 45        # Damage from falling crystal
+const VOID_SHOCKWAVE_SPEED: float = 12.0      # Expansion speed of void shockwave
+const VOID_SHOCKWAVE_MAX_RADIUS: float = 15.0 # Max radius of void shockwave
+
+# Arena exit portal
+const ARENA_EXIT_PORTAL_LIFETIME: float = 30.0  # Seconds exit portal stays after boss dies
+
+# Arena colors (0-1 normalized)
+const ARENA_LAVA_COLOR: Color = Color(1.0, 0.3, 0.05)
+const ARENA_LAVA_GLOW: Color = Color(1.0, 0.5, 0.1)
+const ARENA_CRYSTAL_COLOR: Color = Color(0.4, 0.7, 1.0)
+const ARENA_CRYSTAL_GLOW: Color = Color(0.3, 0.8, 1.0)
+const ARENA_VOID_COLOR: Color = Color(0.5, 0.0, 0.8)
+const ARENA_VOID_GLOW: Color = Color(0.6, 0.1, 1.0)
+const ARENA_WALL_COLOR: Color = Color(0.3, 0.3, 0.35)
+
+# Boss arena trigger: time between boss spawns if none active (seconds)
+const BOSS_ARENA_SPAWN_INTERVAL: float = 120.0  # 2 minutes between boss spawns
+const BOSS_ARENA_SPAWN_MIN_SCORE: int = 500     # Minimum score before first boss arena

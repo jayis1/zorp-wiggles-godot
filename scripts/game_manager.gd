@@ -333,3 +333,10 @@ func add_message(text: String) -> void:
 	messages.append(text)
 	message_added.emit(text)
 	print("[ZorpWiggles] %s" % text)
+
+# ── Phase 18: Boss Arena — track current boss ──
+func set_current_boss(boss: Node) -> void:
+	current_boss = boss
+
+func clear_current_boss() -> void:
+	current_boss = null

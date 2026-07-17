@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 17 — Dynamic Weather (COMPLETE)
+## Status: PHASE 18 — Boss Arenas (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -285,17 +285,24 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Player movement speed × weather multiplier, fire rate × solar flare multiplier, slide friction × snow storm multiplier
 - [x] Enemy detection range × fog multiplier, enemy speed × snow storm multiplier
 
-### Phase 18: Boss Arenas (TODO) 🆕 NEW FEATURE
-- [ ] Arena generation system (terrain morphs when boss spawns)
-- [ ] Arena walls (impassable borders around fight zone)
-- [ ] Arena cover (destructible pillars for hiding)
-- [ ] Environmental hazards (lava geysers, falling crystals, shockwaves)
-- [ ] Arena shrinking (walls close in as fight progresses)
-- [ ] Arena transition effect (ground ripples, walls rise)
-- [ ] Arena exit (portal appears on boss death)
-- [ ] Drake arena: lava arena with geysers and shrinking floor
-- [ ] Serpent King arena: crystal arena with falling stalactites
-- [ ] Graviton Prime arena: void arena with gravity shifts
+### Phase 18: Boss Arenas ✅ COMPLETE 🆕 NEW FEATURE
+- [x] Arena generation system (terrain morphs when boss spawns) — `boss_arena.gd` + `.tscn`, Node3D controller listens to `boss_spawned`/`boss_defeated` signals, builds enclosed arena around player position
+- [x] Arena walls (impassable borders around fight zone) — 12 StaticBody3D wall segments in a ring, animated rising from underground via tween (2s duration), colored per arena type with emission glow
+- [x] Arena cover (destructible pillars for hiding) — 6 Destructible pillars spawned at mid-radius, scaled 1.5x with 60 HP, crystal variant for crystal arena
+- [x] Environmental hazards (lava geysers, falling crystals, shockwaves) — `arena_hazard.gd` + `.tscn`, 3 hazard types with telegraph warning (1.5s pulsing ground circle), activation particles, damage + knockback, fade-out
+- [x] Arena shrinking (walls close in as fight progresses) — Lava arena shrinks every 15s by 4m (min 10m radius), walls animate inward, floor disc shrinks, particle burst + camera shake + warning message
+- [x] Arena transition effect (ground ripples, walls rise) — 200-particle explosion burst on arena formation, camera shake (0.4 trauma), pulsing floor disc emission, walls rise with EASE_OUT + TRANS_CUBIC
+- [x] Arena exit (portal appears on boss death) — Portal spawned at arena center on boss death, lasts 30s for player to teleport away
+- [x] Drake arena: lava arena with geysers and shrinking floor — ArenaType.LAVA_ARENA, LAVA_GEYSER + FALLING_CRYSTAL hazards, shrinking enabled
+- [x] Serpent King arena: crystal arena with falling stalactites — ArenaType.CRYSTAL_ARENA, FALLING_CRYSTAL + VOID_SHOCKWAVE hazards, crystal cover pillars
+- [x] Graviton Prime arena: void arena with gravity shifts — ArenaType.VOID_ARENA, VOID_SHOCKWAVE + LAVA_GEYSER hazards
+- [x] Boss auto-spawn system — BossArena auto-spawns bosses every 120s if player score ≥500, rotates through Drake/Serpent/Graviton, non-Drake bosses promoted with `is_arena_boss` flag + boosted HP
+- [x] `is_arena_boss` flag on EnemyBase — non-Drake arena bosses emit `boss_defeated` on death, clearing `current_boss`
+- [x] `GameManager.set_current_boss()`/`clear_current_boss()` — proper boss tracking for all boss types
+- [x] Navigation mesh rebuild after arena construction/removal — `call_deferred("_rebuild_nav")` ensures NavigationManager updates after walls/cover added/removed
+- [x] Hazard types: LAVA_GEYSER (tall column, knockback), FALLING_CRYSTAL (drops from height, extra damage, shatter effect), VOID_SHOCKWAVE (expanding ring, continuous damage)
+- [x] Hazard telegraph system — 1.5s pulsing ground circle warning before activation, falling crystal visible during telegraph (drops from 25m)
+- [x] `BossArena` node added to `main.tscn`
 
 ### Phase 19: Local Co-op (TODO) 🆕 NEW FEATURE
 - [ ] Player 2 character "Zerp" (different color, slightly different abilities)
@@ -380,4 +387,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Collectible rarity-based spin + organic wobble**: Collectibles now spin at rarity-tiered speeds (common=1.5 rad/s, Star Fruit/Health=2.2, Meteor Shard/Quantum Fuzz/Nebula Dust/crafting materials=3.0) creating a visual hierarchy where valuable pickups draw the eye. Items also drift in a gentle figure-8 pattern (sin/cos on X/Z, 0.12m amplitude) when NOT being magnetically pulled, making them feel suspended in alien gravity rather than pinned to a rail. The wobble anchor updates to the current position when not pulling, so items released from a pull resume wobbling from where they left off rather than snapping back to spawn. `is_magnetic` is now reset each frame and only set true while actively pulling, fixing a latent bug where the flag stayed true forever after first pull.
 
 ## Last Updated
-Phase 17 complete. Dynamic Weather System: New `weather_system.gd` autoload singleton cycles through 6 weather states (Clear, Acid Rain, Solar Flare, Fog, Thunderstorm, Snow Storm) with 35-70s duration each and 4s cross-fade transitions. Weather selection is biome-biased via `WEATHER_BIOME_AFFINITY` table (e.g. acid rain more likely in toxic bog, solar flare in lava/desert, fog in water/swamp, thunderstorm in water/grass, snow storm in snow/crystal). Each weather has gameplay effects: Acid Rain damages exposed entities every 1s (75% reduction under shelter via upward raycast), Solar Flare boosts fire rate 1.5x with pulsing orange light, Fog reduces enemy detection range to 50% and triples WorldEnvironment fog density, Thunderstorm spawns telegraphed lightning strikes (1.2s warning, 45 AoE damage in 6m radius, light flash + camera shake), Snow Storm slows movement to 0.7x and reduces slide friction to 0.4x for icy physics. Weather particles (300-400 GPUParticles3D per type) follow the player: acid rain streaks, rain drops, blowing snow, fog motes, rising embers. Weather-dependent enemy spawning via `WEATHER_SPAWN_BONUS` table — Void Wisps during thunderstorms, Spore Spitters during acid rain, Sentinels during fog/snow. `weather_indicator.gd` HUD panel (top-right) shows current weather icon + name + countdown timer bar, with transition label showing upcoming weather. WorldEnvironment added to `main.tscn` with baseline fog for weather-controlled density. `WeatherSystem` registered as autoload. Phases 18-21 planned.
+Phase 18 complete. Boss Arena System: New `boss_arena.gd` controller builds an enclosed arena around the player when any boss spawns, with 12 wall segments (StaticBody3D) that rise from the ground via tween animation, a colored floor disc overlay, and 6 destructible cover pillars. Three arena types determined by boss: LAVA_ARENA (Drake — lava geysers + shrinking floor every 15s), CRYSTAL_ARENA (Serpent King — falling crystal stalactites), VOID_ARENA (Graviton Prime — expanding void shockwaves). New `arena_hazard.gd` with 3 hazard types: LAVA_GEYSER (tall column, 30 damage + knockback), FALLING_CRYSTAL (drops from 25m, 45 damage + shatter), VOID_SHOCKWAVE (expanding ring, continuous damage). Each hazard has a 1.5s telegraph warning (pulsing ground circle), activation particle burst, and fade-out. BossArena auto-spawns bosses every 120s if player score ≥500, rotating through Drake/Serpent/Graviton. Non-Drake bosses promoted with `is_arena_boss` flag + boosted HP (250 + level*20). On boss death, walls sink, floor fades, exit portal spawns at center (30s lifetime). Navigation mesh rebuilt after arena construction/removal. `GameManager.set_current_boss()`/`clear_current_boss()` for proper boss tracking. Phase 19-20 planned.

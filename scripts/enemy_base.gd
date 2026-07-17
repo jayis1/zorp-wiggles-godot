@@ -21,6 +21,11 @@ signal enemy_hit(enemy: EnemyBase, damage: int)
 @export var score_reward: int = 100
 @export var enemy_type: int = GameConstants.EnemyType.BLOB
 
+# ── Phase 18: Boss Arena — flag for arena-promoted bosses ──
+# Set by BossArena when auto-spawning a non-Drake enemy as a boss.
+# When true, _die() emits boss_defeated so the arena dissolves.
+var is_arena_boss: bool = false
+
 # ─── State ────────────────────────────────────────────────────────────────────
 var hp: int = 50
 var is_alerted: bool = false
@@ -464,6 +469,10 @@ func _die() -> void:
 	enemy_died.emit(self)
 	# Phase 5: Kill feed signal
 	GameManager.enemy_killed.emit(enemy_name, "Zorp")
+	# ── Phase 18: Boss Arena — emit boss_defeated for arena-promoted bosses ──
+	if is_arena_boss:
+		GameManager.boss_defeated.emit(self)
+		GameManager.clear_current_boss()
 	# Remove from GameManager's enemy list to prevent the array from growing
 	# with invalid references over time (performance leak).
 	GameManager.enemies.erase(self)

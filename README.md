@@ -321,7 +321,27 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - **Weather-dependent enemy spawning**: Void Wisps during thunderstorms, Spore Spitters during acid rain, Sentinels during fog/snow
 - HUD weather indicator (top-right): shows current weather icon, name, countdown timer bar, and upcoming weather during transitions
 
-**Remaining phases:** Boss arenas, co-op, audio & polish.
+**Phase 18 (Boss Arenas):** ✅ Complete — 🆕 New Feature
+- When a boss spawns, the terrain around the player morphs into an **enclosed arena** with rising walls, a colored floor disc, and destructible cover pillars
+- **3 arena types** determined by the boss:
+  - **Lava Arena** (Plasma Drake): Lava geysers erupt from the ground + the arena floor **shrinks every 15 seconds**, walls closing in to increase pressure
+  - **Crystal Arena** (Plasma Serpent): Falling crystal stalactites drop from above + crystal cover pillars
+  - **Void Arena** (Graviton): Expanding void shockwaves push entities away
+- **12 wall segments** (StaticBody3D) rise from underground with a 2s tween animation, forming an impassable ring around the fight zone
+- **6 destructible cover pillars** (tougher than normal crates, 60 HP) provide tactical positioning
+- **3 environmental hazard types**:
+  - **Lava Geyser**: Erupts as a tall column after 1.5s telegraph, dealing 30 damage + knockback
+  - **Falling Crystal**: Drops from 25m height with a shadow telegraph, 45 damage + shatter effect on impact
+  - **Void Shockwave**: Expands outward continuously, pushing and damaging entities in its path
+- Each hazard has a **telegraph warning** (pulsing ground circle for 1.5s) so players can dodge
+- **Arena shrinking** (Lava arena): Walls close in by 4m every 15s (minimum 10m radius), with particle bursts + camera shake + warning messages
+- **Arena transition effect**: 200-particle explosion on formation, 0.4 trauma camera shake, pulsing floor emission
+- On boss death: walls sink back underground, floor fades, and an **exit portal** spawns at the arena center (lasts 30s)
+- **Auto-spawn system**: BossArena auto-spawns bosses every 120s if player score ≥500, rotating through Drake/Serpent/Graviton for variety
+- Non-Drake bosses (Serpent, Graviton) are promoted to boss-tier with boosted HP (250 + player level × 20) and the `is_arena_boss` flag
+- Navigation mesh is rebuilt after arena construction and removal so enemy pathfinding accounts for walls and cover
+
+**Remaining phases:** Co-op, audio & polish.
 
 ## License
 

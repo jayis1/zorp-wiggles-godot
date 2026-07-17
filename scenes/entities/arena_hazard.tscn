@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://arena_hazard"]
+
+[ext_resource type="Script" path="res://scripts/arena_hazard.gd" id="1_ah"]
+
+[node name="ArenaHazard" type="Node3D"]
+script = ExtResource("1_ah")
