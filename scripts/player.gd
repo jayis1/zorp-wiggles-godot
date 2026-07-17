@@ -46,6 +46,15 @@ const SHOOT_BUFFER_WINDOW: float = 0.12  # Seconds to remember a shoot press
 var _pulse_buffer_timer: float = 0.0
 const PULSE_BUFFER_WINDOW: float = 0.18  # Seconds to remember pulse wave press
 
+# ── Coyote time for dash: if the dash cooldown expired very recently (within
+#    this window), a dash press fires immediately even if pressed a hair too
+#    early. This bridges the gap between the player's perception of "cooldown
+#    is basically done" and the actual timer, making dash feel snappier when
+#    spamming it in combat. The window is short (80ms) so it doesn't trivialize
+#    the cooldown — it just rounds up the last few frames.
+var _dash_coyote_timer: float = 0.0
+const DASH_COYOTE_WINDOW: float = 0.08  # Grace period after cooldown ends
+
 # ─── Visual ───────────────────────────────────────────────────────────────────
 var base_color: Color = Color(0.3, 0.85, 0.3)  # Alien green
 var is_invuln_blinking: bool = false
@@ -161,7 +170,19 @@ func _physics_process(delta: float) -> void:
 		shoot_cooldown_timer -= delta
 	if pulse_wave_cooldown_timer > 0:
 		pulse_wave_cooldown_timer -= delta
-	
+
+	# ── Coyote time: track the brief window after dash cooldown expires.
+	#    While _dash_coyote_timer > 0, a dash press fires even if the cooldown
+	#    timer just barely hit zero — eliminating the frustration of pressing
+	#    dash a frame too early and having it silently dropped.
+	if GameManager.player_dash_cooldown_timer > 0:
+		GameManager.player_dash_cooldown_timer -= delta
+		if GameManager.player_dash_cooldown_timer <= 0:
+			# Cooldown just expired — start the coyote grace window
+			_dash_coyote_timer = DASH_COYOTE_WINDOW
+	elif _dash_coyote_timer > 0:
+		_dash_coyote_timer -= delta
+
 	# Tick input buffers
 	if _dash_buffer_timer > 0:
 		_dash_buffer_timer -= delta
@@ -393,12 +414,15 @@ func _handle_dash(delta: float) -> void:
 			_start_slide(dash_direction * GameConstants.PLAYER_DASH_SPEED)
 		return
 
-	# Consume buffered dash if cooldown is ready
-	if _dash_buffer_timer > 0 and GameManager.player_dash_cooldown_timer <= 0:
+	# Consume buffered dash if cooldown is ready (or coyote window is active)
+	var can_dash: bool = GameManager.player_dash_cooldown_timer <= 0 or _dash_coyote_timer > 0
+	if _dash_buffer_timer > 0 and can_dash:
 		_dash_buffer_timer = 0.0
+		_dash_coyote_timer = 0.0  # Consume coyote window
 		_start_dash()
 	elif Input.is_action_just_pressed("dash"):
-		if GameManager.player_dash_cooldown_timer <= 0:
+		if can_dash:
+			_dash_coyote_timer = 0.0  # Consume coyote window
 			_start_dash()
 		else:
 			# Buffer the input — will fire when cooldown expires (if within window)
@@ -677,6 +701,25 @@ func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Col
 		pulse_tween.tween_property(mesh, "scale", Vector3.ONE, 0.07) \
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_ELASTIC)
+
+	# ── Muzzle flash: a brief OmniLight3D at the shoot origin that flares the
+	#    projectile's color, then fades in ~60ms. This adds a punchy light burst
+	#    at the gun tip that sells the shot in dark biomes and gives shooting a
+	#    visceral "pop" — even a tiny light kick reads as energy discharge. The
+	#    light is added to the parent (not the projectile) so it stays at the
+	#    muzzle position instead of traveling with the bolt. Color matches the
+	#    equipped weapon mod for cohesive visual language.
+	var muzzle_light := OmniLight3D.new()
+	muzzle_light.light_color = mod_color if mod_id != GameConstants.WeaponMod.NONE else Color(0.2, 1.0, 0.8)
+	muzzle_light.light_energy = 4.0
+	muzzle_light.omni_range = 3.5
+	muzzle_light.omni_attenuation = 1.5
+	get_parent().add_child(muzzle_light)
+	muzzle_light.global_position = global_position + Vector3(0, 0.5, 0)
+	var muzzle_tween := muzzle_light.create_tween()
+	muzzle_tween.tween_property(muzzle_light, "light_energy", 0.0, 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	muzzle_tween.tween_callback(muzzle_light.queue_free)
 
 	# Subtle camera micro-recoil on each shot — a tiny trauma kick that makes
 	# shooting feel punchy without being distracting. At ~9 shots/sec this stays

@@ -146,21 +146,26 @@ func _process(delta: float) -> void:
 
 	for entry in _popups:
 		entry.timer -= delta
-		# Slide in (first 0.3s), stay, then slide out (last 0.4s)
+		# Slide in (first 0.4s), stay, then slide out (last 0.4s)
+		# Uses ease-out cubic for slide-in (fast enter, decelerate) and
+		# ease-in cubic for slide-out (accelerate exit) for a polished feel
+		# that matches the game's juice language. Previously used linear lerp.
 		if entry.timer > 3.6:
-			# Sliding in
+			# Sliding in — ease-out cubic: 1 - (1-t)^3
 			var slide_progress: float = 1.0 - (entry.timer - 3.6) / 0.4
-			entry.slide_x = lerpf(360.0, 0.0, slide_progress)
-			entry.alpha = slide_progress
+			var eased_in: float = 1.0 - pow(1.0 - slide_progress, 3.0)
+			entry.slide_x = lerpf(360.0, 0.0, eased_in)
+			entry.alpha = eased_in
 		elif entry.timer > 0.4:
 			# Staying
 			entry.slide_x = 0.0
 			entry.alpha = 1.0
 		else:
-			# Sliding out
+			# Sliding out — ease-in cubic: t^3 (accelerate away)
 			var out_progress: float = 1.0 - entry.timer / 0.4
-			entry.slide_x = lerpf(0.0, 360.0, out_progress)
-			entry.alpha = 1.0 - out_progress
+			var eased_out: float = pow(out_progress, 3.0)
+			entry.slide_x = lerpf(0.0, 360.0, eased_out)
+			entry.alpha = 1.0 - eased_out
 
 	# Remove expired
 	for i in range(_popups.size() - 1, -1, -1):

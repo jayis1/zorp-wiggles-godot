@@ -151,11 +151,11 @@ func _update_timers(delta: float) -> void:
 	# Invulnerability timer
 	if player_invuln_timer > 0:
 		player_invuln_timer -= delta
-	
-	# Dash cooldown
-	if player_dash_cooldown_timer > 0:
-		player_dash_cooldown_timer -= delta
-	
+
+	# Dash cooldown is now ticked by the player's _physics_process so it can
+	# detect the exact frame the cooldown expires and start coyote time.
+	# (Previously ticked here — moved to player.gd for coyote-time support.)
+
 	# Combo timer
 	if player_combo_timer > 0:
 		player_combo_timer -= delta

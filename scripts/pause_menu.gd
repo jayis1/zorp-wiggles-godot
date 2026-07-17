@@ -39,6 +39,9 @@ func _build_ui() -> void:
 	_panel.offset_top = 180.0
 	_panel.offset_right = 890.0
 	_panel.offset_bottom = 540.0
+	# Set pivot to center so scale animations (slide-in) scale from the middle
+	# instead of the top-left corner, giving a proper "pop" effect.
+	_panel.pivot_offset = Vector2(250.0, 180.0)  # (right-left)/2, (bottom-top)/2
 	add_child(_panel)
 
 	# Title
@@ -115,14 +118,79 @@ func _show_pause() -> void:
 	GameManager.is_paused = true
 	get_tree().paused = true
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	# ── Smooth slide-in animation: the panel scales up from 80% with a fade,
+	#    and each button slides in from below with a staggered delay. This makes
+	#    pausing feel polished instead of a hard snap. The tweens use
+	#    PROCESS_MODE_ALWAYS (inherited from this node) so they run while the
+	#    tree is paused.
+	_animate_pause_in()
+
+func _animate_pause_in() -> void:
+	# Fade in the background
+	_bg.modulate.a = 0.0
+	var bg_tween := create_tween()
+	bg_tween.tween_property(_bg, "modulate:a", 1.0, 0.2) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# Panel scale-in from 0.8 with overshoot
+	_panel.scale = Vector2(0.8, 0.8)
+	_panel.modulate.a = 0.0
+	var panel_tween := create_tween()
+	panel_tween.tween_property(_panel, "modulate:a", 1.0, 0.15) \
+		.set_ease(Tween.EASE_OUT)
+	panel_tween.parallel().tween_property(_panel, "scale", Vector2.ONE, 0.3) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	# Title fades in slightly after the panel
+	_title.modulate.a = 0.0
+	var title_tween := create_tween()
+	title_tween.tween_interval(0.08)
+	title_tween.tween_property(_title, "modulate:a", 1.0, 0.2) \
+		.set_ease(Tween.EASE_OUT)
+	# Buttons slide up from below with staggered delays
+	var buttons: Array[Button] = [_resume_btn, _settings_btn, _quit_btn]
+	for i in range(buttons.size()):
+		var btn: Button = buttons[i]
+		var orig_y: float = btn.offset_top
+		btn.offset_top = orig_y + 30.0  # Start 30px below
+		btn.modulate.a = 0.0
+		var btn_tween := create_tween()
+		btn_tween.tween_interval(0.1 + i * 0.06)
+		btn_tween.tween_property(btn, "modulate:a", 1.0, 0.15) \
+			.set_ease(Tween.EASE_OUT)
+		btn_tween.parallel().tween_property(btn, "offset_top", orig_y, 0.25) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 
 func _on_resume() -> void:
 	_is_paused = false
-	visible = false
+	# ── Smooth fade-out: panel and buttons fade and scale down slightly before
+	#    the menu disappears. The unpause happens immediately (game resumes
+	#    right away) but the visual lingers for ~0.15s so it doesn't hard-cut.
 	GameManager.is_paused = false
 	get_tree().paused = false
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	# Fade out everything
+	if _bg:
+		var bg_out := create_tween()
+		bg_out.tween_property(_bg, "modulate:a", 0.0, 0.15) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	if _panel:
+		var panel_out := create_tween()
+		panel_out.tween_property(_panel, "modulate:a", 0.0, 0.15) \
+			.set_ease(Tween.EASE_IN)
+		panel_out.parallel().tween_property(_panel, "scale", Vector2(0.9, 0.9), 0.15) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		panel_out.tween_callback(func():
+			visible = false
+			# Reset visual state for next pause
+			_bg.modulate.a = 1.0
+			_panel.modulate.a = 1.0
+			_panel.scale = Vector2.ONE
+			_title.modulate.a = 1.0
+			for btn in [_resume_btn, _settings_btn, _quit_btn]:
+				btn.modulate.a = 1.0
+		)
+	else:
+		visible = false
 
 
 func _on_settings() -> void:
