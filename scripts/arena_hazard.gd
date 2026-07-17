@@ -154,9 +154,9 @@ func _deal_damage_in_radius() -> void:
 
 	var center: Vector3 = global_position
 
-	# Damage player if within radius
+	# Damage player if within radius — check both P1 and P2 in co-op
 	var player: Node3D = GameManager.player
-	if player and is_instance_valid(player) and player.is_in_group("player"):
+	if player and is_instance_valid(player) and player.is_in_group("player") and not GameManager.player_is_downed:
 		var dist: float = player.global_position.distance_to(center)
 		if dist < damage_radius:
 			# Falling crystal does extra damage
@@ -171,6 +171,19 @@ func _deal_damage_in_radius() -> void:
 				_apply_knockback(player, center, 15.0)
 			if hazard_type != HazardType.VOID_SHOCKWAVE:
 				_has_dealt_damage = true
+	# ── Phase 19: Co-op — damage P2 if within radius ──
+	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+		if not CoOpManager.p2_is_downed:
+			var p2_dist: float = CoOpManager.p2_node.global_position.distance_to(center)
+			if p2_dist < damage_radius:
+				var p2_dmg: int = damage
+				if hazard_type == HazardType.FALLING_CRYSTAL:
+					p2_dmg = GameConstants.FALLING_CRYSTAL_DAMAGE
+				CoOpManager.p2_take_damage(p2_dmg, center)
+				if hazard_type == HazardType.LAVA_GEYSER:
+					_apply_knockback(CoOpManager.p2_node, center, GameConstants.LAVA_GEYSER_KNOCKBACK)
+				elif hazard_type == HazardType.VOID_SHOCKWAVE:
+					_apply_knockback(CoOpManager.p2_node, center, 15.0)
 
 	# Damage enemies within radius
 	for enemy in get_tree().get_nodes_in_group("enemies"):
