@@ -279,7 +279,13 @@ func heal(amount: int) -> void:
 	AudioManager.play_sfx(AudioManager.SFX_HEAL)
 
 func gain_xp(amount: int) -> void:
-	player_xp += amount
+	# Enhancement: Aurora weather boosts XP gain by 50%
+	var actual_amount: int = amount
+	if WeatherSystem:
+		var xp_mult: float = WeatherSystem.get_xp_multiplier()
+		if xp_mult != 1.0:
+			actual_amount = int(amount * xp_mult)
+	player_xp += actual_amount
 	while player_xp >= player_xp_to_next:
 		player_xp -= player_xp_to_next
 		_level_up()

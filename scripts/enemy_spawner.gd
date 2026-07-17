@@ -18,6 +18,7 @@ var pending_spawns: Array[Dictionary] = []
 const EASY_TYPES: Array[int] = [
 	GameConstants.EnemyType.BLOB,
 	GameConstants.EnemyType.WISP,
+	GameConstants.EnemyType.SWARM_MITE,  # Enhancement: Swarm Mites in easy tier
 ]
 const MEDIUM_TYPES: Array[int] = [
 	GameConstants.EnemyType.BLOB,
@@ -26,6 +27,7 @@ const MEDIUM_TYPES: Array[int] = [
 	GameConstants.EnemyType.SENTINEL,
 	GameConstants.EnemyType.SPITTER,
 	GameConstants.EnemyType.WISP,
+	GameConstants.EnemyType.SWARM_MITE,  # Enhancement: Mites also in medium
 ]
 const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.SERPENT,
@@ -34,6 +36,7 @@ const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.SENTINEL,
 	GameConstants.EnemyType.SPITTER,
 	GameConstants.EnemyType.DRAKE,
+	GameConstants.EnemyType.CRYSTAL_GUARDIAN,  # Enhancement: Guardian in hard tier
 ]
 
 # Enemy scene paths by type
@@ -46,6 +49,9 @@ const ENEMY_SCENES: Dictionary = {
 	GameConstants.EnemyType.BOMBER: "res://scenes/entities/enemy_bomber.tscn",
 	GameConstants.EnemyType.SPITTER: "res://scenes/entities/enemy_spitter.tscn",
 	GameConstants.EnemyType.DRAKE: "res://scenes/entities/enemy_drake.tscn",
+	# Enhancement: New enemy types
+	GameConstants.EnemyType.SWARM_MITE: "res://scenes/entities/enemy_swarm_mite.tscn",
+	GameConstants.EnemyType.CRYSTAL_GUARDIAN: "res://scenes/entities/enemy_crystal_guardian.tscn",
 }
 
 # Enemy type enum → name string (for looking up type data from EnemyTypeData)
@@ -58,6 +64,9 @@ const ENEMY_TYPE_NAMES: Dictionary = {
 	GameConstants.EnemyType.BOMBER: "Void Bomber",
 	GameConstants.EnemyType.SPITTER: "Spore Spitter",
 	GameConstants.EnemyType.DRAKE: "Plasma Drake",
+	# Enhancement: New enemy types
+	GameConstants.EnemyType.SWARM_MITE: "Swarm Mite",
+	GameConstants.EnemyType.CRYSTAL_GUARDIAN: "Crystal Guardian",
 }
 
 func _ready() -> void:
@@ -143,6 +152,29 @@ func _try_spawn() -> void:
 		"type": enemy_type,
 		"timer": GameConstants.ENEMY_SPAWN_WARNING_DURATION,
 	})
+
+	# Enhancement: Swarm Mite pack spawning — when a mite is picked,
+	# there's a chance to spawn additional mites nearby as a pack.
+	# This creates the "swarm" feel — multiple mites rushing from one direction.
+	if enemy_type == GameConstants.EnemyType.SWARM_MITE:
+		if randf() < GameConstants.SWARM_MITE_PACK_SPAWN_CHANCE:
+			var pack_size: int = randi_range(
+				GameConstants.SWARM_MITE_PACK_SIZE_MIN,
+				GameConstants.SWARM_MITE_PACK_SIZE_MAX
+			)
+			for i in range(1, pack_size):  # i=0 is the original mite already queued
+				var pack_angle: float = angle + randf_range(-0.6, 0.6)
+				var pack_dist: float = dist + randf_range(-3.0, 3.0)
+				var pack_pos: Vector3 = player.global_position + Vector3(
+					cos(pack_angle) * pack_dist, 1.0, sin(pack_angle) * pack_dist
+				)
+				pack_pos.x = clampf(pack_pos.x, -extent, extent)
+				pack_pos.z = clampf(pack_pos.z, -extent, extent)
+				pending_spawns.append({
+					"pos": pack_pos,
+					"type": enemy_type,
+					"timer": GameConstants.ENEMY_SPAWN_WARNING_DURATION + randf_range(0.0, 0.5),
+				})
 
 	# Create visual warning ring
 	var warning_scene: PackedScene = load("res://scenes/entities/spawn_warning.tscn")

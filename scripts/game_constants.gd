@@ -107,6 +107,9 @@ enum EnemyType {
 	BOMBER,
 	SPITTER,
 	DRAKE,
+	# ── Enhancement: New enemy types ──
+	SWARM_MITE,       # Tiny, fast, spawns in packs — low HP but overwhelms
+	CRYSTAL_GUARDIAN, # Slow, tanky, fires crystal shard projectiles
 }
 
 # ─── Enemy Spawn & Difficulty ────────────────────────────────────────────────
@@ -183,6 +186,38 @@ const DRAKE_FIRE_BREATH_CONE_ANGLE: float = 45.0
 const DRAKE_CHARGE_COOLDOWN: float = 8.0
 const DRAKE_CHARGE_SPEED: float = 25.0
 const DRAKE_CHARGE_DAMAGE: int = 35
+
+# ─── Enhancement: Swarm Mite ──────────────────────────────────────────────────
+# Tiny, very fast, very low HP enemy that spawns in packs. Individually weak
+# but they swarm the player from multiple directions, creating pressure.
+const SWARM_MITE_HP: int = 12
+const SWARM_MITE_SPEED: float = 9.0
+const SWARM_MITE_DAMAGE: int = 4
+const SWARM_MITE_SCALE: float = 0.35
+const SWARM_MITE_XP: int = 6
+const SWARM_MITE_SCORE: int = 25
+const SWARM_MITE_PACK_SIZE_MIN: int = 3
+const SWARM_MITE_PACK_SIZE_MAX: int = 6
+const SWARM_MITE_PACK_SPAWN_CHANCE: float = 0.4  # 40% of mite spawns are packs
+const SWARM_MITE_COLOR: Color = Color(0.85, 0.35, 0.1)  # Orange-brown
+
+# ─── Enhancement: Crystal Guardian ────────────────────────────────────────────
+# Slow, high-HP, ranged enemy that fires crystal shard projectiles.
+# Tanky but predictable — kiting is the counter-strategy.
+const CRYSTAL_GUARDIAN_HP: int = 180
+const CRYSTAL_GUARDIAN_SPEED: float = 1.8
+const CRYSTAL_GUARDIAN_DAMAGE: int = 18
+const CRYSTAL_GUARDIAN_SCALE: float = 1.6
+const CRYSTAL_GUARDIAN_XP: int = 60
+const CRYSTAL_GUARDIAN_SCORE: int = 200
+const CRYSTAL_GUARDIAN_DETECT_RANGE: float = 30.0
+const CRYSTAL_GUARDIAN_ATTACK_RANGE: float = 22.0  # Ranged
+const CRYSTAL_GUARDIAN_ATTACK_COOLDOWN: float = 2.5
+const CRYSTAL_GUARDIAN_SHARD_SPEED: float = 18.0
+const CRYSTAL_GUARDIAN_SHARD_DAMAGE: int = 16
+const CRYSTAL_GUARDIAN_SHARD_LIFETIME: float = 3.5
+const CRYSTAL_GUARDIAN_COLOR: Color = Color(0.0, 0.8, 0.9)  # Cyan
+const CRYSTAL_GUARDIAN_SHARD_COLOR: Color = Color(0.3, 0.9, 1.0)
 
 # ─── Collectible Types ───────────────────────────────────────────────────────
 enum CollectibleType {
@@ -778,6 +813,9 @@ enum WeaponMod {
 	TESLA_COIL,          # 18 — Regen Crystal + Quantum Fuzz
 	VOID_RAY,            # 19 — Nebula Dust + Toxic Extract
 	QUANTUM_OVERDRIVE,   # 20 — Meteor Shard + Quantum Fuzz + Star Fruit (3-item mega)
+	# ── Enhancement: New weapon mods ──
+	BLACK_HOLE_BEAM,     # 21 — Magnet Core + Meteor Shard — creates a black hole that sucks enemies in
+	PHOTON_BEAM,         # 22 — Regen Crystal + Shield Crystal — rapid-fire piercing beam
 }
 
 const WEAPON_MOD_NAMES: Array[String] = [
@@ -802,6 +840,9 @@ const WEAPON_MOD_NAMES: Array[String] = [
 	"Tesla Coil",
 	"Void Ray",
 	"Quantum Overdrive",
+	# Enhancement: New weapon mods
+	"Black Hole Beam",
+	"Photon Beam",
 ]
 
 const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
@@ -826,6 +867,9 @@ const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
 	"Shocks nearby enemies with electric arcs.",
 	"Slows enemies and drains their energy.",
 	"Devastating triple-bolt with homing + chain.",
+	# Enhancement: New weapon mods
+	"Creates a singularity that sucks enemies in, then collapses for damage.",
+	"Rapid-fire piercing photon bolts that pass through enemies.",
 ]
 
 # Colors for each weapon mod (laser color)
@@ -851,6 +895,9 @@ const WEAPON_MOD_COLORS: Array[Color] = [
 	Color(0.5, 0.9, 1.0),   # Tesla: electric blue
 	Color(0.3, 0.1, 0.5),   # Void: dark purple
 	Color(1.0, 0.8, 0.2),   # Quantum Overdrive: gold
+	# Enhancement: New weapon mods
+	Color(0.1, 0.0, 0.2),   # Black Hole: near-black with purple tint
+	Color(1.0, 1.0, 0.8),   # Photon: warm white-gold
 ]
 
 # Damage multiplier per weapon mod
@@ -876,6 +923,9 @@ const WEAPON_MOD_DAMAGE_MULT: Array[float] = [
 	0.9,   # Tesla Coil
 	0.7,   # Void Ray
 	1.5,   # Quantum Overdrive
+	# Enhancement: New weapon mods
+	1.0,   # Black Hole Beam (damage from the collapse, not the bolt)
+	0.5,   # Photon Beam (rapid fire, each bolt is weak but fires 2x as fast)
 ]
 
 # Fire rate multiplier (lower = faster)
@@ -901,6 +951,9 @@ const WEAPON_MOD_FIRE_RATE_MULT: Array[float] = [
 	1.2,   # Tesla
 	1.2,   # Void
 	2.0,   # Quantum Overdrive
+	# Enhancement: New weapon mods
+	2.0,   # Black Hole Beam (slow, powerful singularity)
+	0.5,   # Photon Beam (very rapid fire — 2x as fast as standard)
 ]
 
 # Projectile speed multiplier
@@ -926,6 +979,9 @@ const WEAPON_MOD_SPEED_MULT: Array[float] = [
 	1.0,   # Tesla
 	0.9,   # Void
 	1.2,   # Quantum Overdrive
+	# Enhancement: New weapon mods
+	0.6,   # Black Hole Beam (slow bolt — it's heavy, collapsing into a singularity)
+	2.0,   # Photon Beam (very fast light-speed bolts)
 ]
 
 # Crafting recipes: maps a sorted key string "typeA,typeB[,typeC]" → WeaponMod enum value
@@ -953,6 +1009,9 @@ const CRAFTING_RECIPES: Dictionary = {
 	# Three-item mega recipes
 	"METEOR_SHARD,NEBULA_DUST,QUANTUM_FUZZ": WeaponMod.MEGA_BLAST,
 	"METEOR_SHARD,QUANTUM_FUZZ,STAR_FRUIT": WeaponMod.QUANTUM_OVERDRIVE,
+	# Enhancement: New weapon mod recipes
+	"MAGNET_CORE,METEOR_SHARD": WeaponMod.BLACK_HOLE_BEAM,
+	"REGEN_CRYSTAL,SHIELD_CRYSTAL": WeaponMod.PHOTON_BEAM,
 }
 
 # Crafting material type names for recipe key lookup
@@ -981,6 +1040,9 @@ enum Weather {
 	FOG,           # Reduces enemy detection range (stealth)
 	THUNDERSTORM,  # Random lightning strikes (AoE damage zones)
 	SNOW_STORM,    # Slows movement, icy physics (slide on surfaces)
+	# ── Enhancement: New weather types ──
+	METEOR_SHOWER, # Random meteor strikes (telegraphed AoE, larger than lightning)
+	AURORA,        # Colorful sky lights, boosts XP gain by 50%
 }
 
 # Weather state duration ranges (seconds): [min, max]
@@ -1004,6 +1066,17 @@ const THUNDER_LIGHTNING_WARN_TIME: float = 1.2     # Telegraph (glowing ground p
 const SNOW_STORM_SPEED_MULT: float = 0.7           # Player/enemy movement speed multiplier
 const SNOW_STORM_FRICTION_MULT: float = 0.4        # Lower friction = slidey surfaces
 
+# ── Enhancement: Meteor Shower weather ──
+const METEOR_SHOWER_INTERVAL_MIN: float = 8.0      # Min seconds between meteor strikes
+const METEOR_SHOWER_INTERVAL_MAX: float = 16.0     # Max seconds between meteor strikes
+const METEOR_DAMAGE: int = 60                       # AoE damage at impact center
+const METEOR_RADIUS: float = 8.0                    # AoE radius (larger than lightning)
+const METEOR_WARN_TIME: float = 2.0                 # Telegraph time (longer than lightning — meteors are visible falling)
+
+# ── Enhancement: Aurora weather ──
+const AURORA_XP_MULT: float = 1.5                   # 50% XP boost during aurora
+const AURORA_LIGHT_ENERGY: float = 1.5              # Ambient aurora light energy
+
 # Weather → biome affinity (weather more likely in thematic biomes)
 # Each weather type maps to a list of biomes where it has a higher chance of starting.
 const WEATHER_BIOME_AFFINITY: Dictionary = {
@@ -1012,6 +1085,9 @@ const WEATHER_BIOME_AFFINITY: Dictionary = {
 	Weather.FOG: [GameConstants.Biome.WATER, GameConstants.Biome.SWAMP, GameConstants.Biome.FOREST],
 	Weather.THUNDERSTORM: [GameConstants.Biome.WATER, GameConstants.Biome.GRASS, GameConstants.Biome.FLOATING_ISLANDS],
 	Weather.SNOW_STORM: [GameConstants.Biome.SNOW, GameConstants.Biome.CRYSTAL],
+	# Enhancement: New weather biome affinities
+	Weather.METEOR_SHOWER: [GameConstants.Biome.LAVA, GameConstants.Biome.DESERT, GameConstants.Biome.ALIEN],
+	Weather.AURORA: [GameConstants.Biome.SNOW, GameConstants.Biome.CRYSTAL, GameConstants.Biome.FLOATING_ISLANDS],
 }
 
 # Weather enemy spawn overrides — weather types that bias spawning toward specific enemies.
@@ -1022,6 +1098,9 @@ const WEATHER_SPAWN_BONUS: Dictionary = {
 	Weather.ACID_RAIN: [GameConstants.EnemyType.SPITTER, GameConstants.EnemyType.BOMBER],
 	Weather.SOLAR_FLARE: [GameConstants.EnemyType.GRAVITON],
 	Weather.SNOW_STORM: [GameConstants.EnemyType.SENTINEL],
+	# Enhancement: New weather spawn bonuses
+	Weather.METEOR_SHOWER: [GameConstants.EnemyType.BOMBER, GameConstants.EnemyType.CRYSTAL_GUARDIAN],
+	Weather.AURORA: [GameConstants.EnemyType.SWARM_MITE, GameConstants.EnemyType.WISP],
 }
 
 # Weather display info (name, icon emoji, color for UI)
@@ -1032,6 +1111,9 @@ const WEATHER_INFO: Dictionary = {
 	Weather.FOG: {"name": "Fog", "icon": "🌫", "color": Color(0.7, 0.75, 0.8)},
 	Weather.THUNDERSTORM: {"name": "Thunderstorm", "icon": "⚡", "color": Color(0.5, 0.6, 1.0)},
 	Weather.SNOW_STORM: {"name": "Snow Storm", "icon": "❄", "color": Color(0.8, 0.9, 1.0)},
+	# Enhancement: New weather types
+	Weather.METEOR_SHOWER: {"name": "Meteor Shower", "icon": "☄", "color": Color(1.0, 0.4, 0.2)},
+	Weather.AURORA: {"name": "Aurora", "icon": "🌌", "color": Color(0.3, 1.0, 0.6)},
 }
 
 # ─── Phase 18: Boss Arenas ───────────────────────────────────────────────────

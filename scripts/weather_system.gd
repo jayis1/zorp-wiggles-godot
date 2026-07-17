@@ -108,6 +108,15 @@ func get_detect_range_multiplier() -> float:
 		_:
 			return 1.0
 
+## Enhancement: XP gain multiplier for the current weather (1.0 = normal).
+## Aurora weather boosts XP by 50%, encouraging aggressive play during auroras.
+func get_xp_multiplier() -> float:
+	match _current_weather:
+		GameConstants.Weather.AURORA:
+			return GameConstants.AURORA_XP_MULT
+		_:
+			return 1.0
+
 ## Force-set a weather state (used for testing/debug; skips transition).
 func force_weather(weather: int) -> void:
 	var old: int = _current_weather
@@ -176,8 +185,21 @@ func _process(delta: float) -> void:
 
 	# Solar flare light pulse
 	if _solar_light and is_instance_valid(_solar_light):
-		var pulse: float = 0.7 + 0.3 * sin(GameManager.game_time * 3.0)
-		_solar_light.light_energy = GameConstants.SOLAR_FLARE_LIGHT_ENERGY * pulse
+		if _current_weather == GameConstants.Weather.AURORA:
+			# Enhancement: Aurora — shift the light color through green-teal-purple hues
+			var hue_shift: float = GameManager.game_time * 0.3
+			var aurora_color := Color.from_hsv(
+				fposmod(hue_shift, 1.0) * 0.4 + 0.3,  # Hue range 0.3-0.7 (green to purple)
+				0.8,  # Saturation
+				1.0   # Value
+			)
+			_solar_light.light_color = aurora_color
+			var pulse: float = 0.7 + 0.3 * sin(GameManager.game_time * 1.5)
+			_solar_light.light_energy = GameConstants.AURORA_LIGHT_ENERGY * pulse
+		else:
+			# Solar flare — orange pulsing light
+			var pulse: float = 0.7 + 0.3 * sin(GameManager.game_time * 3.0)
+			_solar_light.light_energy = GameConstants.SOLAR_FLARE_LIGHT_ENERGY * pulse
 
 # ─── Weather state machine ────────────────────────────────────────────────────
 
@@ -193,6 +215,9 @@ func _pick_next_weather() -> int:
 		GameConstants.Weather.FOG,
 		GameConstants.Weather.THUNDERSTORM,
 		GameConstants.Weather.SNOW_STORM,
+		# Enhancement: New weather types
+		GameConstants.Weather.METEOR_SHOWER,
+		GameConstants.Weather.AURORA,
 	]
 	# Weight: base 1.0, +2.0 if biome-affinity match
 	var biome: int = GameManager.current_biome
@@ -252,7 +277,10 @@ func _tick_weather_effects(delta: float) -> void:
 			_tick_acid_rain(delta)
 		GameConstants.Weather.THUNDERSTORM:
 			_tick_thunderstorm(delta)
-		# SOLAR_FLARE, FOG, SNOW_STORM effects are passive (multipliers queried
+		# Enhancement: Meteor Shower — telegraphed meteor strikes (bigger than lightning)
+		GameConstants.Weather.METEOR_SHOWER:
+			_tick_meteor_shower(delta)
+		# SOLAR_FLARE, FOG, SNOW_STORM, AURORA effects are passive (multipliers queried
 		# by other systems); only light + particles are managed here.
 		_:
 			pass
@@ -310,8 +338,23 @@ func _update_pending_lightning(delta: float) -> void:
 		s["warn_timer"] -= delta
 		if s["warn_timer"] <= 0 and not s["struck"]:
 			s["struck"] = true
-			_execute_lightning_strike(s["pos"])
+			# Enhancement: Check if this is a meteor strike or regular lightning
+			if s.get("is_meteor", false):
+				_execute_meteor_strike(s["pos"])
+			else:
+				_execute_lightning_strike(s["pos"])
 			_pending_strikes.remove_at(i)
+			# Clean up any falling meteor meshes that reached their target
+			for j in range(_active_meteors.size() - 1, -1, -1):
+				var m: Dictionary = _active_meteors[j]
+				var mesh: MeshInstance3D = m["mesh"]
+				if is_instance_valid(mesh):
+					var d: float = mesh.global_position.distance_to(s["pos"])
+					if d < 2.0:
+						mesh.queue_free()
+						_active_meteors.remove_at(j)
+				else:
+					_active_meteors.remove_at(j)
 
 func _execute_lightning_strike(pos: Vector3) -> void:
 	# Phase 20: Audio — thunder SFX
@@ -349,6 +392,113 @@ func _execute_lightning_strike(pos: Vector3) -> void:
 				if enemy.has_method("take_damage_from"):
 					enemy.take_damage_from(GameConstants.THUNDER_LIGHTNING_DAMAGE, pos)
 
+# ─── Enhancement: Meteor Shower ───────────────────────────────────────────────
+# Meteors are larger, more damaging, and have a longer telegraph than lightning.
+# The meteor is visible falling from the sky during the telegraph (a streaking
+# fiery orb descending from height), then impacts with a big explosion.
+
+var _meteor_timer: float = 10.0
+# Active falling meteor visuals (visible during telegraph)
+var _active_meteors: Array[Dictionary] = []
+
+func _tick_meteor_shower(delta: float) -> void:
+	_meteor_timer -= delta
+	if _meteor_timer <= 0:
+		_meteor_timer = randf_range(
+			GameConstants.METEOR_SHOWER_INTERVAL_MIN,
+			GameConstants.METEOR_SHOWER_INTERVAL_MAX)
+		_schedule_meteor_strike()
+
+func _schedule_meteor_strike() -> void:
+	var player: CharacterBody3D = _get_player()
+	if not player:
+		return
+	# Strike at a random position within 22m of the player (wider spread than lightning)
+	var angle: float = randf() * TAU
+	var dist: float = randf_range(4.0, 22.0)
+	var strike_pos: Vector3 = player.global_position + Vector3(cos(angle) * dist, 0, sin(angle) * dist)
+	_pending_strikes.append({
+		"pos": strike_pos,
+		"warn_timer": GameConstants.METEOR_WARN_TIME,
+		"struck": false,
+		"is_meteor": true,  # Flag to distinguish from lightning strikes
+	})
+	lightning_strike_requested.emit(strike_pos, GameConstants.METEOR_WARN_TIME)
+	# Spawn a visible falling meteor during the telegraph
+	var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
+	if parent:
+		var meteor_mesh := MeshInstance3D.new()
+		var meteor_sphere := SphereMesh.new()
+		meteor_sphere.radius = 0.8
+		meteor_sphere.height = 1.6
+		meteor_sphere.radial_segments = 8
+		meteor_mesh.mesh = meteor_sphere
+		var meteor_mat := StandardMaterial3D.new()
+		meteor_mat.albedo_color = Color(1.0, 0.4, 0.1)
+		meteor_mat.emission_enabled = true
+		meteor_mat.emission = Color(1.0, 0.5, 0.1)
+		meteor_mat.emission_energy_multiplier = 3.0
+		meteor_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		meteor_mesh.material_override = meteor_mat
+		# Trail light
+		var meteor_light := OmniLight3D.new()
+		meteor_light.light_color = Color(1.0, 0.5, 0.2)
+		meteor_light.light_energy = 4.0
+		meteor_light.omni_range = 8.0
+		meteor_mesh.add_child(meteor_light)
+		parent.add_child(meteor_mesh)
+		# Start high above and animate falling to the strike position
+		var start_pos: Vector3 = strike_pos + Vector3(0, 40.0, 0)
+		meteor_mesh.global_position = start_pos
+		_active_meteors.append({"mesh": meteor_mesh, "target": strike_pos})
+		# Animate the meteor falling over the warn time
+		var fall_tween := meteor_mesh.create_tween()
+		fall_tween.tween_property(meteor_mesh, "global_position", strike_pos, GameConstants.METEOR_WARN_TIME) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+		# Spin the meteor as it falls
+		fall_tween.parallel().tween_property(meteor_mesh, "rotation:y", TAU * 3, GameConstants.METEOR_WARN_TIME)
+		# Trail particles
+		fall_tween.parallel().tween_callback(func():
+			if is_instance_valid(meteor_mesh) and randf() < 0.5:
+				ParticleEffects.spawn_explosion(parent, meteor_mesh.global_position,
+					Color(1.0, 0.4, 0.1), 4, 0.15)
+		)
+
+func _execute_meteor_strike(pos: Vector3) -> void:
+	# Phase 20: Audio — explosion SFX (bigger than thunder)
+	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
+	AudioManager.play_sfx(AudioManager.SFX_THUNDER)
+	var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
+	if parent:
+		# Big fiery light flash
+		var flash: OmniLight3D = OmniLight3D.new()
+		flash.light_color = Color(1.0, 0.4, 0.1)
+		flash.light_energy = 12.0
+		flash.omni_range = 25.0
+		parent.add_child(flash)
+		flash.global_position = pos + Vector3(0, 6, 0)
+		var tw: Tween = create_tween()
+		tw.tween_property(flash, "light_energy", 0.0, 0.6).set_trans(Tween.TRANS_QUAD)
+		tw.parallel().tween_property(flash, "omni_range", 8.0, 0.6)
+		tw.chain().tween_callback(flash.queue_free)
+		# Large explosion particles (bigger than lightning)
+		ParticleEffects.spawn_mega_explosion(parent, pos + Vector3(0, 2, 0), Color(1.0, 0.4, 0.1))
+		# Camera shake (bigger than lightning — meteors hit harder)
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.6)
+	# Damage entities in radius (larger than lightning)
+	var radius: float = GameConstants.METEOR_RADIUS
+	var player: CharacterBody3D = _get_player()
+	if player and is_instance_valid(player):
+		if player.global_position.distance_to(pos) <= radius:
+			GameManager.take_damage(GameConstants.METEOR_DAMAGE, pos)
+	# Enemies take damage too
+	for enemy in GameManager.enemies:
+		if is_instance_valid(enemy) and not enemy.is_dead:
+			if enemy.global_position.distance_to(pos) <= radius:
+				if enemy.has_method("take_damage_from"):
+					enemy.take_damage_from(GameConstants.METEOR_DAMAGE, pos)
+
 # ─── Weather effects start / end ──────────────────────────────────────────────
 
 func _start_weather_effects(weather: int) -> void:
@@ -380,6 +530,21 @@ func _start_weather_effects(weather: int) -> void:
 		GameConstants.Weather.SNOW_STORM:
 			_weather_particles = _create_weather_particles("snow_storm")
 			parent.add_child(_weather_particles)
+		# Enhancement: New weather effects
+		GameConstants.Weather.METEOR_SHOWER:
+			_weather_particles = _create_weather_particles("embers")
+			parent.add_child(_weather_particles)
+			_meteor_timer = randf_range(5.0, 10.0)  # First meteor sooner
+		GameConstants.Weather.AURORA:
+			# Aurora: colorful shifting sky lights (green-teal-purple) + XP boost
+			_weather_particles = _create_weather_particles("aurora")
+			parent.add_child(_weather_particles)
+			# Create aurora light — a high-altitude colored light that shifts hues
+			_solar_light = OmniLight3D.new()
+			_solar_light.light_color = Color(0.3, 1.0, 0.6)
+			_solar_light.light_energy = GameConstants.AURORA_LIGHT_ENERGY
+			_solar_light.omni_range = 80.0
+			parent.add_child(_solar_light)
 		GameConstants.Weather.CLEAR:
 			pass  # No particles; baseline
 
@@ -388,7 +553,7 @@ func _end_weather_effects(weather: int) -> void:
 	if _weather_particles and is_instance_valid(_weather_particles):
 		_weather_particles.queue_free()
 	_weather_particles = null
-	# Remove solar light
+	# Remove solar/aurora light (shared variable — used for both solar flare and aurora)
 	if _solar_light and is_instance_valid(_solar_light):
 		_solar_light.queue_free()
 	_solar_light = null
@@ -396,6 +561,12 @@ func _end_weather_effects(weather: int) -> void:
 	_target_fog_density = _base_fog_density
 	# Clear pending strikes
 	_pending_strikes.clear()
+	# Enhancement: Clean up active falling meteor meshes
+	for m in _active_meteors:
+		var mesh: MeshInstance3D = m["mesh"]
+		if is_instance_valid(mesh):
+			mesh.queue_free()
+	_active_meteors.clear()
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -411,10 +582,14 @@ func _update_weather_particle_position() -> void:
 	var player: CharacterBody3D = _get_player()
 	if player and is_instance_valid(player):
 		_weather_particles.global_position = player.global_position + Vector3(0, 12, 0)
-	# Solar light follows player too
+	# Solar/aurora light follows player too
 	if _solar_light and is_instance_valid(_solar_light):
 		if player and is_instance_valid(player):
-			_solar_light.global_position = player.global_position + Vector3(0, 25, 0)
+			if _current_weather == GameConstants.Weather.AURORA:
+				# Enhancement: Aurora light is higher and wider — it's a sky-wide phenomenon
+				_solar_light.global_position = player.global_position + Vector3(0, 40, 0)
+			else:
+				_solar_light.global_position = player.global_position + Vector3(0, 25, 0)
 
 func _is_player_exposed_to_sky() -> bool:
 	# Simple heuristic: raycast upward 30m from the player. If it hits nothing,
@@ -508,6 +683,20 @@ func _create_weather_particles(type: String) -> GPUParticles3D:
 			color = Color(1.0, 0.5, 0.1, 0.7)
 			mesh.radius = 0.05
 			mesh.height = 0.1
+		# Enhancement: Aurora particles — colorful slow-drifting lights high above
+		"aurora":
+			p.amount = 60
+			p.lifetime = 8.0
+			pmat.direction = Vector3(1, 0, 0)
+			pmat.spread = 45.0
+			pmat.gravity = Vector3.ZERO
+			pmat.initial_velocity_min = 0.3
+			pmat.initial_velocity_max = 1.5
+			pmat.turbulence_enabled = true
+			pmat.turbulence_noise_scale = 0.2
+			color = Color(0.3, 1.0, 0.6, 0.4)
+			mesh.radius = 2.0  # Large soft globes of light
+			mesh.height = 4.0
 
 	pmat.color = color
 	pmat.scale_min = 0.5

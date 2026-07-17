@@ -406,3 +406,34 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 
 ## Last Updated
 Phase 20 complete. Audio & Polish: AudioManager autoload singleton with 24 procedurally generated sound effects (no external audio files needed — all synthesized at runtime as AudioStreamWAV with raw PCM data). 12-player SFX pool for overlapping sounds. Per-biome ambient music (12 unique looping drone tracks, auto-switches on biome_changed). Boss fight music (intense driving 8-second loop, auto-starts/stops with boss events). SFX integrated into all key gameplay events: shoot, dash, pulse wave, dash bump, pickup (rare items get distinct sound), level up, combo milestone, damage, heal, death, enemy hit, enemy death, boss spawn/defeated, explosion, thunder, arena rise, mutation, rift, revive, pet summon, craft, UI click. Pause menu (pause_menu.gd): P key toggles, Resume/Settings/Quit buttons, PROCESS_MODE_ALWAYS so UI works while tree is paused. Settings menu (settings_menu.gd): Master/SFX/Music volume sliders with real-time adjustment, controls reference, accessible from both pause menu and main menu. Death screen enhanced with clickable "Try Again" and "Quit to Menu" buttons (appear after fade-in). Main menu updated with Settings button. Screen shake and smooth camera follow were already implemented in camera_rig.gd (trauma-based shake, exponential lerp follow). AudioManager registered as autoload in project.godot. ALL PHASES 1-20 COMPLETE — Phase 21 (Export) intentionally skipped per instructions.
+
+## Enhancement Pack 1 — New Enemies, Weapon Mods & Weather
+
+### New Enemy Types (expanding beyond original 8 → 10)
+- **Swarm Mite** (`enemy_swarm_mite.gd` + `.tscn`) — Tiny, very fast (speed 9.0), very low HP (12) enemy that spawns in packs of 3-6. Individually weak (4 damage, dies in 1-2 hits) but they overwhelm from multiple directions. 40% of mite spawns are packs, creating swarming pressure. Smart AI disabled (pure rush behavior — cheaper to process when many are active). Orange-brown color with high emission for a "glowing bug" look. 6 XP / 25 score per kill.
+- **Crystal Guardian** (`enemy_crystal_guardian.gd` + `.tscn`) — Slow (speed 1.8), high-HP (180) ranged enemy that fires crystal shard projectiles. 0.8s charge-up telegraph (grows + brightens) before firing. Crystal shards travel at 18 m/s with 16 damage. Tanky but predictable — kiting is the counter-strategy. Crystalline material (high metallic, low roughness, strong rim). 60 XP / 200 score per kill. Flanking disabled (holds position at range).
+- **Pack spawning system** in EnemySpawner — when a Swarm Mite is picked, 40% chance to spawn 3-6 additional mites nearby as a pack with staggered spawn timers. Creates the "swarm" feel — multiple mites rushing from one direction.
+- New constants in `game_constants.gd`: SWARM_MITE_* and CRYSTAL_GUARDIAN_* tuning parameters.
+- New EnemyType enum values: SWARM_MITE (8), CRYSTAL_GUARDIAN (9).
+- EnemySpawner updated: new types added to EASY/MEDIUM/HARD tier pools, scene paths, and type names.
+- Both enemies added to `enemy_types.gd` data dictionary (entries already existed in TYPES but now have proper implementations).
+
+### New Weapon Mods (expanding beyond original 20 → 22)
+- **Black Hole Beam** (Magnet Core + Meteor Shard) — Creates a singularity on impact that pulls enemies toward its center over 1.2 seconds, dealing tick damage, then collapses for 1.5× AoE damage. Dark sphere visual with negative light (absorbs surrounding light), purple emission, grows during pull phase, then detonates with mega explosion + camera shake. Also pulls enemies in-flight (12m radius, 20 m/s pull strength). Slow fire rate (2× cooldown), moderate damage. Crowd-control mod — group enemies together then hit them with the collapse.
+- **Photon Beam** (Regen Crystal + Shield Crystal) — Rapid-fire piercing photon bolts that pass through up to 5 enemies (more than Piercing Beam's 3). Very fast fire rate (0.5× cooldown = 2× as fast as standard) and very fast projectile speed (2× speed multiplier). Each bolt is weak (0.5× damage) but the sheer volume of fire makes it a sustained DPS monster. Warm white-gold color.
+- New WeaponMod enum values: BLACK_HOLE_BEAM (21), PHOTON_BEAM (22).
+- New entries in all parallel WEAPON_MOD_* arrays (names, descriptions, colors, damage/fire-rate/speed multipliers).
+- New crafting recipes in CRAFTING_RECIPES dictionary.
+- Black Hole Beam on-hit behavior: `_spawn_black_hole()` in `projectile.gd` — creates Area3D singularity with pull phase + collapse phase.
+- Photon Beam pierce behavior: 5 pierces (vs 3 for Piercing Beam) in `_hit_enemy()`.
+- Black Hole Beam in-flight behavior: extra-strong enemy pull (12m radius) in `_apply_mod_flight_behavior()`.
+
+### New Weather Types (expanding beyond original 6 → 8)
+- **Meteor Shower** (☄) — Random meteor strikes with 2-second telegraph (longer than lightning's 1.2s). Meteors are visible falling from 40m height as fiery spinning orbs with trail particles during the telegraph. On impact: 60 damage (vs lightning's 45), 8m radius (vs 6m), mega explosion particles, bigger camera shake (0.6 trauma). Strikes every 8-16 seconds. Biome affinity: Lava, Desert, Alien. Spawn bonus: Void Bombers + Crystal Guardians.
+- **Aurora** (🌌) — Colorful shifting sky lights that boost XP gain by 50%. High-altitude OmniLight (40m above player) cycles through green-teal-purple hues via HSV color shifting. Soft drifting aurora particle globes (60 particles, 2m radius). Encourages aggressive play during auroras — farm XP faster. Biome affinity: Snow, Crystal, Floating Islands. Spawn bonus: Swarm Mites + Void Wisps.
+- New Weather enum values: METEOR_SHOWER (6), AURORA (7).
+- New constants: METEOR_SHOWER_INTERVAL_*, METEOR_DAMAGE, METEOR_RADIUS, METEOR_WARN_TIME, AURORA_XP_MULT, AURORA_LIGHT_ENERGY.
+- New entries in WEATHER_BIOME_AFFINITY, WEATHER_SPAWN_BONUS, and WEATHER_INFO dictionaries.
+- `WeatherSystem` updated: new candidates in `_pick_next_weather()`, `_tick_meteor_shower()`, `_schedule_meteor_strike()`, `_execute_meteor_strike()` functions, aurora light color shifting in `_process()`, aurora particle type in `_create_weather_particles()`, `get_xp_multiplier()` API method.
+- `GameManager.gain_xp()` updated to apply aurora XP multiplier.
+- Weather indicator HUD automatically displays new weather types via WEATHER_INFO dictionary.

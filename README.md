@@ -380,6 +380,21 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 
 **All Phases 1–20 Complete!** Phase 21 (Export & Distribution) is intentionally skipped.
 
+## Enhancement Pack 1 — New Content
+
+### New Enemy Types (8 → 10)
+- **Swarm Mite** — Tiny, very fast enemy (speed 9.0, HP 12) that spawns in packs of 3–6. Individually weak but they overwhelm from multiple directions. 40% of mite spawns are packs, creating swarming pressure. Orange-brown glowing bug aesthetic.
+- **Crystal Guardian** — Slow, tanky ranged enemy (HP 180) that fires crystal shard projectiles with a charge-up telegraph. High metallic crystalline material. Kiting is the counter-strategy. 60 XP per kill.
+- **Pack spawning system** — Swarm Mites have a 40% chance to spawn as a pack of 3–6 with staggered spawn timers, creating the "swarm" feel.
+
+### New Weapon Mods (20 → 22)
+- **Black Hole Beam** (Magnet Core + Meteor Shard) — Creates a singularity on impact that pulls enemies in over 1.2s, dealing tick damage, then collapses for 1.5× AoE damage. Dark sphere with negative light absorption, purple emission. Crowd-control mod.
+- **Photon Beam** (Regen Crystal + Shield Crystal) — Rapid-fire piercing photon bolts that pass through up to 5 enemies. 2× fire rate and 2× projectile speed. Each bolt is weak but the volume of fire makes it a sustained DPS monster. Warm white-gold color.
+
+### New Weather Types (6 → 8)
+- **Meteor Shower** (☄) — Random meteor strikes with 2-second telegraph. Meteors are visible falling from the sky as fiery spinning orbs during the telegraph. 60 damage, 8m radius AoE — bigger and more damaging than lightning. Biome affinity: Lava, Desert, Alien.
+- **Aurora** (🌌) — Colorful shifting sky lights that boost XP gain by 50%. High-altitude light cycles through green-teal-purple hues. Encourages aggressive play during auroras. Biome affinity: Snow, Crystal, Floating Islands.
+
 ## License
 
 Open source — same as the original Zorp Wiggles project.# v0.1.0-godot

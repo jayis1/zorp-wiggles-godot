@@ -200,6 +200,21 @@ func _apply_mod_flight_behavior(delta: float) -> void:
 			if _tesla_zap_timer <= 0:
 				_tesla_zap_timer = 0.15
 				_tesla_zap_nearby()
+		# Enhancement: Black Hole Beam — pull enemies toward the bolt in flight
+		GameConstants.WeaponMod.BLACK_HOLE_BEAM:
+			_pull_nearby_enemies(delta)
+			# Extra-strong pull radius for black hole
+			var bh_pull_radius: float = 12.0
+			for enemy in GameManager.enemies:
+				if not is_instance_valid(enemy):
+					continue
+				if not enemy.is_in_group("enemies"):
+					continue
+				var d: float = global_position.distance_to(enemy.global_position)
+				if d < bh_pull_radius and d > 0.5:
+					var pull_dir: Vector3 = (global_position - enemy.global_position).normalized()
+					var pull_strength: float = 20.0 * (1.0 - d / bh_pull_radius)
+					enemy.global_position += pull_dir * pull_strength * delta
 
 ## Find the nearest enemy to the projectile (for homing).
 func _find_nearest_enemy() -> Node3D:
@@ -367,6 +382,12 @@ func _hit_enemy(enemy: Node3D) -> void:
 		_impact_effect()
 		return  # Don't free — continue flying
 
+	# Enhancement: Photon Beam — pierces through up to 5 enemies (more than Piercing Beam)
+	if _weapon_mod == GameConstants.WeaponMod.PHOTON_BEAM and _pierce_count < 5:
+		_pierce_count += 1
+		_impact_effect()
+		return  # Don't free — continue flying
+
 	# Phase 16: Splitter Laser — spawn two angled projectiles on hit
 	if _weapon_mod == GameConstants.WeaponMod.SPLITTER_LASER:
 		_spawn_splitter_projectiles(enemy)
@@ -380,6 +401,9 @@ func _hit_enemy(enemy: Node3D) -> void:
 		_shrapnel_burst(total_damage)
 	elif _weapon_mod == GameConstants.WeaponMod.ACID_TRAIL:
 		_spawn_acid_pool(total_damage)
+	# Enhancement: Black Hole Beam — create a singularity that sucks enemies in then collapses
+	elif _weapon_mod == GameConstants.WeaponMod.BLACK_HOLE_BEAM:
+		_spawn_black_hole(total_damage)
 
 	# Impact effect
 	_impact_effect()
@@ -627,3 +651,122 @@ func _impact_effect() -> void:
 	ParticleEffects.spawn_explosion(get_parent(), global_position, Color(0.2, 1.0, 0.8), 12, 0.4)
 	# Phase 20: Audio — explosion SFX on impact
 	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
+
+## Enhancement: Black Hole Beam — spawn a singularity that pulls enemies in
+## over 1.5 seconds, then collapses for AoE damage. The singularity is a
+## visual Area3D with a swirling dark sphere that grows, pulls enemies, then
+## detonates. This is a powerful crowd-control mod — group enemies together
+## then hit them with the collapse.
+func _spawn_black_hole(base_dmg: int) -> void:
+	var parent: Node = get_parent()
+	if not parent:
+		return
+	# The singularity lives for 1.5s, pulling enemies toward its center
+	var singularity := Area3D.new()
+	var s_shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 1.0  # Collision radius (visual is larger)
+	s_shape.shape = sphere
+	singularity.add_child(s_shape)
+	parent.add_child(singularity)
+	singularity.global_position = global_position
+
+	# Visual: dark swirling sphere with purple emission
+	var bh_mesh := MeshInstance3D.new()
+	var bh_sphere := SphereMesh.new()
+	bh_sphere.radius = 1.5
+	bh_sphere.height = 3.0
+	bh_sphere.radial_segments = 16
+	bh_sphere.rings = 8
+	bh_mesh.mesh = bh_sphere
+	var bh_mat := StandardMaterial3D.new()
+	bh_mat.albedo_color = Color(0.05, 0.0, 0.1, 0.7)
+	bh_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	bh_mat.emission_enabled = true
+	bh_mat.emission = Color(0.3, 0.0, 0.5)
+	bh_mat.emission_energy_multiplier = 2.0
+	bh_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	bh_mesh.material_override = bh_mat
+	singularity.add_child(bh_mesh)
+
+	# Dark light — absorbs light around the singularity
+	var bh_light := OmniLight3D.new()
+	bh_light.light_color = Color(0.2, 0.0, 0.4)
+	bh_light.light_energy = -2.0  # Negative = darkens surrounding area
+	bh_light.omni_range = 8.0
+	singularity.add_child(bh_light)
+
+	# Pull phase: 1.2s of pulling enemies toward the center
+	var pull_duration: float = 1.2
+	var pull_radius: float = 10.0
+	var pull_tween := singularity.create_tween()
+	# Grow the visual sphere during pull phase
+	pull_tween.tween_property(bh_mesh, "scale", Vector3(1.5, 1.5, 1.5), pull_duration) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# Pulsing light
+	pull_tween.parallel().tween_property(bh_light, "light_energy", -4.0, pull_duration)
+
+	# Tick pull damage every 0.2s during the pull phase
+	var ticks: int = int(pull_duration / 0.2)
+	var tick_tween := singularity.create_tween()
+	for _i in range(ticks):
+		tick_tween.tween_callback(func():
+			if not is_instance_valid(singularity):
+				return
+			for enemy in GameManager.enemies:
+				if not is_instance_valid(enemy):
+					continue
+				if not enemy.is_in_group("enemies"):
+					continue
+				var d: float = singularity.global_position.distance_to(enemy.global_position)
+				if d < pull_radius and d > 0.5:
+					# Strong pull toward center
+					var pull_dir: Vector3 = (singularity.global_position - enemy.global_position).normalized()
+					enemy.global_position += pull_dir * 8.0 * 0.2  # 8 m/s pull
+					# Small tick damage
+					if enemy.has_method("take_damage"):
+						enemy.take_damage(max(1, int(base_dmg * 0.1)))
+		)
+		tick_tween.tween_interval(0.2)
+
+	# Collapse phase: detonate for AoE damage
+	tick_tween.tween_callback(func():
+		if not is_instance_valid(singularity):
+			return
+		# Collapse explosion — damage all enemies in the pull radius
+		var collapse_dmg: int = int(base_dmg * 1.5)
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if not enemy.is_in_group("enemies"):
+				continue
+			var d: float = singularity.global_position.distance_to(enemy.global_position)
+			if d < pull_radius:
+				var falloff: float = 1.0 - (d / pull_radius) * 0.5
+				var collapse_hit: int = int(collapse_dmg * falloff)
+				if enemy.has_method("take_damage_from"):
+					enemy.take_damage_from(collapse_hit, singularity.global_position)
+				elif enemy.has_method("take_damage"):
+					enemy.take_damage(collapse_hit)
+		# Big collapse visual
+		ParticleEffects.spawn_mega_explosion(singularity.get_parent(),
+			singularity.global_position, Color(0.3, 0.0, 0.5))
+		# Collapse light flash
+		var flash := OmniLight3D.new()
+		flash.light_color = Color(0.5, 0.1, 0.8)
+		flash.light_energy = 8.0
+		flash.omni_range = 12.0
+		singularity.get_parent().add_child(flash)
+		flash.global_position = singularity.global_position
+		var flash_tw := flash.create_tween()
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.4)
+		flash_tw.tween_callback(flash.queue_free)
+		# Camera shake on collapse
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.4)
+	)
+	# Shrink and fade the singularity after collapse
+	tick_tween.tween_property(bh_mesh, "scale", Vector3.ZERO, 0.2) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	tick_tween.tween_property(bh_mat, "albedo_color:a", 0.0, 0.2)
+	tick_tween.tween_callback(singularity.queue_free)
