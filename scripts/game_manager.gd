@@ -31,6 +31,7 @@ var player_pickup_streak: int = 0
 var player_pickup_streak_timer: float = 0.0
 var player_max_pickup_streak: int = 0
 var player_last_pickup_milestone: int = 0  # Last pickup milestone reached
+var player_total_pickups: int = 0  # Total items collected (for collect missions)
 var player_crit_chain: int = 0
 var player_crit_chain_timer: float = 0.0
 var player_invuln_timer: float = 0.0
@@ -165,6 +166,7 @@ func _start_game() -> void:
 	player_pickup_streak_timer = 0.0
 	player_max_pickup_streak = 0
 	player_last_pickup_milestone = 0
+	player_total_pickups = 0
 	player_crit_chain = 0
 	player_crit_chain_timer = 0.0
 	player_invuln_timer = 0.0
@@ -313,6 +315,7 @@ func _check_combo_milestone(combo: int) -> void:
 
 func add_pickup_streak() -> void:
 	player_pickup_streak += 1
+	player_total_pickups += 1
 	player_pickup_streak_timer = GameConstants.PICKUP_STREAK_WINDOW
 	if player_pickup_streak > player_max_pickup_streak:
 		player_max_pickup_streak = player_pickup_streak

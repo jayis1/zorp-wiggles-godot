@@ -127,10 +127,8 @@ func _process(_delta: float) -> void:
 			continue
 		match mission.type:
 			MissionType.COLLECT:
-				# Track total pickups via GameManager's max pickup streak + total
-				# We use player_kills as a proxy for kill count, and for collect
-				# we track via the pickup streak milestone events
-				pass  # Updated via _on_pickup_streak_milestone
+				# Track total pickups via GameManager's pickup counter
+				mission.current_count = GameManager.player_total_pickups
 			MissionType.KILL:
 				mission.current_count = GameManager.player_kills
 			MissionType.LEVEL:
@@ -252,6 +250,4 @@ func get_completed_count() -> int:
 	return _completed_missions.size()
 
 func get_total_pickups() -> int:
-	# Track total pickups using the max pickup streak as a proxy
-	# TODO: Add a dedicated player_total_pickups counter to GameManager
-	return GameManager.player_max_pickup_streak
+	return GameManager.player_total_pickups

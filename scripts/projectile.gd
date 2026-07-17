@@ -21,6 +21,7 @@ var _pierce_count: int = 0          # For Piercing Beam
 var _max_bounces: int = 3
 var _max_pierces: int = 3
 var _homing_strength: float = 8.0   # For Homing Laser
+var _tesla_zap_timer: float = 0.0  # For Tesla Coil periodic zap
 var _has_hit_enemies: Array[Node3D] = []  # Track hit enemies for pierce/chain (prevent double-hit)
 var _light: OmniLight3D = null
 var _mod_material: StandardMaterial3D = null  # Per-projectile material for mod color
@@ -153,9 +154,6 @@ func _apply_mod_flight_behavior(delta: float) -> void:
 			if _tesla_zap_timer <= 0:
 				_tesla_zap_timer = 0.15
 				_tesla_zap_nearby()
-
-# Tesla coil internal timer
-var _tesla_zap_timer: float = 0.0
 
 ## Find the nearest enemy to the projectile (for homing).
 func _find_nearest_enemy() -> Node3D:

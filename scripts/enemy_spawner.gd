@@ -48,6 +48,18 @@ const ENEMY_SCENES: Dictionary = {
 	GameConstants.EnemyType.DRAKE: "res://scenes/entities/enemy_drake.tscn",
 }
 
+# Enemy type enum → name string (for looking up type data from EnemyTypeData)
+const ENEMY_TYPE_NAMES: Dictionary = {
+	GameConstants.EnemyType.BLOB: "Slime Blob",
+	GameConstants.EnemyType.SERPENT: "Plasma Serpent",
+	GameConstants.EnemyType.GRAVITON: "Graviton",
+	GameConstants.EnemyType.WISP: "Void Wisp",
+	GameConstants.EnemyType.SENTINEL: "Starburst Sentinel",
+	GameConstants.EnemyType.BOMBER: "Void Bomber",
+	GameConstants.EnemyType.SPITTER: "Spore Spitter",
+	GameConstants.EnemyType.DRAKE: "Plasma Drake",
+}
+
 func _ready() -> void:
 	spawn_timer = 2.0  # Initial delay before first spawn
 
@@ -153,6 +165,15 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	enemy.position = pos
 	get_parent().add_child(enemy)
 	GameManager.enemies.append(enemy)
+
+	# Override enemy_name with the proper type name from EnemyTypeData so
+	# the kill feed and boss bar show the correct name. The scene defaults
+	# may have a generic name (e.g. "Space Blob") but the type-specific name
+	# (e.g. "Slime Blob") is more descriptive. We set this AFTER add_child
+	# so _ready() has already run with the scene's defaults.
+	var type_name: String = ENEMY_TYPE_NAMES.get(enemy_type, "")
+	if not type_name.is_empty() and "enemy_name" in enemy:
+		enemy.enemy_name = type_name
 
 	# ── Phase 11: Spawn materialization particles ──
 	# Energy coalescing effect at the spawn point

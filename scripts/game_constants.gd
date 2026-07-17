@@ -208,6 +208,7 @@ const CRAFTING_MATERIALS: Array[int] = [
 	CollectibleType.NEBULA_DUST,
 	CollectibleType.SPACE_GLOOP,
 	CollectibleType.STAR_FRUIT,
+	CollectibleType.HEALTH_FRAGMENT,  # Used in Vampire Beam recipe
 	CollectibleType.SHIELD_CRYSTAL,
 	CollectibleType.FIREBALL_SCROLL,
 	CollectibleType.REGEN_CRYSTAL,
@@ -774,7 +775,7 @@ enum WeaponMod {
 	SNIPER_BEAM,         # 15 — Meteor Shard + Shield Crystal
 	SHRAPNEL_BURST,      # 16 — Toxic Extract + Fireball Scroll
 	BLAZE_TRAIL,         # 17 — Fireball Scroll + Meteor Shard
-	TESLA_COIL,          # 18 — Quantum Fuzz + Shield Crystal
+	TESLA_COIL,          # 18 — Regen Crystal + Quantum Fuzz
 	VOID_RAY,            # 19 — Nebula Dust + Toxic Extract
 	QUANTUM_OVERDRIVE,   # 20 — Meteor Shard + Quantum Fuzz + Star Fruit (3-item mega)
 }
