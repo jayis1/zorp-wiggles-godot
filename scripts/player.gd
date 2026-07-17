@@ -30,6 +30,12 @@ var slide_velocity: Vector3 = Vector3.ZERO
 var _dash_buffer_timer: float = 0.0  # >0 means a dash press is buffered
 const DASH_BUFFER_WINDOW: float = 0.15  # Seconds to remember dash press before it expires
 
+# ── Shoot input buffer: if the player clicks during the shoot cooldown, the
+#    shot fires immediately when ready instead of being dropped. This makes
+#    rapid-fire feel responsive even when clicking slightly ahead of cooldown.
+var _shoot_buffer_timer: float = 0.0
+const SHOOT_BUFFER_WINDOW: float = 0.12  # Seconds to remember a shoot press
+
 # ─── Visual ───────────────────────────────────────────────────────────────────
 var base_color: Color = Color(0.3, 0.85, 0.3)  # Alien green
 var is_invuln_blinking: bool = false
@@ -64,9 +70,15 @@ func _physics_process(delta: float) -> void:
 	if pulse_wave_cooldown_timer > 0:
 		pulse_wave_cooldown_timer -= delta
 	
-	# Tick input buffer
+	# Tick input buffers
 	if _dash_buffer_timer > 0:
 		_dash_buffer_timer -= delta
+	if _shoot_buffer_timer > 0:
+		_shoot_buffer_timer -= delta
+		# Consume buffered shot when cooldown is ready
+		if shoot_cooldown_timer <= 0 and _shoot_buffer_timer > 0:
+			_shoot_buffer_timer = 0.0
+			_try_shoot()
 	
 	# ── Phase 8: If sliding, the slide handler does its own move_and_slide
 	if is_sliding:
@@ -273,7 +285,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Shoot on left click
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		if not GameManager.is_paused and GameManager.player_is_alive:
-			_try_shoot()
+			_try_shoot_or_buffer()
 	
 	# Pulse wave
 	if event.is_action_pressed("pulse_wave") and GameManager.player_is_alive:
@@ -295,6 +307,17 @@ func _apply_camera_rotation() -> void:
 func _try_shoot() -> void:
 	if shoot_cooldown_timer > 0:
 		return
+	shoot_cooldown_timer = GameConstants.SHOOT_COOLDOWN
+	_spawn_projectile()
+
+## Try to shoot; if on cooldown, buffer the input so it fires as soon as ready.
+## This prevents dropped clicks during rapid fire and makes shooting feel snappy.
+func _try_shoot_or_buffer() -> void:
+	if shoot_cooldown_timer > 0:
+		# Buffer the shot — it will fire when cooldown expires (if within window)
+		_shoot_buffer_timer = SHOOT_BUFFER_WINDOW
+		return
+	_shoot_buffer_timer = 0.0
 	shoot_cooldown_timer = GameConstants.SHOOT_COOLDOWN
 	_spawn_projectile()
 

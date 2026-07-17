@@ -118,12 +118,23 @@ func _explode() -> void:
 	# Visual explosion effect — flash and scale
 	if _material:
 		_material.albedo_color = Color(1.0, 0.6, 0.0)
+	# Explosion light flash — a brief orange burst that illuminates nearby geometry
+	var boom_light := OmniLight3D.new()
+	boom_light.light_color = Color(1.0, 0.5, 0.1)
+	boom_light.light_energy = 5.0
+	boom_light.omni_range = GameConstants.VOID_BOMBER_EXPLOSION_RADIUS * 1.5
+	boom_light.omni_attenuation = 1.5
+	add_child(boom_light)
 	var boom_tween := create_tween()
 	boom_tween.set_parallel(true)
 	boom_tween.tween_property(self, "scale",
 		Vector3.ONE * base_scale * 3.0, 0.15)
 	if _material:
 		boom_tween.tween_property(_material, "albedo_color:a", 0.0, 0.15)
+	# Light fades out fast for a snappy flash
+	boom_tween.tween_property(boom_light, "light_energy", 0.0, 0.2) \
+		.set_ease(Tween.EASE_OUT) \
+		.set_trans(Tween.TRANS_QUAD)
 	boom_tween.chain().tween_callback(queue_free)
 
 	# Camera shake on explosion

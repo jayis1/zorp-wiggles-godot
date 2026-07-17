@@ -12,6 +12,12 @@ extends Node3D
 ## Smoothing weight (higher = snappier follow). ~5 = smooth, ~15 = tight.
 @export var follow_smoothing: float = 6.0
 
+## Dynamic zoom — camera pulls back smoothly when a boss is active to give the
+## player more room to see telegraphed attacks. Distance lerps back to normal
+## when the boss is defeated.
+@export var boss_zoom_distance: float = 28.0  # Pulled-back distance during boss fights
+@export var zoom_smoothing: float = 2.5       # How fast the zoom transitions
+
 ## Screen shake parameters
 @export var max_shake_offset: float = 0.6  # Max position offset in meters
 @export var max_shake_rotation: float = 4.0  # Max rotation offset in degrees
@@ -20,6 +26,10 @@ extends Node3D
 @onready var camera: Camera3D = $Camera3D
 
 var _target_node: Node3D = null
+
+# ─── Dynamic Zoom ─────────────────────────────────────────────────────────────
+var _current_zoom_distance: float = 0.0  # Actual Z offset of the camera
+var _target_zoom_distance: float = 0.0   # Desired Z offset (snaps between normal & boss)
 
 # ─── Screen Shake (trauma-based) ──────────────────────────────────────────────
 var _trauma: float = 0.0  # 0..1, decays over time
@@ -30,11 +40,18 @@ func _ready() -> void:
 		_target_node = get_node_or_null(target)
 
 	# Set initial camera position
-	camera.position = Vector3(0, 0, orbit_distance)
+	_current_zoom_distance = orbit_distance
+	_target_zoom_distance = orbit_distance
+	camera.position = Vector3(0, 0, _current_zoom_distance)
 	rotation_degrees = Vector3(-orbit_angle, 0, 0)
 
 	# Random seeds for shake noise
 	_shake_seed = Vector3(randf() * 1000.0, randf() * 1000.0, randf() * 1000.0)
+
+	# Connect boss signals so the camera automatically zooms out during boss fights.
+	# CameraRig is instantiated fresh each scene load, so double-connect can't happen.
+	GameManager.boss_spawned.connect(_on_boss_spawned)
+	GameManager.boss_defeated.connect(_on_boss_defeated)
 
 func _process(delta: float) -> void:
 	if not _target_node or not is_instance_valid(_target_node):
@@ -49,7 +66,11 @@ func _process(delta: float) -> void:
 	var weight: float = 1.0 - exp(-follow_smoothing * delta)
 	global_position = global_position.lerp(desired, weight)
 
-	# Apply screen shake offset to the camera child node
+	# ── Dynamic zoom: smoothly lerp the camera's local Z toward the target distance
+	var zoom_weight: float = 1.0 - exp(-zoom_smoothing * delta)
+	_current_zoom_distance = lerpf(_current_zoom_distance, _target_zoom_distance, zoom_weight)
+
+	# Apply screen shake offset to the camera child node (shake layers on top of zoom)
 	_apply_screen_shake(delta)
 
 func _apply_screen_shake(delta: float) -> void:
@@ -69,11 +90,13 @@ func _apply_screen_shake(delta: float) -> void:
 
 		camera.position.x = offset_x
 		camera.position.y = offset_y
+		camera.position.z = _current_zoom_distance  # Preserve zoom distance
 		camera.rotation_degrees.z = rot_z
 	else:
-		# Restore camera local transform (keep forward distance)
+		# Restore camera local transform (keep zoom distance)
 		camera.position.x = 0.0
 		camera.position.y = 0.0
+		camera.position.z = _current_zoom_distance
 		camera.rotation_degrees.z = 0.0
 
 ## Add screen shake trauma (0..1). Clamps to 1.0. Multiple calls stack additively.
@@ -93,3 +116,15 @@ func get_right_direction() -> Vector3:
 	var right := camera.global_basis.x
 	right.y = 0
 	return right.normalized()
+
+# ─── Dynamic Boss Zoom ────────────────────────────────────────────────────────
+# When a boss spawns, smoothly pull the camera back so the player can see more
+# of the arena and react to telegraphed attacks. When the boss dies, return to
+# the normal orbit distance. Uses the same exponential-lerp smoothing as the
+# follow logic for a seamless, frame-rate-independent transition.
+
+func _on_boss_spawned(_boss: Node) -> void:
+	_target_zoom_distance = boss_zoom_distance
+
+func _on_boss_defeated(_boss: Node) -> void:
+	_target_zoom_distance = orbit_distance

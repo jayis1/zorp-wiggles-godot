@@ -64,9 +64,16 @@ func _ready() -> void:
 	if body_mesh:
 		_material = StandardMaterial3D.new()
 		_material.albedo_color = base_color
-		_material.roughness = 0.6
+		_material.roughness = 0.55
+		_material.metallic = 0.15
 		_material.emission_enabled = true
 		_material.emission = base_color * 0.15
+		# Rim lighting — gives enemies a glowing edge that makes them pop
+		# against the dark alien terrain. Rim adds a fresnel-style highlight
+		# at grazing angles, improving silhouette readability.
+		_material.rim_enabled = true
+		_material.rim = 0.6       # Rim intensity
+		_material.rim_tint = 0.8  # Tint toward albedo color for cohesive look
 		# Enable transparency for spawn fade-in (alpha=1 is fully opaque, no perf cost)
 		_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		_spawn_target_alpha = base_color.a

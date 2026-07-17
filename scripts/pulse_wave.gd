@@ -9,6 +9,7 @@ var max_radius: float = GameConstants.PULSE_WAVE_RADIUS
 var damage: int = GameConstants.PULSE_WAVE_DAMAGE
 var expand_speed: float = 30.0
 var has_hit: Dictionary = {}  # Track which enemies we've already hit
+var _light: OmniLight3D = null
 
 @onready var ring_mesh: MeshInstance3D = $RingMesh
 
@@ -23,21 +24,40 @@ func _ready() -> void:
 		mat.emission = Color(0.3, 0.8, 1.0) * 0.5
 		ring_mesh.material_override = mat
 
+	# Center light flash — illuminates the area as the wave fires, fading as it expands
+	_light = OmniLight3D.new()
+	_light.light_color = Color(0.3, 0.8, 1.0)
+	_light.light_energy = 3.0
+	_light.omni_range = 8.0
+	_light.omni_attenuation = 1.5
+	add_child(_light)
+
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused:
 		return
 	
-	# Expand
-	radius += expand_speed * delta
+	# Expand — use an ease-out curve so the ring bursts outward quickly and
+	# decelerates as it reaches max radius. This feels more energetic than a
+	# linear expansion and matches the visual "shockwave" shape players expect.
+	var progress: float = radius / max_radius if max_radius > 0.0 else 0.0
+	progress = clampf(progress, 0.0, 1.0)
+	# Ease-out quadratic: fast start, gentle finish
+	var speed_mult: float = 1.0 - 0.65 * progress
+	radius += expand_speed * speed_mult * delta
 	
 	# Update ring visual
 	if ring_mesh:
 		var scale_val := radius * 2.0
-		ring_mesh.scale = Vector3(scale_val, scale_val, 1.0)
-		# Fade out as it expands
-		var progress := radius / max_radius
+		# Use a smoothed scale so the ring doesn't pop on the first frame
+		ring_mesh.scale = ring_mesh.scale.lerp(Vector3(scale_val, scale_val, 1.0), 1.0 - exp(-12.0 * delta))
+		# Fade out as it expands — ease-in so it stays visible early then fades fast
 		var alpha := 1.0 - progress
+		alpha = alpha * alpha  # Quadratic fade for a sharper disappear at the edge
 		mat_override_albedo_alpha(alpha)
+
+	# Fade the center light as the wave expands (punchy flash → gentle glow → off)
+	if _light:
+		_light.light_energy = 3.0 * (1.0 - progress)
 	
 	# Damage enemies in ring
 	var enemies := get_tree().get_nodes_in_group("enemies")
