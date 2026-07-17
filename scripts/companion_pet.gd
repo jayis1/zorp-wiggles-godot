@@ -467,9 +467,10 @@ func _update_idle_anim(delta: float) -> void:
 			if _mesh:
 				_mesh.rotation.y += delta * 8.0
 		3:  # Tail-chase (orbit around own position)
-			var angle: float = _state_timer * 6.0
-			_mesh.position.x = cos(angle) * 0.4
-			_mesh.position.z = sin(angle) * 0.4
+			if _mesh:
+				var angle: float = _state_timer * 6.0
+				_mesh.position.x = cos(angle) * 0.4
+				_mesh.position.z = sin(angle) * 0.4
 		4:  # Sleep (slow bob + dim emission)
 			if _mesh:
 				_mesh.position.y = 0.5 + sin(_state_timer * 2.0) * 0.05

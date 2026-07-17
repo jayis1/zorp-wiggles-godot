@@ -519,7 +519,7 @@ func set_p2_hit() -> void:
 func _die() -> void:
 	is_dead = true
 	var killer_name: String = GameConstants.P2_NAME if _killed_by_p2 else "Zorp"
-	GameManager.register_kill("", killer_name)
+	GameManager.register_kill(enemy_name, killer_name)
 	GameManager.gain_xp(xp_reward)
 	if _killed_by_p2:
 		CoOpManager.p2_add_score(score_reward)
@@ -528,8 +528,6 @@ func _die() -> void:
 	enemy_died.emit(self)
 	# Phase 20: Audio — enemy death SFX
 	AudioManager.play_sfx(AudioManager.SFX_ENEMY_DEATH)
-	# Phase 5: Kill feed signal
-	GameManager.enemy_killed.emit(enemy_name, killer_name)
 	# ── Phase 18: Boss Arena — emit boss_defeated for arena-promoted bosses ──
 	if is_arena_boss:
 		GameManager.boss_defeated.emit(self)

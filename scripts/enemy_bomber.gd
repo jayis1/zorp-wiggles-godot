@@ -150,12 +150,10 @@ func _explode() -> void:
 
 	# Mark as dead for game logic
 	is_dead = true
-	GameManager.register_kill()
+	GameManager.register_kill(enemy_name, "Zorp")
 	GameManager.gain_xp(xp_reward)
 	GameManager.add_score(score_reward)
 	enemy_died.emit(self)
-	# Phase 5: Kill feed signal (must emit here since _die() is overridden)
-	GameManager.enemy_killed.emit(enemy_name, "Zorp")
 	# Remove from GameManager's enemy list (not calling super._die() so erase here)
 	GameManager.enemies.erase(self)
 	# Clean up AI controller
