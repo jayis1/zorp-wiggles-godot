@@ -26,6 +26,10 @@ var dash_direction: Vector3 = Vector3.ZERO
 var is_sliding: bool = false
 var slide_velocity: Vector3 = Vector3.ZERO
 
+# ── Landing effect: tracks whether Zorp is airborne (reverse-gravity, bounce
+#    pad, etc.) so we can play a landing squash + dust puff on touchdown.
+var _was_airborne: bool = false
+
 # ─── Input Buffering ──────────────────────────────────────────────────────────
 var _dash_buffer_timer: float = 0.0  # >0 means a dash press is buffered
 const DASH_BUFFER_WINDOW: float = 0.15  # Seconds to remember dash press before it expires
@@ -118,6 +122,8 @@ func _physics_process(delta: float) -> void:
 		# Flip the mesh upside down for visual effect
 		if mesh:
 			mesh.rotation.x = lerpf(mesh.rotation.x, deg_to_rad(180), 1.0 - exp(-5.0 * delta))
+		# Track that we're airborne so we can play a landing effect on return
+		_was_airborne = true
 	else:
 		# Return to ground level when not in reverse gravity
 		if mesh and abs(mesh.rotation.x) > 0.01:
@@ -125,6 +131,11 @@ func _physics_process(delta: float) -> void:
 		# Gravity pulls back to ground if we were on ceiling
 		if global_position.y > 2.0:
 			global_position.y = lerpf(global_position.y, 0.5, 1.0 - exp(-8.0 * delta))
+			_was_airborne = true
+		elif _was_airborne and global_position.y <= 0.8:
+			# Just landed — play landing squash + dust puff
+			_was_airborne = false
+			_play_landing_effect()
 	
 	# Cooldowns
 	if shoot_cooldown_timer > 0:
@@ -234,6 +245,30 @@ func _update_movement_lean(delta: float) -> void:
 	if mesh:
 		mesh.rotation.x = _lean_current.x
 		mesh.rotation.z = _lean_current.z
+
+# ── Landing squash + dust puff: plays when Zorp touches down after being
+#    airborne (reverse-gravity exit, bounce pad, etc.). The mesh squashes
+#    flat then bounces back with elastic easing — the same juice language
+#    as the dash squash — and a small dust burst + camera nudge sells the
+#    impact. Skipped during dash/slide (their tweens own mesh.scale).
+func _play_landing_effect() -> void:
+	if is_dashing or is_sliding:
+		return
+	if mesh:
+		var land_tween := create_tween()
+		# Squash flat: wide and short (impact frame)
+		land_tween.tween_property(mesh, "scale", Vector3(1.5, 0.4, 1.5), 0.08) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_CUBIC)
+		# Bounce back to normal with elastic overshoot for a juicy recovery
+		land_tween.tween_property(mesh, "scale", Vector3.ONE, 0.22) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_ELASTIC)
+	# Dust puff at Zorp's feet — uses the death poof with a neutral dust color
+	ParticleEffects.spawn_death_poof(get_parent(), global_position + Vector3(0, 0.1, 0),
+		Color(0.7, 0.65, 0.55), 0.6)
+	# Small camera shake on landing for weight
+	_trigger_camera_trauma(0.12)
 
 func _handle_movement(delta: float) -> void:
 	# Read input

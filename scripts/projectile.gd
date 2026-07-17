@@ -26,6 +26,16 @@ var _has_hit_enemies: Array[Node3D] = []  # Track hit enemies for pierce/chain (
 var _light: OmniLight3D = null
 var _mod_material: StandardMaterial3D = null  # Per-projectile material for mod color
 
+# ── Hit-stop (freeze frame) ────────────────────────────────────────────────────
+# A brief global time-scale dip on heavy hits makes impacts feel weighty —
+# a classic "juice" technique. We use a static cooldown so multiple crits in
+# the same frame don't stack into a long freeze. The freeze is short (45ms)
+# so gameplay isn't disrupted, only punctuated.
+static var _hitstop_cooldown: float = 0.0
+const HITSTOP_DURATION: float = 0.045   # Seconds the world freezes
+const HITSTOP_TIME_SCALE: float = 0.08  # Target time scale during freeze
+const HITSTOP_COOLDOWN: float = 0.12    # Min seconds between freeze triggers
+
 # ─── Shared Resources ──────────────────────────────────────────────────────────
 # Projectiles are spawned at ~9/sec during combat. Creating a new
 # StandardMaterial3D per shot causes unnecessary GPU resource allocation
@@ -109,6 +119,10 @@ func _physics_process(delta: float) -> void:
 	if GameManager.is_paused:
 		return
 
+	# ── Hit-stop cooldown tick (static, so any projectile instance can trigger) ──
+	if _hitstop_cooldown > 0.0:
+		_hitstop_cooldown -= delta
+
 	# ── Phase 16: Weapon mod behavior in flight ──
 	_apply_mod_flight_behavior(delta)
 
@@ -132,6 +146,24 @@ func _physics_process(delta: float) -> void:
 	lifetime -= delta
 	if lifetime <= 0:
 		queue_free()
+
+## Hit-stop: briefly dip `Engine.time_scale` to make heavy hits feel weighty.
+## Uses a static cooldown so rapid crits don't stack into a long freeze.
+## The restore is scheduled via a scene-tree Timer (not a tween on self) because
+## the projectile may queue_free() immediately after triggering hit-stop — a
+## self-bound tween would be killed and time_scale would stay frozen forever.
+## We restore to 1.0 (not a saved value) because DimensionSystem uses per-node
+## `_time_scale` multipliers, so Engine.time_scale should always be 1.0.
+func _trigger_hitstop() -> void:
+	if _hitstop_cooldown > 0.0:
+		return
+	_hitstop_cooldown = HITSTOP_COOLDOWN
+	Engine.time_scale = HITSTOP_TIME_SCALE
+	# Schedule restore on the scene tree — survives self queue_free()
+	var timer := get_tree().create_timer(HITSTOP_DURATION)
+	timer.timeout.connect(func():
+		Engine.time_scale = 1.0
+	)
 
 ## Phase 16: Apply weapon mod behavior while the projectile is in flight.
 func _apply_mod_flight_behavior(delta: float) -> void:
@@ -286,12 +318,17 @@ func _hit_enemy(enemy: Node3D) -> void:
 		if GameManager.player_crit_chain >= GameConstants.CRIT_CHAIN_THRESHOLD:
 			crit_mult = GameConstants.CRIT_CHAIN_MULT  # Chain crit bonus: 3x
 		total_damage = int(total_damage * crit_mult)
+		# ── Hit-stop: briefly slow the world on a crit for a weighty impact ──
+		_trigger_hitstop()
 
 	# Check if this will be a kill before applying damage
 	var will_kill: bool = false
 	if enemy.has_method("take_damage_from") or enemy.has_method("take_damage"):
 		if "hp" in enemy and "max_hp" in enemy:
 			will_kill = total_damage >= enemy.hp
+		# ── Hit-stop on kill blows: even heftier freeze for the killing hit ──
+		if will_kill:
+			_trigger_hitstop()
 		# Phase 8: Use the directional damage variant so enemies get knocked back
 		if enemy.has_method("take_damage_from"):
 			enemy.take_damage_from(total_damage, global_position)

@@ -9,6 +9,16 @@ extends Node3D
 @export var orbit_angle: float = GameConstants.CAMERA_ANGLE
 @export var rotate_speed: float = GameConstants.CAMERA_ROTATE_SPEED
 
+## Vertical follow with a deadzone. On flat terrain the player stays at y≈0.5,
+## so a small deadzone (±2m) keeps the camera anchored to the horizon — no
+## jitter from minor Y drift. When the player moves significantly vertically
+## (reverse-gravity dimension at y=20, or falling back down), the camera
+## smoothly follows. This fixes the bug where reverse-gravity placed the
+## player at y=20 but the camera stayed pinned at y=0, making the fight
+## off-screen.
+@export var follow_y_deadzone: float = 2.0   # Horizontal deadzone in meters
+@export var follow_y_smoothing: float = 4.0  # Y lerp smoothing (lower = floatier)
+
 ## Smoothing weight (higher = snappier follow). ~5 = smooth, ~15 = tight.
 @export var follow_smoothing: float = 6.0
 
@@ -82,9 +92,20 @@ func _process(delta: float) -> void:
 
 	# Smoothly follow player using exponential lerp (frame-rate independent)
 	var target_pos := _target_node.global_position
-	var desired := Vector3(target_pos.x, 0, target_pos.z)
 	var weight: float = 1.0 - exp(-follow_smoothing * delta)
-	global_position = global_position.lerp(desired, weight)
+	# Horizontal follow (XZ) — always tracks the player
+	var new_x: float = lerpf(global_position.x, target_pos.x, weight)
+	var new_z: float = lerpf(global_position.z, target_pos.z, weight)
+	# Vertical follow with deadzone — only move Y when the player exits the
+	# deadzone band around the camera's current Y. This keeps the camera
+	# horizon-stable on flat ground while still tracking large vertical
+	# excursions (reverse-gravity dimension, falls, bounce pads).
+	var new_y: float = global_position.y
+	var y_diff: float = target_pos.y - global_position.y
+	if abs(y_diff) > follow_y_deadzone:
+		var y_weight: float = 1.0 - exp(-follow_y_smoothing * delta)
+		new_y = lerpf(global_position.y, target_pos.y, y_weight)
+	global_position = Vector3(new_x, new_y, new_z)
 
 	# ── Dynamic zoom: smoothly lerp the camera's local Z toward the target distance
 	var zoom_weight: float = 1.0 - exp(-zoom_smoothing * delta)
