@@ -36,6 +36,12 @@ const DASH_BUFFER_WINDOW: float = 0.15  # Seconds to remember dash press before 
 var _shoot_buffer_timer: float = 0.0
 const SHOOT_BUFFER_WINDOW: float = 0.12  # Seconds to remember a shoot press
 
+# ── Pulse wave input buffer: same concept as dash/shoot buffers. If the
+#    player presses Q during the pulse wave cooldown, the ability fires
+#    immediately when ready. Prevents dropped inputs during tense moments.
+var _pulse_buffer_timer: float = 0.0
+const PULSE_BUFFER_WINDOW: float = 0.18  # Seconds to remember pulse wave press
+
 # ─── Visual ───────────────────────────────────────────────────────────────────
 var base_color: Color = Color(0.3, 0.85, 0.3)  # Alien green
 var is_invuln_blinking: bool = false
@@ -105,6 +111,12 @@ func _physics_process(delta: float) -> void:
 		if shoot_cooldown_timer <= 0 and _shoot_buffer_timer > 0:
 			_shoot_buffer_timer = 0.0
 			_try_shoot()
+	if _pulse_buffer_timer > 0:
+		_pulse_buffer_timer -= delta
+		# Consume buffered pulse wave when cooldown is ready
+		if pulse_wave_cooldown_timer <= 0 and _pulse_buffer_timer > 0:
+			_pulse_buffer_timer = 0.0
+			_use_pulse_wave()
 	
 	# ── Phase 8: If sliding, the slide handler does its own move_and_slide
 	if is_sliding:
@@ -343,7 +355,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	
 	# Pulse wave
 	if event.is_action_pressed("pulse_wave") and GameManager.player_is_alive and not GameManager.is_paused:
-		_use_pulse_wave()
+		_try_pulse_wave_or_buffer()
 	
 	# Pause toggle
 	if event.is_action_pressed("pause"):
@@ -425,6 +437,16 @@ func _use_pulse_wave() -> void:
 	pulse.global_position = global_position
 	# Camera shake on pulse wave
 	_trigger_camera_trauma(0.25)
+
+## Try to fire the pulse wave; if on cooldown, buffer the input so it fires
+## as soon as ready. Mirrors the dash and shoot buffering pattern so all three
+## player actions feel equally responsive.
+func _try_pulse_wave_or_buffer() -> void:
+	if pulse_wave_cooldown_timer > 0:
+		_pulse_buffer_timer = PULSE_BUFFER_WINDOW
+		return
+	_pulse_buffer_timer = 0.0
+	_use_pulse_wave()
 
 func _trigger_camera_trauma(amount: float) -> void:
 	var cam_rig: Node3D = GameManager.camera_rig

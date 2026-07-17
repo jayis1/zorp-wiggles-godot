@@ -59,6 +59,11 @@ func _physics_process(delta: float) -> void:
 	# Move forward
 	global_position += direction * speed * delta
 
+	# Subtle spin during flight — gives the laser bolt a sense of energy
+	# and motion rather than a static sphere drifting forward.
+	if mesh_instance:
+		mesh_instance.rotate_y(delta * 12.0)
+
 	# Update trail
 	_trail_timer -= delta
 	if _trail_timer <= 0:

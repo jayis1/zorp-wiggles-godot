@@ -59,6 +59,16 @@ var _xp_bar_target_ratio: float = 0.0
 var _boss_bar_target_ratio: float = 0.0
 var _bar_smoothing: float = 10.0  # Higher = snappier bar transitions
 
+# ── Smooth bar color animation ──
+# The bar *size* lerps smoothly, but the color was snapping instantly on
+# hp_changed. Now we track a target color and lerp toward it in _process so
+# the color transition matches the smooth bar drain/fill. This makes HP loss
+# feel less jarring — the color eases from green → yellow → red alongside
+# the shrinking bar instead of popping at the 50% threshold.
+var _hp_bar_target_color: Color = Color(0.0, 1.0, 0.0)
+var _boss_bar_target_color: Color = Color(0.0, 1.0, 0.0)
+var _color_smoothing: float = 8.0  # Color lerp speed (slightly slower than bar for soft transition)
+
 func _ready() -> void:
 	# Connect game manager signals
 	GameManager.hp_changed.connect(_on_hp_changed)
@@ -203,6 +213,8 @@ func _process(delta: float) -> void:
 	var hp_current_ratio: float = hp_bar.size.x / hp_bar_bg.size.x if hp_bar_bg.size.x > 0 else 0.0
 	hp_current_ratio = lerpf(hp_current_ratio, _hp_bar_target_ratio, weight)
 	hp_bar.size.x = hp_bar_bg.size.x * hp_current_ratio
+	# Smooth HP bar color toward target (eases green → yellow → red)
+	hp_bar.color = hp_bar.color.lerp(_hp_bar_target_color, 1.0 - exp(-_color_smoothing * delta))
 
 	# XP bar
 	var xp_bar_width: float = xp_bar_container.size.x - 4.0 if xp_bar_container.size.x > 0 else 396.0
@@ -232,11 +244,9 @@ func _process(delta: float) -> void:
 		boss_current_ratio = lerpf(boss_current_ratio, _boss_bar_target_ratio, weight)
 		boss_hp_bar.size.x = boss_bar_width * boss_current_ratio
 		boss_name_text.text = "☠ %s" % boss_ref.enemy_name
-		# Boss bar color: green → yellow → red (matches player HP bar)
-		if boss_current_ratio > 0.5:
-			boss_hp_bar.color = Color(1.0 - (boss_current_ratio - 0.5) * 2.0, 1.0, 0.0)
-		else:
-			boss_hp_bar.color = Color(1.0, boss_current_ratio * 2.0, 0.0)
+		# Smooth boss bar color toward target (eases green → yellow → red)
+		_boss_bar_target_color = _ratio_to_bar_color(_boss_bar_target_ratio)
+		boss_hp_bar.color = boss_hp_bar.color.lerp(_boss_bar_target_color, 1.0 - exp(-_color_smoothing * delta))
 	else:
 		boss_hp_container.visible = false
 		boss_ref = null
@@ -246,11 +256,9 @@ func _on_hp_changed(new_hp: int, max_hp: int) -> void:
 	_hp_bar_target_ratio = ratio
 	hp_text.text = "%d / %d" % [new_hp, max_hp]
 
-	# Color: green → yellow → red (set immediately, bar size animates smoothly)
-	if ratio > 0.5:
-		hp_bar.color = Color(1.0 - (ratio - 0.5) * 2.0, 1.0, 0.0)
-	else:
-		hp_bar.color = Color(1.0, ratio * 2.0, 0.0)
+	# Target color: green → yellow → red. The color lerps toward this target
+	# in _process so it transitions smoothly alongside the bar size.
+	_hp_bar_target_color = _ratio_to_bar_color(ratio)
 
 func _on_xp_changed(new_xp: int, xp_to_next: int) -> void:
 	var ratio := float(new_xp) / float(xp_to_next) if xp_to_next > 0 else 0.0
@@ -335,3 +343,18 @@ func _on_pickup_streak_milestone(streak: int, xp_bonus: int) -> void:
 		_pickup_streak_label.text = "✦ PICKUP STREAK x%d (+%d XP)" % [streak, xp_bonus]
 		_pickup_streak_label.visible = true
 		_pickup_streak_timer = GameConstants.PICKUP_STREAK_DISPLAY_LIFETIME
+
+# ─── Bar Color Helper ─────────────────────────────────────────────────────────
+# Maps an HP ratio (0..1) to a green → yellow → red color gradient.
+# Used by both the player HP bar and the boss HP bar so they share the same
+# color language. >0.5 interpolates green→yellow; <0.5 interpolates yellow→red.
+func _ratio_to_bar_color(ratio: float) -> Color:
+	ratio = clampf(ratio, 0.0, 1.0)
+	if ratio > 0.5:
+		# Green (0,1,0) → Yellow (1,1,0) as ratio goes 1.0 → 0.5
+		var t: float = (1.0 - ratio) * 2.0  # 0 at full, 1 at half
+		return Color(t, 1.0, 0.0)
+	else:
+		# Yellow (1,1,0) → Red (1,0,0) as ratio goes 0.5 → 0.0
+		var t: float = ratio * 2.0  # 1 at half, 0 at empty
+		return Color(1.0, t, 0.0)
