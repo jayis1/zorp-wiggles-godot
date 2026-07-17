@@ -267,7 +267,9 @@ func _spawn_destructibles() -> void:
 				var wx: float = (x - half_grid) * TILE_SIZE + randf_range(-1.0, 1.0)
 				var wz: float = (z - half_grid) * TILE_SIZE + randf_range(-1.0, 1.0)
 				var prop := destructible_scene.instantiate()
-				add_child(prop)
+				# Set properties BEFORE add_child so _ready() sees the correct values.
+				# _ready() uses fragment_color to create the material, so it must be
+				# set before the node enters the scene tree.
 				prop.global_position = Vector3(wx, 0.0, wz)
 				# Crystal biome → crystal destructibles (more XP), others → crates
 				if biome == GameConstants.Biome.CRYSTAL:
@@ -279,6 +281,7 @@ func _spawn_destructibles() -> void:
 					prop.is_crystal = false
 					prop.fragment_color = GameConstants.DESTRUCTIBLE_CRATE_COLOR
 					prop.prop_name = "Crate"
+				add_child(prop)
 				count += 1
 	print("[WorldGenerator] Spawned %d destructibles" % count)
 

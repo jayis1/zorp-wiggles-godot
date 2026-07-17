@@ -171,6 +171,9 @@ func _collect() -> void:
 		return
 
 	is_popping = true
+	# Remove from GameManager's collectible list to prevent the array from growing
+	# with invalid references over time (performance leak).
+	GameManager.collectibles.erase(self)
 
 	# Award XP
 	if xp_value > 0:

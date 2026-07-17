@@ -154,6 +154,12 @@ func _explode() -> void:
 	enemy_died.emit(self)
 	# Phase 5: Kill feed signal (must emit here since _die() is overridden)
 	GameManager.enemy_killed.emit(enemy_name, "Zorp")
+	# Remove from GameManager's enemy list (not calling super._die() so erase here)
+	GameManager.enemies.erase(self)
+	# Clean up AI controller
+	if ai_controller:
+		ai_controller.cleanup()
+		ai_controller = null
 
 func _die() -> void:
 	# Override: if not already exploded, do normal death

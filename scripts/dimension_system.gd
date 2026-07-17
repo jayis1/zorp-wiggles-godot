@@ -156,14 +156,16 @@ func _spawn_rift(pos: Vector3, target_dim: int) -> void:
 		return
 
 	var rift: Node3D = rift_scene.instantiate()
+	# Set properties BEFORE add_child so _ready() sees the correct values.
+	# _ready() uses target_dimension for colors and global_position for particles.
+	rift.global_position = pos
+	rift.set("target_dimension", target_dim)
+	rift.set("lifetime", GameConstants.RIFT_LIFETIME)
 	# Find a suitable parent — the World node
 	var world: Node = GameManager.world
 	if not world:
 		world = get_tree().current_scene
 	world.add_child(rift)
-	rift.global_position = pos
-	rift.set("target_dimension", target_dim)
-	rift.set("lifetime", GameConstants.RIFT_LIFETIME)
 
 	_active_rifts.append(rift)
 	rift_spawned.emit(pos, target_dim)
@@ -349,11 +351,13 @@ func _spawn_void_shadow_clone() -> void:
 	var world: Node = GameManager.world
 	if not world:
 		world = get_tree().current_scene
-	world.add_child(clone)
+	# Set position BEFORE add_child so _ready() sees the correct global_position
+	# (used for particle effects and boss spawn visuals).
 	clone.global_position = pos
 	clone.set("hp", GameConstants.VOID_SHADOW_CLONE_HP)
 	clone.set("max_hp", GameConstants.VOID_SHADOW_CLONE_HP)
 	clone.set("damage", GameConstants.VOID_SHADOW_CLONE_DAMAGE)
+	world.add_child(clone)
 	GameManager.enemies.append(clone)
 
 	GameManager.add_message("🌑 A shadow clone emerges from the void!")
@@ -399,8 +403,10 @@ func _spawn_exit_collectibles() -> void:
 		var world: Node = GameManager.world
 		if not world:
 			world = get_tree().current_scene
-		world.add_child(coll)
+		# Set position BEFORE add_child so _ready() reads the correct global_position
+		# for base_y (bobbing animation reference height).
 		coll.global_position = pos
+		world.add_child(coll)
 
 		# Set it to a rare collectible type
 		var rare_type: int = GameConstants.RIFT_COLLECTIBLE_TYPES[randi() % GameConstants.RIFT_COLLECTIBLE_TYPES.size()]

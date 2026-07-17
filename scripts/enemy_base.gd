@@ -446,6 +446,9 @@ func _die() -> void:
 	enemy_died.emit(self)
 	# Phase 5: Kill feed signal
 	GameManager.enemy_killed.emit(enemy_name, "Zorp")
+	# Remove from GameManager's enemy list to prevent the array from growing
+	# with invalid references over time (performance leak).
+	GameManager.enemies.erase(self)
 
 	# ── Phase 10: Clean up AI controller ──
 	if ai_controller:

@@ -441,8 +441,8 @@ func _spawn_projectile() -> void:
 	get_parent().add_child(proj)
 	proj.global_position = global_position + Vector3(0, 0.5, 0)
 	proj.set("direction", shoot_dir)
-	# Damage scales with player level
-	var dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + (GameManager.player_level - 1) * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
+	# Damage scales with player level (matches original Ursina: level * bonus)
+	var dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + GameManager.player_level * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
 	proj.set("damage", dmg)
 
 	# Quick scale pulse on shoot for juicy feedback (skip if dashing to avoid tween conflict)
