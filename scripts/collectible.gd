@@ -14,6 +14,8 @@ var is_popping: bool = false  # Pickup lift animation
 
 # ─── Visual ──────────────────────────────────────────────────────────────────
 var base_y: float = 0.0
+var base_pos_x: float = 0.0
+var base_pos_z: float = 0.0
 var bob_offset: float = 0.0
 var glow_phase: float = 0.0
 var _mat: StandardMaterial3D = null
@@ -48,6 +50,8 @@ func _ready() -> void:
 	
 	# Start bobbing animation
 	base_y = global_position.y
+	base_pos_x = global_position.x
+	base_pos_z = global_position.z
 	bob_offset = randf() * TAU  # Random phase offset
 
 func set_type(type: int) -> void:
@@ -109,26 +113,49 @@ func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:
 		return
 
-	# Bob up and down + gentle spin
+	# Bob up and down + gentle spin + lateral wobble for an organic float
 	if not is_popping:
 		bob_offset += delta * 2.0
 		global_position.y = base_y + sin(bob_offset) * 0.3
-		# Continuous slow rotation for visual appeal
-		rotate_y(delta * 1.5)
+		# Rarity-based spin speed — rarer items spin faster, creating a
+		# visual hierarchy where valuable pickups draw the eye. Crafting
+		# materials (rare) spin faster than common XP orbs.
+		var rarity_spin: float = 1.5  # Common default
+		if collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
+				or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
+				or collectible_type == GameConstants.CollectibleType.NEBULA_DUST \
+				or GameConstants.CRAFTING_MATERIALS.has(collectible_type):
+			rarity_spin = 3.0
+		elif collectible_type == GameConstants.CollectibleType.STAR_FRUIT \
+				or collectible_type == GameConstants.CollectibleType.HEALTH_FRAGMENT:
+			rarity_spin = 2.2
+		rotate_y(delta * rarity_spin)
 		# Pulsing emission glow for better visibility ("breathing" effect)
 		if _mat:
 			var pulse: float = 0.7 + 0.4 * sin(bob_offset * 1.5)
 			_mat.emission_energy_multiplier = pulse
 
-	# Magnetic pull toward player
+	# Magnetic pull toward player — uses direct global_position writes, so the
+	# X/Z wobble is only applied above when NOT being pulled (otherwise the
+	# pull and wobble would fight over global_position.x/z). The wobble anchor
+	# is updated here so that when the pull ends, the wobble resumes from the
+	# current position rather than snapping back to the spawn location.
+	# Reset magnetic flag each frame; it's set true only while actively pulling.
+	is_magnetic = false
 	if not _cached_player or not is_instance_valid(_cached_player):
 		_cached_player = get_tree().get_first_node_in_group("player")
 	var player: Node3D = _cached_player
 	if not player:
+		# No player — still apply a gentle X/Z wobble for ambient float
+		if not is_popping:
+			var wobble_x: float = sin(bob_offset * 0.7) * 0.12
+			var wobble_z: float = cos(bob_offset * 0.7 + PI * 0.25) * 0.12
+			global_position.x = base_pos_x + wobble_x
+			global_position.z = base_pos_z + wobble_z
 		return
-	
+
 	var dist := global_position.distance_to(player.global_position)
-	
+
 	# ── Emergency Health Fragment Magnet ── When player HP is critically low,
 	# Health Fragments are pulled from a much larger radius at accelerated speed
 	var is_emergency_magnet: bool = false
@@ -141,7 +168,7 @@ func _physics_process(delta: float) -> void:
 				var pull_speed := GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_SPEED * (1.0 - dist / GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS)
 				var dir := (player.global_position - global_position).normalized()
 				global_position += dir * pull_speed * delta
-	
+
 	# Normal pull radius (skip if emergency magnet already handled)
 	if not is_emergency_magnet and dist < GameConstants.COLLECT_PULL_RADIUS and not is_popping:
 		is_magnetic = true
@@ -154,6 +181,17 @@ func _physics_process(delta: float) -> void:
 		var pull_speed: float = GameConstants.COLLECT_PULL_SPEED * (0.3 + 0.7 * accel_curve)
 		var dir := (player.global_position - global_position).normalized()
 		global_position += dir * pull_speed * delta
+	elif not is_popping and not is_magnetic:
+		# Not being pulled — apply gentle X/Z wobble for an organic float.
+		# Items feel suspended in alien gravity rather than on a rail.
+		# Update the wobble anchor so the wobble centers on the current
+		# position (in case the item was previously pulled and released).
+		base_pos_x = global_position.x
+		base_pos_z = global_position.z
+		var wobble_x: float = sin(bob_offset * 0.7) * 0.12
+		var wobble_z: float = cos(bob_offset * 0.7 + PI * 0.25) * 0.12
+		global_position.x = base_pos_x + wobble_x
+		global_position.z = base_pos_z + wobble_z
 	
 	# Collect radius
 	if dist < GameConstants.COLLECT_RADIUS:

@@ -426,6 +426,20 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# Alert on hit
 	is_alerted = true
 
+	# ── Hit squash pulse — quick body_mesh scale pop on the hit frame for an
+	# extra layer of juicy feedback alongside the color flash. Skipped during
+	# windup (the windup tween controls scale and would conflict) and during
+	# death (the death tween owns scale). Uses TRANS_ELASTIC rebound so the
+	# enemy bounces back to base_scale with a satisfying wobble.
+	if body_mesh and not is_windup and not is_dead:
+		var hit_tween := create_tween()
+		hit_tween.tween_property(body_mesh, "scale",
+			Vector3.ONE * base_scale * 1.25, 0.04) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		hit_tween.tween_property(body_mesh, "scale",
+			Vector3.ONE * base_scale, 0.14) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+
 	# ── Phase 8: Apply knockback impulse from the hit direction
 	if source_pos != Vector3.ZERO:
 		var hit_dir: Vector3 = (global_position - source_pos).normalized()

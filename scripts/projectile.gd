@@ -129,10 +129,24 @@ func _physics_process(delta: float) -> void:
 	# Move forward
 	global_position += direction * speed * delta
 
-	# Subtle spin during flight — gives the laser bolt a sense of energy
-	# and motion rather than a static sphere drifting forward.
-	if mesh_instance:
-		mesh_instance.rotate_y(delta * 12.0)
+	# Orient and stretch the bolt toward its travel direction — gives a fast
+	# laser-bolt silhouette instead of a static drifting sphere. The mesh's
+	# local -Z (forward) is aligned with `direction` via look_at, then the Z
+	# scale is stretched so the bolt reads as a streak of energy. A safe up
+	# vector is used when direction is nearly vertical (homing mods) so
+	# look_at doesn't error on a parallel up vector.
+	if mesh_instance and direction.length_squared() > 0.01:
+		var up_vec := Vector3.UP
+		if absf(direction.dot(Vector3.UP)) > 0.98:
+			up_vec = Vector3.FORWARD
+		mesh_instance.look_at(global_position + direction * 2.0, up_vec)
+		mesh_instance.scale = Vector3(0.75, 0.75, 2.4)
+
+	# Energy flicker — the point light pulses subtly so the bolt feels like
+	# crackling energy rather than a static glow. Uses wall-clock time so the
+	# flicker rate is consistent regardless of time-scale (hit-stop, Time-Slow).
+	if _light:
+		_light.light_energy = 0.7 + 0.3 * sin(Time.get_ticks_msec() * 0.03)
 
 	# Update trail
 	_trail_timer -= delta

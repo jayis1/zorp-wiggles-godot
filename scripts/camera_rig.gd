@@ -19,6 +19,14 @@ extends Node3D
 @export var follow_y_deadzone: float = 2.0   # Horizontal deadzone in meters
 @export var follow_y_smoothing: float = 4.0  # Y lerp smoothing (lower = floatier)
 
+## Camera look-ahead offset — the camera target shifts slightly in the
+## player's movement direction so the player sees more of what they're
+## walking into. Smoothed so it only activates at meaningful speed and
+## eases gently when stopping.
+@export var look_ahead_strength: float = 3.0  # Max offset in meters
+@export var look_ahead_smoothing: float = 4.0  # How fast the offset eases
+var _look_ahead_offset: Vector3 = Vector3.ZERO
+
 ## Smoothing weight (higher = snappier follow). ~5 = smooth, ~15 = tight.
 @export var follow_smoothing: float = 6.0
 
@@ -92,6 +100,22 @@ func _process(delta: float) -> void:
 
 	# Smoothly follow player using exponential lerp (frame-rate independent)
 	var target_pos := _target_node.global_position
+	# ── Look-ahead: shift the follow target in the player's velocity direction
+	# so the camera leads slightly, giving the player more forward visibility.
+	# Only uses horizontal velocity (no Y drift from gravity/reverse-gravity).
+	# The offset is smoothed so it ramps up when moving and eases to zero when
+	# standing still.
+	var player_vel := Vector3.ZERO
+	if _target_node is CharacterBody3D:
+		player_vel = (_target_node as CharacterBody3D).velocity
+	var horiz_vel := Vector2(player_vel.x, player_vel.z)
+	var speed_frac: float = clampf(horiz_vel.length() / GameConstants.PLAYER_SPEED, 0.0, 1.0)
+	var desired_lookahead := Vector3.ZERO
+	if horiz_vel.length() > 0.1:
+		desired_lookahead = Vector3(player_vel.x, 0, player_vel.z).normalized() * look_ahead_strength * speed_frac
+	var la_weight: float = 1.0 - exp(-look_ahead_smoothing * delta)
+	_look_ahead_offset = _look_ahead_offset.lerp(desired_lookahead, la_weight)
+	target_pos += _look_ahead_offset
 	var weight: float = 1.0 - exp(-follow_smoothing * delta)
 	# Horizontal follow (XZ) — always tracks the player
 	var new_x: float = lerpf(global_position.x, target_pos.x, weight)
