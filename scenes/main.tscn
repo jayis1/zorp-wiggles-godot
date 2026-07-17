@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bmain"]
+[gd_scene load_steps=11 format=3 uid="uid://bmain"]
 
 [ext_resource type="Script" path="res://scripts/world_generator.gd" id="2_wg"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="3_pl"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/enemy_spawner.gd" id="6_es"]
 [ext_resource type="Script" path="res://scripts/sky_dome.gd" id="7_sky"]
 [ext_resource type="Script" path="res://scripts/ambient_particles.gd" id="8_ap"]
+[ext_resource type="Script" path="res://scripts/shader_manager.gd" id="9_sm"]
 
 [sub_resource type="SphereShape3D" id="PlayerSphere"]
 radius = 0.5
@@ -181,3 +182,7 @@ script = ExtResource("7_sky")
 
 [node name="AmbientParticles" type="Node3D" parent="."]
 script = ExtResource("8_ap")
+
+[node name="ShaderManager" type="CanvasLayer" parent="."]
+script = ExtResource("9_sm")
+layer = 50

@@ -97,8 +97,21 @@ zorp-wiggles-godot/
 │   ├── ambient_particles.gd # Biome ambient particles (snow, embers, spores, etc.)
 │   ├── damage_flash.gd     # Red screen vignette on player damage
 │   ├── destructible.gd     # Breakable props that shatter into physics fragments (Phase 8)
+│   ├── shader_manager.gd   # Screen-space post-process shader manager (Phase 9)
 │   └── main_menu.gd        # Menu logic
-├── assets/                  # Models, textures, audio (TODO)
+├── assets/
+│   ├── shaders/              # GLSL shaders (.gdshader)
+│   │   ├── heat_distortion.gdshader     # Lava biome heat haze
+│   │   ├── frost_vignette.gdshader      # Snow biome frost edges
+│   │   ├── chromatic_aberration.gdshader # Alien biome RGB split
+│   │   ├── dissolve.gdshader            # Toxic bog corrosive dissolve
+│   │   ├── crystal_refraction.gdshader  # Crystal biome prismatic shimmer
+│   │   ├── water_surface.gdshader       # Animated water ripples (spatial)
+│   │   ├── low_hp_vignette.gdshader     # Low-HP pulsing red warning
+│   │   └── boss_enrage.gdshader         # Boss enrage screen effect
+│   ├── audio/                # Sound effects & music (TODO)
+│   ├── models/               # 3D models (TODO)
+│   └── textures/             # Textures (TODO)
 └── CONVERSION_TRACKER.md   # Conversion progress tracker
 ```
 
@@ -183,7 +196,25 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Physics-based dash: After dash burst, Zorp enters a slide phase with friction decay and bounces off walls (velocity reflection with 0.6 restitution) — dash into enemies to knock them back, dash into destructibles to smash them
 - Graviton gravity well: Now uses an Area3D with `gravity_point = true` to apply real physics gravity to RigidBody3D fragments and collectibles during pull phase (player still pulled manually since CharacterBody3D ignores Area3D gravity)
 
-**Remaining phases:** Shaders, AI, GPU particles (polish), animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
+**Phase 9 (Shaders & Visual Effects):** ✅ Complete
+- 8 custom GLSL shaders in `assets/shaders/`:
+  - **Heat Distortion** (Lava biome): Sine-wave UV displacement with warm orange edge tint and shimmering brightness pulse
+  - **Frost Vignette** (Snow biome): Crystalline frost noise at screen edges with cold blue tint and breathing pulse
+  - **Chromatic Aberration** (Alien biome): RGB channel split that intensifies toward corners with alien purple tint
+  - **Dissolve** (Toxic bog): Animated value-noise corrosive fringe that drips downward, bright acid-green glow at dissolution edge
+  - **Crystal Refraction** (Crystal biome): Faceted prismatic refraction with per-cell random direction and blue-purple shimmer
+  - **Water Surface** (spatial shader): Vertex ripple displacement + scrolling UVs + specular highlights for water biome overlays
+  - **Low-HP Vignette**: Pulsing red heartbeat vignette with desaturation, intensity scales with HP deficit
+  - **Boss Enrage**: Red pulse + chromatic aberration + tunnel-vision darkening, activates when boss HP < 30%
+- ShaderManager system (`shader_manager.gd`): CanvasLayer (layer 50) that manages all screen-space post-process shaders
+  - Cross-fades biome ambient shaders on biome change (dual ColorRect A/B swap with exponential lerp)
+  - Modulates low-HP vignette from HP ratio (activates below 30% HP, max at 0% HP)
+  - Modulates boss enrage from boss HP ratio (activates below 30% boss HP)
+  - Auto-fades and hides overlays when strength is negligible (GPU savings)
+  - Resets all effects on player death / game restart
+- Water biome overlays now use the animated water_surface shader (replaces flat unlit material)
+
+**Remaining phases:** Smart Enemy AI, GPU particles (polish), animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
 
 ## License
 

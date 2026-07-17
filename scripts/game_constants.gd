@@ -478,3 +478,39 @@ const DESTRUCTIBLE_REWARD_XP: int = 10
 # Graviton physics gravity well (Area3D gravity point)
 const GRAVITON_AREA_GRAVITY: float = 14.0        # Gravity strength (Godot units)
 const GRAVITON_AREA_FALLOFF: float = 1.0         # Falloff exponent (1.0 = linear)
+
+# ─── Phase 9: Shaders & Visual Effects ────────────────────────────────────────
+# Biome → screen shader mapping. Each biome can have at most one ambient
+# screen shader active at a time (heat, frost, chromatic, dissolve, crystal).
+# The ShaderManager autoloads the .gdshader files and swaps the active shader
+# when the biome changes, cross-fading the strength for smooth transitions.
+const BIOME_SHADER_MAP: Dictionary = {
+	GameConstants.Biome.LAVA: "heat_distortion",
+	GameConstants.Biome.SNOW: "frost_vignette",
+	GameConstants.Biome.ALIEN: "chromatic_aberration",
+	GameConstants.Biome.TOXIC_BOG: "dissolve",
+	GameConstants.Biome.CRYSTAL: "crystal_refraction",
+}
+
+# Ambient shader strength per biome (0..1). Tuned so the effect is noticeable
+# but never obscures gameplay.
+const BIOME_SHADER_STRENGTH: Dictionary = {
+	GameConstants.Biome.LAVA: 0.55,
+	GameConstants.Biome.SNOW: 0.6,
+	GameConstants.Biome.ALIEN: 0.45,
+	GameConstants.Biome.TOXIC_BOG: 0.5,
+	GameConstants.Biome.CRYSTAL: 0.4,
+}
+
+# Low-HP warning vignette config
+const LOW_HP_SHADER_THRESHOLD: float = 0.3      # HP ratio below which the warning kicks in
+const LOW_HP_SHADER_MAX_STRENGTH: float = 0.85  # Strength when HP is near 0
+const LOW_HP_SHADER_FADE_SPEED: float = 3.0     # How fast strength transitions (per second)
+
+# Boss enrage shader config
+const BOSS_ENRAGE_SHADER_THRESHOLD: float = 0.3  # Boss HP ratio below which enrage shader activates
+const BOSS_ENRAGE_SHADER_MAX_STRENGTH: float = 0.8
+const BOSS_ENRAGE_SHADER_FADE_SPEED: float = 4.0
+
+# Shader cross-fade speed (biome transition)
+const SHADER_TRANSITION_SPEED: float = 2.5

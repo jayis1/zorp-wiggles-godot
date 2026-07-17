@@ -261,6 +261,18 @@ func _spawn_water_overlay(wx: float, wz: float) -> void:
 		GameConstants.TILE_SCALE,
 		GameConstants.WATER_OVERLAY_COLOR
 	)
+	# Phase 9: Apply animated water surface shader for realistic ripples
+	var water_shader: Shader = load("res://assets/shaders/water_surface.gdshader")
+	if water_shader:
+		var mat := ShaderMaterial.new()
+		mat.shader = water_shader
+		mat.set_shader_parameter("water_color", Vector3(0.1, 0.35, 0.7))
+		mat.set_shader_parameter("deep_color", Vector3(0.02, 0.05, 0.2))
+		mat.set_shader_parameter("transparency", 0.55)
+		mat.set_shader_parameter("flow_speed", 0.6)
+		mat.set_shader_parameter("wave_height", 0.04)
+		mat.set_shader_parameter("wave_frequency", 5.0)
+		overlay.material_override = mat
 	_water_overlays.append(overlay)
 	add_child(overlay)
 

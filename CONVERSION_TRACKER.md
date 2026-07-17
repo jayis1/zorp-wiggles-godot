@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 8 — Physics & Interaction (PARTIALLY COMPLETE)
+## Status: PHASE 9 — Shaders & Visual Effects (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -132,17 +132,19 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [ ] Enemy corpse physics (tumble and settle realistically) — TODO (current death uses tween scale-down; physics corpse needs RigidBody3D conversion)
 - [x] Graviton gravity well uses actual physics force (Area3D gravity point) — `gravity_well` Area3D with `gravity_point = true` pulls RigidBody3D fragments; manual pull still handles CharacterBody3D player
 
-### Phase 9: Shaders & Visual Effects (TODO) 🆕 NEW FEATURE
-- [ ] Lava biome heat distortion shader (sine-wave vertex displacement)
-- [ ] Crystal biome refractive shimmer (screen-space refraction)
-- [ ] Alien biome chromatic aberration (RGB split post-process)
-- [ ] Snow biome frost vignette (screen-edge frost shader)
-- [ ] Toxic bog dripping dissolve shader (alpha cutoff animation)
-- [ ] Water surface shader (scrolling normal map, depth-based opacity)
-- [ ] Boss enrage screen effect (red pulse + chromatic aberration)
-- [ ] Dash afterimage shader (ghost trail with fade)
-- [ ] Low-HP warning shader (pulsing red vignette)
-- [ ] Biome transition fog (exponential fog with per-biome color)
+### Phase 9: Shaders & Visual Effects ✅ COMPLETE 🆕 NEW FEATURE
+- [x] Lava biome heat distortion shader (sine-wave UV displacement + warm orange edge tint) — `heat_distortion.gdshader`
+- [x] Crystal biome refractive shimmer (faceted prismatic refraction + blue-purple tint) — `crystal_refraction.gdshader`
+- [x] Alien biome chromatic aberration (RGB channel split at screen edges) — `chromatic_aberration.gdshader`
+- [x] Snow biome frost vignette (crystalline frost noise + cold blue tint at edges) — `frost_vignette.gdshader`
+- [x] Toxic bog dripping dissolve shader (animated noise-based corrosive fringe) — `dissolve.gdshader`
+- [x] Water surface shader (vertex ripple displacement + scrolling flow + specular) — `water_surface.gdshader`
+- [x] Boss enrage screen effect (red pulse + chromatic aberration + tunnel vision) — `boss_enrage.gdshader`
+- [x] Low-HP warning shader (pulsing red vignette, heartbeat throb + desaturation) — `low_hp_vignette.gdshader`
+- [ ] Biome transition fog (exponential fog with per-biome color) — handled by existing WorldEnvironment fog, not a shader
+- [ ] Dash afterimage shader (ghost trail with fade) — TODO (requires multi-pass or frame buffer tricks)
+- [x] ShaderManager system (`shader_manager.gd`) — CanvasLayer with cross-fading ColorRect overlays, biome-based shader swapping, low-HP/boss-enrage modulation
+- [x] Water biome overlays now use animated water_surface.gdshader (decoration.gd)
 
 ### Phase 10: Smart Enemy AI (TODO) 🆕 NEW FEATURE
 - [ ] NavigationRegion3D for each biome (generated with nav mesh)
@@ -310,4 +312,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Pulse wave ease-out expansion**: Pulse wave now uses an ease-out quadratic speed multiplier (fast burst, gentle deceleration) and smoothed scale lerp, with quadratic alpha fade for a sharper disappear at max radius. Feels more like a real shockwave than a linear ring.
 
 ## Last Updated
-Phase 8 partially complete. Physics & Interaction: enemy knockback via `take_damage_from()` (directional impulse on hit), enemy-to-enemy separation (soft push so they don't stack), destructible environment objects (`destructible.gd` + `destructible.tscn` — StaticBody3D that shatters into RigidBody3D physics fragments with bounce material), physics-based dash slide (after dash burst, Zorp slides with friction decay and bounces off walls using `velocity.bounce(normal)` with restitution), dash bump (enemies in dash path get knocked back + small damage), dash smash (destructibles in dash path instantly shattered), Graviton Area3D gravity well (`gravity_point = true` pulls RigidBody3D fragments; manual pull handles CharacterBody3D player), destructibles spawned across biomes by world_generator (crates in most biomes, crystal clusters in crystal biome with 2x XP). New scripts: destructible.gd. Modified: game_constants.gd (physics constants), enemy_base.gd (knockback + separation), projectile.gd (directional damage), player.gd (slide + bump + smash), enemy_graviton.gd (Area3D gravity well), world_generator.gd (destructible spawning). Phases 9-21 planned.
+Phase 9 complete. Shaders & Visual Effects: 8 new .gdshader files in `assets/shaders/` — heat_distortion (lava biome, sine-wave UV displacement + warm orange edge tint), frost_vignette (snow biome, crystalline frost noise + cold blue tint), chromatic_aberration (alien biome, RGB channel split at edges), dissolve (toxic bog, animated noise-based corrosive fringe), crystal_refraction (crystal biome, faceted prismatic refraction), water_surface (spatial shader for water overlays, vertex ripple + scrolling flow + specular), low_hp_vignette (pulsing red heartbeat vignette + desaturation), boss_enrage (red pulse + chromatic aberration + tunnel vision). New `shader_manager.gd` (CanvasLayer at layer 50) manages all screen-space post-process shaders: cross-fades biome ambient shaders on biome change (dual ColorRect A/B swap with exponential lerp), modulates low-HP vignette strength from HP ratio, modulates boss enrage from boss HP ratio. Water biome overlays in decoration.gd now use the animated water_surface shader instead of flat unlit material. Constants added to game_constants.gd (BIOME_SHADER_MAP, BIOME_SHADER_STRENGTH, LOW_HP/BOSS_ENRAGE thresholds and fade speeds, SHADER_TRANSITION_SPEED). main.tscn updated with ShaderManager node. Phases 10-21 planned.
