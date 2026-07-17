@@ -189,16 +189,27 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 
 func _pick_enemy_type(distance_from_center: float) -> int:
 	var tier: int = min(int(distance_from_center / GameConstants.DIFFICULTY_SCALE_DISTANCE), 2)
+	var pool: Array[int]
 	match tier:
 		0:
-			return EASY_TYPES[randi() % EASY_TYPES.size()]
+			pool = EASY_TYPES.duplicate()
 		1:
-			return MEDIUM_TYPES[randi() % MEDIUM_TYPES.size()]
+			pool = MEDIUM_TYPES.duplicate()
 		_:
-			# Hard tier — small chance for Drake boss
-			if randf() < 0.05:
-				return GameConstants.EnemyType.DRAKE
-			return HARD_TYPES[randi() % HARD_TYPES.size()]
+			pool = HARD_TYPES.duplicate()
+	# ── Phase 17: Weather-dependent spawning — bonus-weighted enemies ──
+	# During special weather, certain enemy types get extra entries in the pool,
+	# making them more likely to spawn (e.g. Void Wisps during thunderstorms).
+	var bonus_types: Array = WeatherSystem.get_weather_spawn_bonus_types()
+	for bt in bonus_types:
+		# Add the bonus type up to 2 extra times if it's already in the pool,
+		# or 1 time if it's not (so weather can introduce out-of-tier enemies).
+		if bt in pool:
+			pool.append(bt)
+			pool.append(bt)
+		else:
+			pool.append(bt)
+	return pool[randi() % pool.size()]
 
 func _scale_enemy_to_player_level(enemy: Node3D) -> void:
 	var player_level: int = GameManager.player_level

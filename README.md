@@ -115,6 +115,8 @@ zorp-wiggles-godot/
 │   ├── companion_hud.gd   # Pet HUD indicator (Phase 15)
 │   ├── weapon_mod_system.gd # Weapon mod crafting autoload singleton (Phase 16)
 │   ├── crafting_menu.gd   # Crafting menu UI — combine materials into weapon mods (Phase 16)
+│   ├── weather_system.gd  # Dynamic weather autoload singleton (Phase 17)
+│   ├── weather_indicator.gd # Weather HUD indicator (Phase 17)
 │   └── main_menu.gd        # Menu logic
 ├── assets/
 │   ├── shaders/              # GLSL shaders (.gdshader)
@@ -306,7 +308,20 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - HUD weapon mod indicator: bottom-center label showing current mod name (color-matched) and total material count
 - `WeaponModSystem` autoload singleton manages inventory, crafting, and equip state
 
-**Remaining phases:** Dynamic weather, boss arenas, co-op, audio & polish.
+**Phase 17 (Dynamic Weather):** ✅ Complete — 🆕 New Feature
+- 6 dynamic weather states cycle through the world: **Clear**, **Acid Rain**, **Solar Flare**, **Fog**, **Thunderstorm**, **Snow Storm**
+- Each weather lasts 35–70 seconds with smooth 4-second cross-fade transitions
+- Weather selection is **biome-biased**: acid rain more likely in toxic bogs, solar flares in lava/desert, fog in wetlands, thunderstorms near water, snow storms in frozen biomes
+- **Acid Rain**: Damages all exposed entities (player + enemies) every second. Raycasts upward to check for shelter — 75% damage reduction under overhangs
+- **Solar Flare**: Boosts fire rate by 1.5× with a pulsing orange world light that follows the player
+- **Fog**: Reduces enemy detection range to 50% (stealth opportunity) and smoothly increases WorldEnvironment fog density to 3× baseline
+- **Thunderstorm**: Random lightning strikes with 1.2s telegraph warning, 45 AoE damage in a 6m radius, bright light flash + camera shake
+- **Snow Storm**: Slows all movement to 70% and reduces slide friction to 40% for icy, slidey physics
+- Weather particles (300–400 GPUParticles3D) follow the player: streaking acid rain, rain drops, blowing snow, drifting fog motes, rising embers
+- **Weather-dependent enemy spawning**: Void Wisps during thunderstorms, Spore Spitters during acid rain, Sentinels during fog/snow
+- HUD weather indicator (top-right): shows current weather icon, name, countdown timer bar, and upcoming weather during transitions
+
+**Remaining phases:** Boss arenas, co-op, audio & polish.
 
 ## License
 

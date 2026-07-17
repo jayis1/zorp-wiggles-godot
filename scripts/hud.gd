@@ -211,6 +211,14 @@ func _ready() -> void:
 	WeaponModSystem.mod_unequipped.connect(_on_mod_unequipped_hud)
 	WeaponModSystem.inventory_changed.connect(_on_inventory_changed_hud)
 
+	# ── Phase 17: Weather Indicator ──
+	var wi_script := load("res://scripts/weather_indicator.gd")
+	var wi_ctrl := Control.new()
+	wi_ctrl.set_script(wi_script)
+	wi_ctrl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	wi_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(wi_ctrl)
+
 	# Initialize displays
 	_update_all_displays()
 

@@ -209,6 +209,8 @@ func _update_ai(delta: float) -> void:
 	if ai_controller and ai_controller.enable_los:
 		if not ai_controller.has_los:
 			effective_detect_range *= 0.5  # Reduced detection without visual
+	# Phase 17: Fog weather reduces enemy detection range (stealth opportunity)
+	effective_detect_range *= WeatherSystem.get_detect_range_multiplier()
 
 	if not is_alerted and dist_to_player < effective_detect_range:
 		is_alerted = true
@@ -259,6 +261,8 @@ func _update_ai(delta: float) -> void:
 		effective_speed *= ai_controller.get_enrage_speed_mult()
 		effective_speed *= ai_controller.get_frenzy_speed_mult()
 		effective_speed *= ai_controller.get_ambush_speed_mult()
+	# Phase 17: Snow Storm weather slows all enemies
+	effective_speed *= WeatherSystem.get_speed_multiplier()
 
 	# Movement toward player — compute desired velocity, then smoothly approach
 	# it via exponential lerp for organic acceleration/deceleration.

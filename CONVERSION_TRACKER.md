@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 16 — Weapon Mod Crafting (COMPLETE)
+## Status: PHASE 17 — Dynamic Weather (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -268,17 +268,22 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] `WeaponModSystem` registered as autoload in `project.godot`
 - [x] Input action `crafting` (C key) added to `project.godot`
 
-### Phase 17: Dynamic Weather (TODO) 🆕 NEW FEATURE
-- [ ] Weather state machine (clear → rain → storm → fog → flare → clear)
-- [ ] Acid rain: damages player and enemies (reduced damage with shelter)
-- [ ] Solar flare: boosts energy regen, pulses orange light
-- [ ] Fog: reduces enemy detection range to 50% (stealth opportunity)
-- [ ] Thunderstorm: random lightning strikes (AoE damage zones)
-- [ ] Snow: slows movement, icy physics (slide on surfaces)
-- [ ] Biome-specific weather (lava = ember storms, water = rain, etc.)
-- [ ] Weather transition effects (fog rolls in, rain starts with drops)
-- [ ] Weather UI indicator (current weather + upcoming)
-- [ ] Weather-dependent enemy spawns (storms spawn Void Wisps, etc.)
+### Phase 17: Dynamic Weather ✅ COMPLETE 🆕 NEW FEATURE
+- [x] Weather state machine (clear → rain → storm → fog → flare → clear) — `weather_system.gd` autoload singleton, cycles through 6 `GameConstants.Weather` states with 35-70s duration each and 4s cross-fade transitions
+- [x] Acid rain: damages player and enemies (reduced damage with shelter) — `_tick_acid_rain()` damages exposed entities every 1s, `_is_player_exposed_to_sky()` raycasts upward 30m to check shelter (75% damage reduction under overhang)
+- [x] Solar flare: boosts energy regen, pulses orange light — `get_fire_rate_multiplier()` returns 1.5x, pulsing OmniLight3D (orange, 2.5 energy) follows player
+- [x] Fog: reduces enemy detection range to 50% (stealth opportunity) — `get_detect_range_multiplier()` returns 0.5, WorldEnvironment fog density smoothly lerps to 3x baseline
+- [x] Thunderstorm: random lightning strikes (AoE damage zones) — `_tick_thunderstorm()` schedules strikes every 5-12s, 1.2s telegraph warning, 45 damage in 6m radius, white-blue light flash + particle burst + camera shake
+- [x] Snow: slows movement, icy physics (slide on surfaces) — `get_speed_multiplier()` returns 0.7x for player and enemies, `get_friction_multiplier()` returns 0.4x making dash slides last longer
+- [x] Biome-specific weather (lava = ember storms, water = rain, etc.) — `WEATHER_BIOME_AFFINITY` table weights weather selection by current biome (+2.0 weight for affinity matches)
+- [x] Weather transition effects (fog rolls in, rain starts with drops) — 4s cross-fade transition with `weather_transition_started`/`ended` signals, smooth fog density lerp
+- [x] Weather UI indicator (current weather + upcoming) — `weather_indicator.gd`, top-right panel with icon + name + countdown timer bar, transition label showing next weather, color-matched per weather type
+- [x] Weather-dependent enemy spawns (storms spawn Void Wisps, etc.) — `WEATHER_SPAWN_BONUS` table, `EnemySpawner._pick_enemy_type()` adds bonus-weighted enemy entries during special weather
+- [x] Weather particles (acid rain, rain, snow storm, fog motes, embers) — `_create_weather_particles()` with 5 particle presets, follows player at y=12 offset
+- [x] `WeatherSystem` registered as autoload in `project.godot`
+- [x] WorldEnvironment added to `main.tscn` with baseline fog (density 0.01) for fog weather control
+- [x] Player movement speed × weather multiplier, fire rate × solar flare multiplier, slide friction × snow storm multiplier
+- [x] Enemy detection range × fog multiplier, enemy speed × snow storm multiplier
 
 ### Phase 18: Boss Arenas (TODO) 🆕 NEW FEATURE
 - [ ] Arena generation system (terrain morphs when boss spawns)
@@ -371,4 +376,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Player landing squash + dust puff**: When Zorp touches down after being airborne (reverse-gravity exit, bounce pad landing), the mesh squashes flat (1.5, 0.4, 1.5) then bounces back with `TRANS_ELASTIC` easing — the same juice language as the dash squash — plus a neutral-colored dust puff at the feet and a small camera shake (0.12 trauma). Skipped during dash/slide to avoid tween conflicts on `mesh.scale`. Tracked via a `_was_airborne` flag set whenever the player is above the deadzone threshold.
 
 ## Last Updated
-Phase 16 complete. Weapon Mod Crafting System: New `weapon_mod_system.gd` autoload singleton manages inventory of 10 crafting material types and 20 discoverable weapon mods. 5 new collectible types added (Shield Crystal, Fireball Scroll, Regen Crystal, Magnet Core, Toxic Extract) — they drop from enemy kills (12% normal, 100% boss rate). `crafting_menu.gd` provides a full-screen crafting UI: select 2-3 materials from a grid, click Craft to combine them into a weapon mod, discover new mods by trying combinations (invalid combos refund half the materials). Discovered mods appear in a side panel with equip buttons. Each mod changes laser behavior: Homing Laser tracks enemies, Chain Lightning jumps to 3 nearby enemies, Spread Shot fires 3 bolts in a fan, Piercing Beam passes through enemies, Bouncing Bolt reflects off walls, Freeze Ray slows enemies, Acid Trail leaves a damaging pool, Mega Blast causes AoE explosions, Splitter Laser spawns child projectiles, Vampire Beam heals Zorp, Gravity Well pulls enemies, Ricochet bounces between enemies, Plasma Nova explodes, Sniper Beam does 2x damage at 2x speed, Shrapnel fires in 6 directions, Blaze Trail burns over time, Tesla Coil zaps with electric arcs, Void Ray slows, Quantum Overdrive fires triple homing+chain bolts. Each mod has unique color, damage multiplier (0.5x-2.5x), fire rate multiplier, and projectile speed multiplier. Reflective Shield also provides 40% damage reduction. `projectile.gd` rewritten with `set_weapon_mod()` method and 15+ mod-specific behavior functions for in-flight and on-hit effects. HUD shows a bottom-center mod indicator with current mod name and total material count. Input action `crafting` (C key) added to `project.godot`. `WeaponModSystem` registered as autoload. Phases 17-21 planned.
+Phase 17 complete. Dynamic Weather System: New `weather_system.gd` autoload singleton cycles through 6 weather states (Clear, Acid Rain, Solar Flare, Fog, Thunderstorm, Snow Storm) with 35-70s duration each and 4s cross-fade transitions. Weather selection is biome-biased via `WEATHER_BIOME_AFFINITY` table (e.g. acid rain more likely in toxic bog, solar flare in lava/desert, fog in water/swamp, thunderstorm in water/grass, snow storm in snow/crystal). Each weather has gameplay effects: Acid Rain damages exposed entities every 1s (75% reduction under shelter via upward raycast), Solar Flare boosts fire rate 1.5x with pulsing orange light, Fog reduces enemy detection range to 50% and triples WorldEnvironment fog density, Thunderstorm spawns telegraphed lightning strikes (1.2s warning, 45 AoE damage in 6m radius, light flash + camera shake), Snow Storm slows movement to 0.7x and reduces slide friction to 0.4x for icy physics. Weather particles (300-400 GPUParticles3D per type) follow the player: acid rain streaks, rain drops, blowing snow, fog motes, rising embers. Weather-dependent enemy spawning via `WEATHER_SPAWN_BONUS` table — Void Wisps during thunderstorms, Spore Spitters during acid rain, Sentinels during fog/snow. `weather_indicator.gd` HUD panel (top-right) shows current weather icon + name + countdown timer bar, with transition label showing upcoming weather. WorldEnvironment added to `main.tscn` with baseline fog for weather-controlled density. `WeatherSystem` registered as autoload. Phases 18-21 planned.

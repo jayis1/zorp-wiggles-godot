@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://bmain"]
+[gd_scene load_steps=13 format=3 uid="uid://bmain"]
 
 [ext_resource type="Script" path="res://scripts/world_generator.gd" id="2_wg"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="3_pl"]
@@ -16,7 +16,16 @@ radius = 0.5
 radius = 0.5
 height = 1.0
 
+[sub_resource type="Environment" id="WorldEnv"]
+background_mode = 0
+fog_enabled = true
+fog_density = 0.01
+fog_light_color = Color(0.6, 0.7, 0.9, 1)
+
 [node name="Main" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment"]
+environment = SubResource("WorldEnv")
 
 [node name="World" type="Node3D" parent="."]
 script = ExtResource("2_wg")

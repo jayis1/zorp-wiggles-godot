@@ -972,3 +972,64 @@ const COLLECTIBLE_TYPE_NAMES: Dictionary = {
 
 # Pet aura particle counts per stage
 const PET_AURA_PARTICLE_COUNTS: Array[int] = [0, 8, 20]  # Baby: none, Adolescent: few, Adult: many
+
+# ─── Phase 17: Dynamic Weather ────────────────────────────────────────────────
+enum Weather {
+	CLEAR,         # Normal conditions
+	ACID_RAIN,     # Damages player and enemies; reduced under shelter
+	SOLAR_FLARE,   # Boosts fire rate (energy regen), orange light pulse
+	FOG,           # Reduces enemy detection range (stealth)
+	THUNDERSTORM,  # Random lightning strikes (AoE damage zones)
+	SNOW_STORM,    # Slows movement, icy physics (slide on surfaces)
+}
+
+# Weather state duration ranges (seconds): [min, max]
+const WEATHER_DURATION_MIN: float = 35.0
+const WEATHER_DURATION_MAX: float = 70.0
+const WEATHER_TRANSITION_DURATION: float = 4.0  # Fade-in / fade-out time
+
+# Damage / effect tuning
+const ACID_RAIN_DAMAGE_PER_TICK: int = 2        # Per second applied to exposed entities
+const ACID_RAIN_TICK_INTERVAL: float = 1.0      # How often damage ticks
+const ACID_RAIN_SHELTER_REDUCTION: float = 0.75  # 75% damage reduction under shelter (y < overhang)
+const SOLAR_FLARE_FIRE_RATE_MULT: float = 1.5   # 50% faster fire rate
+const SOLAR_FLARE_LIGHT_ENERGY: float = 2.5     # OmniLight energy for orange glow
+const FOG_DETECT_RANGE_MULT: float = 0.5        # Enemy detection range multiplied by this
+const FOG_DENSITY_MULT: float = 3.0             # WorldEnvironment fog density multiplier
+const THUNDER_LIGHTNING_INTERVAL_MIN: float = 5.0  # Min seconds between strikes
+const THUNDER_LIGHTNING_INTERVAL_MAX: float = 12.0 # Max seconds between strikes
+const THUNDER_LIGHTNING_DAMAGE: int = 45          # AoE damage at strike center
+const THUNDER_LIGHTNING_RADIUS: float = 6.0        # AoE radius
+const THUNDER_LIGHTNING_WARN_TIME: float = 1.2     # Telegraph (glowing ground patch) before strike
+const SNOW_STORM_SPEED_MULT: float = 0.7           # Player/enemy movement speed multiplier
+const SNOW_STORM_FRICTION_MULT: float = 0.4        # Lower friction = slidey surfaces
+
+# Weather → biome affinity (weather more likely in thematic biomes)
+# Each weather type maps to a list of biomes where it has a higher chance of starting.
+const WEATHER_BIOME_AFFINITY: Dictionary = {
+	Weather.ACID_RAIN: [GameConstants.Biome.TOXIC_BOG, GameConstants.Biome.SWAMP],
+	Weather.SOLAR_FLARE: [GameConstants.Biome.LAVA, GameConstants.Biome.DESERT],
+	Weather.FOG: [GameConstants.Biome.WATER, GameConstants.Biome.SWAMP, GameConstants.Biome.FOREST],
+	Weather.THUNDERSTORM: [GameConstants.Biome.WATER, GameConstants.Biome.GRASS, GameConstants.Biome.FLOATING_ISLANDS],
+	Weather.SNOW_STORM: [GameConstants.Biome.SNOW, GameConstants.Biome.CRYSTAL],
+}
+
+# Weather enemy spawn overrides — weather types that bias spawning toward specific enemies.
+# Keyed by Weather enum → array of EnemyType values that get a bonus weight during that weather.
+const WEATHER_SPAWN_BONUS: Dictionary = {
+	Weather.THUNDERSTORM: [GameConstants.EnemyType.WISP],   # Storms spawn Void Wisps
+	Weather.FOG: [GameConstants.EnemyType.WISP, GameConstants.EnemyType.SENTINEL],
+	Weather.ACID_RAIN: [GameConstants.EnemyType.SPITTER, GameConstants.EnemyType.BOMBER],
+	Weather.SOLAR_FLARE: [GameConstants.EnemyType.GRAVITON],
+	Weather.SNOW_STORM: [GameConstants.EnemyType.SENTINEL],
+}
+
+# Weather display info (name, icon emoji, color for UI)
+const WEATHER_INFO: Dictionary = {
+	Weather.CLEAR: {"name": "Clear", "icon": "☀", "color": Color(1.0, 0.9, 0.5)},
+	Weather.ACID_RAIN: {"name": "Acid Rain", "icon": "☣", "color": Color(0.5, 1.0, 0.2)},
+	Weather.SOLAR_FLARE: {"name": "Solar Flare", "icon": "🔥", "color": Color(1.0, 0.5, 0.1)},
+	Weather.FOG: {"name": "Fog", "icon": "🌫", "color": Color(0.7, 0.75, 0.8)},
+	Weather.THUNDERSTORM: {"name": "Thunderstorm", "icon": "⚡", "color": Color(0.5, 0.6, 1.0)},
+	Weather.SNOW_STORM: {"name": "Snow Storm", "icon": "❄", "color": Color(0.8, 0.9, 1.0)},
+}

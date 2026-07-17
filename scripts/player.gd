@@ -298,6 +298,8 @@ func _handle_movement(delta: float) -> void:
 	# Acceleration/deceleration
 	# ── Phase 14: Time-Slow dimension — player moves at reduced speed ──
 	var speed_mult: float = DimensionSystem.get_player_time_scale()
+	# ── Phase 17: Dynamic Weather — snow storm slows movement ──
+	speed_mult *= WeatherSystem.get_speed_multiplier()
 	if move_direction.length_squared() > 0.01:
 		velocity_target = move_direction * GameConstants.PLAYER_SPEED * speed_mult
 		# Snap Y velocity to zero (no vertical movement)
@@ -345,7 +347,10 @@ func _start_slide(initial_vel: Vector3) -> void:
 
 func _update_slide(delta: float) -> void:
 	# Apply friction (frame-rate independent exponential decay)
-	var friction_factor: float = pow(GameConstants.DASH_SLIDE_FRICTION, delta * 60.0)
+	# Phase 17: Snow Storm reduces friction → slidey surfaces (slide lasts longer)
+	var friction_base: float = GameConstants.DASH_SLIDE_FRICTION
+	friction_base = pow(friction_base, WeatherSystem.get_friction_multiplier())
+	var friction_factor: float = pow(friction_base, delta * 60.0)
 	slide_velocity *= friction_factor
 
 	# Move
@@ -521,6 +526,8 @@ func _try_shoot() -> void:
 	var cooldown: float = GameConstants.SHOOT_COOLDOWN
 	if WeaponModSystem:
 		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
+	# Phase 17: Solar Flare weather boosts fire rate
+	cooldown *= WeatherSystem.get_fire_rate_multiplier()
 	shoot_cooldown_timer = cooldown
 	_spawn_projectile()
 
