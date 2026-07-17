@@ -154,6 +154,12 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	get_parent().add_child(enemy)
 	GameManager.enemies.append(enemy)
 
+	# ── Phase 11: Spawn materialization particles ──
+	# Energy coalescing effect at the spawn point
+	var enemy_base: EnemyBase = enemy as EnemyBase
+	if enemy_base:
+		ParticleEffects.spawn_materialization(get_parent(), pos, enemy_base.base_color)
+
 	# Emit spawn direction signal for HUD arrows
 	GameManager.enemy_spawned_near.emit(pos, enemy_type)
 

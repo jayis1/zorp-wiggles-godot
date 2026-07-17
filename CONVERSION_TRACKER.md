@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 10 — Smart Enemy AI (COMPLETE)
+## Status: PHASE 11 — GPU Particles (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -162,15 +162,16 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Smart AI disabled for stationary Sentinel (`use_smart_ai = false`)
 - [x] Flanking/ambush disabled for Drake boss and Spore Spitter (ranged kiter)
 
-### Phase 11: GPU Particles (TODO) 🆕 NEW FEATURE
-- [ ] GPUParticles3D for explosions (1000+ particles per burst)
-- [ ] Ambient biome weather (rain, snow, embers, spores, bubbles)
-- [ ] Trail effects (dash trail, projectile trail, movement particles)
-- [ ] Boss death spectacles (multi-layer particle cascade)
-- [ ] Level-up shockwave (ring + sparkles via GPUParticles3D)
-- [ ] Collectible pickup sparkle burst
-- [ ] Enemy spawn materialization particles
-- [ ] Atmosphere particles (dust motes, floating pollen, fireflies)
+### Phase 11: GPU Particles ✅ COMPLETE 🆕 NEW FEATURE
+- [x] GPUParticles3D for explosions (1000+ particles per burst) — `spawn_mega_explosion()` with 4 layers: core flash (400 particles), debris (300 particles with gravity), rising smoke (200 particles), sparks (150 particles with trails)
+- [x] Ambient biome weather (rain, snow, embers, spores, bubbles) — already from Phase 6, now using `draw_pass_1` (fixed from broken `particles.mesh` assignment)
+- [x] Trail effects (dash trail, projectile trail) — dash trail from Phase 6, new `spawn_projectile_trail()` for continuous particle trails
+- [x] Boss death spectacles (multi-layer particle cascade) — `spawn_boss_death_spectacle()` combines mega explosion + sky beam + expanding ring shockwave (200 particles), integrated into Drake boss death
+- [x] Level-up shockwave (ring + sparkles via GPUParticles3D) — `spawn_levelup_shockwave()` with 100-particle expanding golden ring + 80 upward sparkles
+- [x] Collectible pickup sparkle burst — already from Phase 6 (`spawn_pickup_sparkle()`)
+- [x] Enemy spawn materialization particles — `spawn_materialization()` with 80 converging energy particles, integrated into EnemySpawner
+- [x] Atmosphere particles (dust motes, floating pollen, fireflies) — `spawn_atmosphere()` with 3 types (dust/pollen/fireflies), biome-mapped in AmbientParticles
+- [x] Bug fix: All 8 `particles.mesh = mesh` assignments replaced with `particles.draw_pass_1 = mesh` (GPUParticles3D in Godot 4 uses draw_pass_1, not .mesh)
 
 ### Phase 12: Animation System (TODO) 🆕 NEW FEATURE
 - [ ] AnimationPlayer for Zorp idle bob (subtle breathing float)
@@ -325,4 +326,4 @@ NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (ex
 - **Damage number easing curves**: Pop-in animation now uses manual ease-out pow formulas (`1-(1-t)^3` for cubic rise to peak, `1-(1-t)^4` for quartic settle) instead of linear interpolation. Gives damage numbers a more decisive pop and softer landing, matching the juice style of dash squash. Note: Godot's built-in `ease(t, curve)` with negative curve values produces ease-IN-OUT (symmetric S-curves), not ease-out — the explicit pow formula is both correct and clearer.
 
 ## Last Updated
-Phase 10 complete. Smart Enemy AI: New `enemy_ai_controller.gd` (utility class) implements 9 advanced AI behaviors layered on top of EnemyBase's basic chase AI — line-of-sight checks (RayCast3D every 0.3s, reduced detection without visual contact), flanking (35% chance on alert, ±75° approach offset, perpendicular circling at 6m standoff), retreat (backs off at <25% HP with 1.15× speed, resumes at >55% HP), ambush (hides behind cover, reduced detect range, 1.6× rush speed when player approaches), pack behavior (finds same-type allies within 12m, assigns surround slots for non-overlapping approach, pack frenzy at <10% HP spreads to allies with 1.4× speed + white flash), call-for-help (wounded enemy at <35% HP alerts all enemies within 16m), enrage (25% HP threshold, 1.35× speed, smooth red color transition, pulsing red aura sphere), and near-death shudder (X/Z scale jitter at <10% HP). New `navigation_manager.gd` autoload builds a NavigationRegion3D at runtime from the world's static colliders (baked after world generation via `call_deferred`), and `enemy_base.gd` queries `NavigationManager.get_next_position()` every 0.4s for obstacle-aware pathfinding. Smart AI is opt-in via `@export use_smart_ai` — disabled for stationary Sentinel, flanking/ambush disabled for Drake boss and Spore Spitter. 60+ new constants in `game_constants.gd` (AI_NAV_*, AI_LOS_*, AI_FLANK_*, AI_RETREAT_*, AI_AMBUSH_*, AI_PACK_*, AI_CALL_HELP_*, AI_ENRAGE_*, AI_SHUDDER_*). GameManager gains `_last_enrage_warning_time` for globally-throttled enrage proximity warnings. Phases 11-21 planned.
+Phase 11 complete. GPU Particles: 6 new particle functions added to `particle_effects.gd` — `spawn_mega_explosion()` (4-layer 1000+ particle explosion: core flash + debris + smoke + sparks), `spawn_boss_death_spectacle()` (mega explosion + sky beam + expanding ring, integrated into Drake death), `spawn_materialization()` (80 converging energy particles on enemy spawn, integrated into EnemySpawner), `spawn_atmosphere()` (3 types: dust motes/pollen/fireflies, biome-mapped in AmbientParticles for always-on ambient feel), `spawn_projectile_trail()` (continuous particle trail for projectiles), `spawn_levelup_shockwave()` (100-particle golden ring + 80 upward sparkles). Critical bug fix: all 8 `particles.mesh = mesh` assignments replaced with `particles.draw_pass_1 = mesh` (GPUParticles3D in Godot 4 uses `draw_pass_1`, not `.mesh` — this was causing runtime errors on every particle effect). `ambient_particles.gd` updated with `BIOME_ATMOSPHERE_MAP` and dual-layer particle spawning (weather + atmosphere). Phases 12-21 planned.

@@ -146,4 +146,7 @@ func _die() -> void:
 	# Boss death — extra rewards and notification
 	GameManager.add_message("Plasma Drake defeated!")
 	GameManager.boss_defeated.emit(self)
+	# ── Phase 11: Boss death spectacle — mega particle cascade ──
+	ParticleEffects.spawn_boss_death_spectacle(get_parent(), global_position,
+		Color(1.0, 0.0, 1.0), 3.0)
 	super._die()
