@@ -227,7 +227,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 	# ── Phase 19: Co-op — P2 dot (magenta) ──
 	if CoOpManager.is_coop_active():
 		var p2_rel := CoOpManager.p2_node.global_position - player.global_position
-		var p2_pos := center + Vector2(p2_rel.x, p2_rel.z) * _scale
+		var p2_pos := center + Vector2(p2_rel.x, p2_rel.z) * pixel_per_world
 		# Clamp to minimap edge
 		var p2_offset := p2_pos - center
 		if p2_offset.length() > _half_size - 2:
