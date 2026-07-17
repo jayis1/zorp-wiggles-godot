@@ -122,39 +122,45 @@ func _on_body_entered(body: Node3D) -> void:
 func _collect() -> void:
 	if is_popping:
 		return
-	
+
 	is_popping = true
-	
+
 	# Award XP
 	if xp_value > 0:
 		GameManager.gain_xp(xp_value)
 		# Spawn XP gain popup (cyan-blue "+N XP")
 		_spawn_xp_popup(xp_value)
-	
+
 	# Health fragments heal
 	if collectible_type == GameConstants.CollectibleType.HEALTH_FRAGMENT:
 		GameManager.heal(25)
 		# Spawn heal popup (green "+25")
 		_spawn_heal_popup(25)
-	
+
 	# Pickup streak
 	GameManager.add_pickup_streak()
-	
+
+	# Phase 6: Pickup sparkle burst
+	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
+	ParticleEffects.spawn_pickup_sparkle(get_parent(), global_position, config["color"])
+
+	# Rare items get a sky beam
+	if collectible_type == GameConstants.CollectibleType.METEOR_SHARD:
+		ParticleEffects.spawn_sky_beam(get_parent(), global_position, Color(1.0, 0.5, 0.1))
+
 	# Pickup animation: pop up + spin fast + shrink, with easing for juicy feel
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3.ONE * 1.5, 0.1) \
 		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BACK)
-	# Shrink + rise in parallel, then free after both complete
-	tween.chain().set_parallel(true)
-	tween.tween_property(self, "scale", Vector3.ZERO, 0.18) \
+	tween.chain().tween_property(self, "scale", Vector3.ZERO, 0.18) \
 		.set_ease(Tween.EASE_IN) \
 		.set_trans(Tween.TRANS_CUBIC)
 	# Rise slightly during shrink for a "lift" feel
-	tween.tween_property(self, "global_position:y", global_position.y + 0.8, 0.25) \
+	tween.parallel().tween_property(self, "global_position:y", global_position.y + 0.8, 0.25) \
 		.set_ease(Tween.EASE_OUT)
-	tween.chain().tween_callback(queue_free)
-	
+	tween.tween_callback(queue_free)
+
 	collected.emit(collectible_type, xp_value)
 
 func _spawn_xp_popup(amount: int) -> void:

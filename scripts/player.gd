@@ -126,15 +126,18 @@ func _handle_dash(delta: float) -> void:
 
 func _start_dash() -> void:
 	is_dashing = true
-	GameManager.player_is_dashing = true
 	dash_timer = GameConstants.PLAYER_DASH_DURATION
 	dash_direction = move_direction if move_direction.length_squared() > 0.01 else get_forward_dir_fallback()
 	GameManager.player_dash_cooldown_timer = GameConstants.PLAYER_DASH_COOLDOWN
 	GameManager.player_invuln_timer = max(GameManager.player_invuln_timer, GameConstants.PLAYER_DASH_INVULN_DURATION)
+	GameManager.player_is_dashing = true
 	dash_started.emit()
 
 	# Camera shake on dash for punch
 	_trigger_camera_trauma(0.15)
+
+	# Phase 6: Dash trail particles
+	ParticleEffects.spawn_dash_trail(get_parent(), global_position, base_color)
 
 	# Squash-and-stretch: compress vertically, stretch horizontally, then bounce back
 	if mesh:

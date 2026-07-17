@@ -231,6 +231,9 @@ func _die() -> void:
 	# Camera shake on enemy death (bigger for larger enemies)
 	_trigger_camera_trauma(clampf(base_scale * 0.15, 0.08, 0.35))
 
+	# Phase 6: Death poof particles
+	ParticleEffects.spawn_death_poof(get_parent(), global_position, base_color, base_scale)
+
 	# Death animation — scale down with bounce, rise, then free
 	var death_tween := create_tween()
 	death_tween.set_parallel(true)

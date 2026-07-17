@@ -214,6 +214,9 @@ func _level_up() -> void:
 	player_xp_to_next = int(player_xp_to_next * GameConstants.PLAYER_LEVEL_XP_MULT)
 	level_up.emit(player_level)
 	print("[ZorpWiggles] Level up! Now level %d" % player_level)
+	# Phase 6: Level-up shockwave + particle burst
+	if player and is_instance_valid(player):
+		ParticleEffects.spawn_levelup_burst(player.get_parent(), player.global_position)
 
 func add_score(amount: int) -> void:
 	player_score += amount
@@ -273,14 +276,18 @@ func _check_combo_milestone(combo: int) -> void:
 	var tier: int = combo / GameConstants.COMBO_MILESTONE_INTERVAL
 	var color_idx: int = (tier - 1) % GameConstants.COMBO_MILESTONE_FLASH_COLORS.size()
 	var flash_color: Color = GameConstants.COMBO_MILESTONE_FLASH_COLORS[color_idx]
-	
+
 	# XP bonus: base + per-tier extra
 	var xp_bonus: int = GameConstants.COMBO_MILESTONE_XP_BASE + (tier - 1) * GameConstants.COMBO_MILESTONE_XP_PER_TIER
 	gain_xp(xp_bonus)
-	
+
 	# Emit milestone signal for HUD flash + message
 	combo_milestone.emit(combo, tier, flash_color)
 	add_message("★ COMBO MILESTONE x%d! +%d XP" % [combo, xp_bonus])
+
+	# Phase 6: Combo milestone fireworks
+	if player and is_instance_valid(player):
+		ParticleEffects.spawn_combo_fireworks(player.get_parent(), player.global_position, tier)
 
 func add_pickup_streak() -> void:
 	player_pickup_streak += 1
