@@ -82,14 +82,22 @@ func _physics_process(delta: float) -> void:
 	scale = scale.lerp(target_scale, 1.0 - exp(-12.0 * delta))
 
 	# Check player hit — damage once when ring passes through
+	# In co-op, check both players — the ring can hit either one
 	if not _has_hit_player:
 		var player: Node3D = get_tree().get_first_node_in_group("player")
-		if player and GameManager.player_is_alive:
+		if player and GameManager.player_is_alive and not GameManager.player_is_downed:
 			var dist: float = global_position.distance_to(player.global_position)
 			# Hit when player is near the ring edge
 			if abs(dist - current_radius) < 1.0:
 				GameManager.take_damage(damage, global_position)
 				_has_hit_player = true
+		# ── Phase 19: Co-op — check P2 ──
+		if not _has_hit_player and CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+			if not CoOpManager.p2_is_downed:
+				var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
+				if abs(p2_dist - current_radius) < 1.0:
+					CoOpManager.p2_take_damage(damage, global_position)
+					_has_hit_player = true
 
 	# Fade out as it reaches max radius — quadratic fade for a sharper disappear
 	var fade: float = 1.0 - progress
