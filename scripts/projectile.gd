@@ -141,10 +141,14 @@ func _hit_enemy(enemy: Node3D) -> void:
 
 	# Check if this will be a kill before applying damage
 	var will_kill: bool = false
-	if enemy.has_method("take_damage"):
+	if enemy.has_method("take_damage_from") or enemy.has_method("take_damage"):
 		if "hp" in enemy and "max_hp" in enemy:
 			will_kill = total_damage >= enemy.hp
-		enemy.take_damage(total_damage)
+		# Phase 8: Use the directional damage variant so enemies get knocked back
+		if enemy.has_method("take_damage_from"):
+			enemy.take_damage_from(total_damage, global_position)
+		else:
+			enemy.take_damage(total_damage)
 
 	# Damage number popup
 	DamageNumber.spawn(get_parent(), global_position, total_damage, is_crit, will_kill)

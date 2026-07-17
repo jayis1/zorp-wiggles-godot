@@ -102,12 +102,38 @@ func _physics_process(delta: float) -> void:
 	_update_timers(delta)
 	_update_visuals(delta)
 
-	# Apply knockback velocity
+	# ── Phase 8: Apply knockback velocity (impulse-style, decays over time)
 	if knockback_vel.length_squared() > 0.01:
 		global_position += knockback_vel * delta
-		knockback_vel = knockback_vel.move_toward(Vector3.ZERO, 30.0 * delta)
+		knockback_vel = knockback_vel.move_toward(Vector3.ZERO, GameConstants.KNOCKBACK_DAMPING * delta)
+
+	# ── Phase 8: Enemy-to-enemy separation (soft push so they don't overlap)
+	_apply_enemy_separation(delta)
 
 	move_and_slide()
+
+
+# ── Phase 8: Enemy separation ─────────────────────────────────────────────────
+# Pushes nearby same-group enemies apart so they don't stack on top of each other.
+# Uses distance-based force (no full physics engine needed — simple velocity offset).
+func _apply_enemy_separation(delta: float) -> void:
+	if is_dead:
+		return
+	var sep_radius: float = GameConstants.ENEMY_SEPARATION_RADIUS + base_scale * 0.5
+	for other in GameManager.enemies:
+		if other == self or not is_instance_valid(other):
+			continue
+		var other_base: EnemyBase = other as EnemyBase
+		if other_base == null or other_base.is_dead:
+			continue
+		var d: float = global_position.distance_to(other.global_position)
+		if d < sep_radius and d > 0.001:
+			# Direction from other → me, push me away
+			var push_dir: Vector3 = (global_position - other.global_position).normalized()
+			push_dir.y = 0
+			# Stronger when closer (inverse-linear falloff)
+			var strength: float = GameConstants.ENEMY_SEPARATION_FORCE * (1.0 - d / sep_radius)
+			global_position += push_dir * strength * delta
 
 func _update_ai(delta: float) -> void:
 	var player: Node3D = get_tree().get_first_node_in_group("player")
@@ -198,6 +224,10 @@ func _reset_attack_flag() -> void:
 		is_attacking = false
 
 func take_damage(amount: int) -> void:
+	take_damage_from(amount, Vector3.ZERO)
+
+# Phase 8: Damage with knockback direction (called by projectiles that know the hit direction)
+func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if is_dead:
 		return
 	hp -= amount
@@ -212,6 +242,12 @@ func take_damage(amount: int) -> void:
 
 	# Alert on hit
 	is_alerted = true
+
+	# ── Phase 8: Apply knockback impulse from the hit direction
+	if source_pos != Vector3.ZERO:
+		var hit_dir: Vector3 = (global_position - source_pos).normalized()
+		hit_dir.y = 0
+		apply_knockback(hit_dir, GameConstants.KNOCKBACK_FORCE_HIT)
 
 	if hp <= 0:
 		_die()

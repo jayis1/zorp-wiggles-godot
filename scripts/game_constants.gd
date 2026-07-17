@@ -441,3 +441,40 @@ const KILL_FEED_MAX_ENTRIES: int = 5
 const KILL_FEED_LIFETIME: float = 4.0
 const KILL_FEED_FADE_SPEED: float = 2.0
 const KILL_FEED_COLOR: Color = Color(1.0, 0.85, 0.3, 0.9)
+
+# ─── Phase 8: Physics & Interaction ───────────────────────────────────────────
+# Knockback impulse forces applied when enemies take damage / push each other.
+const KNOCKBACK_FORCE_HIT: float = 12.0          # Impulse when struck by projectile
+const KNOCKBACK_FORCE_EXPLOSION: float = 30.0    # Impulse from explosions (bomber, pulse)
+const KNOCKBACK_FORCE_MELEE: float = 8.0         # Enemy-to-enemy push
+const KNOCKBACK_FORCE_DASH_BUMP: float = 18.0    # Zorp dashes into enemy
+const KNOCKBACK_DAMPING: float = 25.0            # How fast knockback velocity decays per second
+const ENEMY_SEPARATION_RADIUS: float = 1.2       # Minimum spacing between same-type enemies
+const ENEMY_SEPARATION_FORCE: float = 14.0       # Force applied when enemies overlap
+
+# Physics-based dash — Zorp slides and bounces off walls
+const DASH_SLIDE_FRICTION: float = 0.92          # Velocity retained per frame during slide (1.0 = no friction)
+const DASH_SLIDE_MIN_SPEED: float = 3.0          # Below this speed, slide ends
+const DASH_BOUNCE_RESTITUTION: float = 0.6       # Energy retained on wall bounce
+
+# Collectible bounce & tumble (RigidBody3D physics)
+const COLLECTIBLE_BOUNCE_RESTITUTION: float = 0.55
+const COLLECTIBLE_BOUNCE_MASS: float = 0.3
+const COLLECTIBLE_TUMBLE_TORQUE: float = 5.0     # Random angular impulse on spawn
+const COLLECTIBLE_GRAVITY_SCALE: float = 0.8     # Slight floatiness
+
+# Destructible objects
+const DESTRUCTIBLE_HP: int = 30
+const DESTRUCTIBLE_KNOCKBACK_FORCE: float = 15.0
+const DESTRUCTIBLE_SHATTER_COUNT: int = 8        # Number of fragments on shatter
+const DESTRUCTIBLE_SHATTER_IMPULSE: float = 10.0
+const DESTRUCTIBLE_SHATTER_LIFETIME: float = 3.0
+const DESTRUCTIBLE_SPAWN_CHANCE: float = 0.05    # Per-tile chance in a biome
+const DESTRUCTIBLE_CRATE_COLOR: Color = Color(0.65, 0.45, 0.25)   # Wooden crate
+const DESTRUCTIBLE_CRYSTAL_COLOR: Color = Color(0.7, 0.4, 0.9)    # Crystal chunk
+const DESTRUCTIBLE_REWARD_SCORE: int = 30
+const DESTRUCTIBLE_REWARD_XP: int = 10
+
+# Graviton physics gravity well (Area3D gravity point)
+const GRAVITON_AREA_GRAVITY: float = 14.0        # Gravity strength (Godot units)
+const GRAVITON_AREA_FALLOFF: float = 1.0         # Falloff exponent (1.0 = linear)

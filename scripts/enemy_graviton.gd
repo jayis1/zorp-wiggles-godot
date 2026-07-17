@@ -13,6 +13,9 @@ var pull_timer: float = 0.0
 var cooldown_timer: float = 5.0
 var pull_damage_accum: float = 0.0
 
+# ── Phase 8: Area3D gravity well (affects RigidBody3D fragments, collectibles) ──
+var gravity_well: Area3D = null
+
 # ─── Visual ───────────────────────────────────────────────────────────────────
 var pull_ring: MeshInstance3D = null
 
@@ -49,6 +52,25 @@ func _ready() -> void:
 	pull_ring.position = Vector3(0, -0.5, 0)
 	pull_ring.visible = false
 
+	# ── Phase 8: Create Area3D gravity well for actual physics force on RigidBodies
+	gravity_well = Area3D.new()
+	gravity_well.gravity_point = true
+	gravity_well.gravity_point_center = Vector3.ZERO  # Center = this Area3D's origin
+	gravity_well.gravity = GameConstants.GRAVITON_AREA_GRAVITY
+	gravity_well.gravity_point_unit_distance = 1.0  # Falloff reference distance
+	# Collision shape = sphere matching the pull radius
+	var well_shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = GameConstants.GRAVITON_PULL_RADIUS
+	well_shape.shape = sphere
+	gravity_well.add_child(well_shape)
+	# Mask: only affect physics bodies (fragments, collectibles), not player/enemies
+	gravity_well.collision_mask = 0b0001  # Layer 1 — physics objects
+	gravity_well.space_override = Area3D.SPACE_OVERRIDE_COMBINE_REPLACE
+	gravity_well.monitoring = false  # Don't fire body_entered (we only want the gravity effect)
+	add_child(gravity_well)
+	gravity_well.visible = false  # Hide the area gizmo in-game (it's invisible anyway)
+
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
 	if is_dead or GameManager.is_paused or spawn_grace_timer > 0:
@@ -62,7 +84,7 @@ func _physics_process(delta: float) -> void:
 
 	if pull_active:
 		pull_timer -= delta
-		# Pull player toward this enemy
+		# Pull player toward this enemy (CharacterBody3D — manual pull, not Area3D gravity)
 		if dist_to_player > 1.0 and dist_to_player < GameConstants.GRAVITON_PULL_RADIUS:
 			var pull_dir: Vector3 = (global_position - player.global_position).normalized()
 			pull_dir.y = 0
@@ -89,6 +111,9 @@ func _physics_process(delta: float) -> void:
 			)
 			if pull_ring:
 				pull_ring.visible = false
+			# ── Phase 8: Disable gravity well when pull ends
+			if gravity_well:
+				gravity_well.gravity = 0.0
 	else:
 		cooldown_timer -= delta
 		# Show warning ring when about to pull
@@ -108,3 +133,6 @@ func _physics_process(delta: float) -> void:
 				var mat := pull_ring.material_override as StandardMaterial3D
 				if mat:
 					mat.albedo_color = Color(180.0 / 255.0, 0.0, 1.0, 0.3)
+			# ── Phase 8: Enable the Area3D gravity well for RigidBody physics objects
+			if gravity_well:
+				gravity_well.gravity = GameConstants.GRAVITON_AREA_GRAVITY

@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 6 — Particle Effects & Juice (PARTIALLY COMPLETE)
+## Status: PHASE 8 — Physics & Interaction (PARTIALLY COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -123,14 +123,14 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [ ] XP curve and level-up stat scaling
 - [ ] Difficulty scaling over time (more enemies, stronger, faster)
 
-### Phase 8: Physics & Interaction (TODO) 🆕 NEW FEATURE
-- [ ] Ragdoll death for player and enemies (Skeleton + PhysicalBone3D)
-- [ ] Enemy knockback with physics impulse (enemies push each other)
-- [ ] Collectible bounce and tumble (RigidBody3D with bounce material)
-- [ ] Destructible environment objects (crates, crystals shatter into pieces)
-- [ ] Physics-based dash (Zorp slides and bounces off walls)
-- [ ] Enemy corpse physics (tumble and settle realistically)
-- [ ] Graviton gravity well uses actual physics force (Area3D gravity point)
+### Phase 8: Physics & Interaction (PARTIAL — 5 of 7 complete) 🆕 NEW FEATURE
+- [ ] Ragdoll death for player and enemies (Skeleton + PhysicalBone3D) — TODO (requires character models with skeletons)
+- [x] Enemy knockback with physics impulse (enemies push each other) — `take_damage_from()` applies directional knockback; `_apply_enemy_separation()` pushes overlapping enemies apart
+- [ ] Collectible bounce and tumble (RigidBody3D with bounce material) — TODO (collectibles are Area3D, converting to RigidBody would break pickup logic)
+- [x] Destructible environment objects (crates, crystals shatter into pieces) — `destructible.gd` + `destructible.tscn`, spawns RigidBody3D fragments with PhysicsMaterial bounce
+- [x] Physics-based dash (Zorp slides and bounces off walls) — `_start_slide()`/`_update_slide()` in player.gd, friction decay + `velocity.bounce(normal)` on wall collision
+- [ ] Enemy corpse physics (tumble and settle realistically) — TODO (current death uses tween scale-down; physics corpse needs RigidBody3D conversion)
+- [x] Graviton gravity well uses actual physics force (Area3D gravity point) — `gravity_well` Area3D with `gravity_point = true` pulls RigidBody3D fragments; manual pull still handles CharacterBody3D player
 
 ### Phase 9: Shaders & Visual Effects (TODO) 🆕 NEW FEATURE
 - [ ] Lava biome heat distortion shader (sine-wave vertex displacement)
@@ -303,4 +303,4 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - **Enemy spawn material fade-in**: `_update_spawn_visuals()` now fades material alpha from 0→target using quadratic ease-in during the 2s grace period, instead of being a no-op. Preserves per-enemy alpha (Void Wisp stays semi-transparent).
 
 ## Last Updated
-Phase 6 partially complete. Particle Effects & Juice: particle_effects.gd (static factory using GPUParticles3D — explosion, level-up burst, combo fireworks, pickup sparkle, death poof, sky beam, shield break, dash trail, ambient particles), dash trail particles on dash start, pickup sparkle burst on collect + sky beam on rare Meteor Shards, death poof on enemy death, level-up golden shockwave ring + upward sparkles, combo milestone tier-colored fireworks, ambient biome particles (snow/embers/spores/bubbles/dust following player per biome), projectile impact explosion, player damage flash (red screen vignette on damage taken). New scripts: particle_effects.gd, ambient_particles.gd, damage_flash.gd. AmbientParticles node added to main.tscn. Phases 7-21 planned.
+Phase 8 partially complete. Physics & Interaction: enemy knockback via `take_damage_from()` (directional impulse on hit), enemy-to-enemy separation (soft push so they don't stack), destructible environment objects (`destructible.gd` + `destructible.tscn` — StaticBody3D that shatters into RigidBody3D physics fragments with bounce material), physics-based dash slide (after dash burst, Zorp slides with friction decay and bounces off walls using `velocity.bounce(normal)` with restitution), dash bump (enemies in dash path get knocked back + small damage), dash smash (destructibles in dash path instantly shattered), Graviton Area3D gravity well (`gravity_point = true` pulls RigidBody3D fragments; manual pull handles CharacterBody3D player), destructibles spawned across biomes by world_generator (crates in most biomes, crystal clusters in crystal biome with 2x XP). New scripts: destructible.gd. Modified: game_constants.gd (physics constants), enemy_base.gd (knockback + separation), projectile.gd (directional damage), player.gd (slide + bump + smash), enemy_graviton.gd (Area3D gravity well), world_generator.gd (destructible spawning). Phases 9-21 planned.

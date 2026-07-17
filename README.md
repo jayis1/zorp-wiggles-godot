@@ -52,7 +52,8 @@ zorp-wiggles-godot/
 │       ├── portal.tscn         # Linked teleporter portals
 │       ├── trader.tscn         # Wandering trader NPC
 │       ├── monolith.tscn       # Alien monolith (buffs)
-│       └── healing_shrine.tscn # Healing crystal shrine
+│       ├── healing_shrine.tscn # Healing crystal shrine
+│       └── destructible.tscn # Breakable crates & crystal clusters (Phase 8)
 ├── scripts/
 │   ├── game_constants.gd   # All game constants
 │   ├── game_manager.gd     # Autoload singleton — game state
@@ -95,6 +96,7 @@ zorp-wiggles-godot/
 │   ├── particle_effects.gd # GPUParticles3D factory for all particle effects
 │   ├── ambient_particles.gd # Biome ambient particles (snow, embers, spores, etc.)
 │   ├── damage_flash.gd     # Red screen vignette on player damage
+│   ├── destructible.gd     # Breakable props that shatter into physics fragments (Phase 8)
 │   └── main_menu.gd        # Menu logic
 ├── assets/                  # Models, textures, audio (TODO)
 └── CONVERSION_TRACKER.md   # Conversion progress tracker
@@ -174,7 +176,14 @@ See [CONVERSION_TRACKER.md](CONVERSION_TRACKER.md) for detailed progress.
 - Player damage flash: Red screen-edge vignette on damage taken
 - Projectile impact explosion: Small cyan particle burst on hit
 
-**Remaining phases:** Missions, physics, shaders, AI, GPU particles (polish), animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
+**Phase 8 (Physics & Interaction):** 🔄 Partial — 5 of 7 complete
+- Enemy knockback: Projectiles apply directional impulse via `take_damage_from()`, enemies get pushed back from hit direction
+- Enemy separation: Overlapping enemies softly push each other apart (prevents stacking)
+- Destructible objects: Breakable crates (wooden) and crystal clusters (purple) scattered across biomes — shoot or dash to shatter into RigidBody3D physics fragments with bounce material, grants score + XP
+- Physics-based dash: After dash burst, Zorp enters a slide phase with friction decay and bounces off walls (velocity reflection with 0.6 restitution) — dash into enemies to knock them back, dash into destructibles to smash them
+- Graviton gravity well: Now uses an Area3D with `gravity_point = true` to apply real physics gravity to RigidBody3D fragments and collectibles during pull phase (player still pulled manually since CharacterBody3D ignores Area3D gravity)
+
+**Remaining phases:** Shaders, AI, GPU particles (polish), animations, mutations, rifts, companion pet, weapon crafting, weather, boss arenas, co-op, audio, export.
 
 ## License
 

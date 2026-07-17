@@ -233,11 +233,43 @@ func _spawn_collectibles() -> void:
 		_spawn_collectible_at(type, pos)
 
 func _spawn_structures() -> void:
-	"""Spawn monoliths, traders, portals, and healing shrines."""
+	"""Spawn monoliths, traders, portals, healing shrines, and destructibles."""
 	_spawn_portal_pairs()
 	_spawn_initial_traders()
 	_spawn_monoliths()
 	_spawn_healing_shrines()
+	_spawn_destructibles()  # Phase 8: breakable props
+
+# ── Phase 8: Spawn destructible crates & crystals across biomes ────────────────
+func _spawn_destructibles() -> void:
+	var destructible_scene := preload("res://scenes/entities/destructible.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+	var count: int = 0
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			# Skip water/lava/floating islands — destructibles need solid ground
+			if not _is_biome_walkable(biome) or biome == GameConstants.Biome.FLOATING_ISLANDS:
+				continue
+			if randf() < GameConstants.DESTRUCTIBLE_SPAWN_CHANCE:
+				var wx: float = (x - half_grid) * TILE_SIZE + randf_range(-1.0, 1.0)
+				var wz: float = (z - half_grid) * TILE_SIZE + randf_range(-1.0, 1.0)
+				var prop := destructible_scene.instantiate()
+				add_child(prop)
+				prop.global_position = Vector3(wx, 0.0, wz)
+				# Crystal biome → crystal destructibles (more XP), others → crates
+				if biome == GameConstants.Biome.CRYSTAL:
+					prop.is_crystal = true
+					prop.fragment_color = GameConstants.DESTRUCTIBLE_CRYSTAL_COLOR
+					prop.reward_xp = GameConstants.DESTRUCTIBLE_REWARD_XP * 2
+					prop.prop_name = "Crystal Cluster"
+				else:
+					prop.is_crystal = false
+					prop.fragment_color = GameConstants.DESTRUCTIBLE_CRATE_COLOR
+					prop.prop_name = "Crate"
+				count += 1
+	print("[WorldGenerator] Spawned %d destructibles" % count)
 
 func _spawn_portal_pairs() -> void:
 	"""Create linked portal pairs at walkable locations around the world."""
