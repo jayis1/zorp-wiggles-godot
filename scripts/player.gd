@@ -59,6 +59,10 @@ func _ready() -> void:
 		shape.radius = 0.5
 		collision_shape.shape = shape
 	add_to_group("player")
+	# Use PROCESS_MODE_ALWAYS so the player can still receive input (e.g. pause toggle)
+	# when the game is paused. _physics_process already checks is_paused and returns
+	# early, so the player won't move while paused — only input processing continues.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:
@@ -276,7 +280,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		is_right_clicking = event.pressed
 	
-	if event is InputEventMouseMotion and is_right_clicking:
+	if event is InputEventMouseMotion and is_right_clicking and not GameManager.is_paused:
 		camera_yaw -= event.relative.x * 0.3
 		camera_pitch -= event.relative.y * 0.3
 		camera_pitch = clampf(camera_pitch, -80.0, -10.0)
@@ -288,7 +292,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_try_shoot_or_buffer()
 	
 	# Pulse wave
-	if event.is_action_pressed("pulse_wave") and GameManager.player_is_alive:
+	if event.is_action_pressed("pulse_wave") and GameManager.player_is_alive and not GameManager.is_paused:
 		_use_pulse_wave()
 	
 	# Pause toggle
