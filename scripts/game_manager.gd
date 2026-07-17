@@ -45,6 +45,9 @@ signal combo_milestone(combo: int, tier: int, color: Color)
 signal pickup_streak_milestone(streak: int, xp_bonus: int)
 signal crit_chain_activated(chain: int)
 signal enemy_spawned_near(pos: Vector3, enemy_type: int)
+signal damage_taken_from(source_pos: Vector3)  # Phase 5: damage direction indicator
+signal enemy_killed(enemy_name: String, killer_name: String)  # Phase 5: kill feed
+signal biome_changed(biome_id: int)  # Phase 5: biome indicator
 
 # ─── World State ──────────────────────────────────────────────────────────────
 var world_seed: int = 0
@@ -89,6 +92,7 @@ func _process(delta: float) -> void:
 	
 	game_time += delta
 	_update_timers(delta)
+	_update_biome_tracking()
 
 func _update_timers(delta: float) -> void:
 	# Invulnerability timer
@@ -131,6 +135,17 @@ func _update_timers(delta: float) -> void:
 		active_buffs.erase(key)
 		add_message("%s expired" % key.capitalize())
 
+func _update_biome_tracking() -> void:
+	# Phase 5: Detect biome changes and emit signal for biome indicator
+	if not player or not is_instance_valid(player):
+		return
+	if not world or not world.has_method("get_biome_at"):
+		return
+	var new_biome: int = world.get_biome_at(player.global_position)
+	if new_biome != current_biome:
+		current_biome = new_biome
+		biome_changed.emit(new_biome)
+
 func _start_game() -> void:
 	player_hp = GameConstants.PLAYER_START_HP
 	player_max_hp = GameConstants.PLAYER_START_HP
@@ -140,20 +155,29 @@ func _start_game() -> void:
 	player_score = 0
 	player_kills = 0
 	player_combo = 0
+	player_combo_timer = 0.0
 	player_best_combo = 0
 	player_last_combo_milestone = 0
 	player_pickup_streak = 0
+	player_pickup_streak_timer = 0.0
 	player_max_pickup_streak = 0
 	player_last_pickup_milestone = 0
 	player_crit_chain = 0
+	player_crit_chain_timer = 0.0
 	player_invuln_timer = 0.0
+	player_dash_cooldown_timer = 0.0
+	player_is_dashing = false
+	player_dash_timer = 0.0
+	player_is_paused = false
 	player_is_alive = true
 	game_time = 0.0
 	is_paused = false
+	active_buffs.clear()
+	current_boss = null
 	hp_changed.emit(player_hp, player_max_hp)
 	xp_changed.emit(player_xp, player_xp_to_next)
 
-func take_damage(amount: int) -> void:
+func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if player_invuln_timer > 0 or player_is_dashing or not player_is_alive:
 		return
 	player_hp = max(0, player_hp - amount)
@@ -161,6 +185,9 @@ func take_damage(amount: int) -> void:
 	hp_changed.emit(player_hp, player_max_hp)
 	# Camera shake on taking damage
 	_trigger_camera_trauma(0.35)
+	# Phase 5: Emit damage direction signal (if source_pos is non-zero)
+	if source_pos != Vector3.ZERO:
+		damage_taken_from.emit(source_pos)
 	if player_hp <= 0:
 		_die()
 

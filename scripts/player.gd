@@ -109,6 +109,7 @@ func _handle_dash(delta: float) -> void:
 		dash_timer -= delta
 		if dash_timer <= 0:
 			is_dashing = false
+			GameManager.player_is_dashing = false
 			dash_ended.emit()
 		return
 
@@ -125,6 +126,7 @@ func _handle_dash(delta: float) -> void:
 
 func _start_dash() -> void:
 	is_dashing = true
+	GameManager.player_is_dashing = true
 	dash_timer = GameConstants.PLAYER_DASH_DURATION
 	dash_direction = move_direction if move_direction.length_squared() > 0.01 else get_forward_dir_fallback()
 	GameManager.player_dash_cooldown_timer = GameConstants.PLAYER_DASH_COOLDOWN

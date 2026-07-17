@@ -8,6 +8,7 @@ class_name EnemyWisp
 
 # ─── Wisp State ───────────────────────────────────────────────────────────────
 var teleport_cooldown: float = 0.0
+var _teleport_tween: Tween = null
 
 func _ready() -> void:
 	enemy_name = "Void Wisp"
@@ -75,11 +76,14 @@ func _teleport_behind_player() -> void:
 
 	# Teleport visual — quick fade out and in
 	if _material:
-		_material.albedo_color.a = 0.0
+		# Kill any active teleport tween to avoid conflicts
+		if _teleport_tween and _teleport_tween.is_valid():
+			_teleport_tween.kill()
+		_material.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.0)
 		global_position = new_pos
-		var fade_tween := create_tween()
-		fade_tween.tween_property(_material, "albedo_color:a",
-			160.0 / 255.0, 0.3)
+		_teleport_tween = create_tween()
+		_teleport_tween.tween_property(_material, "albedo_color:a",
+			_spawn_target_alpha, 0.3)
 
 	teleport_cooldown = GameConstants.VOID_WISP_TELEPORT_COOLDOWN
 	is_alerted = true

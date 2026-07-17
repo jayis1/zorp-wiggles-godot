@@ -402,8 +402,6 @@ func _spawn_enemy_at(type_name: String, pos: Vector3) -> void:
 	enemy.detect_range = type_data.get("detect", GameConstants.ENEMY_DETECT_RANGE)
 	# Set color
 	enemy.base_color = type_data["color"]
-	# Set model based on type
-	var model_type: String = type_data["model"]
 	add_child(enemy)
 	GameManager.enemies.append(enemy)
 

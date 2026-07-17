@@ -46,7 +46,7 @@ func _physics_process(delta: float) -> void:
 	if player and GameManager.player_is_alive:
 		var dist: float = global_position.distance_to(player.global_position)
 		if dist < GameConstants.ENEMY_PROJECTILE_HIT_RADIUS:
-			GameManager.take_damage(damage)
+			GameManager.take_damage(damage, global_position)
 			queue_free()
 
 	# Aura pulse
@@ -56,5 +56,5 @@ func _physics_process(delta: float) -> void:
 
 func _on_body_entered(body: Node3D) -> void:
 	if body.is_in_group("player"):
-		GameManager.take_damage(damage)
+		GameManager.take_damage(damage, global_position)
 		queue_free()

@@ -26,6 +26,7 @@ var _pillars: Array[MeshInstance3D] = []
 func _ready() -> void:
 	_bob_offset = randf() * TAU
 	_build_visuals()
+	add_to_group("portals")
 
 	# Collision shape is provided by the scene (PortalCollision) — no need to create a duplicate.
 	body_entered.connect(_on_body_entered)

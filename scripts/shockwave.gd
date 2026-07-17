@@ -42,7 +42,7 @@ func _physics_process(delta: float) -> void:
 			var dist: float = global_position.distance_to(player.global_position)
 			# Hit when player is near the ring edge
 			if abs(dist - current_radius) < 1.0:
-				GameManager.take_damage(damage)
+				GameManager.take_damage(damage, global_position)
 				_has_hit_player = true
 
 	# Fade out as it reaches max radius

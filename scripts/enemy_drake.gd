@@ -87,7 +87,7 @@ func _update_boss_attacks(delta: float) -> void:
 		velocity = charge_dir * GameConstants.DRAKE_CHARGE_SPEED
 		# Check collision with player
 		if dist_to_player < 2.0:
-			GameManager.take_damage(GameConstants.DRAKE_CHARGE_DAMAGE)
+			GameManager.take_damage(GameConstants.DRAKE_CHARGE_DAMAGE, global_position)
 			is_charging = false
 			charge_timer = GameConstants.DRAKE_CHARGE_COOLDOWN
 		if charge_duration <= 0:
@@ -119,7 +119,7 @@ func _fire_breath(player: Node3D) -> void:
 
 	var proj_scene: PackedScene = load("res://scenes/entities/enemy_projectile.tscn")
 	if not proj_scene:
-		GameManager.take_damage(GameConstants.DRAKE_FIRE_BREATH_DAMAGE)
+		GameManager.take_damage(GameConstants.DRAKE_FIRE_BREATH_DAMAGE, global_position)
 		return
 
 	for i in range(5):

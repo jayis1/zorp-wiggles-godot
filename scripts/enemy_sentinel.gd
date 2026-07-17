@@ -78,4 +78,4 @@ func _fire_shockwave() -> void:
 		if player:
 			var dist: float = global_position.distance_to(player.global_position)
 			if dist < GameConstants.STARBURST_SHOCKWAVE_MAX_RADIUS:
-				GameManager.take_damage(GameConstants.STARBURST_SHOCKWAVE_DAMAGE)
+				GameManager.take_damage(GameConstants.STARBURST_SHOCKWAVE_DAMAGE, global_position)

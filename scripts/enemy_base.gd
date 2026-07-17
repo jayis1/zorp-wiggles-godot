@@ -30,6 +30,7 @@ var is_dead: bool = false
 var spawn_grace_timer: float = GameConstants.ENEMY_SPAWN_GRACE_PERIOD
 var alert_indicator_timer: float = 0.0
 var hit_flinch_timer: float = 0.0
+var _hit_flash_timer: float = 0.0
 var is_windup: bool = false
 var knockback_vel: Vector3 = Vector3.ZERO
 var _spawn_target_alpha: float = 1.0
@@ -39,9 +40,9 @@ var wander_dir: Vector3 = Vector3.ZERO
 var wander_timer: float = 3.0
 
 # ─── Visual ──────────────────────────────────────────────────────────────────
-var base_color: Color = Color.RED
+@export var base_color: Color = Color.RED
 var current_color: Color = Color.RED
-var base_scale: float = 1.0
+@export var base_scale: float = 1.0
 var _material: StandardMaterial3D = null
 
 # ─── Node References ─────────────────────────────────────────────────────────
@@ -167,8 +168,8 @@ func _try_attack(player: Node3D) -> void:
 
 func _execute_attack(player: Node3D) -> void:
 	is_windup = false
-	# Deal damage
-	GameManager.take_damage(damage)
+	# Deal damage (pass enemy position for damage direction indicator)
+	GameManager.take_damage(damage, global_position)
 
 	# Camera shake on player hit
 	_trigger_camera_trauma(0.2)
@@ -193,7 +194,7 @@ func _execute_attack(player: Node3D) -> void:
 	get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
 
 func _reset_attack_flag() -> void:
-	if not is_dead:
+	if is_instance_valid(self) and not is_dead:
 		is_attacking = false
 
 func take_damage(amount: int) -> void:
@@ -203,6 +204,7 @@ func take_damage(amount: int) -> void:
 	enemy_hit.emit(self, amount)
 
 	# Hit flash
+	_hit_flash_timer = 0.15
 	if _material:
 		_material.albedo_color = Color.WHITE
 		var flash_tween := create_tween()
@@ -223,6 +225,8 @@ func _die() -> void:
 	GameManager.gain_xp(xp_reward)
 	GameManager.add_score(score_reward)
 	enemy_died.emit(self)
+	# Phase 5: Kill feed signal
+	GameManager.enemy_killed.emit(enemy_name, "Zorp")
 
 	# Camera shake on enemy death (bigger for larger enemies)
 	_trigger_camera_trauma(clampf(base_scale * 0.15, 0.08, 0.35))
@@ -245,6 +249,8 @@ func _update_timers(delta: float) -> void:
 		attack_cooldown_timer -= delta
 	if hit_flinch_timer > 0:
 		hit_flinch_timer -= delta
+	if _hit_flash_timer > 0:
+		_hit_flash_timer -= delta
 
 func _update_spawn_visuals(delta: float) -> void:
 	# Material fade-in during spawn grace period (quadratic ease-in for smooth appearance)
@@ -261,9 +267,8 @@ func _update_visuals(delta: float) -> void:
 
 	# Low-HP warning pulse — only when not currently being hit-flashed
 	# (hit flash tween controls _material.albedo_color during its 0.15s duration)
-	if ratio < 0.25 and ratio > 0 and _material and not is_windup:
-		# Don't override while a hit-flash tween is active (simplistic check:
-		# skip if albedo is currently WHITE from a fresh hit)
+	if ratio < 0.25 and ratio > 0 and _material and not is_windup and _hit_flash_timer <= 0:
+		# Don't override while a hit-flash tween is active
 		if _material.albedo_color != Color.WHITE:
 			var pulse := 0.5 + 0.5 * sin(GameManager.game_time * 8.0)
 			var warning_color := Color(1.0, 0.1, 0.1).lerp(Color.WHITE, pulse * 0.3)

@@ -11,6 +11,7 @@ extends CanvasLayer
 
 # ─── XP Bar ──────────────────────────────────────────────────────────────────
 @onready var xp_bar: ColorRect = $XPBarContainer/XPBar
+@onready var xp_bar_container: Panel = $XPBarContainer
 @onready var xp_text: Label = $XPBarContainer/XPText
 
 # ─── Level & Score ───────────────────────────────────────────────────────────
@@ -100,6 +101,60 @@ func _ready() -> void:
 	_spawn_direction_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_spawn_direction_indicator)
 	
+	# ── Phase 5: Minimap ──
+	var minimap_script := load("res://scripts/minimap.gd")
+	var minimap_ctrl := Control.new()
+	minimap_ctrl.set_script(minimap_script)
+	add_child(minimap_ctrl)
+	
+	# ── Phase 5: Damage Direction Indicator ──
+	var ddi_script := load("res://scripts/damage_direction_indicator.gd")
+	var ddi_ctrl := Control.new()
+	ddi_ctrl.set_script(ddi_script)
+	add_child(ddi_ctrl)
+	
+	# ── Phase 5: Boss Tension Vignette ──
+	var btv_script := load("res://scripts/boss_tension_vignette.gd")
+	var btv_ctrl := Control.new()
+	btv_ctrl.set_script(btv_script)
+	add_child(btv_ctrl)
+	
+	# ── Phase 5: Death Screen ──
+	var ds_script := load("res://scripts/death_screen.gd")
+	var ds_ctrl := Control.new()
+	ds_ctrl.set_script(ds_script)
+	add_child(ds_ctrl)
+	
+	# ── Phase 5: Biome Indicator ──
+	var bi_script := load("res://scripts/biome_indicator.gd")
+	var bi_ctrl := Control.new()
+	bi_ctrl.set_script(bi_script)
+	add_child(bi_ctrl)
+	
+	# ── Phase 5: Dash Cooldown Indicator ──
+	var dci_script := load("res://scripts/dash_cooldown_indicator.gd")
+	var dci_ctrl := Control.new()
+	dci_ctrl.set_script(dci_script)
+	add_child(dci_ctrl)
+	
+	# ── Phase 5: Kill Feed ──
+	var kf_script := load("res://scripts/kill_feed.gd")
+	var kf_ctrl := Control.new()
+	kf_ctrl.set_script(kf_script)
+	add_child(kf_ctrl)
+	
+	# ── Phase 5: Achievement Popups ──
+	var ap_script := load("res://scripts/achievement_popup.gd")
+	var ap_ctrl := Control.new()
+	ap_ctrl.set_script(ap_script)
+	add_child(ap_ctrl)
+	
+	# ── Phase 5: Power-up Timer Display ──
+	var pud_script := load("res://scripts/powerup_timer_display.gd")
+	var pud_ctrl := Control.new()
+	pud_ctrl.set_script(pud_script)
+	add_child(pud_ctrl)
+	
 	# Initialize displays
 	_update_all_displays()
 
@@ -144,9 +199,10 @@ func _process(delta: float) -> void:
 	hp_bar.size.x = hp_bar_bg.size.x * hp_current_ratio
 
 	# XP bar
-	var xp_current_ratio: float = xp_bar.size.x / 400.0
+	var xp_bar_width: float = xp_bar_container.size.x - 4.0 if xp_bar_container.size.x > 0 else 396.0
+	var xp_current_ratio: float = xp_bar.size.x / xp_bar_width if xp_bar_width > 0 else 0.0
 	xp_current_ratio = lerpf(xp_current_ratio, _xp_bar_target_ratio, weight)
-	xp_bar.size.x = 400.0 * xp_current_ratio
+	xp_bar.size.x = xp_bar_width * xp_current_ratio
 
 	# Combo timer bar
 	if GameManager.player_combo > 0:
@@ -165,9 +221,10 @@ func _process(delta: float) -> void:
 	if boss_ref and is_instance_valid(boss_ref) and boss_ref.hp > 0:
 		boss_hp_container.visible = true
 		_boss_bar_target_ratio = float(boss_ref.hp) / float(boss_ref.max_hp) if boss_ref.max_hp > 0 else 0.0
-		var boss_current_ratio: float = boss_hp_bar.size.x / 300.0
+		var boss_bar_width: float = boss_hp_container.size.x - 4.0 if boss_hp_container.size.x > 0 else 496.0
+		var boss_current_ratio: float = boss_hp_bar.size.x / boss_bar_width if boss_bar_width > 0 else 0.0
 		boss_current_ratio = lerpf(boss_current_ratio, _boss_bar_target_ratio, weight)
-		boss_hp_bar.size.x = 300.0 * boss_current_ratio
+		boss_hp_bar.size.x = boss_bar_width * boss_current_ratio
 		boss_name_text.text = "☠ %s" % boss_ref.enemy_name
 		# Boss bar color: red → orange → yellow
 		if boss_current_ratio > 0.5:

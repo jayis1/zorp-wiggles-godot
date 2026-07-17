@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: PHASE 4 — Full Combat & Abilities (PARTIALLY COMPLETE)
+## Status: PHASE 5 — HUD Polish (COMPLETE)
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -87,18 +87,18 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [x] Spawn direction indicator arrows on HUD (screen-edge arrows for off-screen enemies)
 - [x] Health fragment emergency magnet (vacuum nearby health when low HP)
 
-### Phase 5: HUD Polish (TODO)
-- [ ] Minimap (SubViewport with top-down camera, color-coded tiles)
-- [ ] Enemy proximity radar dots
-- [ ] Power-up timer display (buff duration bars)
-- [ ] Damage direction indicators (8 directional arrows)
-- [ ] Boss tension vignette (pulsing red screen edge near boss)
-- [ ] Death screen with stats (best combo, time survived, kills)
-- [ ] Achievement popup system
-- [ ] Kill feed (recent kills scrolling)
-- [ ] Biome indicator (current biome name + icon)
-- [ ] Dash cooldown indicator
-- [ ] Weapon/power-up icon display
+### Phase 5: HUD Polish ✅ COMPLETE
+- [x] Minimap (SubViewport with top-down camera, color-coded tiles)
+- [x] Enemy proximity radar dots (red dots on minimap, boss = magenta)
+- [x] Power-up timer display (buff duration bars for monolith buffs)
+- [x] Damage direction indicators (red arrows pointing toward damage source)
+- [x] Boss tension vignette (pulsing red screen edge near boss, proximity-scaled)
+- [x] Death screen with stats (best combo, time survived, kills, score roll-up)
+- [x] Achievement popup system (12 achievements: first kill, combos, levels, pickups, boss, biomes)
+- [x] Kill feed (recent kills scrolling on right side, fading out)
+- [x] Biome indicator (current biome name + icon, color-matched to terrain)
+- [x] Dash cooldown indicator (circular ring with ⚡ icon, green when ready)
+- [x] Weapon/power-up icon display (integrated into power-up timer display)
 
 ### Phase 6: Particle Effects & Juice (TODO)
 - [ ] Movement trail particles (speed lines behind Zorp)

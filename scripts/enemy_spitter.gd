@@ -115,4 +115,4 @@ func _fire_spit(player: Node3D) -> void:
 		proj.global_position = global_position + Vector3(0, 0.5, 0)
 	else:
 		# Fallback: instant damage
-		GameManager.take_damage(GameConstants.SPORE_SPIT_DAMAGE)
+		GameManager.take_damage(GameConstants.SPORE_SPIT_DAMAGE, global_position)

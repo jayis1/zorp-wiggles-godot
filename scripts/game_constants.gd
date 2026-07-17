@@ -304,6 +304,7 @@ const BIOME_FOG: Dictionary = {
 	GameConstants.Biome.SNOW: {"color": Color(60.0 / 255.0, 60.0 / 255.0, 80.0 / 255.0), "density": 0.005},
 	GameConstants.Biome.SWAMP: {"color": Color(30.0 / 255.0, 50.0 / 255.0, 15.0 / 255.0), "density": 0.016},
 	GameConstants.Biome.MUSHROOM: {"color": Color(50.0 / 255.0, 10.0 / 255.0, 60.0 / 255.0), "density": 0.012},
+	GameConstants.Biome.ALIEN: {"color": Color(60.0 / 255.0, 20.0 / 255.0, 70.0 / 255.0), "density": 0.010},
 	GameConstants.Biome.FLOATING_ISLANDS: {"color": Color(40.0 / 255.0, 25.0 / 255.0, 60.0 / 255.0), "density": 0.005},
 	GameConstants.Biome.TOXIC_BOG: {"color": Color(50.0 / 255.0, 60.0 / 255.0, 15.0 / 255.0), "density": 0.018},
 }
@@ -372,3 +373,71 @@ const HEALTH_FRAGMENT_EMERGENCY_PULL_SPEED: float = 18.0
 const SPAWN_DIRECTION_INDICATOR_DURATION: float = 2.0
 const SPAWN_DIRECTION_INDICATOR_DISTANCE: float = 250.0  # Screen-edge offset
 const SPAWN_DIRECTION_ARROW_COLOR: Color = Color(1.0, 0.4, 0.2, 0.8)
+
+# ─── Minimap (Phase 5) ────────────────────────────────────────────────────────
+const MINIMAP_SIZE: float = 180.0           # Pixel size of the minimap square
+const MINIMAP_MARGIN: float = 20.0          # Margin from screen edge
+const MINIMAP_REFRESH_INTERVAL: float = 0.25  # Seconds between terrain redraw
+const MINIMAP_DOT_REFRESH_INTERVAL: float = 0.05  # Seconds between dot updates
+const MINIMAP_ENEMY_DOT_COLOR: Color = Color(1.0, 60.0 / 255.0, 60.0 / 255.0)
+const MINIMAP_PLAYER_DOT_COLOR: Color = Color(1.0, 1.0, 1.0)
+const MINIMAP_BOSS_DOT_COLOR: Color = Color(1.0, 0.0, 1.0)
+const MINIMAP_COLLECTIBLE_DOT_COLOR: Color = Color(100.0 / 255.0, 200.0 / 255.0, 1.0)
+const MINIMAP_BG_COLOR: Color = Color(0.05, 0.03, 0.08, 0.85)
+const MINIMAP_BORDER_COLOR: Color = Color(0.3, 0.6, 0.9, 0.9)
+const MINIMAP_PORTAL_DOT_COLOR: Color = Color(0.0, 1.0, 1.0)
+const MINIMAP_TRADER_DOT_COLOR: Color = Color(1.0, 200.0 / 255.0, 100.0 / 255.0)
+const MINIMAP_VIEW_RANGE: float = 120.0  # World units visible around player
+
+# ─── Damage Direction Indicator (Phase 5) ─────────────────────────────────────
+const DAMAGE_INDICATOR_DURATION: float = 1.5
+const DAMAGE_INDICATOR_MAX_ALPHA: float = 220.0 / 255.0
+const DAMAGE_INDICATOR_DISTANCE: float = 180.0  # Pixels from screen center
+const DAMAGE_INDICATOR_FADE_SPEED: float = 1.5
+const DAMAGE_INDICATOR_COLOR: Color = Color(1.0, 0.15, 0.15)
+const DAMAGE_INDICATOR_MAX_ACTIVE: int = 6  # Max simultaneous indicators
+
+# ─── Boss Tension Vignette (Phase 5) ──────────────────────────────────────────
+const BOSS_VIGNETTE_BASE_ALPHA: float = 30.0 / 255.0
+const BOSS_VIGNETTE_MAX_ALPHA: float = 90.0 / 255.0
+const BOSS_VIGNETTE_PULSE_SPEED: float = 3.0
+const BOSS_VIGNETTE_PROXIMITY_RANGE: float = 60.0  # World units for max intensity
+const BOSS_VIGNETTE_COLOR: Color = Color(0.9, 0.05, 0.05)
+
+# ─── Death Screen (Phase 5) ───────────────────────────────────────────────────
+const DEATH_SCREEN_FADE_IN_DURATION: float = 0.8
+const DEATH_SCREEN_BG_COLOR: Color = Color(0.02, 0.0, 0.05, 0.82)
+const DEATH_SCREEN_TITLE_COLOR: Color = Color(0.9, 0.15, 0.15)
+const DEATH_SCREEN_STAT_COLOR: Color = Color(0.85, 0.85, 0.95)
+const DEATH_SCREEN_STAT_LABEL_COLOR: Color = Color(0.5, 0.5, 0.6)
+
+# ─── Biome Indicator (Phase 5) ────────────────────────────────────────────────
+const BIOME_INDICATOR_FADE_SPEED: float = 5.0
+const BIOME_NAMES: Dictionary = {
+	GameConstants.Biome.GRASS: "Grasslands",
+	GameConstants.Biome.DESERT: "Desert Wastes",
+	GameConstants.Biome.WATER: "Azure Lakes",
+	GameConstants.Biome.LAVA: "Magma Fields",
+	GameConstants.Biome.FOREST: "Whispering Forest",
+	GameConstants.Biome.CRYSTAL: "Crystal Caverns",
+	GameConstants.Biome.SNOW: "Frostfall Tundra",
+	GameConstants.Biome.SWAMP: "Murk Swamp",
+	GameConstants.Biome.ALIEN: "Alien Zone",
+	GameConstants.Biome.MUSHROOM: "Mushroom Grove",
+	GameConstants.Biome.FLOATING_ISLANDS: "Floating Isles",
+	GameConstants.Biome.TOXIC_BOG: "Toxic Bog",
+}
+const BIOME_INDICATOR_TEXT_COLOR: Color = Color(0.9, 0.9, 1.0, 0.85)
+
+# ─── Dash Cooldown Indicator (Phase 5) ────────────────────────────────────────
+const DASH_COOLDOWN_RING_RADIUS: float = 22.0
+const DASH_COOLDOWN_RING_THICKNESS: float = 4.0
+const DASH_COOLDOWN_READY_COLOR: Color = Color(0.3, 1.0, 0.5, 0.9)
+const DASH_COOLDOWN_CHARGING_COLOR: Color = Color(0.5, 0.5, 0.5, 0.6)
+const DASH_COOLDOWN_ICON_COLOR: Color = Color(0.4, 1.0, 0.6)
+
+# ─── Kill Feed (Phase 5) ──────────────────────────────────────────────────────
+const KILL_FEED_MAX_ENTRIES: int = 5
+const KILL_FEED_LIFETIME: float = 4.0
+const KILL_FEED_FADE_SPEED: float = 2.0
+const KILL_FEED_COLOR: Color = Color(1.0, 0.85, 0.3, 0.9)

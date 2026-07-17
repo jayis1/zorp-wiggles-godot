@@ -145,13 +145,15 @@ func _collect() -> void:
 	tween.tween_property(self, "scale", Vector3.ONE * 1.5, 0.1) \
 		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BACK)
-	tween.chain().tween_property(self, "scale", Vector3.ZERO, 0.18) \
+	# Shrink + rise in parallel, then free after both complete
+	tween.chain().set_parallel(true)
+	tween.tween_property(self, "scale", Vector3.ZERO, 0.18) \
 		.set_ease(Tween.EASE_IN) \
 		.set_trans(Tween.TRANS_CUBIC)
 	# Rise slightly during shrink for a "lift" feel
-	tween.parallel().tween_property(self, "global_position:y", global_position.y + 0.8, 0.25) \
+	tween.tween_property(self, "global_position:y", global_position.y + 0.8, 0.25) \
 		.set_ease(Tween.EASE_OUT)
-	tween.tween_callback(queue_free)
+	tween.chain().tween_callback(queue_free)
 	
 	collected.emit(collectible_type, xp_value)
 

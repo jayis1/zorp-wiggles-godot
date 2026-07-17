@@ -101,7 +101,7 @@ func _explode() -> void:
 	if player:
 		var dist: float = global_position.distance_to(player.global_position)
 		if dist < GameConstants.VOID_BOMBER_EXPLOSION_RADIUS:
-			GameManager.take_damage(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE)
+			GameManager.take_damage(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE, global_position)
 
 	# Damage nearby enemies too
 	for enemy in get_tree().get_nodes_in_group("enemies"):
@@ -122,6 +122,9 @@ func _explode() -> void:
 	if _material:
 		boom_tween.tween_property(_material, "albedo_color:a", 0.0, 0.15)
 	boom_tween.chain().tween_callback(queue_free)
+
+	# Camera shake on explosion
+	_trigger_camera_trauma(0.4)
 
 	# Mark as dead for game logic
 	is_dead = true

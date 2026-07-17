@@ -73,7 +73,7 @@ func _physics_process(delta: float) -> void:
 			# Damage per second while in pull range
 			pull_damage_accum += GameConstants.GRAVITON_PULL_DAMAGE * delta
 			if pull_damage_accum >= 1.0:
-				GameManager.take_damage(int(pull_damage_accum))
+				GameManager.take_damage(int(pull_damage_accum), global_position)
 				pull_damage_accum = 0.0
 
 		# Animate pull ring pulse
