@@ -1,6 +1,7 @@
 ## Zorp Wiggles — Shockwave Ring
 ## Expanding ring AoE fired by Starburst Sentinel.
 ## Grows outward, damages player if caught in the ring.
+## Polished: correct radius scaling, center light flash, shared resources.
 
 extends Area3D
 
@@ -14,6 +15,7 @@ var current_radius: float = 0.0
 var age: float = 0.0
 var _material: StandardMaterial3D = null
 var _has_hit_player: bool = false
+var _light: OmniLight3D = null
 
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
@@ -25,11 +27,17 @@ static var _shared_mesh: CylinderMesh = null
 static func _ensure_shared_mesh() -> void:
 	if _shared_mesh == null:
 		_shared_mesh = CylinderMesh.new()
+		# Base radius of 0.5m — the ring is then scaled by current_radius / 0.5
+		# to reach the actual desired radius. This gives a smooth, visible ring
+		# at all sizes without changing the mesh.
 		_shared_mesh.top_radius = 0.5
 		_shared_mesh.bottom_radius = 0.5
 		_shared_mesh.height = 0.1
 		_shared_mesh.radial_segments = 24
 		_shared_mesh.rings = 2
+
+## The base mesh radius — used to compute the correct scale factor.
+const _BASE_MESH_RADIUS: float = 0.5
 
 func _ready() -> void:
 	# Set up material
@@ -45,6 +53,16 @@ func _ready() -> void:
 		_material.emission_energy_multiplier = 1.5
 		mesh.material_override = _material
 
+	# Center light flash — illuminates the Sentinel's area as the shockwave
+	# fires, fading as the ring expands. Matches the pulse wave's light flash
+	# for a consistent shockwave visual language.
+	_light = OmniLight3D.new()
+	_light.light_color = Color(1.0, 0.8, 0.2)
+	_light.light_energy = 2.5
+	_light.omni_range = 6.0
+	_light.omni_attenuation = 1.5
+	add_child(_light)
+
 func _physics_process(delta: float) -> void:
 	age += delta
 	# Ease-out expansion — fast burst, gentle deceleration. Matches the pulse
@@ -55,9 +73,13 @@ func _physics_process(delta: float) -> void:
 	var speed_mult: float = 1.0 - 0.6 * progress
 	current_radius += expand_speed * speed_mult * delta
 
-	# Scale the shockwave ring
-	var ring_scale: float = current_radius / max_radius
-	scale = scale.lerp(Vector3.ONE * ring_scale, 1.0 - exp(-12.0 * delta))
+	# Scale the shockwave ring to the actual current radius.
+	# The base mesh has radius 0.5m, so we scale by current_radius / 0.5
+	# to reach the desired physical size. Previously this scaled by the
+	# ratio (0→1), making the ring only 0.5m at max — nearly invisible.
+	var ring_scale: float = current_radius / _BASE_MESH_RADIUS
+	var target_scale := Vector3(ring_scale, ring_scale, 1.0)
+	scale = scale.lerp(target_scale, 1.0 - exp(-12.0 * delta))
 
 	# Check player hit — damage once when ring passes through
 	if not _has_hit_player:
@@ -70,11 +92,15 @@ func _physics_process(delta: float) -> void:
 				_has_hit_player = true
 
 	# Fade out as it reaches max radius — quadratic fade for a sharper disappear
+	var fade: float = 1.0 - progress
 	if _material:
-		var fade: float = 1.0 - progress
 		_material.albedo_color.a = 0.6 * fade * fade
 		# Emission fades alongside alpha for a coherent dissipating glow
 		_material.emission_energy_multiplier = 1.5 * fade * fade
+
+	# Fade the center light as the ring expands (punchy flash → off)
+	if _light:
+		_light.light_energy = 2.5 * fade
 
 	# Destroy when fully expanded
 	if current_radius >= max_radius:

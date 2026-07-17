@@ -303,6 +303,30 @@ func _collect() -> void:
 	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
 	ParticleEffects.spawn_pickup_sparkle(get_parent(), global_position, config["color"])
 
+	# ── Pickup light flash ── A brief OmniLight3D at the pickup point that
+	# flashes the collectible's color and fades over 0.25s. Gives pickups
+	# extra punch in dark biomes where the sparkle particles alone can be
+	# subtle. Rare items get a brighter, wider flash for a juicier reward.
+	var pickup_light := OmniLight3D.new()
+	pickup_light.light_color = config["color"]
+	var flash_intensity: float = 2.0
+	var flash_range: float = 3.0
+	if collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
+			or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
+			or collectible_type == GameConstants.CollectibleType.NEBULA_DUST \
+			or GameConstants.CRAFTING_MATERIALS.has(collectible_type):
+		flash_intensity = 3.5
+		flash_range = 5.0
+	pickup_light.light_energy = flash_intensity
+	pickup_light.omni_range = flash_range
+	pickup_light.omni_attenuation = 1.2
+	get_parent().add_child(pickup_light)
+	pickup_light.global_position = global_position
+	var light_fade := pickup_light.create_tween()
+	light_fade.tween_property(pickup_light, "light_energy", 0.0, 0.25) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	light_fade.tween_callback(pickup_light.queue_free)
+
 	# Rare items get a sky beam
 	if collectible_type == GameConstants.CollectibleType.METEOR_SHARD:
 		ParticleEffects.spawn_sky_beam(get_parent(), global_position, Color(1.0, 0.5, 0.1))
