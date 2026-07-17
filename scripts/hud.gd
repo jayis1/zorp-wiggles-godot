@@ -247,12 +247,12 @@ func _process(delta: float) -> void:
 				var fade_tween := create_tween()
 				fade_tween.tween_property(level_up_text, "modulate:a", 0.0, 0.3) \
 					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-				fade_tween.parallel().tween_property(level_up_text, "scale", Vector3.ONE * 0.8, 0.3) \
+				fade_tween.parallel().tween_property(level_up_text, "scale", Vector2.ONE * 0.8, 0.3) \
 					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 				fade_tween.tween_callback(func():
 					level_up_text.visible = false
 					level_up_text.modulate.a = 1.0
-					level_up_text.scale = Vector3.ONE
+					level_up_text.scale = Vector2.ONE
 				)
 	
 	# Combo milestone flash decay
@@ -350,12 +350,12 @@ func _on_level_up(level: int) -> void:
 		# Kill any existing tween on the label to avoid stacking
 		if level_up_text.has_meta("_lv_tween") and is_instance_valid(level_up_text.get_meta("_lv_tween") as Tween):
 			(level_up_text.get_meta("_lv_tween") as Tween).kill()
-		level_up_text.scale = Vector3.ZERO
+		level_up_text.scale = Vector2.ZERO
 		level_up_text.modulate.a = 1.0
 		var lv_tween := create_tween()
-		lv_tween.tween_property(level_up_text, "scale", Vector3.ONE * 1.25, 0.25) \
+		lv_tween.tween_property(level_up_text, "scale", Vector2.ONE * 1.25, 0.25) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-		lv_tween.tween_property(level_up_text, "scale", Vector3.ONE, 0.15) \
+		lv_tween.tween_property(level_up_text, "scale", Vector2.ONE, 0.15) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		level_up_text.set_meta("_lv_tween", lv_tween)
 	show_message("Level Up! Full HP restored!", 3.0)
@@ -379,9 +379,9 @@ func _on_combo_changed(count: int) -> void:
 			if combo_text.has_meta("_combo_tween") and is_instance_valid(combo_text.get_meta("_combo_tween") as Tween):
 				(combo_text.get_meta("_combo_tween") as Tween).kill()
 			var combo_tween := create_tween()
-			combo_tween.tween_property(combo_text, "scale", Vector3.ONE * 1.3, 0.06) \
+			combo_tween.tween_property(combo_text, "scale", Vector2.ONE * 1.3, 0.06) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-			combo_tween.tween_property(combo_text, "scale", Vector3.ONE, 0.15) \
+			combo_tween.tween_property(combo_text, "scale", Vector2.ONE, 0.15) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 			combo_text.set_meta("_combo_tween", combo_tween)
 	else:
