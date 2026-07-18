@@ -364,9 +364,16 @@ func _spawn_void_shadow_clone() -> void:
 
 func _despawn_void_shadow_clone() -> void:
 	# Remove shadow clones when leaving Void dimension
+	# Iterate over a duplicate so we can safely erase from the source array
+	# while iterating (queue_free alone would leave invalid references in
+	# GameManager.enemies, which other systems iterate over every frame).
+	var to_remove: Array = []
 	for enemy in GameManager.enemies:
 		if is_instance_valid(enemy) and enemy.is_in_group("void_clone"):
-			enemy.queue_free()
+			to_remove.append(enemy)
+	for enemy in to_remove:
+		GameManager.enemies.erase(enemy)
+		enemy.queue_free()
 
 func _swap_entity_roles() -> void:
 	# In Mirror dimension, collectibles become "hostile"
