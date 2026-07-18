@@ -139,6 +139,16 @@ func _define_achievements() -> void:
 		# ── Special: Prestige ──
 		{"id": "prestige_1", "title": "Reborn", "desc": "Prestige for the first time", "icon": "🌟", "category": "Progression", "target": 0, "progress_key": ""},
 		{"id": "prestige_5", "title": "Eternal", "desc": "Reach prestige level 5", "icon": "🌟🌟", "category": "Progression", "target": 0, "progress_key": ""},
+		# ── Phase 26: World Life — lore stones, treasure chests, wildlife ──
+		{"id": "lore_1", "title": "Lore Seeker", "desc": "Read your first lore stone", "icon": "📜", "category": "Exploration", "target": 1, "progress_key": "lore_stones_read"},
+		{"id": "lore_10", "title": "Lore Keeper", "desc": "Read 10 lore stones", "icon": "📜📜", "category": "Exploration", "target": 10, "progress_key": "lore_stones_read"},
+		{"id": "lore_30", "title": "Loremaster", "desc": "Read all 30 lore stones", "icon": "📚", "category": "Exploration", "target": 30, "progress_key": "lore_stones_read"},
+		{"id": "chest_1", "title": "Treasure Finder", "desc": "Open your first treasure chest", "icon": "🗝", "category": "Collection", "target": 1, "progress_key": "treasure_chests_opened"},
+		{"id": "chest_10", "title": "Treasure Hunter", "desc": "Open 10 treasure chests", "icon": "🗝🗝", "category": "Collection", "target": 10, "progress_key": "treasure_chests_opened"},
+		{"id": "chest_25", "title": "Treasure Hoarder", "desc": "Open 25 treasure chests", "icon": "💰", "category": "Collection", "target": 25, "progress_key": "treasure_chests_opened"},
+		{"id": "wildlife_1", "title": "Critter Catcher", "desc": "Catch your first wildlife", "icon": "🦌", "category": "Collection", "target": 1, "progress_key": "wildlife_caught"},
+		{"id": "wildlife_25", "title": "Wildlife Wrangler", "desc": "Catch 25 wildlife", "icon": "🦌🦌", "category": "Collection", "target": 25, "progress_key": "wildlife_caught"},
+		{"id": "wildlife_100", "title": "Beast Master", "desc": "Catch 100 wildlife", "icon": "🐾", "category": "Collection", "target": 100, "progress_key": "wildlife_caught"},
 	]
 	for def in defs:
 		var ach := Achievement.new()

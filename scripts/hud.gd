@@ -589,7 +589,13 @@ func _on_boss_defeated(boss: Node) -> void:
 		)
 
 func _on_message_added(text: String) -> void:
-	show_message(text, 2.5)
+	# ── Phase 26: Lore messages display longer so the player can read them ──
+	if text.begins_with("📜 LORE:"):
+		show_message(text, 6.0)
+	elif text.begins_with("📜"):
+		show_message(text, 3.5)
+	else:
+		show_message(text, 2.5)
 
 # ─── Combo Milestone Flash ───────────────────────────────────────────────────
 func _on_combo_milestone(combo: int, tier: int, flash_color: Color) -> void:

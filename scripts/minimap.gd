@@ -195,6 +195,44 @@ func _draw_entity_dots(rect: Rect2) -> void:
 		if _is_in_rect(pos, rect):
 			draw_circle(pos, 2.5, GameConstants.MINIMAP_TRADER_DOT_COLOR)
 
+	# ── Phase 26: Lore stone dots (small purple, pulsing) ──
+	for stone in get_tree().get_nodes_in_group("lore_stone"):
+		if not is_instance_valid(stone):
+			continue
+		var spos: Vector2 = _world_to_mini(stone.global_position.x, stone.global_position.z, px, pz, pixel_per_world)
+		if _is_in_rect(spos, rect):
+			# Pulsing alpha for a "calling" effect.
+			var pulse: float = 0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.003)
+			var lore_color: Color = Color(0.55, 0.47, 1.0, pulse)
+			draw_circle(spos, 2.0, lore_color)
+
+	# ── Phase 26: Treasure chest dots (small gold, only when close) ──
+	# Chests are hidden — only show on minimap when within glow range, so the
+	# player has to explore to find them rather than just beelining to dots.
+	for chest in get_tree().get_nodes_in_group("treasure_chest"):
+		if not is_instance_valid(chest):
+			continue
+		var cpos: Vector2 = _world_to_mini(chest.global_position.x, chest.global_position.z, px, pz, pixel_per_world)
+		if _is_in_rect(cpos, rect):
+			# Only draw if the player is within the chest's glow range.
+			var dist: float = chest.global_position.distance_to(player.global_position)
+			if dist <= GameConstants.TREASURE_CHEST_GLOW_RANGE:
+				var gold_color: Color = Color(1.0, 0.85, 0.3, 0.9)
+				draw_rect(Rect2(cpos.x - 2.0, cpos.y - 2.0, 4.0, 4.0), gold_color, true)
+
+	# ── Phase 26: Wildlife dots (small green, only when close) ──
+	# Wildlife is non-hostile and shown as small green dots so the player can
+	# spot them to hunt. Only drawn when within flee range to avoid clutter.
+	for creature in get_tree().get_nodes_in_group("wildlife"):
+		if not is_instance_valid(creature):
+			continue
+		if "species_color" in creature:
+			var wpos: Vector2 = _world_to_mini(creature.global_position.x, creature.global_position.z, px, pz, pixel_per_world)
+			if _is_in_rect(wpos, rect):
+				var wdist: float = creature.global_position.distance_to(player.global_position)
+				if wdist <= GameConstants.WILDLIFE_FLEE_RANGE:
+					draw_circle(wpos, 1.5, creature.species_color)
+
 	# ── Enemy dots (red, boss = magenta) ──
 	for enemy in GameManager.enemies:
 		if not is_instance_valid(enemy):

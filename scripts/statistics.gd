@@ -321,6 +321,27 @@ func record_revive() -> void:
 	_add_lifetime("revives", 1.0)
 	_dirty = true
 
+# ── Phase 26: World Life — lore stones, treasure chests, wildlife ──
+func record_lore_stone_read() -> void:
+	_add_lifetime("lore_stones_read", 1.0)
+	_add_session("lore_stones_read", 1.0)
+	stats_updated.emit()
+
+func record_treasure_chest_opened(trapped: bool = false) -> void:
+	_add_lifetime("treasure_chests_opened", 1.0)
+	_add_session("treasure_chests_opened", 1.0)
+	if trapped:
+		_add_lifetime("trapped_chests_triggered", 1.0)
+		_add_session("trapped_chests_triggered", 1.0)
+	stats_updated.emit()
+
+func record_wildlife_caught(species_name: String = "Unknown") -> void:
+	_add_lifetime("wildlife_caught", 1.0)
+	_add_session("wildlife_caught", 1.0)
+	_inc_dict_lifetime("wildlife_by_type", species_name)
+	_inc_dict_session("wildlife_by_type", species_name)
+	stats_updated.emit()
+
 func add_biome_time(biome_id: int, seconds: float) -> void:
 	# Called periodically by BiomeEffects or GameManager for per-biome time tracking
 	var key: String = str(biome_id)

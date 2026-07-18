@@ -295,6 +295,10 @@ func _spawn_structures() -> void:
 	_spawn_monoliths()
 	_spawn_healing_shrines()
 	_spawn_destructibles()  # Phase 8: breakable props
+	# ── Phase 26: World Life — lore stones, treasure chests, wildlife ──
+	_spawn_lore_stones()
+	_spawn_treasure_chests()
+	_spawn_wildlife()
 
 # ── Phase 8: Spawn destructible crates & crystals across biomes ────────────────
 func _spawn_destructibles() -> void:
@@ -545,3 +549,104 @@ func get_biome_at(world_pos: Vector3) -> int:
 	x = clampi(x, 0, GRID_SIZE - 1)
 	z = clampi(z, 0, GRID_SIZE - 1)
 	return grid[x * GRID_SIZE + z]
+
+# ── Phase 26: World Life — lore stones, treasure chests, wildlife ──────────────
+# These are scattered across walkable biomes. Lore stones reveal lore text when
+# the player approaches. Treasure chests are hidden (glow when close) and
+# contain rare loot (some are trapped). Wildlife are non-hostile creatures that
+# flee from the player and drop loot when caught.
+
+func _spawn_lore_stones() -> void:
+	# Scatter lore stones across walkable biomes. Each stone picks a lore
+	# fragment from the LORE_FRAGMENTS list. Stones near spawn are skipped so
+	# the player isn't immediately reading lore before they've started playing.
+	var stone_scene := preload("res://scenes/entities/lore_stone.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+	var count: int = 0
+	var fragment_idx: int = 0
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			if not _is_biome_walkable(biome):
+				continue
+			if randf() < GameConstants.LORE_STONE_SPAWN_CHANCE:
+				var wx: float = (x - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+				var wz: float = (z - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+				# Skip if too close to spawn (let the player explore first).
+				if Vector2(wx, wz).length() < 50:
+					continue
+				var stone := stone_scene.instantiate()
+				add_child(stone)
+				stone.global_position = Vector3(wx, 0, wz)
+				# Assign lore fragments sequentially so the story unfolds in order.
+				stone.fragment_index = fragment_idx % GameConstants.LORE_FRAGMENTS.size()
+				fragment_idx += 1
+				count += 1
+	print("[WorldGenerator] Spawned %d lore stones" % count)
+
+func _spawn_treasure_chests() -> void:
+	# Scatter hidden treasure chests across walkable biomes. Skipped near spawn.
+	var chest_scene := preload("res://scenes/entities/treasure_chest.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+	var count: int = 0
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			if not _is_biome_walkable(biome):
+				continue
+			if randf() < GameConstants.TREASURE_CHEST_SPAWN_CHANCE:
+				var wx: float = (x - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+				var wz: float = (z - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+				if Vector2(wx, wz).length() < 60:
+					continue
+				var chest := chest_scene.instantiate()
+				add_child(chest)
+				chest.global_position = Vector3(wx, 0, wz)
+				count += 1
+	print("[WorldGenerator] Spawned %d treasure chests" % count)
+
+func _spawn_wildlife() -> void:
+	# Spawn biome-appropriate wildlife. Each species only spawns in its
+	# preferred biomes (see WILDLIFE_SPECIES in game_constants.gd), creating
+	# biome-specific fauna. Skipped near spawn so the player doesn't
+	# immediately trample them.
+	var wildlife_scene := preload("res://scenes/entities/wildlife.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+	var count: int = 0
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			if not _is_biome_walkable(biome):
+				continue
+			if randf() < GameConstants.WILDLIFE_SPAWN_CHANCE:
+				var wx: float = (x - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+				var wz: float = (z - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+				if Vector2(wx, wz).length() < 30:
+					continue
+				# Pick a species that prefers this biome.
+				var species: Dictionary = _pick_wildlife_species_for_biome(biome)
+				if species.is_empty():
+					continue  # No species for this biome — skip.
+				var creature := wildlife_scene.instantiate()
+				add_child(creature)
+				creature.global_position = Vector3(wx, 0.5, wz)
+				creature.species_name = species.get("name", "Unknown")
+				creature.species_color = species.get("color", Color(0.9, 0.8, 0.3))
+				creature.species_scale = species.get("scale", 0.5)
+				count += 1
+	print("[WorldGenerator] Spawned %d wildlife" % count)
+
+func _pick_wildlife_species_for_biome(biome: int) -> Dictionary:
+	# Return a random species from WILDLIFE_SPECIES that prefers the given
+	# biome. Returns an empty Dictionary if no species prefers this biome.
+	var candidates: Array[Dictionary] = []
+	for species in GameConstants.WILDLIFE_SPECIES:
+		var biomes: Array = species.get("biomes", [])
+		if biome in biomes:
+			candidates.append(species)
+	if candidates.is_empty():
+		return {}
+	return candidates[randi() % candidates.size()]

@@ -1852,4 +1852,138 @@ const POISON_NOVA_RING_DAMAGE: int = 20  # Instant damage from the ring
 const POISON_NOVA_CLOUD_RADIUS: float = 5.0
 const POISON_NOVA_CLOUD_DURATION: float = 4.0
 const POISON_NOVA_CLOUD_DAMAGE_PER_TICK: int = 8
+
+# ─── Phase 26: World Life — Lore Stones, Treasure Chests, Wildlife ────────────
+# Lore Stones — scattered ancient relics that reveal fragments of game lore
+# when the player approaches. Each stone has a piece of lore text. Collecting
+# all stones grants a completion bonus. Lore stones persist (don't respawn) in
+# the save file (future Phase 31 save/load), but for now they simply disappear
+# after being read.
+const LORE_STONE_SPAWN_CHANCE: float = 0.012       # Per-tile chance of a lore stone
+const LORE_STONE_READ_RANGE: float = 4.5           # Player must be within this range
+const LORE_STONE_XP_REWARD: int = 25                # XP for reading a lore stone
+const LORE_STONE_TOTAL_COUNT_TARGET: int = 30      # Approximate target count across world
+const LORE_STONE_COLOR: Color = Color(110.0 / 255.0, 90.0 / 255.0, 160.0 / 255.0)
+const LORE_STONE_GLOW_COLOR: Color = Color(140.0 / 255.0, 120.0 / 255.0, 1.0)
+const LORE_STONE_HEIGHT: float = 1.8                # Visual height of the stone pillar
+
+# Lore fragments — revealed when a lore stone is read. Each entry is a short
+# snippet of world-building text. Stones pick from this list sequentially so
+# the player uncovers the story in a loose order.
+const LORE_FRAGMENTS: Array[String] = [
+	"Before the Void came, the Zorpions tended gardens of starlight.",
+	"The Wiggling was discovered by Zix the Wanderer in the Age of Foam.",
+	"Each biome was seeded by a different Tribe, long since dissolved.",
+	"The Crystal Caverns hum a song older than the planet's core.",
+	"Ancient Sentinels were guardians, not conquerors — until the corruption.",
+	"The Dimensional Rifts opened when the Sky Citadel fell from orbit.",
+	"Glip the Trader once crossed the Toxic Bog on a single raft of spores.",
+	"Deep Ocean is not water. It is liquid memory, breathing slowly.",
+	"The Volcano Core is the planet's last heartbeat, fading but defiant.",
+	"Meteor Shards are tears of the sky, shed when the stars began to die.",
+	"Quantum Fuzz grows where time has been wounded by the Time Wardens.",
+	"Nebula Dust is the ash of a galaxy that never finished forming.",
+	"The Swarm Queen was once a gardener, before the hive consumed her.",
+	"Echo Knights repeat the last patrol they ever flew — forever.",
+	"Gravity Elementals dream of falling upward, toward a sky they lost.",
+	"Mirror Mimics were built to reflect heroes — but they learned to hate them.",
+	"Plasma Stalkers learned invisibility from the Shadow Clones of the Void.",
+	"The Companion Pet species was engineered to be loyal. It exceeded the spec.",
+	"Blood Moon is not a moon. It is an eye, and it is watching.",
+	"Aurora Borealis is the breath of something sleeping beneath the snow.",
+	"The Digital Grid is a tomb for a civilization that uploaded itself.",
+	"Ancient Ruins are not ruins. They are cages, and the doors are open.",
+	"Every Monolith is a finger of the same buried hand.",
+	"Healing Shrines grow where a Zorpion once wept for a fallen friend.",
+	"The portals do not move you through space. They move space around you.",
+	"Prestige is not power. It is remembering who you were before.",
+	"The first Zorp landed here with nothing but a wiggle and a wish.",
+	"Sandstorms carry the voices of every creature the desert has swallowed.",
+	"Magnetic Storms are the planet trying to remember how to speak.",
+	"The last lore stone is this one. The story continues in you.",
+]
+
+# Treasure Chests — hidden containers buried across the world. They're not
+# visible from far away (semi-buried, low-profile), but emit a faint glimmer
+# when the player is close. Opening one grants rare loot + XP. Some chests
+# are "trapped" (spawn a small enemy or trigger a hazard) for risk/reward.
+const TREASURE_CHEST_SPAWN_CHANCE: float = 0.008   # Per-tile chance
+const TREASURE_CHEST_OPEN_RANGE: float = 3.5       # Player must be within this range
+const TREASURE_CHEST_XP_REWARD: int = 60           # XP for opening
+const TREASURE_CHEST_GLOW_RANGE: float = 12.0     # Distance at which glimmer appears
+const TREASURE_CHEST_TRAP_CHANCE: float = 0.25    # 25% are trapped
+const TREASURE_CHEST_COLOR: Color = Color(140.0 / 255.0, 100.0 / 255.0, 50.0 / 255.0)
+const TREASURE_CHEST_GLOW_COLOR: Color = Color(1.0, 0.85, 0.3)
+const TREASURE_CHEST_TRAP_DAMAGE: int = 25
+const TREASURE_CHEST_LOOT_COUNT: int = 3           # Number of items per chest
+
+# Wildlife — non-hostile creatures that roam the world. They flee from the
+# player when approached. If caught (player touches them), they drop loot
+# (XP orb + occasional crafting material) and a small score bonus. They do
+# NOT fight back. They're a light exploration reward — hunting them is
+# optional but worthwhile. Each wildlife type has a different color, speed,
+# and preferred biome.
+const WILDLIFE_SPAWN_CHANCE: float = 0.018         # Per-tile chance
+const WILDLIFE_FLEE_SPEED: float = 9.0             # Speed when fleeing
+const WILDLIFE_FLEE_RANGE: float = 14.0            # Distance at which they start fleeing
+const WILDLIFE_WANDER_SPEED: float = 1.8           # Speed when wandering
+const WILDLIFE_WANDER_RADIUS: float = 30.0         # Wander radius from home
+const WILDLIFE_XP_REWARD: int = 15                  # XP for catching
+const WILDLIFE_SCORE_REWARD: int = 30              # Score for catching
+const WILDLIFE_MATERIAL_DROP_CHANCE: float = 0.30  # 30% chance to drop a crafting material
+const WILDLIFE_CATCH_RANGE: float = 1.5            # Touch distance to catch
+
+# Wildlife species — each species has a name, color, scale, and preferred
+# biome list (biomes where they spawn). Wildlife of a species only spawns in
+# its preferred biomes, creating biome-specific fauna.
+const WILDLIFE_SPECIES: Array[Dictionary] = [
+	{
+		"name": "Glimmer Hopper",
+		"color": Color(0.9, 0.8, 0.3),
+		"scale": 0.5,
+		"biomes": [Biome.GRASS, Biome.FOREST, Biome.MUSHROOM],
+	},
+	{
+		"name": "Frost Mite",
+		"color": Color(0.7, 0.9, 1.0),
+		"scale": 0.4,
+		"biomes": [Biome.SNOW, Biome.CRYSTAL, Biome.CRYSTAL_CAVERNS],
+	},
+	{
+		"name": "Sand Skitter",
+		"color": Color(0.95, 0.75, 0.4),
+		"scale": 0.45,
+		"biomes": [Biome.DESERT, Biome.ANCIENT_RUINS],
+	},
+	{
+		"name": "Bog Hopper",
+		"color": Color(0.5, 0.85, 0.4),
+		"scale": 0.5,
+		"biomes": [Biome.SWAMP, Biome.TOXIC_BOG],
+	},
+	{
+		"name": "Void Mote",
+		"color": Color(0.6, 0.3, 0.9),
+		"scale": 0.35,
+		"biomes": [Biome.ALIEN, Biome.UNDERGROUND, Biome.DIGITAL_GRID],
+	},
+	{
+		"name": "Tidal Sprite",
+		"color": Color(0.3, 0.7, 0.95),
+		"scale": 0.4,
+		"biomes": [Biome.WATER, Biome.DEEP_OCEAN],
+	},
+	{
+		"name": "Ember Wisp",
+		"color": Color(1.0, 0.5, 0.2),
+		"scale": 0.4,
+		"biomes": [Biome.LAVA, Biome.VOLCANO_CORE],
+	},
+	{
+		"name": "Cloud Drifter",
+		"color": Color(0.95, 0.95, 1.0),
+		"scale": 0.55,
+		"biomes": [Biome.FLOATING_ISLANDS, Biome.SKY_CITADEL],
+	},
+]
 const POISON_NOVA_CLOUD_TICK_INTERVAL: float = 0.6

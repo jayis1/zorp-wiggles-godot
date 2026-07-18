@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3 uid="uid://lorestone01"]
+
+[ext_resource type="Script" path="res://scripts/lore_stone.gd" id="1_lore"]
+
+[sub_resource type="BoxShape3D" id="LoreStoneShape"]
+size = Vector3(1.4, 3.6, 1.4)
+
+[node name="LoreStone" type="Area3D"]
+script = ExtResource("1_lore")
+
+[node name="LoreStoneCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+shape = SubResource("LoreStoneShape")

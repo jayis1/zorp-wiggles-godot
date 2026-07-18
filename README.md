@@ -48,6 +48,9 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 - **Permanent Upgrades** — skill bonuses persist across runs via JSON save (+HP, +damage, +speed, +XP, +crit, +loot, +fire rate, +multishot, +dash cooldown, +HP regen, +dmg reduction, auto-revive)
 - **Prestige System** — reset at level 20+ for +10% XP multiplier per prestige level, bonus SP, and golden aura cosmetic
 - **Statistics Page** — lifetime + session stats (kills, distance, time, items, biome time, enemy/boss breakdowns) with 4 tabs (F2 key)
+- **Lore Stones** — 30 scattered ancient relics that reveal world-building lore fragments when approached (📜 icon, purple glow, +25 XP each)
+- **Treasure Chests** — hidden chests with golden glimmer when close; contain rare loot (Meteor Shards, Quantum Fuzz, etc.); 25% are trapped (spawn a Chest Mimic)
+- **Roaming Wildlife** — 8 biome-specific non-hostile species (Glimmer Hopper, Frost Mite, Sand Skitter, Bog Hopper, Void Mote, Tidal Sprite, Ember Wisp, Cloud Drifter) that flee from the player and drop loot when caught
 
 ---
 
@@ -185,7 +188,7 @@ Phases 1-20 (core game + 12 new features) are **COMPLETE**. Ongoing development 
 - **Phase 23**: New enemy types (Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight, Plasma Stalker, Time Warden, Mirror Mimic implemented; Void Leviathan, Ancient Sentinel pending) — **IN PROGRESS** (7/10 enemy types implemented)
 - **Phase 24**: New weapon mods (Black Hole Launcher, Time Freeze Ray, Mind Control, Meteor Strike, Turret Deploy)
 - **Phase 25**: Progression systems (skill tree, prestige, daily challenges, endless mode, boss rush)
-- **Phase 26**: World life (wandering merchants, villages, wildlife, treasure chests, lore stones, fast travel)
+- **Phase 26**: World life (wandering merchants, villages, wildlife, treasure chests, lore stones, fast travel) — **IN PROGRESS** (3/10 implemented: roaming wildlife with 8 biome-specific species, hidden treasure chests with traps, lore stones with 30 lore fragments)
 - **Phase 27**: Pet evolution expansion (5 new paths, fusion, accessories, training, multi-pet)
 - **Phase 28**: Weather expansion (meteor shower, aurora, sandstorm, blood moon, eclipse, gravity anomaly)
 - **Phase 29**: Equipment (armor, consumables, accessories, upgrade system, set bonuses)
