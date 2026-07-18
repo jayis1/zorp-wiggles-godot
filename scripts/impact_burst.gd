@@ -68,9 +68,14 @@ func _ready() -> void:
 	scale = Vector3.ONE * 0.3
 	var tween := create_tween()
 	tween.set_parallel(true)
+	# TRANS_BACK gives a slight overshoot on the scale-up — the burst pops
+	# past its target size and settles back, which reads as a punchy "snap"
+	# impact rather than a smooth glide. This is the standard juice curve
+	# for hit sparks (e.g. Vlambeer's Nuclear Throne impacts). EASE_OUT
+	# so the overshoot happens at the end of the rise, not the start.
 	tween.tween_property(self, "scale", Vector3.ONE * 2.0, 0.25) \
 		.set_ease(Tween.EASE_OUT) \
-		.set_trans(Tween.TRANS_CUBIC)
+		.set_trans(Tween.TRANS_BACK)
 	if _material:
 		tween.tween_property(_material, "albedo_color:a", 0.0, 0.25) \
 			.set_ease(Tween.EASE_IN)

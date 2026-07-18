@@ -83,10 +83,18 @@ func _process(delta: float) -> void:
 			global_position.x += wob_x * delta * 10.0
 			global_position.z += wob_z * delta * 10.0
 
-	# Fade out in the second half of life
+	# Fade out in the second half of life. Use an ease-in quadratic curve
+	# (alpha = t²) instead of a linear ramp: the number stays near-full
+	# opacity for most of its life and only drops off sharply at the end.
+	# A linear fade makes the number visibly dim from the moment the fade
+	# window starts, which reads as "the number is dying" too early — the
+	# quadratic keeps it punchy and readable, then snaps out of view.
+	# This mirrors classic arcade damage-pop behavior (Vlambeer / Doom Eternal).
 	var life_frac: float = lifetime / max_lifetime
 	if life_frac < GameConstants.DMG_NUMBER_FADE_START:
-		var fade_alpha: float = life_frac / GameConstants.DMG_NUMBER_FADE_START
+		var fade_t: float = life_frac / GameConstants.DMG_NUMBER_FADE_START  # 1→0
+		# Quadratic ease-in: t² — holds opacity, then drops fast at the end
+		var fade_alpha: float = fade_t * fade_t
 		modulate.a = clampf(fade_alpha, 0.0, 1.0)
 
 	if lifetime <= 0:

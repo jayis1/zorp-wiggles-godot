@@ -794,9 +794,16 @@ func _handle_invuln_blink(delta: float) -> void:
 		# Reset emission to normal (match the idle emission intensity used
 		# everywhere else — base_color * 0.4, NOT raw base_color, which would
 		# be 2.5× brighter and cause a visible emission pop when blink ends).
+		# IMPORTANT: if a biome mutation is active, the player's albedo+emission
+		# are tinted toward the mutation color (see _update_mutation_material).
+		# Hardcoding base_color * 0.4 here would wipe the mutation tint, causing
+		# Zorp to flash back to plain green for the rest of the mutation. Instead
+		# we delegate to _update_mutation_material(), which restores the correct
+		# blended color (or base_color if no mutation is active). This keeps the
+		# invuln-blink reset consistent with the mutation system's color state.
 		if _player_material:
 			_player_material.emission_energy_multiplier = 1.0
-			_player_material.emission = base_color * 0.4
+			_update_mutation_material()
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Right-click camera rotation
@@ -956,6 +963,15 @@ func _spawn_projectile() -> void:
 				var angle: float = 0.12 * (1 if i % 2 == 0 else -1) * ((i / 2) + 1)
 				_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, angle), mod_dmg, mod_speed, mod_color, mod_id)
 
+	# ── Phase 20: Audio — shoot SFX (played ONCE per shot, not per bolt) ──
+	# Multi-bolt mods (Spread Shot, Quantum Overdrive, Multishot skill) all fire
+	# from _spawn_single_projectile, but the SFX must only play once per trigger
+	# pull — otherwise 3+ identical SFX_SHOOT samples layer on the same frame
+	# into a muddy, over-loud "chunk". Playing it here (after the match) means
+	# every shot — single, spread, or multishot — has identical perceived volume
+	# and timbre, so rapid fire stays crisp and distinct.
+	AudioManager.play_sfx(AudioManager.SFX_SHOOT)
+
 ## Spawn a single projectile with the given parameters. The mod_id is passed to
 ## the projectile so it can apply behavior-specific logic (homing, bouncing, etc.).
 func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Color, mod_id: int = GameConstants.WeaponMod.NONE) -> void:
@@ -978,8 +994,12 @@ func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Col
 	get_parent().add_child(proj)
 	proj.global_position = global_position + Vector3(0, 0.5, 0)
 
-	# Phase 20: Audio — shoot SFX
-	AudioManager.play_sfx(AudioManager.SFX_SHOOT)
+	# NOTE: Shoot SFX is played once per shot in _spawn_projectile(), not here.
+	# Multi-bolt mods (Spread Shot fires 3, Quantum Overdrive fires 3+) used
+	# to play SFX_SHOOT once per bolt, layering 3+ identical shots on the same
+	# frame into a muddy, over-loud "chunk". Playing it once per shot keeps
+	# every shot — single or spread — at the same perceived volume and timbre,
+	# so rapid fire stays crisp and distinct.
 	# Quick scale pulse on shoot for juicy feedback (skip if dashing to avoid tween conflict)
 	if mesh and not is_dashing:
 		var pulse_tween := create_tween()
