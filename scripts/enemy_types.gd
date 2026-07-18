@@ -124,6 +124,22 @@ static var TYPES: Dictionary = {
 		"hp": 110,  "speed": 4.0,  "damage": 14,  "scale": 1.1,
 		"model": "diamond", "decor": "aura",    "detect": 30,
 	},
+	# ── Phase 23: New enemy types (batch 2) ──
+	"Plasma Stalker": {
+		"color": Color(1.0, 0.25, 0.55),         # Hot pink-magenta
+		"hp": 55,   "speed": 6.0,  "damage": 18,  "scale": 1.0,
+		"model": "sphere",  "decor": "aura",    "detect": 34,
+	},
+	"Time Warden": {
+		"color": Color(0.35, 0.55, 1.0),         # Cool temporal blue
+		"hp": 140,  "speed": 3.0,  "damage": 16,  "scale": 1.4,
+		"model": "diamond", "decor": "aura",    "detect": 32,
+	},
+	"Mirror Mimic": {
+		"color": Color(0.85, 0.85, 0.92),        # Mirror silver
+		"hp": 85,   "speed": 3.4,  "damage": 12,  "scale": 1.2,
+		"model": "sphere",  "decor": "shards",  "detect": 30,
+	},
 }
 
 static var EASY_TYPES: Array[String] = ["Slime Blob", "Space Beetle", "Swarm Mite", "Void Wisp"]
@@ -156,6 +172,10 @@ static var LOOT_DROPS: Dictionary = {
 	"Swarm Queen":         [4, 6],
 	"Crystal Wraith":      [2, 4],
 	"Echo Knight":         [2, 4],
+	# ── Phase 23: New enemy types (batch 2) ──
+	"Plasma Stalker":      [2, 3],
+	"Time Warden":         [3, 5],
+	"Mirror Mimic":        [2, 4],
 }
 
 static func get_type(name: String) -> Dictionary:

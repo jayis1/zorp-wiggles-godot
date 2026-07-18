@@ -136,6 +136,10 @@ enum EnemyType {
 	SWARM_QUEEN,      # Spawns Swarm Mites continuously, must be killed to stop spawns
 	CRYSTAL_WRAITH,   # Shatters into shards on death, shards reform into mini-wraiths
 	ECHO_KNIGHT,      # Creates shadow copies of itself, all attack simultaneously
+	# ── Phase 23: New enemy types (batch 2) ──
+	PLASMA_STALKER,  # Turns invisible — only visible by particle trail
+	TIME_WARDEN,     # Slows player in AoE, speeds self, teleport attacks
+	MIRROR_MIMIC,    # Copies player's weapon mod, fires it back at them
 }
 
 # ─── Enemy Spawn & Difficulty ────────────────────────────────────────────────
@@ -1549,3 +1553,75 @@ const ECHO_KNIGHT_COPY_OFFSET: float = 3.0   # Meters from the real knight
 const ECHO_KNIGHT_COPY_ALPHA: float = 0.45   # Translucent copies
 const ECHO_KNIGHT_COPY_DAMAGE_MULT: float = 0.6  # Copies deal reduced damage
 const COOP_DROP_OUT_HOLD_TIME: float = 2.0     # Hold drop-in key this long to drop out
+
+# ── Plasma Stalker ───────────────────────────────────────────────────────────
+# An ambusher that periodically turns nearly invisible. While cloaked the mesh
+# is almost fully transparent — the only tell is a particle trail of plasma
+# sparks that drift behind it. The player must spot the trail to track the
+# stalker and burst it down during the brief visible window. Fast, low-HP,
+# high-damage — a glass-cannon ambusher.
+const PLASMA_STALKER_HP: int = 55
+const PLASMA_STALKER_SPEED: float = 6.0
+const PLASMA_STALKER_DAMAGE: int = 18
+const PLASMA_STALKER_SCALE: float = 1.0
+const PLASMA_STALKER_XP: int = 45
+const PLASMA_STALKER_SCORE: int = 150
+const PLASMA_STALKER_DETECT_RANGE: float = 34.0
+const PLASMA_STALKER_ATTACK_RANGE: float = 1.8
+const PLASMA_STALKER_ATTACK_COOLDOWN: float = 1.1
+const PLASMA_STALKER_COLOR: Color = Color(1.0, 0.25, 0.55)   # Hot pink-magenta
+const PLASMA_STALKER_CLOAK_COLOR: Color = Color(1.0, 0.25, 0.55, 0.06)  # Near-invisible
+const PLASMA_STALKER_VISIBLE_DURATION: float = 2.5   # Seconds visible (vulnerable tell)
+const PLASMA_STALKER_CLOAK_DURATION: float = 4.0     # Seconds cloaked
+const PLASMA_STALKER_CLOAK_WARN_TIME: float = 0.35  # Shimmer before cloaking
+const PLASMA_STALKER_CLOAK_BLINK_SPEED: float = 16.0 # Hz of blink during warn
+const PLASMA_STALKER_TRAIL_INTERVAL: float = 0.05    # Seconds between trail sparks
+const PLASMA_STALKER_TRAIL_SPARK_COUNT: int = 2     # Sparks per emission
+const PLASMA_STALKER_SPEED_BOOST_CLOAK: float = 1.3 # Faster while cloaked (ambush)
+
+# ── Time Warden ──────────────────────────────────────────────────────────────
+# A temporal controller that projects a slowing field around itself. Players
+# inside the field move and attack slower; the Warden itself moves faster.
+# Periodically teleports behind the player for a surprise attack. Tanky and
+# disruptive — the counter is to stay outside its AoE and burst it from range.
+const TIME_WARDEN_HP: int = 140
+const TIME_WARDEN_SPEED: float = 3.0
+const TIME_WARDEN_DAMAGE: int = 16
+const TIME_WARDEN_SCALE: float = 1.4
+const TIME_WARDEN_XP: int = 70
+const TIME_WARDEN_SCORE: int = 220
+const TIME_WARDEN_DETECT_RANGE: float = 32.0
+const TIME_WARDEN_ATTACK_RANGE: float = 2.0
+const TIME_WARDEN_ATTACK_COOLDOWN: float = 1.6
+const TIME_WARDEN_COLOR: Color = Color(0.35, 0.55, 1.0)    # Cool temporal blue
+const TIME_WARDEN_FIELD_COLOR: Color = Color(0.35, 0.55, 1.0, 0.12)  # Translucent field
+const TIME_WARDEN_FIELD_RADIUS: float = 7.0       # Slowing field radius
+const TIME_WARDEN_PLAYER_SLOW_MULT: float = 0.55  # Player speed multiplier in field
+const TIME_WARDEN_SELF_SPEED_MULT: float = 1.35    # Warden speed boost (always on)
+const TIME_WARDEN_TELEPORT_INTERVAL: float = 6.0  # Seconds between teleports
+const TIME_WARDEN_TELEPORT_DISTANCE: float = 4.0  # Behind player, this far
+const TIME_WARDEN_TELEPORT_WARN_TIME: float = 0.5 # Blink telegraph before teleport
+const TIME_WARDEN_TELEPORT_BLINK_SPEED: float = 14.0
+const TIME_WARDEN_FIELD_TICK_INTERVAL: float = 0.3  # How often to re-check player in field
+
+# ── Mirror Mimic ─────────────────────────────────────────────────────────────
+# Copies the player's currently equipped weapon mod and fires it back at them.
+# When the player has no mod equipped, it fires a standard projectile. The
+# mimic reads WeaponModSystem.get_equipped_mod() and mirrors the mod's color
+# and projectile behavior. Medium HP, medium speed, ranged — the counter is to
+# equip a mod that's hard to dodge (or unequip to deny it a powerful mod).
+const MIRROR_MIMIC_HP: int = 85
+const MIRROR_MIMIC_SPEED: float = 3.4
+const MIRROR_MIMIC_DAMAGE: int = 12
+const MIRROR_MIMIC_SCALE: float = 1.2
+const MIRROR_MIMIC_XP: int = 55
+const MIRROR_MIMIC_SCORE: int = 180
+const MIRROR_MIMIC_DETECT_RANGE: float = 30.0
+const MIRROR_MIMIC_ATTACK_RANGE: float = 24.0      # Ranged — fires from distance
+const MIRROR_MIMIC_ATTACK_COOLDOWN: float = 2.0
+const MIRROR_MIMIC_COLOR: Color = Color(0.85, 0.85, 0.92)  # Mirror silver
+const MIRROR_MIMIC_NONE_COLOR: Color = Color(0.7, 0.7, 0.75)  # No-mod fallback
+const MIRROR_MIMIC_PROJECTILE_SPEED: float = 18.0
+const MIRROR_MIMIC_PROJECTILE_LIFETIME: float = 3.5
+const MIRROR_MIMIC_SPREAD_DEGREES: float = 6.0     # Slight inaccuracy
+const MIRROR_MIMIC_MIMICRY_DAMAGE_MULT: float = 0.7  # Mimic's copy is weaker than original

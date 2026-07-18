@@ -10,7 +10,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 
 ### Core Gameplay
 - **3D open world** with 19 procedurally-generated biomes (grass, desert, water, lava, forest, crystal, snow, swamp, alien, mushroom, floating islands, toxic bog + Phase 22: deep ocean, volcano core, sky citadel, digital grid, crystal caverns, ancient ruins, underground)
-- **18+ enemy types** with unique AI behaviors (Slime Blob, Plasma Drake, Graviton, Void Wisp, Spore Spitter, Starburst Sentinel, Plasma Serpent, Swarm Mite, Crystal Guardian, Phase Shifter, Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight, and more)
+- **21+ enemy types** with unique AI behaviors (Slime Blob, Plasma Drake, Graviton, Void Wisp, Spore Spitter, Starburst Sentinel, Plasma Serpent, Swarm Mite, Crystal Guardian, Phase Shifter, Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight, Plasma Stalker, Time Warden, Mirror Mimic, and more)
 - **Smart enemy AI** with NavMesh pathfinding, flanking, retreat, ambush, pack coordination, line-of-sight checks, and enrage systems
 - **Combat system** with crit chains, kill combos, pickup streaks, damage numbers, and 20+ weapon mods
 - **Full HUD** with HP/XP bars, minimap, radar, boss HP bar, combo counter, kill feed, biome indicator, dash cooldown, achievement popups, death screen
@@ -176,7 +176,7 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 Phases 1-20 (core game + 12 new features) are **COMPLETE**. Ongoing development includes:
 
 - **Phase 22**: New biomes (Deep Ocean, Volcano Core, Sky Citadel, Digital Grid, Crystal Caverns, Ancient Ruins, Underground) — **IN PROGRESS** (7/8 biomes implemented with decorations, mutations, biome effects, audio, weather affinities)
-- **Phase 23**: New enemy types (Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight implemented; Void Leviathan, Plasma Stalker, Time Warden, Mirror Mimic, Ancient Sentinel pending) — **IN PROGRESS** (4/10 enemy types implemented)
+- **Phase 23**: New enemy types (Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight, Plasma Stalker, Time Warden, Mirror Mimic implemented; Void Leviathan, Ancient Sentinel pending) — **IN PROGRESS** (7/10 enemy types implemented)
 - **Phase 24**: New weapon mods (Black Hole Launcher, Time Freeze Ray, Mind Control, Meteor Strike, Turret Deploy)
 - **Phase 25**: Progression systems (skill tree, prestige, daily challenges, endless mode, boss rush)
 - **Phase 26**: World life (wandering merchants, villages, wildlife, treasure chests, lore stones, fast travel)

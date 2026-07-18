@@ -442,6 +442,13 @@ func _handle_movement(delta: float) -> void:
 	speed_mult *= WeatherSystem.get_speed_multiplier()
 	# ── Phase 7: Monolith Speed Surge buff ──
 	speed_mult *= GameManager.get_speed_buff_mult()
+	# ── Phase 23: Time Warden slow field — player slowed inside the field ──
+	# The warden's slow field is a positional effect; we query the static
+	# registry for the strongest overlapping field at the player's position.
+	# This is applied AFTER the other multipliers so it compounds with weather
+	# and dimension effects (a Time Warden in a Time-Slow dimension is brutal).
+	if EnemyTimeWarden:
+		speed_mult *= EnemyTimeWarden.get_player_slow_mult(global_position)
 	# ── Phase 7: Tier-based speed bonus (+0.5 m/s per 5 levels) ──
 	var tier: int = (GameManager.player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
 	var base_speed: float = GameConstants.PLAYER_SPEED + tier * GameConstants.PLAYER_LEVEL_SPEED_TIER_BONUS

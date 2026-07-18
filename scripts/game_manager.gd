@@ -401,6 +401,10 @@ func restart_game() -> void:
 	enemies.clear()
 	collectibles.clear()
 	projectiles.clear()
+	# ── Phase 23: Clear Time Warden slow-field registry on restart ──
+	# Prevents stale warden positions from slowing the player after a restart.
+	if EnemyTimeWarden:
+		EnemyTimeWarden.clear_registry()
 	# ── Phase 19: Reset co-op state ──
 	player_is_downed = false
 	p1_downed_timer = 0.0

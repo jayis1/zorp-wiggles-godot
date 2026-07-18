@@ -159,6 +159,9 @@ func _handle_movement(delta: float) -> void:
 	var speed_mult: float = DimensionSystem.get_player_time_scale()
 	speed_mult *= WeatherSystem.get_speed_multiplier()
 	speed_mult *= GameConstants.P2_SPEED_MULT
+	# ── Phase 23: Time Warden slow field — P2 also slowed inside the field ──
+	if EnemyTimeWarden:
+		speed_mult *= EnemyTimeWarden.get_player_slow_mult(global_position)
 
 	if move_direction.length_squared() > 0.01:
 		velocity = move_direction * GameConstants.PLAYER_SPEED * speed_mult

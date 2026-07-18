@@ -33,6 +33,8 @@ const MEDIUM_TYPES: Array[int] = [
 	GameConstants.EnemyType.TOXIC_SPORE,     # Phase 23: Toxic Spore also in medium
 	GameConstants.EnemyType.CRYSTAL_WRAITH,  # Phase 23: Crystal Wraith in medium
 	GameConstants.EnemyType.ECHO_KNIGHT,     # Phase 23: Echo Knight in medium
+	GameConstants.EnemyType.PLASMA_STALKER,  # Phase 23: Plasma Stalker in medium
+	GameConstants.EnemyType.MIRROR_MIMIC,    # Phase 23: Mirror Mimic in medium
 ]
 const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.SERPENT,
@@ -45,7 +47,10 @@ const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.PHASE_SHIFTER,     # Enhancement: Phase Shifter also in hard
 	GameConstants.EnemyType.SWARM_QUEEN,       # Phase 23: Swarm Queen in hard tier
 	GameConstants.EnemyType.CRYSTAL_WRAITH,    # Phase 23: Crystal Wraith also in hard
-	GameConstants.EnemyType.ECHO_KNIGHT,       # Phase 23: Echo Knight also in hard
+	GameConstants.EnemyType.ECHO_KNIGHT,        # Phase 23: Echo Knight also in hard
+	GameConstants.EnemyType.PLASMA_STALKER,    # Phase 23: Plasma Stalker also in hard
+	GameConstants.EnemyType.TIME_WARDEN,       # Phase 23: Time Warden in hard tier
+	GameConstants.EnemyType.MIRROR_MIMIC,      # Phase 23: Mirror Mimic also in hard
 ]
 
 # Enemy scene paths by type
@@ -67,6 +72,10 @@ const ENEMY_SCENES: Dictionary = {
 	GameConstants.EnemyType.SWARM_QUEEN: "res://scenes/entities/enemy_swarm_queen.tscn",
 	GameConstants.EnemyType.CRYSTAL_WRAITH: "res://scenes/entities/enemy_crystal_wraith.tscn",
 	GameConstants.EnemyType.ECHO_KNIGHT: "res://scenes/entities/enemy_echo_knight.tscn",
+	# Phase 23: New enemy types (batch 2)
+	GameConstants.EnemyType.PLASMA_STALKER: "res://scenes/entities/enemy_plasma_stalker.tscn",
+	GameConstants.EnemyType.TIME_WARDEN: "res://scenes/entities/enemy_time_warden.tscn",
+	GameConstants.EnemyType.MIRROR_MIMIC: "res://scenes/entities/enemy_mirror_mimic.tscn",
 }
 
 # Enemy type enum → name string (for looking up type data from EnemyTypeData)
@@ -88,6 +97,10 @@ const ENEMY_TYPE_NAMES: Dictionary = {
 	GameConstants.EnemyType.SWARM_QUEEN: "Swarm Queen",
 	GameConstants.EnemyType.CRYSTAL_WRAITH: "Crystal Wraith",
 	GameConstants.EnemyType.ECHO_KNIGHT: "Echo Knight",
+	# Phase 23: New enemy types (batch 2)
+	GameConstants.EnemyType.PLASMA_STALKER: "Plasma Stalker",
+	GameConstants.EnemyType.TIME_WARDEN: "Time Warden",
+	GameConstants.EnemyType.MIRROR_MIMIC: "Mirror Mimic",
 }
 
 func _ready() -> void:
