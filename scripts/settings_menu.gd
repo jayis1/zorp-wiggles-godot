@@ -17,6 +17,10 @@ var _master_label: Label
 var _sfx_label: Label
 var _music_label: Label
 var _controls_label: Label
+# Track the entrance tween so we can kill it before starting a new one
+var _entrance_tween: Tween = null
+# Track whether the menu is currently animating out (prevents re-show flicker)
+var _animating_out: bool = false
 
 
 func _ready() -> void:
@@ -41,6 +45,9 @@ func _build_ui() -> void:
 	_panel.offset_top = 100.0
 	_panel.offset_right = 990.0
 	_panel.offset_bottom = 620.0
+	# Set pivot to center so scale animations scale from the middle
+	# (same pattern as pause_menu — gives a proper pop-in effect)
+	_panel.pivot_offset = Vector2(350.0, 260.0)  # (right-left)/2, (bottom-top)/2
 	add_child(_panel)
 
 	# Title
@@ -138,10 +145,41 @@ func _make_slider(x: float, y: float, w: float) -> HSlider:
 
 func show_menu() -> void:
 	visible = true
+	_animating_out = false
 	# Refresh slider values from AudioManager
 	_master_slider.value = AudioManager.master_volume * 100.0
 	_sfx_slider.value = AudioManager.sfx_volume * 100.0
 	_music_slider.value = AudioManager.music_volume * 100.0
+	# ── Entrance animation: background fades in, panel scales up from 0.85
+	#    with overshoot, title and controls fade in slightly after. Mirrors the
+	#    pause menu's slide-in pattern so all menus share the same visual language.
+	# Kill any existing entrance tween to avoid stacking
+	if _entrance_tween and is_instance_valid(_entrance_tween):
+		_entrance_tween.kill()
+	# Reset state for a clean entrance
+	_bg.modulate.a = 0.0
+	_panel.scale = Vector2(0.85, 0.85)
+	_panel.modulate.a = 0.0
+	_title.modulate.a = 0.0
+	_controls_label.modulate.a = 0.0
+	_back_btn.modulate.a = 0.0
+	_entrance_tween = create_tween()
+	# Background fade
+	_entrance_tween.tween_property(_bg, "modulate:a", 1.0, 0.15) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# Panel scale-in with overshoot (parallel to bg)
+	_entrance_tween.parallel().tween_property(_panel, "modulate:a", 1.0, 0.12) \
+		.set_ease(Tween.EASE_OUT)
+	_entrance_tween.parallel().tween_property(_panel, "scale", Vector2.ONE, 0.25) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	# Title + controls fade in after panel
+	_entrance_tween.tween_property(_title, "modulate:a", 1.0, 0.15) \
+		.set_ease(Tween.EASE_OUT)
+	_entrance_tween.parallel().tween_property(_controls_label, "modulate:a", 1.0, 0.2) \
+		.set_ease(Tween.EASE_OUT)
+	# Back button fades in last
+	_entrance_tween.tween_property(_back_btn, "modulate:a", 1.0, 0.15) \
+		.set_ease(Tween.EASE_OUT)
 
 
 func _on_master_changed(value: float) -> void:
@@ -159,11 +197,42 @@ func _on_music_changed(value: float) -> void:
 
 
 func _on_back() -> void:
-	visible = false
+	if _animating_out:
+		return  # Already animating out — don't double-trigger
+	_animating_out = true
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	# ── Exit animation: panel scales down slightly + fades, background fades.
+	#    The menu hides after the tween completes so it doesn't hard-cut. Mirrors
+	#    the pause menu's resume animation for consistent menu language.
+	if _entrance_tween and is_instance_valid(_entrance_tween):
+		_entrance_tween.kill()
+	_entrance_tween = create_tween()
+	_entrance_tween.tween_property(_bg, "modulate:a", 0.0, 0.15) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_entrance_tween.parallel().tween_property(_panel, "modulate:a", 0.0, 0.15) \
+		.set_ease(Tween.EASE_IN)
+	_entrance_tween.parallel().tween_property(_panel, "scale", Vector2(0.9, 0.9), 0.15) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	_entrance_tween.parallel().tween_property(_title, "modulate:a", 0.0, 0.12) \
+		.set_ease(Tween.EASE_IN)
+	_entrance_tween.parallel().tween_property(_controls_label, "modulate:a", 0.0, 0.12) \
+		.set_ease(Tween.EASE_IN)
+	_entrance_tween.parallel().tween_property(_back_btn, "modulate:a", 0.0, 0.12) \
+		.set_ease(Tween.EASE_IN)
+	_entrance_tween.tween_callback(func():
+		visible = false
+		_animating_out = false
+		# Reset visual state for next show
+		_bg.modulate.a = 1.0
+		_panel.modulate.a = 1.0
+		_panel.scale = Vector2.ONE
+		_title.modulate.a = 1.0
+		_controls_label.modulate.a = 1.0
+		_back_btn.modulate.a = 1.0
+	)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("pause"):
-		visible = false
+		_on_back()
 		get_viewport().set_input_as_handled()

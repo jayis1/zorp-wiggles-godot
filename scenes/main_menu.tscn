@@ -24,6 +24,8 @@ offset_left = 200.0
 offset_top = 100.0
 offset_right = 1080.0
 offset_bottom = 200.0
+theme_override_font_sizes/font_size = 56
+theme_override_colors/font_color = Color(0.4, 1.0, 0.6, 1)
 text = "ZORP WIGGLES
 ALIEN ADVENTURE"
 horizontal_alignment = 1
@@ -35,39 +37,46 @@ offset_left = 340.0
 offset_top = 220.0
 offset_right = 940.0
 offset_bottom = 260.0
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.6, 0.7, 0.9, 1)
 text = "Godot Edition"
 horizontal_alignment = 1
 
 [node name="StartButton" type="Button" parent="."]
 layout_mode = 0
 offset_left = 490.0
-offset_top = 350.0
+offset_top = 320.0
 offset_right = 790.0
-offset_bottom = 410.0
-text = "START GAME"
+offset_bottom = 380.0
+theme_override_font_sizes/font_size = 24
+text = "▶  START GAME"
 
 [node name="SettingsButton" type="Button" parent="."]
 layout_mode = 0
 offset_left = 490.0
-offset_top = 430.0
+offset_top = 400.0
 offset_right = 790.0
-offset_bottom = 490.0
-text = "⚙ SETTINGS"
+offset_bottom = 460.0
+theme_override_font_sizes/font_size = 24
+text = "⚙  SETTINGS"
 
 [node name="QuitButton" type="Button" parent="."]
 layout_mode = 0
 offset_left = 490.0
-offset_top = 510.0
+offset_top = 480.0
 offset_right = 790.0
-offset_bottom = 570.0
-text = "QUIT"
+offset_bottom = 540.0
+theme_override_font_sizes/font_size = 24
+text = "✖  QUIT"
 
 [node name="Controls" type="Label" parent="."]
 layout_mode = 0
 offset_left = 340.0
-offset_top = 540.0
+offset_top = 590.0
 offset_right = 940.0
-offset_bottom = 680.0
+offset_bottom = 700.0
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.5, 0.55, 0.7, 1)
 text = "WASD: Move | RClick: Look | Click: Shoot
 Space: Dash | E: Trade | M: Minimap
 Tab: Missions | P: Pause | Q: Pulse Wave"

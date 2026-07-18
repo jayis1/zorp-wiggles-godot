@@ -743,17 +743,21 @@ const COLLECTIBLE_DROP_SCENE := preload("res://scenes/entities/collectible.tscn"
 
 ## Drop a crafting material when the enemy dies. Chance depends on enemy type
 ## (normal enemies have 12% chance, bosses always drop).
+## Material type is chosen via a weighted loot table (rarity tiers), with bosses
+## using a rarity-biased table so their drops feel more rewarding.
 func _drop_crafting_material() -> void:
 	var drop_chance: float = GameConstants.CRAFTING_MATERIAL_DROP_CHANCE
 	# Bosses (Drake, Sentinel) always drop a material
-	if base_scale >= 2.0 or max_hp >= 200:
+	var is_boss: bool = base_scale >= 2.0 or max_hp >= 200
+	if is_boss:
 		drop_chance = GameConstants.CRAFTING_MATERIAL_DROP_CHANCE_BOSS
 	if randf() > drop_chance:
 		return
-	# Pick a random crafting material type to drop
-	var material_types: Array[int] = GameConstants.CRAFTING_MATERIALS.duplicate()
-	material_types.shuffle()
-	var drop_type: int = material_types[0]
+	# Pick a crafting material via the weighted loot table.
+	# Bosses use the rarity-biased table (shifts weight toward rare mats).
+	var table: Dictionary = GameConstants.CRAFTING_LOOT_TABLE_BOSS_BIAS if is_boss \
+		else GameConstants.CRAFTING_LOOT_TABLE
+	var drop_type: int = _weighted_pick(table)
 	# Spawn a collectible at the enemy's position
 	var drop: Area3D = COLLECTIBLE_DROP_SCENE.instantiate()
 	get_parent().add_child(drop)
@@ -772,3 +776,23 @@ func _drop_crafting_material() -> void:
 	# Add to collectibles group
 	if not drop.is_in_group("collectibles"):
 		drop.add_to_group("collectibles")
+
+## Weighted random pick from a {type: weight} dictionary. Returns a random key
+## with probability proportional to its weight. Falls back to uniform random
+## from the keys if all weights are zero (degenerate edge case).
+static func _weighted_pick(table: Dictionary) -> int:
+	var total_weight: float = 0.0
+	for w in table.values():
+		total_weight += w
+	if total_weight <= 0.0:
+		var keys: Array = table.keys()
+		return keys[randi() % keys.size()] if not keys.is_empty() else GameConstants.CollectibleType.SPACE_GLOOP
+	var roll: float = randf() * total_weight
+	var cumulative: float = 0.0
+	for key in table.keys():
+		cumulative += table[key]
+		if roll <= cumulative:
+			return key
+	# Fallback (shouldn't reach here due to float rounding)
+	var keys: Array = table.keys()
+	return keys[keys.size() - 1]

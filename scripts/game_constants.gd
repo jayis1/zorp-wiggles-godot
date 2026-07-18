@@ -299,6 +299,55 @@ const CRAFTING_MATERIALS: Array[int] = [
 const CRAFTING_MATERIAL_DROP_CHANCE: float = 0.12  # 12% chance per kill
 const CRAFTING_MATERIAL_DROP_CHANCE_BOSS: float = 1.0  # Bosses always drop a material
 
+# ── Loot table: weighted drop chances for crafting materials ──
+# Instead of a uniform random pick from all materials, we weight by rarity tier.
+# Common materials drop more often, rare materials drop less often. This creates
+# a meaningful progression curve — players accumulate common mats quickly and
+# rarely see the exotic ones, making the rare recipes feel special when they
+# finally get the ingredients. Bosses bias toward rarer drops (see below).
+#
+# Tiers (weight = relative probability):
+#   Common (30):  SPACE_GLOOP, STAR_FRUIT, MAGNET_CORE
+#   Uncommon (18): NEBULA_DUST, TOXIC_EXTRACT, REGEN_CRYSTAL
+#   Rare (8):      FIREBALL_SCROLL, SHIELD_CRYSTAL
+#   Epic (4):      QUANTUM_FUZZ, METEOR_SHARD
+#   Legendary (2): HEALTH_FRAGMENT  (precious — also a healing item)
+#
+# HEALTH_FRAGMENT is in the loot table because it's used in the Vampire Beam
+# recipe. It's weighted lowest because it doubles as a heal pickup, so dropping
+# it as a crafting mat would steal the heal opportunity. The low weight means
+# most of the time you'll get HP fragments from world spawns, not enemy drops.
+const CRAFTING_LOOT_TABLE: Dictionary = {
+	CollectibleType.SPACE_GLOOP: 30,
+	CollectibleType.STAR_FRUIT: 30,
+	CollectibleType.MAGNET_CORE: 30,
+	CollectibleType.NEBULA_DUST: 18,
+	CollectibleType.TOXIC_EXTRACT: 18,
+	CollectibleType.REGEN_CRYSTAL: 18,
+	CollectibleType.FIREBALL_SCROLL: 8,
+	CollectibleType.SHIELD_CRYSTAL: 8,
+	CollectibleType.QUANTUM_FUZZ: 4,
+	CollectibleType.METEOR_SHARD: 4,
+	CollectibleType.HEALTH_FRAGMENT: 2,
+}
+# Bosses get a rarity bias — their loot table shifts weight toward rarer tiers
+# so boss kills feel rewarding. Common weights are halved, epic/legendary are
+# doubled. This means a boss is ~4x more likely to drop a Meteor Shard or
+# Quantum Fuzz than a normal enemy, and ~10x more likely to drop a Health Fragment.
+const CRAFTING_LOOT_TABLE_BOSS_BIAS: Dictionary = {
+	CollectibleType.SPACE_GLOOP: 15,
+	CollectibleType.STAR_FRUIT: 15,
+	CollectibleType.MAGNET_CORE: 15,
+	CollectibleType.NEBULA_DUST: 18,
+	CollectibleType.TOXIC_EXTRACT: 18,
+	CollectibleType.REGEN_CRYSTAL: 18,
+	CollectibleType.FIREBALL_SCROLL: 16,
+	CollectibleType.SHIELD_CRYSTAL: 16,
+	CollectibleType.QUANTUM_FUZZ: 8,
+	CollectibleType.METEOR_SHARD: 8,
+	CollectibleType.HEALTH_FRAGMENT: 4,
+}
+
 # ─── Sky & Stars ──────────────────────────────────────────────────────────────
 const STAR_COUNT: int = 80
 const STAR_HEIGHT_MIN: float = 80.0
