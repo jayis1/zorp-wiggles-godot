@@ -145,7 +145,7 @@ func _process(delta: float) -> void:
 			_quit_btn.visible = true
 			_animate_button_in(_quit_btn, 0.08)
 
-queue_redraw()
+	queue_redraw()
 
 ## Entrance animation for death-screen buttons: fade in + scale up from 0.8
 ## with a gentle overshoot. The stagger delay offsets the second button so
