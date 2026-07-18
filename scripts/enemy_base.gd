@@ -175,20 +175,25 @@ func _physics_process(delta: float) -> void:
 # ── Phase 8: Enemy separation ─────────────────────────────────────────────────
 # Pushes nearby same-group enemies apart so they don't stack on top of each other.
 # Uses distance-based force (no full physics engine needed — simple velocity offset).
+# Uses distance_squared_to to avoid the sqrt cost per pair — important because this
+# runs O(n²) every physics frame across all enemies.
 func _apply_enemy_separation(delta: float) -> void:
 	if is_dead:
 		return
 	var sep_radius: float = GameConstants.ENEMY_SEPARATION_RADIUS + base_scale * 0.5
+	var sep_radius_sq: float = sep_radius * sep_radius
 	for other in GameManager.enemies:
 		if other == self or not is_instance_valid(other):
 			continue
 		var other_base: EnemyBase = other as EnemyBase
 		if other_base == null or other_base.is_dead:
 			continue
-		var d: float = global_position.distance_to(other.global_position)
-		if d < sep_radius and d > 0.001:
+		var diff: Vector3 = global_position - other.global_position
+		var dist_sq: float = diff.length_squared()
+		if dist_sq < sep_radius_sq and dist_sq > 0.0001:
+			var d: float = sqrt(dist_sq)
 			# Direction from other → me, push me away
-			var push_dir: Vector3 = (global_position - other.global_position).normalized()
+			var push_dir: Vector3 = diff / d  # normalized
 			push_dir.y = 0
 			# Stronger when closer (inverse-linear falloff)
 			var strength: float = GameConstants.ENEMY_SEPARATION_FORCE * (1.0 - d / sep_radius)
@@ -477,9 +482,11 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# The albedo snaps to white and the emission energy kicks up, then both
 	# ease back over 0.15s. The combined effect is a bright "strobed" flash
 	# that reads even in dark biomes.
+	# NOTE: Preserve the original alpha (_spawn_target_alpha) so semi-transparent
+	# enemies (Void Wisp, etc.) don't briefly become fully opaque during the flash.
 	_hit_flash_timer = 0.15
 	if _material:
-		_material.albedo_color = Color.WHITE
+		_material.albedo_color = Color(1.0, 1.0, 1.0, _spawn_target_alpha)
 		var _prev_emission_energy: float = _material.emission_energy_multiplier
 		_material.emission_energy_multiplier = 4.0
 		var flash_tween := create_tween()

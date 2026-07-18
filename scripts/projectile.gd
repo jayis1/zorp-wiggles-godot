@@ -23,6 +23,14 @@ var _max_pierces: int = 3
 var _homing_strength: float = 8.0   # For Homing Laser
 var _tesla_zap_timer: float = 0.0  # For Tesla Coil periodic zap
 var _has_hit_enemies: Array[Node3D] = []  # Track hit enemies for pierce/chain (prevent double-hit)
+# ── Homing target cache ── Re-evaluating the nearest enemy every frame is
+# expensive (iterates the full enemy list). We cache the current homing target
+# and only re-pick every HOMING_REPATH_INTERVAL seconds, or when the cached
+# target dies / goes out of range. This keeps homing responsive without the
+# per-frame O(n) scan.
+var _homing_target: Node3D = null
+var _homing_repath_timer: float = 0.0
+const HOMING_REPATH_INTERVAL: float = 0.15  # Re-pick target 6.7x/sec
 # True once this projectile has been consumed (queue_free called). Prevents
 # double-hit when two body_entered signals fire on the same frame (overlapping
 # enemies/colliders) — the second signal would otherwise damage a second target
@@ -201,8 +209,8 @@ func _trigger_hitstop() -> void:
 func _apply_mod_flight_behavior(delta: float) -> void:
 	match _weapon_mod:
 		GameConstants.WeaponMod.HOMING_LASER, GameConstants.WeaponMod.QUANTUM_OVERDRIVE:
-			# Homing: steer toward the nearest enemy
-			var target: Node3D = _find_nearest_enemy()
+			# Homing: steer toward the nearest enemy (cached, re-picked periodically)
+			var target: Node3D = _get_cached_homing_target(delta)
 			if target:
 				var to_target: Vector3 = (target.global_position - global_position).normalized()
 				var current_dir: Vector3 = direction.normalized()
@@ -233,9 +241,9 @@ func _apply_mod_flight_behavior(delta: float) -> void:
 					var pull_dir: Vector3 = (global_position - enemy.global_position).normalized()
 					var pull_strength: float = 20.0 * (1.0 - d / bh_pull_radius)
 					enemy.global_position += pull_dir * pull_strength * delta
-		# Enhancement: Magnet Mine — strong homing toward nearest enemy
+		# Enhancement: Magnet Mine — strong homing toward nearest enemy (cached)
 		GameConstants.WeaponMod.MAGNET_MINE:
-			var mine_target: Node3D = _find_nearest_enemy()
+			var mine_target: Node3D = _get_cached_homing_target(delta, 12.0)
 			if mine_target:
 				var to_target: Vector3 = (mine_target.global_position - global_position).normalized()
 				var current_dir: Vector3 = direction.normalized()
@@ -243,10 +251,32 @@ func _apply_mod_flight_behavior(delta: float) -> void:
 				var new_dir: Vector3 = current_dir.lerp(to_target, 12.0 * delta).normalized()
 				direction = new_dir
 
+## Cached homing target lookup. Re-picks the nearest enemy every
+## HOMING_REPATH_INTERVAL seconds, or immediately if the cached target is
+## no longer valid. This avoids scanning the full enemy list every frame for
+## every homing projectile — a meaningful perf win when several homing bolts
+## are in flight at once.
+func _get_cached_homing_target(delta: float, max_range: float = 30.0) -> Node3D:
+	_homing_repath_timer -= delta
+	# Re-pick if the timer expired or the cached target is no longer valid
+	var need_repath: bool = _homing_repath_timer <= 0.0
+	if _homing_target and not is_instance_valid(_homing_target):
+		_homing_target = null
+		need_repath = true
+	if not need_repath and _homing_target:
+		# Also repath if the target moved out of homing range
+		if global_position.distance_to(_homing_target.global_position) > max_range:
+			need_repath = true
+	if need_repath:
+		_homing_repath_timer = HOMING_REPATH_INTERVAL
+		_homing_target = _find_nearest_enemy(max_range)
+	return _homing_target
+
 ## Find the nearest enemy to the projectile (for homing).
-func _find_nearest_enemy() -> Node3D:
+## Optional max_range overrides the default homing range (used by Magnet Mine).
+func _find_nearest_enemy(max_range: float = 30.0) -> Node3D:
 	var nearest: Node3D = null
-	var nearest_dist: float = 30.0  # Max homing range
+	var nearest_dist: float = max_range  # Max homing range
 	for enemy in GameManager.enemies:
 		if not is_instance_valid(enemy):
 			continue
@@ -363,14 +393,39 @@ func _on_body_entered(body: Node3D) -> void:
 		_is_consumed = true
 		queue_free()
 
-## Phase 16: Bounce off a wall — reflect direction and continue.
+## Phase 16: Bounce off a wall — reflect direction using the surface normal.
+## Area3D doesn't provide collision normals directly, so we use the physics
+## direct space state's intersect_ray (no node creation needed) to find the
+## wall's surface normal, then reflect the direction around it. This produces
+## physically-correct ricochets (e.g. hitting a wall at 45° bounces off at 45°)
+## instead of the old "reverse direction" hack which sent the bolt back toward
+## the shooter regardless of impact angle. Falls back to the old reverse if the
+## raycast misses (e.g. glancing hit on a thin collider).
 func _bounce_off_wall(_body: Node3D) -> void:
 	_bounce_count += 1
-	# Simple bounce: reverse direction (more sophisticated would use normals,
-	# but Area3D doesn't provide collision normals easily)
-	# Try to bounce upward/away
-	direction = -direction + Vector3(0, 0.3, 0)
-	direction = direction.normalized()
+	# Try to find the surface normal via a short raycast from just behind the
+	# impact point back along the travel direction. Uses the physics direct
+	# space state (no node creation) so this is cheap even for rapid bounces.
+	var normal: Vector3 = Vector3.ZERO
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var ray_origin: Vector3 = global_position - direction * 0.5
+	var ray_end: Vector3 = global_position + direction * 1.0
+	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_end, 1)  # mask 1 = world
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	var hit: Dictionary = space.intersect_ray(query)
+	if not hit.is_empty() and hit.has("normal"):
+		normal = hit["normal"]
+	if normal.length_squared() > 0.01:
+		# Reflect direction around the surface normal
+		direction = direction.bounce(normal)
+		# Ensure the bolt moves away from the wall (dot > 0)
+		if direction.dot(normal) < 0:
+			direction = -direction
+		direction = direction.normalized()
+	else:
+		# Fallback: reverse direction with a slight upward bias
+		direction = (-direction + Vector3(0, 0.3, 0)).normalized()
 	# Small visual feedback
 	ParticleEffects.spawn_explosion(get_parent(), global_position, _mod_color, 8, 0.2)
 
