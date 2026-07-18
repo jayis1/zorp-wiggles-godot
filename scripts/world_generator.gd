@@ -395,9 +395,10 @@ func _spawn_initial_traders() -> void:
 			var biome: int = get_biome_at(Vector3(tx, 0, tz))
 			if _is_biome_walkable(biome):
 				var trader := trader_scene.instantiate()
+				# Set trader_name BEFORE add_child so _ready() sees the correct name.
+				trader.trader_name = GameConstants.TRADER_NAMES[randi() % GameConstants.TRADER_NAMES.size()]
 				add_child(trader)
 				trader.global_position = Vector3(tx, 1, tz)
-				trader.trader_name = GameConstants.TRADER_NAMES[randi() % GameConstants.TRADER_NAMES.size()]
 				break
 
 func _spawn_monoliths() -> void:
@@ -583,11 +584,12 @@ func _spawn_lore_stones() -> void:
 				if Vector2(wx, wz).length() < 50:
 					continue
 				var stone := stone_scene.instantiate()
-				add_child(stone)
-				stone.global_position = Vector3(wx, 0, wz)
-				# Assign lore fragments sequentially so the story unfolds in order.
+				# Set fragment_index BEFORE add_child so _ready() doesn't auto-pick
+				# a random fragment (the spawner assigns them sequentially).
 				stone.fragment_index = fragment_idx % GameConstants.LORE_FRAGMENTS.size()
 				fragment_idx += 1
+				add_child(stone)
+				stone.global_position = Vector3(wx, 0, wz)
 				count += 1
 	print("[WorldGenerator] Spawned %d lore stones" % count)
 
@@ -637,11 +639,13 @@ func _spawn_wildlife() -> void:
 				if species.is_empty():
 					continue  # No species for this biome — skip.
 				var creature := wildlife_scene.instantiate()
-				add_child(creature)
-				creature.global_position = Vector3(wx, 0.5, wz)
+				# Set export properties BEFORE add_child so _ready() sees the correct
+				# species (visuals, scale, and color are all picked in _ready).
 				creature.species_name = species.get("name", "Unknown")
 				creature.species_color = species.get("color", Color(0.9, 0.8, 0.3))
 				creature.species_scale = species.get("scale", 0.5)
+				add_child(creature)
+				creature.global_position = Vector3(wx, 0.5, wz)
 				count += 1
 	print("[WorldGenerator] Spawned %d wildlife" % count)
 
@@ -698,9 +702,11 @@ func _spawn_dialogue_npcs() -> void:
 			if Vector2(wx, wz).length() < 40:
 				continue
 			var npc := npc_scene.instantiate()
+			# Set export properties BEFORE add_child so _ready() sees the correct
+			# archetype (visuals, name pool, and config are all picked in _ready).
+			npc.archetype = archetype
 			add_child(npc)
 			npc.global_position = Vector3(wx, 0.5, wz)
-			npc.archetype = archetype
 			count += 1
 	print("[WorldGenerator] Spawned %d dialogue NPCs" % count)
 
@@ -734,10 +740,12 @@ func _spawn_environmental_hazards() -> void:
 			if Vector2(wx, wz).length() < 35:
 				continue
 			var hazard := hazard_scene.instantiate()
-			add_child(hazard)
-			hazard.global_position = Vector3(wx, 0, wz)
+			# Set export properties BEFORE add_child so _ready() sees the correct
+			# hazard type (visuals, damage, and config are all picked in _ready).
 			hazard.hazard_type_name = hazard_type_name
 			hazard.damage = hazard_damage
+			add_child(hazard)
+			hazard.global_position = Vector3(wx, 0, wz)
 			count += 1
 	print("[WorldGenerator] Spawned %d environmental hazards" % count)
 
@@ -776,12 +784,14 @@ func _spawn_interactive_objects() -> void:
 			else:
 				obj_type = "hidden_passage"
 			var obj := obj_scene.instantiate()
-			add_child(obj)
-			obj.global_position = Vector3(wx, 0, wz)
+			# Set export properties BEFORE add_child so _ready() sees the correct
+			# object type (visuals, HP, collision, and config are all picked in _ready).
 			obj.object_type = obj_type
 			# Assign a linked_id so switches pair with nearby doors/passages.
 			if obj_type == "switch" or obj_type == "door" or obj_type == "hidden_passage":
 				obj.linked_id = "link_%d" % (link_counter / 2)
 				link_counter += 1
+			add_child(obj)
+			obj.global_position = Vector3(wx, 0, wz)
 			count += 1
 	print("[WorldGenerator] Spawned %d interactive objects" % count)
