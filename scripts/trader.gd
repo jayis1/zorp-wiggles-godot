@@ -152,22 +152,22 @@ func _open_trade_menu() -> void:
 	_try_trade()
 
 func _try_trade() -> void:
-	# Check if player has enough Space Gloop
-	var gloop_count: int = 0
-	# Access player inventory if available
-	if GameManager.has_method("get_collectible_count"):
-		gloop_count = GameManager.get_collectible_count(GameConstants.CollectibleType.SPACE_GLOOP)
-	else:
-		# Fallback — check collectibles array for nearby Space Gloop
-		gloop_count = GameManager.collectibles.size()  # rough estimate
+	# Fallback trade path used only when the TradeMenu UI isn't available.
+	# The primary path opens TradeMenu (see _open_trade_menu above), which
+	# handles Space Gloop deduction via WeaponModSystem.remove_materials().
+	# This fallback must use the same inventory source so it stays consistent.
+	var gloop_count: int = WeaponModSystem.get_material_count(GameConstants.CollectibleType.SPACE_GLOOP)
 
 	if gloop_count < GameConstants.TRADER_TRADE_COST:
-		GameManager.add_message("Need %d Space Gloop to trade!" % GameConstants.TRADER_TRADE_COST)
+		GameManager.add_message("Need %d Space Gloop to trade! (have %d)" % [GameConstants.TRADER_TRADE_COST, gloop_count])
 		return
 
-	# Deduct Space Gloop
-	if GameManager.has_method("remove_collectible"):
-		GameManager.remove_collectible(GameConstants.CollectibleType.SPACE_GLOOP, GameConstants.TRADER_TRADE_COST)
+	# Deduct Space Gloop via WeaponModSystem (remove_materials expects an Array
+	# of material types, one entry per unit — NOT a Dictionary).
+	var materials_to_remove: Array = []
+	for _i in range(GameConstants.TRADER_TRADE_COST):
+		materials_to_remove.append(GameConstants.CollectibleType.SPACE_GLOOP)
+	WeaponModSystem.remove_materials(materials_to_remove)
 
 	# Give random rare item
 	var item_name: String = TRADE_ITEMS[randi() % TRADE_ITEMS.size()]
