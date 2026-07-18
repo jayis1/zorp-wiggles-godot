@@ -692,10 +692,12 @@ func _handle_invuln_blink(delta: float) -> void:
 		is_invuln_blinking = false
 		if mesh:
 			mesh.visible = true
-		# Reset emission to normal
+		# Reset emission to normal (match the idle emission intensity used
+		# everywhere else — base_color * 0.4, NOT raw base_color, which would
+		# be 2.5× brighter and cause a visible emission pop when blink ends).
 		if _player_material:
 			_player_material.emission_energy_multiplier = 1.0
-			_player_material.emission = base_color
+			_player_material.emission = base_color * 0.4
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Right-click camera rotation

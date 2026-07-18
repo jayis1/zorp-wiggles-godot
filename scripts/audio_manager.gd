@@ -40,6 +40,14 @@ var _current_biome: int = -1
 var _boss_music_playing: bool = false
 var _initialized: bool = false
 
+# ── Music fade tweens ── Stored so we can kill them before starting a new fade
+#    (e.g. rapid biome changes). Without this, overlapping volume tweens would
+#    fight and the music volume would jitter.
+var _music_fade_tween: Tween = null
+var _boss_fade_tween: Tween = null
+const MUSIC_FADE_IN_DURATION: float = 0.8   # Seconds for music to swell in
+const MUSIC_FADE_OUT_DURATION: float = 0.5  # Seconds for music to fade out
+
 const SAMPLE_RATE: int = 44100
 
 # SFX names
@@ -129,6 +137,9 @@ func play_sfx(sfx_name: String) -> void:
 
 
 ## Play looping biome ambient music.
+## Fades in smoothly from silence over MUSIC_FADE_IN_DURATION so biome
+## transitions don't pop. If biome music is already playing for the same
+## biome, this is a no-op (avoids restarting the loop on redundant calls).
 func play_music_biome(biome_id: int) -> void:
 	if not _initialized:
 		return
@@ -146,34 +157,48 @@ func play_music_biome(biome_id: int) -> void:
 		_music_player.bus = "Master"
 		add_child(_music_player)
 	_music_player.stream = _music_streams[biome_id]
-	_music_player.volume_db = linear_to_db(music_volume * master_volume)
+	# Start from silence and fade in — prevents the jarring hard-pop of the
+	# drone cutting in instantly when crossing a biome boundary.
+	_music_player.volume_db = linear_to_db(0.0)
 	_music_player.play()
+	_fade_player(_music_player, music_volume * master_volume, MUSIC_FADE_IN_DURATION, "_music_fade_tween")
 
 
 ## Play boss fight music (overrides biome music).
+## Fades in so the boss theme swells rather than snaps — a hard cut from
+## ambient drone to driving bass feels mechanical; a short fade sells the
+## "the fight begins" moment cinematically.
 func play_boss_music() -> void:
 	if not _initialized:
 		return
 	if _boss_music_playing and _boss_music_player and _boss_music_player.playing:
 		return
 	_boss_music_playing = true
+	# Crossfade: biome music fades out (0.5s) while boss music fades in
+	# (0.8s). The brief overlap is intentional — a crossfade reads as a
+	# cinematic transition, whereas a hard cut from ambient drone to
+	# driving bass feels mechanical. The biome player stops itself when
+	# its fade-out completes; it'll be restarted on boss defeat.
 	_stop_music_player()
 	if not _boss_music_player:
 		_boss_music_player = AudioStreamPlayer.new()
 		_boss_music_player.bus = "Master"
 		add_child(_boss_music_player)
 	_boss_music_player.stream = _boss_music_stream
-	_boss_music_player.volume_db = linear_to_db(music_volume * master_volume)
+	_boss_music_player.volume_db = linear_to_db(0.0)
 	_boss_music_player.play()
+	_fade_player(_boss_music_player, music_volume * master_volume, MUSIC_FADE_IN_DURATION, "_boss_fade_tween")
 
 
 ## Stop boss music and resume biome music.
+## The boss player fades out while the biome music fades back in, giving a
+## smooth "victory" transition instead of an abrupt switch back to ambient.
 func stop_boss_music() -> void:
 	if not _boss_music_playing:
 		return
 	_boss_music_playing = false
 	_stop_boss_music()
-	# Resume biome music
+	# Resume biome music (play_music_biome handles its own fade-in)
 	if _current_biome >= 0:
 		play_music_biome(_current_biome)
 
@@ -209,21 +234,75 @@ func _apply_volumes() -> void:
 
 
 func _apply_music_volume() -> void:
+	# If a fade tween is currently animating the music volume, let it run —
+	# killing it would snap the volume, and the fade's target was already
+	# computed from the current music_volume * master_volume at start time.
+	# The next fade (or a direct call without an active fade) will pick up
+	# the new volume. This prevents the settings slider from fighting an
+	# in-progress fade. When no fade is active, apply the volume directly.
+	var music_fading: bool = _music_fade_tween != null and is_instance_valid(_music_fade_tween) and _music_fade_tween.is_running()
+	var boss_fading: bool = _boss_fade_tween != null and is_instance_valid(_boss_fade_tween) and _boss_fade_tween.is_running()
 	var vol_db = linear_to_db(music_volume * master_volume)
-	if _music_player:
+	if _music_player and not music_fading:
 		_music_player.volume_db = vol_db
-	if _boss_music_player:
+	if _boss_music_player and not boss_fading:
 		_boss_music_player.volume_db = vol_db
 
 
 func _stop_music_player() -> void:
 	if _music_player:
-		_music_player.stop()
+		# Fade out before stopping so the ambient drone doesn't cut off
+		# abruptly when the boss music takes over or the game ends. We
+		# tween the volume to silence, then stop the player in the callback.
+		# If a fade is already running, kill it first to avoid stacking.
+		if _music_fade_tween and is_instance_valid(_music_fade_tween):
+			_music_fade_tween.kill()
+		_music_fade_tween = create_tween()
+		_music_fade_tween.tween_property(_music_player, "volume_db",
+			linear_to_db(0.0), MUSIC_FADE_OUT_DURATION) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		var player_to_stop := _music_player
+		_music_fade_tween.tween_callback(func():
+			if is_instance_valid(player_to_stop):
+				player_to_stop.stop()
+		)
 
 
 func _stop_boss_music() -> void:
 	if _boss_music_player:
-		_boss_music_player.stop()
+		# Same fade-out treatment as biome music — the boss theme tailing
+		# off smoothly reads as "the threat has passed" rather than a hard
+		# cut when the boss keels over.
+		if _boss_fade_tween and is_instance_valid(_boss_fade_tween):
+			_boss_fade_tween.kill()
+		_boss_fade_tween = create_tween()
+		_boss_fade_tween.tween_property(_boss_music_player, "volume_db",
+			linear_to_db(0.0), MUSIC_FADE_OUT_DURATION) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		var player_to_stop := _boss_music_player
+		_boss_fade_tween.tween_callback(func():
+			if is_instance_valid(player_to_stop):
+				player_to_stop.stop()
+		)
+
+
+## Fade a music player's volume to a target linear value over `duration`
+## seconds. `tween_property_name` is the name of the member Tween variable
+## to store the new tween in (so the previous fade can be killed). Uses
+## ease-out so the swell settles gently rather than linearly ramping.
+func _fade_player(player: AudioStreamPlayer, target_linear: float,
+		duration: float, tween_prop_name: String) -> void:
+	if not player:
+		return
+	# Kill any existing fade on this player to avoid fighting tweens
+	var existing: Tween = get(tween_prop_name)
+	if existing and is_instance_valid(existing):
+		existing.kill()
+	var fade_tween := create_tween()
+	fade_tween.tween_property(player, "volume_db",
+		linear_to_db(target_linear), duration) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	set(tween_prop_name, fade_tween)
 
 
 # ─── Signal Handlers ──────────────────────────────────────────────────────────

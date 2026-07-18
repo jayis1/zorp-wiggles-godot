@@ -312,10 +312,17 @@ func _process(delta: float) -> void:
 		var combo_max: float = GameConstants.COMBO_TIMEOUT + CoOpManager.get_combo_window_bonus()
 		var ratio := GameManager.player_combo_timer / combo_max
 		combo_timer_bar.size.x = 200.0 * clampf(ratio, 0.0, 1.0)
-		# Color: green → yellow → red
+		# Color: green (fresh) → yellow → red (expiring). The comment used to
+		# claim this gradient but only yellow→red was implemented — the green
+		# "just pressed" state was missing. Now a fresh combo reads as green
+		# and warms through yellow to red as it runs out, matching the HP bar
+		# color language and giving players a clear "time is running out" cue.
 		if ratio > 0.5:
-			combo_timer_bar.color = Color(1.0, 1.0, 0.0)
+			# Green (0,1,0) → Yellow (1,1,0) as ratio goes 1.0 → 0.5
+			var t_green: float = (1.0 - ratio) * 2.0
+			combo_timer_bar.color = Color(t_green, 1.0, 0.0)
 		else:
+			# Yellow (1,1,0) → Red (1,0,0) as ratio goes 0.5 → 0.0
 			combo_timer_bar.color = Color(1.0, ratio * 2.0, 0.0)
 	else:
 		combo_timer_bar.visible = false
