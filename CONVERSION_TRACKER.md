@@ -381,17 +381,17 @@ NOTE: Cron jobs should implement phases 1-20 and 22-35. Do NOT implement Phase 2
 - [ ] Gravity Flip Field (area where gravity reverses, enemies fall up) — deferred (requires gravity zone system)
 - [ ] Void Rift Cutter (opens a dimensional rift that damages enemies passing through) — deferred (requires rift zone system)
 
-### Phase 25: Progression & Meta-Systems (TODO) 🆕
-- [ ] Skill Tree (3 branches: Combat, Survival, Exploration — spend skill points from leveling)
-- [ ] Permanent upgrades (persist across runs: +HP, +damage, +speed, +XP gain)
-- [ ] Prestige system (reset level for permanent multiplier, unlock cosmetic skins)
-- [ ] Daily Challenge (seed-based run, fixed biome/enemies/loot, one attempt per day)
-- [ ] Weekly Challenge (longer run with modifiers, global leaderboard seed)
-- [ ] Endless Mode (wave-based escalation, no world exploration, pure combat)
-- [ ] Boss Rush Mode (fight all bosses back-to-back, timer tracking)
-- [ ] Speedrun Timer (track biome-to-biome splits, total run time, personal best)
-- [ ] Achievement tracking system (50+ achievements with progress bars)
-- [ ] Statistics page (lifetime kills, distance traveled, time per biome, items collected)
+### Phase 25: Progression & Meta-Systems (IN PROGRESS) 🆕
+- [x] Skill Tree (3 branches: Combat, Survival, Exploration — spend skill points from leveling) — `progression_system.gd` autoload singleton; 15 skills (5 per branch), 5 ranks each (75 total ranks); SP earned 1/level (+1 bonus every 5 levels) + prestige bonus; `skill_tree.gd` UI (K key) with 3-column layout, clickable skill nodes, rank bars, hover highlights, prestige button; Combat branch: Power Strike (+8% dmg/rank), Keen Eye (+3% crit/rank), Rapid Fire (+5% fire rate/rank), Extra Bolts (+1 projectile/2 ranks), Giant Slayer (+15% boss dmg/rank); Survival branch: Vitality (+20 HP/rank), Regeneration (+1 HP/sec/rank), Energy Shield (+5% dmg reduction/rank), Second Wind (auto-revive charges), Toughness (+3% dmg reduction/rank); Exploration branch: Swift Stride (+4% speed/rank), Quick Learner (+10% XP/rank), Lucky Find (+5% loot/rank), Biome Adaptation (+5% per biome), Fluid Motion (-6% dash cd/rank); all multipliers integrated into player.gd (speed, fire rate, damage, crit, dash cd, multishot), game_manager.gd (XP gain, damage reduction, HP regen, auto-revive), projectile.gd (boss damage, crit chance), enemy_base.gd (loot chance); persisted to `user://zorp_progression.json`
+- [x] Permanent upgrades (persist across runs: +HP, +damage, +speed, +XP gain) — `ProgressionSystem.apply_permanent_upgrades()` called from `GameManager._start_game()`; max HP bonus from Vitality skill, damage multiplier from Power Strike, speed multiplier from Swift Stride, XP multiplier from Quick Learner + prestige; all persist via JSON save file
+- [x] Prestige system (reset level for permanent multiplier, unlock cosmetic skins) — `ProgressionSystem.prestige()` requires level 20+; grants +5 SP per prestige level; +10% XP multiplier per prestige level; golden OmniLight aura on player (intensity scales with prestige); prestige button in skill tree UI; `prestige_1`/`prestige_5` achievements
+- [ ] Daily Challenge (seed-based run, fixed biome/enemies/loot, one attempt per day) — deferred (requires seed system)
+- [ ] Weekly Challenge (longer run with modifiers, global leaderboard seed) — deferred (requires server)
+- [ ] Endless Mode (wave-based escalation, no world exploration, pure combat) — deferred (requires mode manager)
+- [ ] Boss Rush Mode (fight all bosses back-to-back, timer tracking) — deferred (requires mode manager)
+- [ ] Speedrun Timer (track biome-to-biome splits, total run time, personal best) — deferred (requires timer UI)
+- [x] Achievement tracking system (50+ achievements with progress bars) — `achievement_popup.gd` expanded from 12 to 56 achievements across 6 categories (Combat, Survival, Exploration, Collection, Progression, Special); each achievement has target + progress_key linking to Statistics lifetime stats; `_check_progress_achievements()` auto-unlocks when current >= target; new achievements include kills (100/500/1000/5000), bosses (5/20), distance (1km/10km/50km), time (1h/5h/24h), items (100/1000/5000), shots (500/5000), dashes (100/1000), runs (10/50/100), prestige (1/5), pet feedings (10/50), rifts (5/25), weather (10/50), revives (1/10), best score/combo/survival; public API `get_unlocked_count()`, `get_total_count()`, `get_progress()`, `get_all_achievements()` for future achievements list UI
+- [x] Statistics page (lifetime kills, distance traveled, time per biome, items collected) — `statistics.gd` autoload singleton tracks session + lifetime stats; persists to `user://zorp_stats.json`; auto-tracks via GameManager/WeaponModSystem/WeatherSystem/ProgressionSystem signals; distance tracking via player position delta; per-biome time, per-enemy-type kills, per-item-type collection, per-boss-type defeats; `statistics_page.gd` UI (F2 key) with 4 tabs (Session, Lifetime, Combat, Exploration); format_time() and format_distance() helpers; batched saves (5s debounce)
 
 ### Phase 26: NPC & World Life (TODO) 🆕
 - [ ] Wandering merchants (random NPCs that appear, sell rare items for Space Gloop)

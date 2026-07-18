@@ -110,6 +110,8 @@ func _process(delta: float) -> void:
 	_update_timers(delta)
 	_update_biome_tracking()
 	_check_difficulty_tier_change()
+	# ── Phase 25: Progression System HP regen (Survival branch) ──
+	_update_hp_regen(delta)
 
 func _check_difficulty_tier_change() -> void:
 	var current_tier: int = get_time_difficulty_tier()
@@ -221,6 +223,24 @@ func _update_biome_tracking() -> void:
 		current_biome = new_biome
 		biome_changed.emit(new_biome)
 
+# ── Phase 25: Progression System HP regen (Survival branch) ──
+# Passive HP regeneration from the Regeneration skill. Accumulates fractional HP
+# and applies when it crosses 1.0. Only regens when alive and below max HP.
+var _hp_regen_accumulator: float = 0.0
+func _update_hp_regen(delta: float) -> void:
+	if not ProgressionSystem:
+		return
+	var regen_per_sec: float = ProgressionSystem.get_hp_regen_per_sec()
+	if regen_per_sec <= 0:
+		return
+	if player_hp >= player_max_hp:
+		return  # Already at full — no need to regen
+	_hp_regen_accumulator += regen_per_sec * delta
+	while _hp_regen_accumulator >= 1.0:
+		_hp_regen_accumulator -= 1.0
+		player_hp = min(player_max_hp, player_hp + 1)
+	hp_changed.emit(player_hp, player_max_hp)
+
 func _start_game() -> void:
 	player_hp = GameConstants.PLAYER_START_HP
 	player_max_hp = GameConstants.PLAYER_START_HP
@@ -254,6 +274,9 @@ func _start_game() -> void:
 	_last_difficulty_tier = 0
 	active_buffs.clear()
 	current_boss = null
+	# ── Phase 25: Apply permanent upgrades from skill tree ──
+	if ProgressionSystem:
+		ProgressionSystem.apply_permanent_upgrades()
 	hp_changed.emit(player_hp, player_max_hp)
 	xp_changed.emit(player_xp, player_xp_to_next)
 
@@ -277,6 +300,11 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# ── Phase 16: Reflective Shield weapon mod reduces incoming damage ──
 	if WeaponModSystem and WeaponModSystem.get_equipped_mod() == GameConstants.WeaponMod.REFLECTIVE_SHIELD:
 		actual_amount = int(actual_amount * 0.6)  # 40% damage reduction
+	# ── Phase 25: Progression System damage reduction (skill tree) ──
+	if ProgressionSystem:
+		var prog_dmg_reduce: float = ProgressionSystem.get_damage_reduction()
+		if prog_dmg_reduce > 0:
+			actual_amount = int(actual_amount * (1.0 - prog_dmg_reduce))
 	player_hp = max(0, player_hp - actual_amount)
 	player_invuln_timer = GameConstants.PLAYER_INVULN_DURATION
 	hp_changed.emit(player_hp, player_max_hp)
@@ -314,6 +342,9 @@ func gain_xp(amount: int) -> void:
 		var xp_mult: float = WeatherSystem.get_xp_multiplier()
 		if xp_mult != 1.0:
 			actual_amount = int(amount * xp_mult)
+	# ── Phase 25: Progression System XP multiplier (skill tree + prestige) ──
+	if ProgressionSystem:
+		actual_amount = int(actual_amount * ProgressionSystem.get_xp_gain_mult())
 	# ── Phase 7: Monolith XP buff (Wisdom Aura) ──
 	actual_amount = int(actual_amount * get_xp_buff_mult())
 	player_xp += actual_amount
@@ -371,6 +402,11 @@ func register_kill(enemy_name: String = "", killer_name: String = "Zorp") -> voi
 			_check_combo_milestone(player_combo)
 
 func _die() -> void:
+	# ── Phase 25: Progression System auto-revive (Second Wind skill) ──
+	# Tries to consume a revive charge before going down/dying
+	if ProgressionSystem and not player_is_downed:
+		if ProgressionSystem.try_auto_revive():
+			return  # Auto-revived — don't proceed to death
 	# ── Phase 19: Co-op — P1 goes down instead of dying if P2 is active ──
 	if CoOpManager.p2_active and not player_is_downed:
 		player_is_downed = true

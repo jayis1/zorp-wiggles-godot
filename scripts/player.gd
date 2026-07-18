@@ -144,6 +144,16 @@ func _ready() -> void:
 		_player_material.rim = 0.7
 		_player_material.rim_tint = 0.9
 		mesh.material_override = _player_material
+	# ── Phase 25: Prestige cosmetic aura — a golden light for prestiged players ──
+	# Each prestige level adds a subtle golden OmniLight around Zorp, visible
+	# as a warm halo. The light intensity scales with prestige level.
+	if ProgressionSystem and ProgressionSystem.get_prestige_level() > 0:
+		var prestige_light := OmniLight3D.new()
+		prestige_light.light_color = ProgressionSystem.get_prestige_cosmetic_color()
+		prestige_light.light_energy = 0.5 + minf(2.0, ProgressionSystem.get_prestige_level() * 0.3)
+		prestige_light.omni_range = 4.0 + ProgressionSystem.get_prestige_level() * 0.5
+		prestige_light.omni_attenuation = 1.5
+		add_child(prestige_light)
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused:
@@ -449,6 +459,9 @@ func _handle_movement(delta: float) -> void:
 	# and dimension effects (a Time Warden in a Time-Slow dimension is brutal).
 	if EnemyTimeWarden:
 		speed_mult *= EnemyTimeWarden.get_player_slow_mult(global_position)
+	# ── Phase 25: Progression System speed bonus (skill tree) ──
+	if ProgressionSystem:
+		speed_mult *= ProgressionSystem.get_speed_mult()
 	# ── Phase 7: Tier-based speed bonus (+0.5 m/s per 5 levels) ──
 	var tier: int = (GameManager.player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
 	var base_speed: float = GameConstants.PLAYER_SPEED + tier * GameConstants.PLAYER_LEVEL_SPEED_TIER_BONUS
@@ -552,10 +565,17 @@ func _start_dash() -> void:
 	is_dashing = true
 	dash_timer = GameConstants.PLAYER_DASH_DURATION
 	dash_direction = move_direction if move_direction.length_squared() > 0.01 else get_forward_dir_fallback()
-	GameManager.player_dash_cooldown_timer = GameConstants.PLAYER_DASH_COOLDOWN
+	# ── Phase 25: Progression System dash cooldown multiplier (skill tree) ──
+	var dash_cd: float = GameConstants.PLAYER_DASH_COOLDOWN
+	if ProgressionSystem:
+		dash_cd *= ProgressionSystem.get_dash_cooldown_mult()
+	GameManager.player_dash_cooldown_timer = dash_cd
 	GameManager.player_invuln_timer = max(GameManager.player_invuln_timer, GameConstants.PLAYER_DASH_INVULN_DURATION)
 	GameManager.player_is_dashing = true
 	dash_started.emit()
+	# ── Phase 25: Statistics tracking ──
+	if Statistics:
+		Statistics.record_dash()
 
 	# Camera shake on dash for punch
 	_trigger_camera_trauma(0.15)
@@ -769,8 +789,14 @@ func _try_shoot() -> void:
 		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
 	# Phase 17: Solar Flare weather boosts fire rate
 	cooldown *= WeatherSystem.get_fire_rate_multiplier()
+	# ── Phase 25: Progression System fire rate bonus (skill tree) ──
+	if ProgressionSystem:
+		cooldown *= ProgressionSystem.get_fire_rate_mult()
 	shoot_cooldown_timer = cooldown
 	_spawn_projectile()
+	# ── Phase 25: Statistics tracking ──
+	if Statistics:
+		Statistics.record_shot()
 
 ## Try to shoot; if on cooldown, buffer the input so it fires as soon as ready.
 ## This prevents dropped clicks during rapid fire and makes shooting feel snappy.
@@ -784,8 +810,16 @@ func _try_shoot_or_buffer() -> void:
 	var cooldown: float = GameConstants.SHOOT_COOLDOWN
 	if WeaponModSystem:
 		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
+	# Phase 17: Solar Flare weather boosts fire rate
+	cooldown *= WeatherSystem.get_fire_rate_multiplier()
+	# ── Phase 25: Progression System fire rate bonus (skill tree) ──
+	if ProgressionSystem:
+		cooldown *= ProgressionSystem.get_fire_rate_mult()
 	shoot_cooldown_timer = cooldown
 	_spawn_projectile()
+	# ── Phase 25: Statistics tracking ──
+	if Statistics:
+		Statistics.record_shot()
 
 func _spawn_projectile() -> void:
 	var shoot_dir := get_shoot_direction()
@@ -808,24 +842,43 @@ func _spawn_projectile() -> void:
 	var base_dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + level_dmg
 	# ── Phase 7: Monolith Power Surge damage buff ──
 	base_dmg = int(base_dmg * GameManager.get_damage_buff_mult())
+	# ── Phase 25: Progression System damage multiplier (skill tree) ──
+	if ProgressionSystem:
+		base_dmg = int(base_dmg * ProgressionSystem.get_damage_mult())
 	var mod_dmg: int = int(base_dmg * mod_dmg_mult)
 	var mod_speed: float = GameConstants.PROJECTILE_SPEED * mod_speed_mult
 	
 	# Spawn projectiles based on the equipped mod's behavior pattern
+	# ── Phase 25: Extra projectiles from Multishot skill (Combat branch) ──
+	var extra_bolts: int = 0
+	if ProgressionSystem:
+		extra_bolts = ProgressionSystem.get_extra_projectiles()
 	match mod_id:
 		GameConstants.WeaponMod.SPREAD_SHOT:
 			# Three bolts in a fan pattern
 			_spawn_single_projectile(shoot_dir, mod_dmg, mod_speed, mod_color)
 			_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, 0.2), mod_dmg, mod_speed, mod_color)
 			_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, -0.2), mod_dmg, mod_speed, mod_color)
+			# Extra bolts from skill tree — add tighter fan bolts
+			for i in range(extra_bolts):
+				var angle: float = 0.1 * (1 if i % 2 == 0 else -1) * ((i / 2) + 1)
+				_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, angle), mod_dmg, mod_speed, mod_color)
 		GameConstants.WeaponMod.QUANTUM_OVERDRIVE:
 			# Triple-bolt with homing + chain (mega mod)
 			_spawn_single_projectile(shoot_dir, mod_dmg, mod_speed, mod_color, mod_id)
 			_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, 0.15), mod_dmg, mod_speed, mod_color, mod_id)
 			_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, -0.15), mod_dmg, mod_speed, mod_color, mod_id)
+			# Extra bolts from skill tree
+			for i in range(extra_bolts):
+				var angle: float = 0.08 * (1 if i % 2 == 0 else -1) * ((i / 2) + 1)
+				_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, angle), mod_dmg, mod_speed, mod_color, mod_id)
 		_:
 			# All other mods fire a single projectile (behavior is handled by the projectile itself)
 			_spawn_single_projectile(shoot_dir, mod_dmg, mod_speed, mod_color, mod_id)
+			# Extra bolts from skill tree — add side-firing bolts at tight angles
+			for i in range(extra_bolts):
+				var angle: float = 0.12 * (1 if i % 2 == 0 else -1) * ((i / 2) + 1)
+				_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, angle), mod_dmg, mod_speed, mod_color, mod_id)
 
 ## Spawn a single projectile with the given parameters. The mod_id is passed to
 ## the projectile so it can apply behavior-specific logic (homing, bouncing, etc.).
@@ -920,6 +973,9 @@ func _use_pulse_wave() -> void:
 	_trigger_camera_trauma(0.25)
 	# Phase 20: Audio — pulse wave SFX
 	AudioManager.play_sfx(AudioManager.SFX_PULSE_WAVE)
+	# ── Phase 25: Statistics tracking ──
+	if Statistics:
+		Statistics.record_pulse_wave()
 
 ## Try to fire the pulse wave; if on cooldown, buffer the input so it fires
 ## as soon as ready. Mirrors the dash and shoot buffering pattern so all three

@@ -1,8 +1,11 @@
-## Zorp Wiggles — Achievement Popup System (Phase 5: HUD Polish)
+## Zorp Wiggles — Achievement Popup System (Phase 5: HUD Polish + Phase 25 Expansion)
 ## Displays achievement popups that slide in from the right side when unlocked.
-## Achievements are tracked for: first kill, combo milestones, biome explorer,
-## level milestones, pickup streak milestones, and boss kill.
-## Each popup shows an icon, title, and description, then slides out after a few seconds.
+## Phase 25: Expanded to 50+ achievements with progress bar tracking.
+## Achievements are grouped into categories: Combat, Survival, Exploration,
+## Collection, Progression, Special. Each has a target and current progress.
+## Progress-based achievements unlock when current >= target.
+## One-shot achievements (no progress bar) unlock on a specific event.
+## Lifetime progress is persisted via the Statistics autoload.
 
 extends Control
 
@@ -13,7 +16,10 @@ class Achievement:
 	var id: String
 	var title: String
 	var description: String
-	var icon: String  # Unicode symbol
+	var icon: String       # Unicode symbol
+	var category: String   # Category for grouping
+	var target: float      # Target value (0 = one-shot, no progress bar)
+	var progress_key: String  # Statistics lifetime key for progress tracking ("" = manual)
 
 # ─── Popup Entry ──────────────────────────────────────────────────────────────
 class PopupEntry:
@@ -26,6 +32,7 @@ class PopupEntry:
 var _popups: Array[PopupEntry] = []
 var _unlocked: Dictionary = {}  # id -> true
 var _all_achievements: Array[Achievement] = []
+var _progress: Dictionary = {}  # id -> current progress value (for progress-bar achievements)
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -42,27 +49,96 @@ func _ready() -> void:
 	GameManager.boss_defeated.connect(_on_boss_defeated)
 	GameManager.boss_spawned.connect(_on_boss_spawned)
 	GameManager.biome_changed.connect(_on_biome_changed)
-
-	# Track first kill via enemy_killed signal
 	GameManager.enemy_killed.connect(_on_enemy_killed)
-
+	# Phase 25: Connect to new systems for progress-based achievements
+	if WeaponModSystem:
+		WeaponModSystem.mod_crafted.connect(_on_mod_crafted)
+	if ProgressionSystem:
+		ProgressionSystem.prestige_changed.connect(_on_prestige_changed)
+	if Statistics:
+		Statistics.stats_updated.connect(_on_stats_updated)
 	# Define all achievements
 	_define_achievements()
 
 func _define_achievements() -> void:
+	# Format: {id, title, desc, icon, category, target, progress_key}
+	# target=0 means one-shot (no progress bar). progress_key links to a Statistics lifetime key.
 	var defs := [
-		{"id": "first_kill", "title": "First Blood", "desc": "Defeat your first enemy", "icon": "⚔"},
-		{"id": "combo_5", "title": "On a Roll", "desc": "Reach a x5 combo", "icon": "★"},
-		{"id": "combo_10", "title": "Killing Spree", "desc": "Reach a x10 combo", "icon": "★★"},
-		{"id": "combo_20", "title": "Unstoppable", "desc": "Reach a x20 combo", "icon": "★★★"},
-		{"id": "level_5", "title": "Getting Stronger", "desc": "Reach level 5", "icon": "↑"},
-		{"id": "level_10", "title": "Power Surge", "desc": "Reach level 10", "icon": "↑↑"},
-		{"id": "pickup_10", "title": "Collector", "desc": "10-pickup streak", "icon": "✦"},
-		{"id": "pickup_20", "title": "Treasure Hunter", "desc": "20-pickup streak", "icon": "✦✦"},
-		{"id": "boss_kill", "title": "Giant Slayer", "desc": "Defeat a boss", "icon": "☠"},
-		{"id": "biome_explorer_3", "title": "Explorer", "desc": "Visit 3 different biomes", "icon": "◆"},
-		{"id": "biome_explorer_6", "title": "Wanderer", "desc": "Visit 6 different biomes", "icon": "◆◆"},
-		{"id": "biome_explorer_12", "title": "Cartographer", "desc": "Visit all 12 biomes", "icon": "◆◆◆"},
+		# ── Combat: One-shot milestones ──
+		{"id": "first_kill", "title": "First Blood", "desc": "Defeat your first enemy", "icon": "⚔", "category": "Combat", "target": 0, "progress_key": ""},
+		{"id": "combo_5", "title": "On a Roll", "desc": "Reach a x5 combo", "icon": "★", "category": "Combat", "target": 0, "progress_key": ""},
+		{"id": "combo_10", "title": "Killing Spree", "desc": "Reach a x10 combo", "icon": "★★", "category": "Combat", "target": 0, "progress_key": ""},
+		{"id": "combo_20", "title": "Unstoppable", "desc": "Reach a x20 combo", "icon": "★★★", "category": "Combat", "target": 0, "progress_key": ""},
+		{"id": "combo_50", "title": "Legend", "desc": "Reach a x50 combo", "icon": "★★★★", "category": "Combat", "target": 0, "progress_key": ""},
+		{"id": "boss_kill", "title": "Giant Slayer", "desc": "Defeat a boss", "icon": "☠", "category": "Combat", "target": 0, "progress_key": ""},
+		{"id": "boss_kill_5", "title": "Boss Hunter", "desc": "Defeat 5 bosses", "icon": "☠☠", "category": "Combat", "target": 5, "progress_key": "bosses_defeated"},
+		{"id": "boss_kill_20", "title": "Boss Exterminator", "desc": "Defeat 20 bosses", "icon": "☠☠☠", "category": "Combat", "target": 20, "progress_key": "bosses_defeated"},
+		# ── Combat: Progress-based (lifetime kills) ──
+		{"id": "kills_100", "title": "Centurion", "desc": "Defeat 100 enemies total", "icon": "💀", "category": "Combat", "target": 100, "progress_key": "total_kills"},
+		{"id": "kills_500", "title": "Exterminator", "desc": "Defeat 500 enemies total", "icon": "💀💀", "category": "Combat", "target": 500, "progress_key": "total_kills"},
+		{"id": "kills_1000", "title": "Warlord", "desc": "Defeat 1,000 enemies total", "icon": "💀💀💀", "category": "Combat", "target": 1000, "progress_key": "total_kills"},
+		{"id": "kills_5000", "title": "Conqueror", "desc": "Defeat 5,000 enemies total", "icon": "👑", "category": "Combat", "target": 5000, "progress_key": "total_kills"},
+		# ── Combat: Weapon mastery ──
+		{"id": "mod_craft_1", "title": "Tinkerer", "desc": "Craft your first weapon mod", "icon": "🔧", "category": "Combat", "target": 0, "progress_key": ""},
+		{"id": "mod_craft_10", "title": "Engineer", "desc": "Craft 10 weapon mods total", "icon": "🔧🔧", "category": "Combat", "target": 10, "progress_key": "mods_crafted"},
+		{"id": "mod_craft_30", "title": "Master Artificer", "desc": "Craft 30 weapon mods total", "icon": "⚙", "category": "Combat", "target": 30, "progress_key": "mods_crafted"},
+		# ── Survival: Level milestones ──
+		{"id": "level_5", "title": "Getting Stronger", "desc": "Reach level 5", "icon": "↑", "category": "Progression", "target": 0, "progress_key": ""},
+		{"id": "level_10", "title": "Power Surge", "desc": "Reach level 10", "icon": "↑↑", "category": "Progression", "target": 0, "progress_key": ""},
+		{"id": "level_20", "title": "Ascendant", "desc": "Reach level 20", "icon": "↑↑↑", "category": "Progression", "target": 0, "progress_key": ""},
+		{"id": "level_30", "title": "Transcendent", "desc": "Reach level 30", "icon": "🌟", "category": "Progression", "target": 0, "progress_key": ""},
+		# ── Survival: Run count ──
+		{"id": "runs_10", "title": "Persistent", "desc": "Complete 10 runs", "icon": "🔄", "category": "Progression", "target": 10, "progress_key": "total_runs"},
+		{"id": "runs_50", "title": "Dedicated", "desc": "Complete 50 runs", "icon": "🔄🔄", "category": "Progression", "target": 50, "progress_key": "total_runs"},
+		{"id": "runs_100", "title": "Veteran", "desc": "Complete 100 runs", "icon": "🎖", "category": "Progression", "target": 100, "progress_key": "total_runs"},
+		# ── Survival: Best records ──
+		{"id": "best_score_5k", "title": "High Scorer", "desc": "Score 5,000 in a single run", "icon": "💯", "category": "Progression", "target": 5000, "progress_key": "best_score"},
+		{"id": "best_score_25k", "title": "Score Master", "desc": "Score 25,000 in a single run", "icon": "💯💯", "category": "Progression", "target": 25000, "progress_key": "best_score"},
+		{"id": "best_combo_30", "title": "Combo King", "desc": "Achieve a x30 combo", "icon": "🔥", "category": "Combat", "target": 30, "progress_key": "best_combo"},
+		{"id": "best_survival_300", "title": "Survivor", "desc": "Survive 5 minutes in a single run", "icon": "⏱", "category": "Survival", "target": 300.0, "progress_key": "best_survival_time"},
+		{"id": "best_survival_600", "title": "Endurance", "desc": "Survive 10 minutes in a single run", "icon": "⏱⏱", "category": "Survival", "target": 600.0, "progress_key": "best_survival_time"},
+		# ── Exploration: Biome explorer ──
+		{"id": "biome_explorer_3", "title": "Explorer", "desc": "Visit 3 different biomes", "icon": "◆", "category": "Exploration", "target": 0, "progress_key": ""},
+		{"id": "biome_explorer_6", "title": "Wanderer", "desc": "Visit 6 different biomes", "icon": "◆◆", "category": "Exploration", "target": 0, "progress_key": ""},
+		{"id": "biome_explorer_12", "title": "Cartographer", "desc": "Visit all 12 biomes", "icon": "◆◆◆", "category": "Exploration", "target": 0, "progress_key": ""},
+		{"id": "biome_explorer_19", "title": "World Walker", "desc": "Visit all 19 biomes", "icon": "🗺", "category": "Exploration", "target": 0, "progress_key": ""},
+		# ── Exploration: Distance ──
+		{"id": "distance_1km", "title": "Walker", "desc": "Travel 1 km total", "icon": "👣", "category": "Exploration", "target": 1000.0, "progress_key": "distance_traveled"},
+		{"id": "distance_10km", "title": "Marathoner", "desc": "Travel 10 km total", "icon": "🏃", "category": "Exploration", "target": 10000.0, "progress_key": "distance_traveled"},
+		{"id": "distance_50km", "title": "Globetrotter", "desc": "Travel 50 km total", "icon": "🌍", "category": "Exploration", "target": 50000.0, "progress_key": "distance_traveled"},
+		# ── Exploration: Time played ──
+		{"id": "time_1h", "title": "First Hour", "desc": "Play for 1 hour total", "icon": "🕐", "category": "Exploration", "target": 3600.0, "progress_key": "time_played"},
+		{"id": "time_5h", "title": "Dedicated Player", "desc": "Play for 5 hours total", "icon": "🕔", "category": "Exploration", "target": 18000.0, "progress_key": "time_played"},
+		{"id": "time_24h", "title": "Addicted", "desc": "Play for 24 hours total", "icon": "🕘", "category": "Exploration", "target": 86400.0, "progress_key": "time_played"},
+		# ── Collection: Pickup streaks ──
+		{"id": "pickup_10", "title": "Collector", "desc": "10-pickup streak", "icon": "✦", "category": "Collection", "target": 0, "progress_key": ""},
+		{"id": "pickup_20", "title": "Treasure Hunter", "desc": "20-pickup streak", "icon": "✦✦", "category": "Collection", "target": 0, "progress_key": ""},
+		{"id": "pickup_50", "title": "Magpie", "desc": "50-pickup streak", "icon": "✦✦✦", "category": "Collection", "target": 0, "progress_key": ""},
+		# ── Collection: Lifetime items ──
+		{"id": "items_100", "title": "Gatherer", "desc": "Collect 100 items total", "icon": "📦", "category": "Collection", "target": 100, "progress_key": "items_collected"},
+		{"id": "items_1000", "title": "Hoarder", "desc": "Collect 1,000 items total", "icon": "📦📦", "category": "Collection", "target": 1000, "progress_key": "items_collected"},
+		{"id": "items_5000", "title": "Treasure Vault", "desc": "Collect 5,000 items total", "icon": "💎", "category": "Collection", "target": 5000, "progress_key": "items_collected"},
+		# ── Collection: Shots fired ──
+		{"id": "shots_500", "title": "Trigger Happy", "desc": "Fire 500 shots total", "icon": "🔫", "category": "Combat", "target": 500, "progress_key": "shots_fired"},
+		{"id": "shots_5000", "title": "Sharpshooter", "desc": "Fire 5,000 shots total", "icon": "🎯", "category": "Combat", "target": 5000, "progress_key": "shots_fired"},
+		# ── Collection: Dashes ──
+		{"id": "dashes_100", "title": "Dasher", "desc": "Dash 100 times total", "icon": "💨", "category": "Survival", "target": 100, "progress_key": "dashes"},
+		{"id": "dashes_1000", "title": "Speed Demon", "desc": "Dash 1,000 times total", "icon": "💨💨", "category": "Survival", "target": 1000, "progress_key": "dashes"},
+		# ── Special: Pet ──
+		{"id": "pet_feed_10", "title": "Pet Owner", "desc": "Feed your pet 10 times", "icon": "🐾", "category": "Special", "target": 10, "progress_key": "pet_feedings"},
+		{"id": "pet_feed_50", "title": "Pet Whisperer", "desc": "Feed your pet 50 times", "icon": "🐾🐾", "category": "Special", "target": 50, "progress_key": "pet_feedings"},
+		# ── Special: Rifts ──
+		{"id": "rifts_5", "title": "Dimensional Traveler", "desc": "Enter 5 dimensional rifts", "icon": "🌀", "category": "Special", "target": 5, "progress_key": "rifts_entered"},
+		{"id": "rifts_25", "title": "Rift Walker", "desc": "Enter 25 dimensional rifts", "icon": "🌀🌀", "category": "Special", "target": 25, "progress_key": "rifts_entered"},
+		# ── Special: Weather ──
+		{"id": "weather_10", "title": "Storm Chaser", "desc": "Survive 10 weather events", "icon": "⛈", "category": "Special", "target": 10, "progress_key": "weather_events"},
+		{"id": "weather_50", "title": "Storm Veteran", "desc": "Survive 50 weather events", "icon": "🌩", "category": "Special", "target": 50, "progress_key": "weather_events"},
+		# ── Special: Revives ──
+		{"id": "revive_1", "title": "Guardian Angel", "desc": "Revive your partner once", "icon": "✚", "category": "Special", "target": 1, "progress_key": "revives"},
+		{"id": "revive_10", "title": "Medic", "desc": "Revive your partner 10 times", "icon": "✚✚", "category": "Special", "target": 10, "progress_key": "revives"},
+		# ── Special: Prestige ──
+		{"id": "prestige_1", "title": "Reborn", "desc": "Prestige for the first time", "icon": "🌟", "category": "Progression", "target": 0, "progress_key": ""},
+		{"id": "prestige_5", "title": "Eternal", "desc": "Reach prestige level 5", "icon": "🌟🌟", "category": "Progression", "target": 0, "progress_key": ""},
 	]
 	for def in defs:
 		var ach := Achievement.new()
@@ -70,6 +146,9 @@ func _define_achievements() -> void:
 		ach.title = def["title"]
 		ach.description = def["desc"]
 		ach.icon = def["icon"]
+		ach.category = def["category"]
+		ach.target = float(def["target"])
+		ach.progress_key = def["progress_key"]
 		_all_achievements.append(ach)
 
 # ─── Tracking State ───────────────────────────────────────────────────────────
@@ -78,6 +157,7 @@ var _visited_biomes: Dictionary = {}  # biome_id -> true
 # ─── Signal Handlers ──────────────────────────────────────────────────────────
 func _on_enemy_killed(_enemy_name: String, _killer_name: String) -> void:
 	_unlock("first_kill")
+	_check_progress_achievements()
 
 func _on_combo_milestone(combo: int, _tier: int, _color: Color) -> void:
 	if combo >= 5:
@@ -86,21 +166,30 @@ func _on_combo_milestone(combo: int, _tier: int, _color: Color) -> void:
 		_unlock("combo_10")
 	if combo >= 20:
 		_unlock("combo_20")
+	if combo >= 50:
+		_unlock("combo_50")
 
 func _on_level_up(level: int) -> void:
 	if level >= 5:
 		_unlock("level_5")
 	if level >= 10:
 		_unlock("level_10")
+	if level >= 20:
+		_unlock("level_20")
+	if level >= 30:
+		_unlock("level_30")
 
 func _on_pickup_streak_milestone(streak: int, _xp: int) -> void:
 	if streak >= 10:
 		_unlock("pickup_10")
 	if streak >= 20:
 		_unlock("pickup_20")
+	if streak >= 50:
+		_unlock("pickup_50")
 
 func _on_boss_defeated(_boss: Node) -> void:
 	_unlock("boss_kill")
+	_check_progress_achievements()
 
 func _on_boss_spawned(_boss: Node) -> void:
 	pass  # We only care about boss kills
@@ -114,6 +203,59 @@ func _on_biome_changed(biome_id: int) -> void:
 		_unlock("biome_explorer_6")
 	if count >= 12:
 		_unlock("biome_explorer_12")
+	if count >= 19:
+		_unlock("biome_explorer_19")
+
+func _on_mod_crafted(_mod_id: int) -> void:
+	_unlock("mod_craft_1")
+	_check_progress_achievements()
+
+func _on_prestige_changed(level: int) -> void:
+	_unlock("prestige_1")
+	if level >= 5:
+		_unlock("prestige_5")
+
+func _on_stats_updated() -> void:
+	# Periodically check progress-based achievements against lifetime stats
+	_check_progress_achievements()
+
+# ─── Progress-based Achievement Checking ───────────────────────────────────────
+# For achievements with a progress_key, we query the Statistics autoload for the
+# current lifetime value and unlock if current >= target.
+func _check_progress_achievements() -> void:
+	if not Statistics:
+		return
+	for ach in _all_achievements:
+		if ach.target <= 0 or ach.progress_key.is_empty():
+			continue  # One-shot achievement — skip
+		if _unlocked.has(ach.id):
+			continue  # Already unlocked
+		var current: float = float(Statistics.get_lifetime_stat(ach.progress_key))
+		_progress[ach.id] = current
+		if current >= ach.target:
+			_unlock(ach.id)
+
+# ─── Public API ────────────────────────────────────────────────────────────────
+func get_unlocked_count() -> int:
+	return _unlocked.size()
+
+func get_total_count() -> int:
+	return _all_achievements.size()
+
+func get_progress(achievement_id: String) -> float:
+	return float(_progress.get(achievement_id, 0.0))
+
+func get_achievement_by_id(achievement_id: String) -> Achievement:
+	for a in _all_achievements:
+		if a.id == achievement_id:
+			return a
+	return null
+
+func get_all_achievements() -> Array[Achievement]:
+	return _all_achievements
+
+func get_unlocked_dict() -> Dictionary:
+	return _unlocked.duplicate()
 
 # ─── Logic ────────────────────────────────────────────────────────────────────
 func _unlock(achievement_id: String) -> void:

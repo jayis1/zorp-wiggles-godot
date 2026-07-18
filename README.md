@@ -41,9 +41,13 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 - Quest log UI with progress tracking
 - Trader NPC with trade menu
 - Monolith buff structures (speed, damage, XP buffs)
-- Achievement system with popups
+- Achievement system with popups (56 achievements across 6 categories with progress tracking)
 - XP curve and level-up stat scaling
 - Difficulty scaling over time
+- **Skill Tree** — 3 branches (Combat, Survival, Exploration), 15 skills, 75 ranks, spend SP from leveling (K key)
+- **Permanent Upgrades** — skill bonuses persist across runs via JSON save (+HP, +damage, +speed, +XP, +crit, +loot, +fire rate, +multishot, +dash cooldown, +HP regen, +dmg reduction, auto-revive)
+- **Prestige System** — reset at level 20+ for +10% XP multiplier per prestige level, bonus SP, and golden aura cosmetic
+- **Statistics Page** — lifetime + session stats (kills, distance, time, items, biome time, enemy/boss breakdowns) with 4 tabs (F2 key)
 
 ---
 
@@ -63,6 +67,8 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 | F | Summon/dismiss companion pet |
 | G | Pet fetch mode (click collectible to fetch) |
 | C | Open weapon mod crafting menu |
+| K | Open skill tree |
+| F2 | Open statistics page |
 | **Player 2 (Zerp)** | |
 | Arrow Keys | Move |
 | / | Shoot |

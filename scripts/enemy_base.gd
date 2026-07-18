@@ -760,6 +760,9 @@ func _drop_crafting_material() -> void:
 	var is_boss: bool = base_scale >= 2.0 or max_hp >= 200
 	if is_boss:
 		drop_chance = GameConstants.CRAFTING_MATERIAL_DROP_CHANCE_BOSS
+	# ── Phase 25: Progression System loot chance bonus (Exploration branch) ──
+	if ProgressionSystem:
+		drop_chance = minf(1.0, drop_chance + ProgressionSystem.get_loot_chance_bonus())
 	if randf() > drop_chance:
 		return
 	# Pick a crafting material via the weighted loot table.

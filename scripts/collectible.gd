@@ -473,6 +473,9 @@ func _collect() -> void:
 	tween.tween_callback(queue_free)
 
 	collected.emit(collectible_type, xp_value)
+	# ── Phase 25: Statistics tracking — record item collection ──
+	if Statistics:
+		Statistics.record_item_collected(collectible_type)
 	# Phase 20: Audio — pickup SFX (rare items get a different sound)
 	var is_rare: bool = collectible_type in [
 		GameConstants.CollectibleType.METEOR_SHARD,

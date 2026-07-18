@@ -227,6 +227,9 @@ func _finish_dimension_entry() -> void:
 
 	var dim_name: String = GameConstants.DIMENSION_NAMES.get(_current_dimension, "Unknown")
 	GameManager.add_message("🌀 %s active! %ds remaining" % [dim_name, int(_dimension_timer)])
+	# ── Phase 25: Statistics tracking — record rift entry ──
+	if Statistics:
+		Statistics.record_rift_entered()
 
 	# Remove all active rifts (you've entered one, the rest dissolve)
 	for rift in _active_rifts:

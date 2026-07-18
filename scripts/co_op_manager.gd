@@ -296,6 +296,9 @@ func _revive_p2() -> void:
 	if p2_node and p2_node.has_method("set_invuln"):
 		p2_node.set_invuln(GameConstants.COOP_REVIVE_INVULN_DURATION)
 	_check_coop_milestones()
+	# ── Phase 25: Statistics tracking — record revive ──
+	if Statistics:
+		Statistics.record_revive()
 
 func _p2_die_for_real() -> void:
 	p2_is_downed = false

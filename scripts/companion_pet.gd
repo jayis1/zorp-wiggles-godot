@@ -221,6 +221,9 @@ func feed(collectible_type: int) -> void:
 	pet_hp_changed.emit(hp, max_hp)
 	_check_evolution()
 	_emit_progress()
+	# ── Phase 25: Statistics tracking — record pet feeding ──
+	if Statistics:
+		Statistics.record_pet_feeding()
 
 
 func _check_evolution() -> void:

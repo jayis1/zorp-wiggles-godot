@@ -242,6 +242,22 @@ func _ready() -> void:
 	tm_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(tm_ctrl)
 
+	# ── Phase 25: Statistics Page (F2) ──
+	var sp_script := load("res://scripts/statistics_page.gd")
+	var sp_ctrl := Control.new()
+	sp_ctrl.set_script(sp_script)
+	sp_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sp_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(sp_ctrl)
+
+	# ── Phase 25: Skill Tree UI (K) ──
+	var st_script := load("res://scripts/skill_tree.gd")
+	var st_ctrl := Control.new()
+	st_ctrl.set_script(st_script)
+	st_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	st_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(st_ctrl)
+
 	# Initialize displays
 	_update_all_displays()
 

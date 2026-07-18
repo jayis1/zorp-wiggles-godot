@@ -485,8 +485,21 @@ func _hit_enemy(enemy: Node3D) -> void:
 	if _weapon_mod == GameConstants.WeaponMod.METEOR_STRIKE:
 		total_damage = GameConstants.METEOR_STRIKE_BOLT_DAMAGE
 
+	# ── Phase 25: Progression System boss damage bonus (Combat branch) ──
+	# Giant Slayer skill increases damage against bosses (high HP / large scale)
+	var is_target_boss: bool = false
+	if "max_hp" in enemy and "base_scale" in enemy:
+		var e_max_hp: int = int(enemy.get("max_hp"))
+		var e_scale: float = float(enemy.get("base_scale"))
+		is_target_boss = e_max_hp >= 200 or e_scale >= 2.0
+	if is_target_boss and ProgressionSystem:
+		total_damage = int(total_damage * ProgressionSystem.get_boss_damage_mult())
+
 	# Crit check
 	var crit_chance := GameConstants.CRIT_BASE_CHANCE
+	# ── Phase 25: Progression System crit chance bonus (Combat branch) ──
+	if ProgressionSystem:
+		crit_chance += ProgressionSystem.get_crit_chance_bonus()
 	var is_crit := randf() < crit_chance
 	if is_crit:
 		# Crit chain bonus
