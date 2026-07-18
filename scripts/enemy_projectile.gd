@@ -19,6 +19,11 @@ var _material: StandardMaterial3D = null
 var _time_scale: float = 1.0  # Phase 14: Time-Slow dimension
 var _light: OmniLight3D = null
 var _cached_player: Node3D = null
+# Guard against double-hit: the distance check in _physics_process and the
+# body_entered Area3D signal can both fire on the same frame. Without this
+# flag, _on_hit_player would run twice (queue_free is deferred), dealing
+# double damage to the player from a single enemy projectile.
+var _has_already_hit: bool = false
 
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
@@ -111,17 +116,28 @@ func _physics_process(delta: float) -> void:
 		var dist: float = global_position.distance_to(_cached_player.global_position)
 		if dist < GameConstants.ENEMY_PROJECTILE_HIT_RADIUS:
 			_on_hit_player(_cached_player)
+			return  # _on_hit_player freed this projectile; stop processing
 	# ── Phase 19: Co-op — also check P2 if active ──
+	# Only check P2 if we didn't already hit P1 (above returns on hit, so
+	# reaching here means P1 was not in range). Without the early return above,
+	# a single projectile could damage BOTH players in co-op if they were
+	# both within ENEMY_PROJECTILE_HIT_RADIUS of the bolt on the same frame
+	# — _on_hit_player calls queue_free() (deferred to end of frame), so the
+	# second check would still run and damage P2 after P1 was already hit.
 	if CoOpManager.is_coop_active() and not CoOpManager.p2_is_downed:
-		var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
-		if p2_dist < GameConstants.ENEMY_PROJECTILE_HIT_RADIUS:
-			_on_hit_player(CoOpManager.p2_node)
+		if CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+			var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
+			if p2_dist < GameConstants.ENEMY_PROJECTILE_HIT_RADIUS:
+				_on_hit_player(CoOpManager.p2_node)
+				return  # _on_hit_player freed this projectile
 
 # ── Phase 14: Set time scale (called by DimensionSystem) ──
 func set_time_scale(scale: float) -> void:
 	_time_scale = scale
 
 func _on_body_entered(body: Node3D) -> void:
+	if _has_already_hit:
+		return  # Already hit a player this frame; don't double-damage
 	if body.is_in_group("player"):
 		_on_hit_player(body)
 	elif not body.is_in_group("enemies"):
@@ -131,7 +147,14 @@ func _on_body_entered(body: Node3D) -> void:
 
 ## Hit a player — route damage to the correct player in co-op.
 ## `target` is the CharacterBody3D that was hit (P1 or P2).
+## Sets a guard flag so the distance-check in _physics_process and the
+## body_entered signal can't both fire _on_hit_player on the same frame
+## (which would double-damage the player — queue_free is deferred so the
+## second call would still execute before the node is actually freed).
 func _on_hit_player(target: Node3D = null) -> void:
+	if _has_already_hit:
+		return  # Prevent double-hit from distance check + body_entered
+	_has_already_hit = true
 	# Default to P1 if no target specified (backward compatibility)
 	if target and target.is_in_group("player2"):
 		CoOpManager.p2_take_damage(damage, global_position)

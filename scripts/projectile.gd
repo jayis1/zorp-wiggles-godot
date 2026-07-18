@@ -23,6 +23,12 @@ var _max_pierces: int = 3
 var _homing_strength: float = 8.0   # For Homing Laser
 var _tesla_zap_timer: float = 0.0  # For Tesla Coil periodic zap
 var _has_hit_enemies: Array[Node3D] = []  # Track hit enemies for pierce/chain (prevent double-hit)
+# True once this projectile has been consumed (queue_free called). Prevents
+# double-hit when two body_entered signals fire on the same frame (overlapping
+# enemies/colliders) — the second signal would otherwise damage a second target
+# before the deferred queue_free() takes effect, letting a single non-piercing
+# bolt hit multiple enemies.
+var _is_consumed: bool = false
 var _light: OmniLight3D = null
 var _mod_material: StandardMaterial3D = null  # Per-projectile material for mod color
 
@@ -321,6 +327,14 @@ func _update_trail_visuals(delta: float) -> void:
 			tm.visible = false
 
 func _on_body_entered(body: Node3D) -> void:
+	# If this projectile is already consumed (queued for free from a prior
+	# hit this frame), ignore further collisions. Without this guard, a fast
+	# projectile overlapping two enemies on the same frame would fire
+	# body_entered twice — _hit_enemy calls queue_free() (deferred to end of
+	# frame), so the second signal would still execute and damage the second
+	# enemy, letting a single non-piercing bolt hit multiple targets.
+	if _is_consumed:
+		return
 	# Check if it's an enemy
 	if body.is_in_group("enemies"):
 		# Don't hit the same enemy twice (for piercing/chain)
@@ -332,6 +346,7 @@ func _on_body_entered(body: Node3D) -> void:
 		if body.has_method("take_damage_from"):
 			body.take_damage_from(damage, global_position)
 		_impact_effect()
+		_is_consumed = true
 		queue_free()
 	else:
 		# Hit terrain/wall
@@ -345,6 +360,7 @@ func _on_body_entered(body: Node3D) -> void:
 			_bounce_off_wall(body)
 			return
 		_impact_effect()
+		_is_consumed = true
 		queue_free()
 
 ## Phase 16: Bounce off a wall — reflect direction and continue.
@@ -455,6 +471,7 @@ func _hit_enemy(enemy: Node3D) -> void:
 
 	# Impact effect
 	_impact_effect()
+	_is_consumed = true
 	queue_free()
 
 ## Phase 16: Apply on-hit weapon mod effects (chain lightning, freeze, vampire, etc.)

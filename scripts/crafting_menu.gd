@@ -20,6 +20,13 @@ const DISCOVERED_NAME_COLOR: Color = Color(0.8, 0.7, 1.0)
 # ─── Internal State ───────────────────────────────────────────────────────────
 var _selected_materials: Array[int] = []  # CollectibleType values selected for crafting
 var _is_open: bool = false
+# Set true by _on_mod_crafted when a NEW mod is discovered during a craft_mod()
+# call. _on_craft_pressed resets this before calling craft_mod() so it can tell
+# whether the craft produced a new discovery (signal fired) or a re-craft (no
+# signal). Without this, is_mod_discovered() is always true after craft_mod()
+# returns (craft_mod adds the mod before returning), so the "already known"
+# text would overwrite the "NEW MOD DISCOVERED" message for genuine discoveries.
+var _mod_was_newly_crafted: bool = false
 
 # ─── UI Node References ───────────────────────────────────────────────────────
 var _bg_panel: Panel
@@ -256,6 +263,10 @@ func _on_mod_crafted(mod_id: int) -> void:
 	var mod_name: String = GameConstants.WEAPON_MOD_NAMES[mod_id]
 	_result_label.text = "★ NEW MOD DISCOVERED: %s!" % mod_name
 	_result_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
+	# Flag so _on_craft_pressed knows this was a new discovery (not a re-craft).
+	# The signal fires synchronously inside craft_mod() before it returns, so
+	# _on_craft_pressed can read this flag immediately after the call.
+	_mod_was_newly_crafted = true
 	if GameManager:
 		GameManager.add_message("★ New weapon mod discovered: %s!" % mod_name)
 
@@ -356,16 +367,24 @@ func _on_material_button_pressed(mat_type: int) -> void:
 func _on_craft_pressed() -> void:
 	if _selected_materials.size() < 2:
 		return
+	# Reset the new-discovery flag before crafting. _on_mod_crafted (fired
+	# synchronously inside craft_mod when a NEW mod is discovered) sets this
+	# to true. We can't use is_mod_discovered() after the call because
+	# craft_mod() adds the mod to _discovered_mods before returning, so it
+	# would always be true and we couldn't tell new discoveries from re-crafts.
+	_mod_was_newly_crafted = false
 	var result: int = WeaponModSystem.craft_mod(_selected_materials.duplicate())
 	if result >= 0:
 		# Success
 		# Phase 20: Audio — craft SFX
 		AudioManager.play_sfx(AudioManager.SFX_CRAFT)
 		var mod_name: String = GameConstants.WEAPON_MOD_NAMES[result]
-		if WeaponModSystem.is_mod_discovered(result):
-			# Was already discovered, just re-crafted
+		# For new discoveries, _on_mod_crafted already set the result label
+		# to "★ NEW MOD DISCOVERED" — don't overwrite it. For re-crafts (mod
+		# was already known), show the "already known" confirmation.
+		if not _mod_was_newly_crafted:
 			_result_label.text = "✓ Crafted: %s (already known)" % mod_name
-		_result_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.4))
+			_result_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.4))
 		_clear_selection()
 	else:
 		_result_label.text = "✗ Invalid combination! Try another mix."
