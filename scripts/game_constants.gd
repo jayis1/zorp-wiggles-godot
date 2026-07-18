@@ -137,9 +137,13 @@ enum EnemyType {
 	CRYSTAL_WRAITH,   # Shatters into shards on death, shards reform into mini-wraiths
 	ECHO_KNIGHT,      # Creates shadow copies of itself, all attack simultaneously
 	# ── Phase 23: New enemy types (batch 2) ──
-	PLASMA_STALKER,  # Turns invisible — only visible by particle trail
-	TIME_WARDEN,     # Slows player in AoE, speeds self, teleport attacks
-	MIRROR_MIMIC,    # Copies player's weapon mod, fires it back at them
+	PLASMA_STALKER,    # Turns invisible — only visible by particle trail
+	TIME_WARDEN,       # Slows player in AoE, speeds self, teleport attacks
+	MIRROR_MIMIC,      # Copies player's weapon mod, fires it back at them
+	# ── Phase 23: New enemy types (batch 3 — bosses & elites) ──
+	VOID_LEVIATHAN,    # Giant serpentine boss, multi-stage, swims through terrain
+	ANCIENT_SENTINEL,  # Mega-boss, multiple attack phases, arena-wide hazards
+	GRAVITY_ELEMENTAL, # Gravity-manipulating elite, throws objects, repels player
 }
 
 # ─── Enemy Spawn & Difficulty ────────────────────────────────────────────────
@@ -1024,6 +1028,13 @@ enum WeaponMod {
 	PHOTON_BEAM,         # 22 — Regen Crystal + Shield Crystal — rapid-fire piercing beam
 	SPECTRAL_BEAM,       # 23 — Quantum Fuzz + Toxic Extract — phases through walls, ignores enemy shields
 	MAGNET_MINE,         # 24 — Magnet Core + Fireball Scroll — homing mine that attaches then detonates
+	# ── Phase 24: New weapon mods ──
+	BLACK_HOLE_LAUNCHER, # 25 — Magnet Core + Nebula Dust + Meteor Shard — portable singularity launcher
+	TIME_FREEZE_RAY,     # 26 — Regen Crystal + Quantum Fuzz + Star Fruit — freezes enemies in time
+	SHRINK_BEAM,         # 27 — Toxic Extract + Shield Crystal — shrinks enemies, making them slow & weak
+	METEOR_STRIKE,       # 28 — Meteor Shard + Fireball Scroll + Nebula Dust — calls down a meteor at cursor
+	LIGHTNING_STORM,     # 29 — Regen Crystal + Magnet Core + Quantum Fuzz — chain lightning storm
+	POISON_NOVA,         # 30 — Nebula Dust + Space Gloop + Toxic Extract — expanding ring of poison, DoT to all hit
 }
 
 const WEAPON_MOD_NAMES: Array[String] = [
@@ -1053,6 +1064,13 @@ const WEAPON_MOD_NAMES: Array[String] = [
 	"Photon Beam",
 	"Spectral Beam",
 	"Magnet Mine",
+	# Phase 24: New weapon mods
+	"Black Hole Launcher",
+	"Time Freeze Ray",
+	"Shrink Beam",
+	"Meteor Strike",
+	"Lightning Storm",
+	"Poison Nova",
 ]
 
 const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
@@ -1082,6 +1100,13 @@ const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
 	"Rapid-fire piercing photon bolts that pass through enemies.",
 	"Phases through walls and terrain — never blocked. Ignores enemy intangibility.",
 	"Homing mine that attaches to an enemy, then detonates for massive AoE damage.",
+	# Phase 24: New weapon mods
+	"Launches a portable singularity that travels forward, pulling enemies in, then collapses for massive AoE damage.",
+	"Freezes enemies in time for 3 seconds — they can't move, attack, or take damage from other sources.",
+	"Shrinks enemies for 5 seconds — they become tiny, slow, and deal reduced damage.",
+	"Calls down a meteor from the sky at the cursor location, dealing massive AoE damage on impact.",
+	"Chain lightning storm — bolts arc between all nearby enemies, dealing damage to each.",
+	"Expanding ring of poison that damages all enemies it touches, with lingering DoT.",
 ]
 
 # Colors for each weapon mod (laser color)
@@ -1112,6 +1137,13 @@ const WEAPON_MOD_COLORS: Array[Color] = [
 	Color(1.0, 1.0, 0.8),   # Photon: warm white-gold
 	Color(0.4, 0.2, 0.6, 0.7), # Spectral: translucent violet ghost
 	Color(0.9, 0.5, 0.1),   # Magnet Mine: orange-red explosive
+	# Phase 24: New weapon mods
+	Color(0.05, 0.0, 0.15),  # Black Hole Launcher: deep void purple-black
+	Color(0.6, 0.85, 1.0),   # Time Freeze Ray: crystalline ice-cyan
+	Color(0.4, 0.9, 0.3),    # Shrink Beam: lime green (compress)
+	Color(1.0, 0.4, 0.1),    # Meteor Strike: fiery orange-red
+	Color(0.7, 0.85, 1.0),   # Lightning Storm: electric pale blue
+	Color(0.5, 0.9, 0.2),    # Poison Nova: toxic green
 ]
 
 # Damage multiplier per weapon mod
@@ -1142,6 +1174,13 @@ const WEAPON_MOD_DAMAGE_MULT: Array[float] = [
 	0.5,   # Photon Beam (rapid fire, each bolt is weak but fires 2x as fast)
 	0.9,   # Spectral Beam (phasing is the utility, damage is decent)
 	1.6,   # Magnet Mine (big single-hit AoE detonation)
+	# Phase 24: New weapon mods
+	1.4,   # Black Hole Launcher (the collapse is the damage)
+	0.6,   # Time Freeze Ray (utility — freeze, not damage)
+	0.7,   # Shrink Beam (utility — debuff, not damage)
+	2.8,   # Meteor Strike (massive single-hit AoE)
+	1.2,   # Lightning Storm (chains to many enemies)
+	1.3,   # Poison Nova (AoE + DoT)
 ]
 
 # Fire rate multiplier (lower = faster)
@@ -1172,6 +1211,13 @@ const WEAPON_MOD_FIRE_RATE_MULT: Array[float] = [
 	0.5,   # Photon Beam (very rapid fire — 2x as fast as standard)
 	1.3,   # Spectral Beam (slower, deliberate shots)
 	1.8,   # Magnet Mine (slow deploy — big payoff)
+	# Phase 24: New weapon mods
+	2.4,   # Black Hole Launcher (very slow — heavy singularity)
+	1.8,   # Time Freeze Ray (slow, deliberate)
+	1.4,   # Shrink Beam (moderate)
+	3.0,   # Meteor Strike (very slow — calling down a meteor)
+	2.2,   # Lightning Storm (slow charge-up)
+	1.8,   # Poison Nova (slow — expanding ring)
 ]
 
 # Projectile speed multiplier
@@ -1202,6 +1248,13 @@ const WEAPON_MOD_SPEED_MULT: Array[float] = [
 	2.0,   # Photon Beam (very fast light-speed bolts)
 	1.1,   # Spectral Beam (moderate — phasing through everything)
 	0.7,   # Magnet Mine (slow — it's a drifting mine, then homes in)
+	# Phase 24: New weapon mods
+	0.5,   # Black Hole Launcher (slow — heavy singularity travels forward)
+	1.0,   # Time Freeze Ray (moderate)
+	1.2,   # Shrink Beam (moderate-fast)
+	0.4,   # Meteor Strike (slow — the bolt is the meteor strike marker)
+	1.0,   # Lightning Storm (moderate)
+	0.8,   # Poison Nova (slow-ish — expanding ring)
 ]
 
 # Crafting recipes: maps a sorted key string "typeA,typeB[,typeC]" → WeaponMod enum value
@@ -1234,6 +1287,14 @@ const CRAFTING_RECIPES: Dictionary = {
 	"REGEN_CRYSTAL,SHIELD_CRYSTAL": WeaponMod.PHOTON_BEAM,
 	"QUANTUM_FUZZ,TOXIC_EXTRACT": WeaponMod.SPECTRAL_BEAM,
 	"FIREBALL_SCROLL,MAGNET_CORE": WeaponMod.MAGNET_MINE,
+	# Phase 24: New weapon mod recipes (3-item mega recipes)
+	"MAGNET_CORE,METEOR_SHARD,NEBULA_DUST": WeaponMod.BLACK_HOLE_LAUNCHER,
+	"QUANTUM_FUZZ,REGEN_CRYSTAL,STAR_FRUIT": WeaponMod.TIME_FREEZE_RAY,
+	"SHIELD_CRYSTAL,TOXIC_EXTRACT": WeaponMod.SHRINK_BEAM,
+	"FIREBALL_SCROLL,METEOR_SHARD,NEBULA_DUST": WeaponMod.METEOR_STRIKE,
+	"MAGNET_CORE,QUANTUM_FUZZ,REGEN_CRYSTAL": WeaponMod.LIGHTNING_STORM,
+	# Poison Nova uses a 3-item recipe to avoid colliding with Void Ray's key
+	"NEBULA_DUST,SPACE_GLOOP,TOXIC_EXTRACT": WeaponMod.POISON_NOVA,
 }
 
 # Crafting material type names for recipe key lookup
@@ -1625,3 +1686,170 @@ const MIRROR_MIMIC_PROJECTILE_SPEED: float = 18.0
 const MIRROR_MIMIC_PROJECTILE_LIFETIME: float = 3.5
 const MIRROR_MIMIC_SPREAD_DEGREES: float = 6.0     # Slight inaccuracy
 const MIRROR_MIMIC_MIMICRY_DAMAGE_MULT: float = 0.7  # Mimic's copy is weaker than original
+
+# ── Phase 23: Void Leviathan (boss) ──────────────────────────────────────────
+# A giant serpentine boss that "swims" through terrain (ignores collision with
+# static world geometry for its body, though its head still collides with the
+# player). Multi-stage fight:
+#   Stage 1 (>66% HP): slow chase + void breath (cone of dark projectiles)
+#   Stage 2 (33-66% HP): faster, summons Void Wisps, tail sweep attack
+#   Stage 3 (<33% HP): enraged — very fast, vacuum pull (sucks player toward
+#     the maw), rapid void breath volleys
+# The leviathan has a segmented body like the Plasma Serpent but much larger,
+# and the segments damage the player on contact (tail swipe). On death the
+# body collapses segment-by-segment with cascading particle bursts.
+const VOID_LEVIATHAN_HP: int = 600
+const VOID_LEVIATHAN_SPEED: float = 2.8
+const VOID_LEVIATHAN_DAMAGE: int = 30
+const VOID_LEVIATHAN_SCALE: float = 3.0
+const VOID_LEVIATHAN_XP: int = 400
+const VOID_LEVIATHAN_SCORE: int = 2500
+const VOID_LEVIATHAN_DETECT_RANGE: float = 45.0
+const VOID_LEVIATHAN_ATTACK_RANGE: float = 3.5
+const VOID_LEVIATHAN_ATTACK_COOLDOWN: float = 2.0
+const VOID_LEVIATHAN_COLOR: Color = Color(0.15, 0.0, 0.35)  # Deep void purple
+const VOID_LEVIATHAN_ENRAGE_COLOR: Color = Color(0.6, 0.0, 0.8)  # Bright void purple
+const VOID_LEVIATHAN_SEGMENTS: int = 6
+const VOID_LEVIATHAN_SEGMENT_SPACING: float = 2.8
+const VOID_LEVIATHAN_STAGE2_THRESHOLD: float = 0.66   # HP fraction
+const VOID_LEVIATHAN_STAGE3_THRESHOLD: float = 0.33   # HP fraction
+const VOID_LEVIATHAN_ENRAGE_SPEED_MULT: float = 1.6
+const VOID_LEVIATHAN_ENRAGE_DAMAGE_MULT: float = 1.3
+const VOID_LEVIATHAN_BREATH_COOLDOWN: float = 4.5
+const VOID_LEVIATHAN_BREATH_DAMAGE: int = 22
+const VOID_LEVIATHAN_BREATH_BOLTS: int = 7
+const VOID_LEVIATHAN_BREATH_CONE_DEGREES: float = 35.0
+const VOID_LEVIATHAN_BREATH_PROJECTILE_SPEED: float = 22.0
+const VOID_LEVIATHAN_TAIL_SWEEP_DAMAGE: int = 25
+const VOID_LEVIATHAN_TAIL_SWEEP_RADIUS: float = 4.5
+const VOID_LEVIATHAN_SUMMON_INTERVAL: float = 8.0  # Seconds between wisp summons (stage 2+)
+const VOID_LEVIATHAN_SUMMON_COUNT: int = 2
+const VOID_LEVIATHAN_VACUUM_COOLDOWN: float = 7.0  # Stage 3 vacuum pull
+const VOID_LEVIATHAN_VACUUM_RADIUS: float = 20.0
+const VOID_LEVIATHAN_VACUUM_FORCE: float = 14.0
+const VOID_LEVIATHAN_VACUUM_DURATION: float = 2.0
+
+# ── Phase 23: Ancient Sentinel (mega-boss) ───────────────────────────────────
+# A colossal mega-boss with multiple attack phases and arena-wide hazards. The
+# Sentinel is stationary (like the Starburst Sentinel) but much larger and with
+# a rotating cycle of attacks:
+#   Phase A (rotating beam): sweeps a death ray around the arena
+#   Phase B (pillar barrage): summons falling crystal pillars across the arena
+#   Phase C (shockwave nova): expanding ring waves that must be jumped/dodged
+#   Phase D (enrage, <25% HP): all attacks at once, faster cycle
+# Very high HP, very high reward. The fight is a multi-minute endurance battle
+# that tests dodging, positioning, and sustained DPS.
+const ANCIENT_SENTINEL_HP: int = 900
+const ANCIENT_SENTINEL_SPEED: float = 0.0  # Stationary
+const ANCIENT_SENTINEL_DAMAGE: int = 35
+const ANCIENT_SENTINEL_SCALE: float = 3.5
+const ANCIENT_SENTINEL_XP: int = 600
+const ANCIENT_SENTINEL_SCORE: int = 4000
+const ANCIENT_SENTINEL_DETECT_RANGE: float = 50.0
+const ANCIENT_SENTINEL_ATTACK_RANGE: float = 50.0  # Arena-wide
+const ANCIENT_SENTINEL_ATTACK_COOLDOWN: float = 1.0
+const ANCIENT_SENTINEL_COLOR: Color = Color(0.8, 0.7, 0.3)  # Ancient gold-brown
+const ANCIENT_SENTINEL_ENRAGE_COLOR: Color = Color(1.0, 0.3, 0.1)
+const ANCIENT_SENTINEL_ENRAGE_HP_THRESHOLD: float = 0.25
+const ANCIENT_SENTINEL_PHASE_DURATION: float = 5.0  # Seconds per attack phase
+const ANCIENT_SENTINEL_BEAM_ROTATE_SPEED: float = 1.2  # rad/s for rotating beam
+const ANCIENT_SENTINEL_BEAM_DAMAGE: int = 30           # Per second of exposure
+const ANCIENT_SENTINEL_BEAM_LENGTH: float = 40.0
+const ANCIENT_SENTINEL_BEAM_WARN_TIME: float = 1.2
+const ANCIENT_SENTINEL_PILLAR_COUNT: int = 8            # Falling pillars per barrage
+const ANCIENT_SENTINEL_PILLAR_DAMAGE: int = 40
+const ANCIENT_SENTINEL_PILLAR_RADIUS: float = 3.5
+const ANCIENT_SENTINEL_PILLAR_WARN_TIME: float = 1.0
+const ANCIENT_SENTINEL_NOVA_COUNT: int = 3              # Sequential nova rings
+const ANCIENT_SENTINEL_NOVA_DAMAGE: int = 35
+const ANCIENT_SENTINEL_NOVA_EXPAND_SPEED: float = 14.0
+const ANCIENT_SENTINEL_NOVA_MAX_RADIUS: float = 30.0
+const ANCIENT_SENTINEL_NOVA_INTERVAL: float = 1.2  # Seconds between rings
+
+# ── Phase 23: Gravity Elemental ─────────────────────────────────────────────
+# An elite enemy that manipulates gravity around itself. Periodically creates a
+# gravity field that repels the player outward and flings nearby loose objects
+# (RigidBody3D fragments, collectibles) at the player as projectiles. Medium-high
+# HP, moderate speed. The counter is to stay at range and burst it down before
+# it can set up its gravity field. The repel field has a telegraph (charging
+# visual) before activating, giving the player time to back away.
+const GRAVITY_ELEMENTAL_HP: int = 160
+const GRAVITY_ELEMENTAL_SPEED: float = 3.2
+const GRAVITY_ELEMENTAL_DAMAGE: int = 20
+const GRAVITY_ELEMENTAL_SCALE: float = 1.6
+const GRAVITY_ELEMENTAL_XP: int = 80
+const GRAVITY_ELEMENTAL_SCORE: int = 280
+const GRAVITY_ELEMENTAL_DETECT_RANGE: float = 32.0
+const GRAVITY_ELEMENTAL_ATTACK_RANGE: float = 2.2
+const GRAVITY_ELEMENTAL_ATTACK_COOLDOWN: float = 1.5
+const GRAVITY_ELEMENTAL_COLOR: Color = Color(0.3, 0.5, 0.9)  # Gravitic blue
+const GRAVITY_ELEMENTAL_FIELD_COLOR: Color = Color(0.3, 0.5, 0.9, 0.18)
+const GRAVITY_ELEMENTAL_FIELD_RADIUS: float = 9.0
+const GRAVITY_ELEMENTAL_REPEL_FORCE: float = 22.0
+const GRAVITY_ELEMENTAL_FIELD_DURATION: float = 1.5
+const GRAVITY_ELEMENTAL_FIELD_COOLDOWN: float = 6.0
+const GRAVITY_ELEMENTAL_FIELD_WARN_TIME: float = 0.8  # Telegraph before repel
+const GRAVITY_ELEMENTAL_FIELD_TICK_INTERVAL: float = 0.1  # How often to apply repel force
+const GRAVITY_ELEMENTAL_PROJECTILE_DAMAGE: int = 14
+const GRAVITY_ELEMENTAL_PROJECTILE_SPEED: float = 16.0
+const GRAVITY_ELEMENTAL_MAX_FLUNG_OBJECTS: int = 6  # Max objects to fling per field activation
+
+# ── Phase 24: New Weapon Mod Tuning ──────────────────────────────────────────
+# Black Hole Launcher — a portable singularity that travels forward then
+# collapses. The bolt itself pulls enemies in as it flies (stronger than Black
+# Hole Beam), then on impact (or max lifetime) it collapses for massive AoE.
+const BLACK_HOLE_LAUNCHER_PULL_RADIUS: float = 14.0
+const BLACK_HOLE_LAUNCHER_PULL_FORCE: float = 24.0
+const BLACK_HOLE_LAUNCHER_COLLAPSE_RADIUS: float = 12.0
+const BLACK_HOLE_LAUNCHER_COLLAPSE_MULT: float = 2.0  # × base damage on collapse
+const BLACK_HOLE_LAUNCHER_LIFETIME: float = 1.8  # Auto-collapse after this
+
+# Time Freeze Ray — freezes a single enemy in place for 3 seconds. While frozen
+# the enemy can't move, attack, or take damage from other sources (it's locked
+# outside time). The freeze is broken early if the player damages the frozen
+# enemy with the Time Freeze Ray again (refresh) or another weapon (shatters
+# the freeze for bonus damage). Single-target utility — great for locking down
+# a dangerous elite while you deal with its friends.
+const TIME_FREEZE_RAY_DURATION: float = 3.0
+const TIME_FREEZE_RAY_SHATTER_BONUS_MULT: float = 1.5  # Bonus damage if a non-freeze hit breaks the freeze
+
+# Shrink Beam — shrinks an enemy for 5 seconds. While shrunk the enemy moves at
+# 0.4× speed, deals 0.5× damage, and has 0.6× HP (the lost HP is restored when
+# the effect ends, capped at max). The shrink visual is a dramatic scale-down
+# with a green aura. Multiple shrinks don't stack (refresh duration instead).
+const SHRINK_BEAM_DURATION: float = 5.0
+const SHRINK_BEAM_SPEED_MULT: float = 0.4
+const SHRINK_BEAM_DAMAGE_MULT: float = 0.5
+const SHRINK_BEAM_HP_MULT: float = 0.6
+const SHRINK_BEAM_SCALE_MULT: float = 0.35
+
+# Meteor Strike — calls down a meteor at the bolt's impact point. The bolt
+# itself is just a marker (low damage); the meteor falls from the sky after a
+# short delay, dealing massive AoE damage on impact. The meteor is visible
+# during its fall (telegraph), and the impact creates a large explosion + crater
+# glow + camera shake. Biome-agnostic — works anywhere.
+const METEOR_STRIKE_FALL_HEIGHT: float = 50.0
+const METEOR_STRIKE_FALL_TIME: float = 0.9  # Seconds from spawn to impact
+const METEOR_STRIKE_RADIUS: float = 9.0
+const METEOR_STRIKE_BOLT_DAMAGE: int = 10  # The marker bolt itself (small)
+const METEOR_STRIKE_IMPACT_MULT: float = 3.5  # × base damage on impact
+
+# Lightning Storm — on hit, chains lightning to ALL nearby enemies (up to a cap)
+# with damage falloff per jump. The chain is visualized with electric arc
+# particles between each hit enemy. Unlike Chain Lightning (3 targets), the
+# storm hits up to 8 enemies but each jump does less damage.
+const LIGHTNING_STORM_MAX_TARGETS: int = 8
+const LIGHTNING_STORM_CHAIN_RANGE: float = 10.0
+const LIGHTNING_STORM_FALLOFF_PER_JUMP: float = 0.12  # Each jump loses 12% damage
+
+# Poison Nova — on impact, expands a ring of poison that damages all enemies it
+# touches. Leaves a lingering poison cloud at the impact point for DoT. The ring
+# expands faster than a shockwave but deals less instant damage — the DoT is the
+# main threat. Great against groups.
+const POISON_NOVA_RADIUS: float = 12.0
+const POISON_NOVA_EXPAND_SPEED: float = 18.0
+const POISON_NOVA_RING_DAMAGE: int = 20  # Instant damage from the ring
+const POISON_NOVA_CLOUD_RADIUS: float = 5.0
+const POISON_NOVA_CLOUD_DURATION: float = 4.0
+const POISON_NOVA_CLOUD_DAMAGE_PER_TICK: int = 8
+const POISON_NOVA_CLOUD_TICK_INTERVAL: float = 0.6

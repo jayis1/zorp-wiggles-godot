@@ -13,6 +13,7 @@ var max_lifetime: float = GameConstants.DMG_NUMBER_LIFETIME
 var popin_timer: float = GameConstants.DMG_NUMBER_POPIN_DURATION
 var is_crit: bool = false
 var is_kill: bool = false
+var is_boss: bool = false  # Boss kill — gets a distinct "BOSS SLAIN!" popup
 
 var _base_scale: float = 1.0
 var _drift_x: float = 0.0
@@ -65,14 +66,17 @@ func _process(delta: float) -> void:
 	# rather than a slow sway. Normal (non-crit) hits skip this entirely to
 	# preserve visual hierarchy — only big hits vibrate.
 	if (is_crit or is_kill) and popin_timer <= 0.0:
+		# Boss kills get a stronger, longer jitter for extra impact.
+		var jitter_scale: float = 1.7 if is_boss else 1.0
+		var jitter_window: float = 0.6 if is_boss else 0.4
 		# Time since pop-in finished, clamped to the jitter envelope window.
 		var since_popin: float = clampf(
 			(max_lifetime - lifetime) - GameConstants.DMG_NUMBER_POPIN_DURATION,
-			0.0, 0.4)
-		if since_popin < 0.4:
-			var env: float = 1.0 - (since_popin / 0.4)  # 1 → 0 linear decay
+			0.0, jitter_window)
+		if since_popin < jitter_window:
+			var env: float = 1.0 - (since_popin / jitter_window)  # 1 → 0 linear decay
 			var env_eased: float = env * env  # quadratic so it starts strong
-			var jitter_amp: float = 0.18 * env_eased  # Max ~18cm sideways
+			var jitter_amp: float = 0.18 * env_eased * jitter_scale  # Max ~18cm sideways
 			# Incoherent X/Z frequencies so the wobble isn't a clean circle
 			var wob_x: float = sin(since_popin * 28.0) * jitter_amp
 			var wob_z: float = sin(since_popin * 31.0 + 1.7) * jitter_amp * 0.6
@@ -115,15 +119,28 @@ func _update_popin() -> void:
 	scale = Vector3.ONE * current_scale * _base_scale
 
 ## Configure the damage number's appearance based on type and amount.
-func configure(amount: int, crit: bool, kill: bool) -> void:
+## Boss kills get a dramatic magenta "BOSS SLAIN!" popup that's larger and
+## lives longer than a normal kill, so downing a major foe feels like an event.
+func configure(amount: int, crit: bool, kill: bool, boss: bool = false) -> void:
 	is_crit = crit
 	is_kill = kill
+	is_boss = boss
 
 	var text_str: String
 	var color: Color
 	var scale_factor: float = GameConstants.DMG_NUMBER_BASE_SCALE
 
-	if kill:
+	if boss:
+		# Boss kills are the climax — magenta/gold, big, and longer-lived so
+		# the player has time to register the milestone during the hit-stop.
+		text_str = "☠ %d BOSS SLAIN!" % amount
+		color = Color(1.0, 0.2, 0.8)  # Magenta — distinct from gold crits & yellow kills
+		scale_factor = GameConstants.DMG_NUMBER_KILL_SCALE * 1.4
+		# Boss popups live ~2x longer so they're still on-screen when the
+		# hit-stop ends and the death spectacle begins.
+		lifetime = max_lifetime * 2.0
+		max_lifetime = lifetime
+	elif kill:
 		text_str = "%d KILL!" % amount
 		color = GameConstants.DMG_NUMBER_KILL_COLOR
 		scale_factor = GameConstants.DMG_NUMBER_KILL_SCALE
@@ -156,11 +173,11 @@ func configure_heal(amount: int) -> void:
 	modulate = GameConstants.DMG_NUMBER_HEAL_COLOR
 
 ## Static factory: create and spawn a damage number in the world.
-static func spawn(parent: Node, pos: Vector3, amount: int, is_crit: bool = false, is_kill: bool = false) -> void:
+static func spawn(parent: Node, pos: Vector3, amount: int, is_crit: bool = false, is_kill: bool = false, is_boss: bool = false) -> void:
 	var dn := DamageNumber.new()
 	parent.add_child(dn)
 	# Add jitter so overlapping numbers spread out
 	var jitter_x := randf_range(-GameConstants.DMG_NUMBER_JITTER_X, GameConstants.DMG_NUMBER_JITTER_X)
 	var jitter_z := randf_range(-GameConstants.DMG_NUMBER_JITTER_Z, GameConstants.DMG_NUMBER_JITTER_Z)
 	dn.global_position = pos + Vector3(jitter_x, 2.0, jitter_z)
-	dn.configure(amount, is_crit, is_kill)
+	dn.configure(amount, is_crit, is_kill, is_boss)

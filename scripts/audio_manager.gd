@@ -125,6 +125,11 @@ func _connect_signals() -> void:
 # ─── Public API ───────────────────────────────────────────────────────────────
 
 ## Play a one-shot sound effect by name. Safe to call if the name doesn't exist.
+## Combat SFX (shoot, enemy_hit, dash_bump) get subtle random pitch variation
+## (±6%) so rapid-fire combat doesn't feel monotonous — a standard game-audio
+## juice technique. Non-combat SFX (UI, level-up arpeggios) play at unity pitch
+## so melodies stay in tune. The variation is tiny enough that rapid shots
+## still read as the same weapon, just with natural micro-detuning.
 func play_sfx(sfx_name: String) -> void:
 	if not _initialized:
 		return
@@ -133,7 +138,22 @@ func play_sfx(sfx_name: String) -> void:
 	var player = _next_sfx_player()
 	player.stream = _sfx_streams[sfx_name]
 	player.volume_db = linear_to_db(sfx_volume * master_volume)
+	# Pitch variation for combat sounds — keeps rapid fire from sounding robotic
+	if sfx_name in _PITCH_VARIATION_SFX:
+		player.pitch_scale = 1.0 + randf_range(-_PITCH_VARIATION_AMOUNT, _PITCH_VARIATION_AMOUNT)
+	else:
+		player.pitch_scale = 1.0
 	player.play()
+
+# SFX that get subtle random pitch variation. These are short, percussive
+# combat sounds where micro-detuning reads as natural variation rather than
+# a tuning error. Melodic SFX (arpeggios, chimes) are excluded so their
+# musical intervals stay clean.
+const _PITCH_VARIATION_SFX: Array[String] = [
+	SFX_SHOOT, SFX_ENEMY_HIT, SFX_DASH_BUMP, SFX_DASH, SFX_ENEMY_DEATH,
+	SFX_EXPLOSION, SFX_PULSE_WAVE, SFX_DAMAGE,
+]
+const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
 
 ## Play looping biome ambient music.

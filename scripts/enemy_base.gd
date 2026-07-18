@@ -657,6 +657,8 @@ func _spawn_physics_corpse() -> void:
 
 	# Add to scene
 	parent_node.add_child(corpse)
+	# ── Phase 23: Tag the corpse so the Gravity Elemental can find and fling it ──
+	corpse.add_to_group("physics_corpse")
 
 	# Initial impulse — use current velocity + knockback for direction
 	var impulse_dir: Vector3 = velocity.normalized() if velocity.length_squared() > 0.01 else Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).normalized()

@@ -51,6 +51,7 @@ const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.PLASMA_STALKER,    # Phase 23: Plasma Stalker also in hard
 	GameConstants.EnemyType.TIME_WARDEN,       # Phase 23: Time Warden in hard tier
 	GameConstants.EnemyType.MIRROR_MIMIC,      # Phase 23: Mirror Mimic also in hard
+	GameConstants.EnemyType.GRAVITY_ELEMENTAL, # Phase 23: Gravity Elemental in hard tier
 ]
 
 # Enemy scene paths by type
@@ -76,6 +77,10 @@ const ENEMY_SCENES: Dictionary = {
 	GameConstants.EnemyType.PLASMA_STALKER: "res://scenes/entities/enemy_plasma_stalker.tscn",
 	GameConstants.EnemyType.TIME_WARDEN: "res://scenes/entities/enemy_time_warden.tscn",
 	GameConstants.EnemyType.MIRROR_MIMIC: "res://scenes/entities/enemy_mirror_mimic.tscn",
+	# Phase 23: New enemy types (batch 3 — bosses & elites)
+	GameConstants.EnemyType.VOID_LEVIATHAN: "res://scenes/entities/enemy_void_leviathan.tscn",
+	GameConstants.EnemyType.ANCIENT_SENTINEL: "res://scenes/entities/enemy_ancient_sentinel.tscn",
+	GameConstants.EnemyType.GRAVITY_ELEMENTAL: "res://scenes/entities/enemy_gravity_elemental.tscn",
 }
 
 # Enemy type enum → name string (for looking up type data from EnemyTypeData)
@@ -101,6 +106,10 @@ const ENEMY_TYPE_NAMES: Dictionary = {
 	GameConstants.EnemyType.PLASMA_STALKER: "Plasma Stalker",
 	GameConstants.EnemyType.TIME_WARDEN: "Time Warden",
 	GameConstants.EnemyType.MIRROR_MIMIC: "Mirror Mimic",
+	# Phase 23: New enemy types (batch 3 — bosses & elites)
+	GameConstants.EnemyType.VOID_LEVIATHAN: "Void Leviathan",
+	GameConstants.EnemyType.ANCIENT_SENTINEL: "Ancient Sentinel",
+	GameConstants.EnemyType.GRAVITY_ELEMENTAL: "Gravity Elemental",
 }
 
 func _ready() -> void:

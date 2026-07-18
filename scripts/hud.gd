@@ -270,14 +270,18 @@ func _process(delta: float) -> void:
 					level_up_text.scale = Vector2.ONE
 				)
 	
-	# Combo milestone flash decay
+	# Combo milestone flash decay — ease-out cubic so the flash punches in
+	# and fades smoothly rather than linearly draining. Linear decay reads
+	# as mechanical (a constant brightness slope); ease-out gives a sharp
+	# pop that decelerates into nothing, matching the combo "thwack" feel.
 	if _combo_flash_timer > 0:
 		_combo_flash_timer -= delta
 		var flash_progress: float = _combo_flash_timer / GameConstants.COMBO_MILESTONE_FLASH_DURATION
 		flash_progress = clampf(flash_progress, 0.0, 1.0)
+		# Ease-out cubic: 1-(1-t)^3 — sharp onset, gentle tail
+		var eased: float = 1.0 - pow(1.0 - flash_progress, 3.0)
 		if _combo_flash_rect:
-			# Fade out the flash
-			var alpha: float = flash_progress * (40.0 / 255.0)  # Max alpha = 40/255 (subtle)
+			var alpha: float = eased * (40.0 / 255.0)  # Max alpha = 40/255 (subtle)
 			var c: Color = _combo_flash_rect.color
 			c.a = alpha
 			_combo_flash_rect.color = c

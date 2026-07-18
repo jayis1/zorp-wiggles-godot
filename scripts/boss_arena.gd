@@ -148,6 +148,11 @@ func _on_boss_spawned(boss: Node) -> void:
 		_arena_type = GameConstants.ArenaType.CRYSTAL_ARENA
 	elif boss.has_method("get") and boss.get("enemy_type") == GameConstants.EnemyType.GRAVITON:
 		_arena_type = GameConstants.ArenaType.VOID_ARENA
+	# Phase 23: New bosses — use thematic arena types
+	elif boss.has_method("get") and boss.get("enemy_type") == GameConstants.EnemyType.VOID_LEVIATHAN:
+		_arena_type = GameConstants.ArenaType.VOID_ARENA
+	elif boss.has_method("get") and boss.get("enemy_type") == GameConstants.EnemyType.ANCIENT_SENTINEL:
+		_arena_type = GameConstants.ArenaType.CRYSTAL_ARENA
 	else:
 		# Default to lava arena for any boss
 		_arena_type = GameConstants.ArenaType.LAVA_ARENA
@@ -485,6 +490,9 @@ func _spawn_arena_boss() -> void:
 		GameConstants.EnemyType.DRAKE,
 		GameConstants.EnemyType.SERPENT,
 		GameConstants.EnemyType.GRAVITON,
+		# Phase 23: New bosses in the arena rotation
+		GameConstants.EnemyType.VOID_LEVIATHAN,
+		GameConstants.EnemyType.ANCIENT_SENTINEL,
 	]
 	var boss_type: int = boss_types[randi() % boss_types.size()]
 
@@ -497,6 +505,11 @@ func _spawn_arena_boss() -> void:
 			scene_path = "res://scenes/entities/enemy_serpent.tscn"
 		GameConstants.EnemyType.GRAVITON:
 			scene_path = "res://scenes/entities/enemy_graviton.tscn"
+		# Phase 23: New boss scenes
+		GameConstants.EnemyType.VOID_LEVIATHAN:
+			scene_path = "res://scenes/entities/enemy_void_leviathan.tscn"
+		GameConstants.EnemyType.ANCIENT_SENTINEL:
+			scene_path = "res://scenes/entities/enemy_ancient_sentinel.tscn"
 		_:
 			scene_path = "res://scenes/entities/enemy_drake.tscn"
 
@@ -522,7 +535,11 @@ func _spawn_arena_boss() -> void:
 		boss.max_hp = new_hp
 		boss.hp = new_hp
 		# Make non-Drake bosses emit boss signals (Drake does this in _ready)
-		if boss_type != GameConstants.EnemyType.DRAKE:
+		# Phase 23: Void Leviathan and Ancient Sentinel emit their own boss signals
+		# in _ready (like the Drake), so we only mark the older non-Drake bosses.
+		var is_new_boss: bool = boss_type == GameConstants.EnemyType.VOID_LEVIATHAN or \
+			boss_type == GameConstants.EnemyType.ANCIENT_SENTINEL
+		if boss_type != GameConstants.EnemyType.DRAKE and not is_new_boss:
 			# Boost HP to boss-tier if not already
 			if new_hp < 200:
 				boss.max_hp = 250 + GameManager.player_level * 20

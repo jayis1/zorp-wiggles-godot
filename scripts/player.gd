@@ -840,6 +840,10 @@ func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Col
 	proj.set("direction", shoot_dir)
 	proj.set("damage", dmg)
 	proj.set("speed", spd)
+	# Phase 24: Black Hole Launcher has a shorter lifetime so it auto-collapses
+	# at the configured distance (the bolt travels forward then collapses).
+	if mod_id == GameConstants.WeaponMod.BLACK_HOLE_LAUNCHER:
+		proj.set("lifetime", GameConstants.BLACK_HOLE_LAUNCHER_LIFETIME)
 	if proj.has_method("set_weapon_mod"):
 		proj.set_weapon_mod(mod_id, col)
 	get_parent().add_child(proj)

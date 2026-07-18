@@ -140,6 +140,22 @@ static var TYPES: Dictionary = {
 		"hp": 85,   "speed": 3.4,  "damage": 12,  "scale": 1.2,
 		"model": "sphere",  "decor": "shards",  "detect": 30,
 	},
+	# ── Phase 23: New enemy types (batch 3 — bosses & elites) ──
+	"Void Leviathan": {
+		"color": Color(0.15, 0.0, 0.35),         # Deep void purple
+		"hp": 600,  "speed": 2.8,  "damage": 30,  "scale": 3.0,
+		"model": "diamond", "decor": "aura",    "detect": 45,
+	},
+	"Ancient Sentinel": {
+		"color": Color(0.8, 0.7, 0.3),           # Ancient gold-brown
+		"hp": 900,  "speed": 0.0,  "damage": 35,  "scale": 3.5,
+		"model": "diamond", "decor": "shards",  "detect": 50,
+	},
+	"Gravity Elemental": {
+		"color": Color(0.3, 0.5, 0.9),           # Gravitic blue
+		"hp": 160,  "speed": 3.2,  "damage": 20,  "scale": 1.6,
+		"model": "sphere",  "decor": "aura",    "detect": 32,
+	},
 }
 
 static var EASY_TYPES: Array[String] = ["Slime Blob", "Space Beetle", "Swarm Mite", "Void Wisp"]
@@ -176,6 +192,10 @@ static var LOOT_DROPS: Dictionary = {
 	"Plasma Stalker":      [2, 3],
 	"Time Warden":         [3, 5],
 	"Mirror Mimic":        [2, 4],
+	# ── Phase 23: New enemy types (batch 3 — bosses & elites) ──
+	"Void Leviathan":      [6, 10],   # Boss — large loot
+	"Ancient Sentinel":    [8, 12],   # Mega-boss — very large loot
+	"Gravity Elemental":   [3, 5],
 }
 
 static func get_type(name: String) -> Dictionary:

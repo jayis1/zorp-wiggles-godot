@@ -45,10 +45,17 @@ var _mod_material: StandardMaterial3D = null  # Per-projectile material for mod 
 # a classic "juice" technique. We use a static cooldown so multiple crits in
 # the same frame don't stack into a long freeze. The freeze is short (45ms)
 # so gameplay isn't disrupted, only punctuated.
+#
+# Boss kills get a longer, deeper freeze (90ms at 0.04x) so slaying a major
+# foe feels like a cinematic moment rather than just another enemy pop. The
+# cooldown is skipped for boss kills so the freeze always lands on the kill
+# blow even during rapid fire.
 static var _hitstop_cooldown: float = 0.0
-const HITSTOP_DURATION: float = 0.045   # Seconds the world freezes
-const HITSTOP_TIME_SCALE: float = 0.08  # Target time scale during freeze
+const HITSTOP_DURATION: float = 0.045   # Seconds the world freezes (normal)
+const HITSTOP_TIME_SCALE: float = 0.08  # Target time scale during freeze (normal)
 const HITSTOP_COOLDOWN: float = 0.12    # Min seconds between freeze triggers
+const HITSTOP_BOSS_DURATION: float = 0.09   # Boss kill freeze (90ms — weighty)
+const HITSTOP_BOSS_TIME_SCALE: float = 0.04 # Boss kill freeze (near-stop)
 
 # ─── Shared Resources ──────────────────────────────────────────────────────────
 # Projectiles are spawned at ~9/sec during combat. Creating a new
@@ -173,6 +180,18 @@ func _physics_process(delta: float) -> void:
 	# Lifetime countdown
 	lifetime -= delta
 	if lifetime <= 0:
+		# Phase 24: Black Hole Launcher auto-collapses on lifetime expiry (if not already consumed)
+		if not _is_consumed and _weapon_mod == GameConstants.WeaponMod.BLACK_HOLE_LAUNCHER:
+			_spawn_black_hole_launcher_collapse(damage)
+			_is_consumed = true
+		# Phase 24: Meteor Strike calls the meteor on lifetime expiry (if not already consumed)
+		elif not _is_consumed and _weapon_mod == GameConstants.WeaponMod.METEOR_STRIKE:
+			_call_meteor_strike(damage)
+			_is_consumed = true
+		# Phase 24: Poison Nova triggers on lifetime expiry (if not already consumed)
+		elif not _is_consumed and _weapon_mod == GameConstants.WeaponMod.POISON_NOVA:
+			_spawn_poison_nova(damage)
+			_is_consumed = true
 		queue_free()
 
 ## Hit-stop: briefly dip `Engine.time_scale` to make heavy hits feel weighty.
@@ -191,16 +210,21 @@ func _physics_process(delta: float) -> void:
 ## delivering a punchy 45ms freeze. Passing `ignore_time_scale=true` makes the
 ## timer count real-time seconds regardless of the current time scale, so
 ## the freeze restores exactly when intended.
-func _trigger_hitstop() -> void:
-	if _hitstop_cooldown > 0.0:
+func _trigger_hitstop(is_boss_kill: bool = false) -> void:
+	# Boss kills bypass the cooldown so the freeze always lands on the kill
+	# blow, even during rapid fire. Normal crits/hits respect the cooldown to
+	# avoid stacking into a long stutter.
+	if not is_boss_kill and _hitstop_cooldown > 0.0:
 		return
 	_hitstop_cooldown = HITSTOP_COOLDOWN
-	Engine.time_scale = HITSTOP_TIME_SCALE
+	var freeze_duration: float = HITSTOP_BOSS_DURATION if is_boss_kill else HITSTOP_DURATION
+	var freeze_scale: float = HITSTOP_BOSS_TIME_SCALE if is_boss_kill else HITSTOP_TIME_SCALE
+	Engine.time_scale = freeze_scale
 	# Schedule restore on the scene tree — survives self queue_free().
 	# `ignore_time_scale=true` is critical: without it the restore timer
-	# ticks at 8% speed (the freeze time scale), so the "brief" freeze
-	# would last over half a second — far too long.
-	var timer := get_tree().create_timer(HITSTOP_DURATION, true, false, true)
+	# ticks at the freeze speed, so the "brief" freeze would last many
+	# times longer than intended (e.g. 0.09s / 0.04 = 2.25s for a boss kill).
+	var timer := get_tree().create_timer(freeze_duration, true, false, true)
 	timer.timeout.connect(func():
 		Engine.time_scale = 1.0
 	)
@@ -250,6 +274,20 @@ func _apply_mod_flight_behavior(delta: float) -> void:
 				# Strong homing — mines are designed to seek targets
 				var new_dir: Vector3 = current_dir.lerp(to_target, 12.0 * delta).normalized()
 				direction = new_dir
+		# Phase 24: Black Hole Launcher — extra-strong pull in flight + auto-collapse
+		GameConstants.WeaponMod.BLACK_HOLE_LAUNCHER:
+			# Pull enemies toward the bolt with a large radius (stronger than Black Hole Beam)
+			var bh_pull_radius: float = GameConstants.BLACK_HOLE_LAUNCHER_PULL_RADIUS
+			for enemy in GameManager.enemies:
+				if not is_instance_valid(enemy):
+					continue
+				if not enemy.is_in_group("enemies"):
+					continue
+				var d: float = global_position.distance_to(enemy.global_position)
+				if d < bh_pull_radius and d > 0.5:
+					var pull_dir: Vector3 = (global_position - enemy.global_position).normalized()
+					var pull_strength: float = GameConstants.BLACK_HOLE_LAUNCHER_PULL_FORCE * (1.0 - d / bh_pull_radius)
+					enemy.global_position += pull_dir * pull_strength * delta
 
 ## Cached homing target lookup. Re-picks the nearest enemy every
 ## HOMING_REPATH_INTERVAL seconds, or immediately if the cached target is
@@ -389,6 +427,15 @@ func _on_body_entered(body: Node3D) -> void:
 		if _weapon_mod == GameConstants.WeaponMod.BOUNCING_BOLT and _bounce_count < _max_bounces:
 			_bounce_off_wall(body)
 			return
+		# Phase 24: Meteor Strike — terrain hit triggers the meteor at the impact point
+		if _weapon_mod == GameConstants.WeaponMod.METEOR_STRIKE:
+			_call_meteor_strike(damage)
+		# Phase 24: Poison Nova — terrain hit triggers the nova at the impact point
+		elif _weapon_mod == GameConstants.WeaponMod.POISON_NOVA:
+			_spawn_poison_nova(damage)
+		# Phase 24: Black Hole Launcher — terrain hit triggers the collapse
+		elif _weapon_mod == GameConstants.WeaponMod.BLACK_HOLE_LAUNCHER:
+			_spawn_black_hole_launcher_collapse(damage)
 		_impact_effect()
 		_is_consumed = true
 		queue_free()
@@ -432,6 +479,11 @@ func _bounce_off_wall(_body: Node3D) -> void:
 func _hit_enemy(enemy: Node3D) -> void:
 	# damage already includes level bonus and mod multiplier (set by player.gd on spawn)
 	var total_damage := damage
+	# Phase 24: Meteor Strike — the bolt is just a marker; the meteor is the
+	# main damage. Reduce the bolt's direct hit damage so the bulk comes from
+	# the meteor impact (called later in this function).
+	if _weapon_mod == GameConstants.WeaponMod.METEOR_STRIKE:
+		total_damage = GameConstants.METEOR_STRIKE_BOLT_DAMAGE
 
 	# Crit check
 	var crit_chance := GameConstants.CRIT_BASE_CHANCE
@@ -449,12 +501,18 @@ func _hit_enemy(enemy: Node3D) -> void:
 
 	# Check if this will be a kill before applying damage
 	var will_kill: bool = false
+	var is_boss_kill: bool = false
 	if enemy.has_method("take_damage_from") or enemy.has_method("take_damage"):
 		if "hp" in enemy and "max_hp" in enemy:
 			will_kill = total_damage >= enemy.hp
 		# ── Hit-stop on kill blows: even heftier freeze for the killing hit ──
+		# Boss kills (high max_hp or large base_scale) get the longer, deeper
+		# freeze so the moment reads as a cinematic beat, not just another pop.
 		if will_kill:
-			_trigger_hitstop()
+			var enemy_max_hp: int = int(enemy.get("max_hp")) if "max_hp" in enemy else 0
+			var enemy_base_scale: float = float(enemy.get("base_scale")) if "base_scale" in enemy else 1.0
+			is_boss_kill = enemy_max_hp >= 200 or enemy_base_scale >= 2.0
+			_trigger_hitstop(is_boss_kill)
 		# ── Phase 19: Co-op — mark enemy as hit by P2 if this is a P2 projectile ──
 		if has_meta("is_p2_projectile") and enemy.has_method("set_p2_hit"):
 			enemy.set_p2_hit()
@@ -469,8 +527,8 @@ func _hit_enemy(enemy: Node3D) -> void:
 		else:
 			enemy.take_damage(total_damage)
 
-	# Damage number popup
-	DamageNumber.spawn(get_parent(), global_position, total_damage, is_crit, will_kill)
+	# Damage number popup — boss kills get a distinct "BOSS SLAIN!" variant
+	DamageNumber.spawn(get_parent(), global_position, total_damage, is_crit, will_kill, is_boss_kill)
 
 	# ── Phase 16: Weapon mod on-hit effects ──
 	_apply_mod_on_hit(enemy, total_damage)
@@ -523,6 +581,17 @@ func _hit_enemy(enemy: Node3D) -> void:
 	# Enhancement: Magnet Mine — big AoE detonation on impact, pulls enemies in first
 	elif _weapon_mod == GameConstants.WeaponMod.MAGNET_MINE:
 		_spawn_magnet_mine_detonation(total_damage)
+	# Phase 24: Black Hole Launcher — portable singularity collapse (bigger than Black Hole Beam)
+	elif _weapon_mod == GameConstants.WeaponMod.BLACK_HOLE_LAUNCHER:
+		_spawn_black_hole_launcher_collapse(total_damage)
+	# Phase 24: Meteor Strike — call down a meteor at the impact point
+	# Pass the original projectile damage (not the reduced bolt damage) so the
+	# meteor's impact scales with the full mod damage.
+	elif _weapon_mod == GameConstants.WeaponMod.METEOR_STRIKE:
+		_call_meteor_strike(damage)
+	# Phase 24: Poison Nova — expanding ring of poison + lingering cloud
+	elif _weapon_mod == GameConstants.WeaponMod.POISON_NOVA:
+		_spawn_poison_nova(total_damage)
 
 	# Impact effect
 	_impact_effect()
@@ -554,6 +623,15 @@ func _apply_mod_on_hit(enemy: Node3D, dmg: int) -> void:
 		GameConstants.WeaponMod.REFLECTIVE_SHIELD:
 			# Defensive: no special on-hit, but the mod reduces incoming damage
 			pass
+		# Phase 24: Time Freeze Ray — freeze the enemy in time
+		GameConstants.WeaponMod.TIME_FREEZE_RAY:
+			_freeze_enemy_time(enemy)
+		# Phase 24: Shrink Beam — shrink the enemy
+		GameConstants.WeaponMod.SHRINK_BEAM:
+			_shrink_enemy(enemy)
+		# Phase 24: Lightning Storm — chain to many nearby enemies
+		GameConstants.WeaponMod.LIGHTNING_STORM:
+			_lightning_storm(enemy, dmg)
 
 ## Phase 16: Chain lightning — hit jumps to nearby enemies.
 func _chain_lightning(source_enemy: Node3D, dmg: int) -> void:
@@ -993,3 +1071,488 @@ func _spawn_magnet_mine_detonation(base_dmg: int) -> void:
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	tick_tween.tween_property(mine_mat, "albedo_color:a", 0.0, 0.2)
 	tick_tween.tween_callback(mine_node.queue_free)
+
+# ── Phase 24: New Weapon Mod Behaviors ───────────────────────────────────────
+
+## Phase 24: Black Hole Launcher — spawn a portable singularity that collapses
+## for massive AoE damage. Larger pull radius and bigger collapse than the Black
+## Hole Beam. The singularity grows during a brief pull phase, then detonates.
+func _spawn_black_hole_launcher_collapse(base_dmg: int) -> void:
+	var parent: Node = get_parent()
+	if not parent:
+		return
+	var singularity := Area3D.new()
+	var s_shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 1.5
+	s_shape.shape = sphere
+	singularity.add_child(s_shape)
+	parent.add_child(singularity)
+	singularity.global_position = global_position
+
+	# Visual: dark swirling sphere with purple emission (larger than Black Hole Beam)
+	var bh_mesh := MeshInstance3D.new()
+	var bh_sphere := SphereMesh.new()
+	bh_sphere.radius = 2.0
+	bh_sphere.height = 4.0
+	bh_sphere.radial_segments = 18
+	bh_sphere.rings = 9
+	bh_mesh.mesh = bh_sphere
+	var bh_mat := StandardMaterial3D.new()
+	bh_mat.albedo_color = Color(0.05, 0.0, 0.15, 0.8)
+	bh_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	bh_mat.emission_enabled = true
+	bh_mat.emission = Color(0.4, 0.0, 0.6)
+	bh_mat.emission_energy_multiplier = 2.5
+	bh_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	bh_mesh.material_override = bh_mat
+	singularity.add_child(bh_mesh)
+
+	# Dark light — absorbs surrounding light
+	var bh_light := OmniLight3D.new()
+	bh_light.light_color = Color(0.2, 0.0, 0.4)
+	bh_light.light_energy = -3.0
+	bh_light.omni_range = 12.0
+	singularity.add_child(bh_light)
+
+	# Pull phase: 0.8s of pulling enemies toward the center
+	var pull_duration: float = 0.8
+	var pull_radius: float = GameConstants.BLACK_HOLE_LAUNCHER_COLLAPSE_RADIUS
+	var pull_tween := singularity.create_tween()
+	pull_tween.tween_property(bh_mesh, "scale", Vector3(1.8, 1.8, 1.8), pull_duration) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	pull_tween.parallel().tween_property(bh_light, "light_energy", -6.0, pull_duration)
+
+	# Tick pull damage every 0.15s during the pull phase
+	var ticks: int = int(pull_duration / 0.15)
+	var tick_tween := singularity.create_tween()
+	for _i in range(ticks):
+		tick_tween.tween_callback(func():
+			if not is_instance_valid(singularity):
+				return
+			for enemy in GameManager.enemies:
+				if not is_instance_valid(enemy):
+					continue
+				if not enemy.is_in_group("enemies"):
+					continue
+				var d: float = singularity.global_position.distance_to(enemy.global_position)
+				if d < pull_radius and d > 0.5:
+					var pull_dir: Vector3 = (singularity.global_position - enemy.global_position).normalized()
+					enemy.global_position += pull_dir * 12.0 * 0.15
+					if enemy.has_method("take_damage"):
+						enemy.take_damage(max(1, int(base_dmg * 0.08)))
+		)
+		tick_tween.tween_interval(0.15)
+
+	# Collapse phase: detonate for massive AoE damage
+	tick_tween.tween_callback(func():
+		if not is_instance_valid(singularity):
+			return
+		var collapse_dmg: int = int(base_dmg * GameConstants.BLACK_HOLE_LAUNCHER_COLLAPSE_MULT)
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if not enemy.is_in_group("enemies"):
+				continue
+			var d: float = singularity.global_position.distance_to(enemy.global_position)
+			if d < pull_radius:
+				var falloff: float = 1.0 - (d / pull_radius) * 0.4
+				var collapse_hit: int = int(collapse_dmg * falloff)
+				if enemy.has_method("take_damage_from"):
+					enemy.take_damage_from(collapse_hit, singularity.global_position)
+				elif enemy.has_method("take_damage"):
+					enemy.take_damage(collapse_hit)
+		# Massive collapse visual
+		ParticleEffects.spawn_mega_explosion(singularity.get_parent(),
+			singularity.global_position, Color(0.4, 0.0, 0.6))
+		# Collapse light flash
+		var flash := OmniLight3D.new()
+		flash.light_color = Color(0.6, 0.1, 0.9)
+		flash.light_energy = 10.0
+		flash.omni_range = 16.0
+		singularity.get_parent().add_child(flash)
+		flash.global_position = singularity.global_position
+		var flash_tw := flash.create_tween()
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.5)
+		flash_tw.tween_callback(flash.queue_free)
+		# Camera shake on collapse
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.5)
+	)
+	# Shrink and fade the singularity after collapse
+	tick_tween.tween_property(bh_mesh, "scale", Vector3.ZERO, 0.25) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	tick_tween.tween_property(bh_mat, "albedo_color:a", 0.0, 0.25)
+	tick_tween.tween_callback(singularity.queue_free)
+
+## Phase 24: Time Freeze Ray — freeze the enemy in time for 3 seconds. While
+## frozen the enemy can't move, attack, or take damage from other sources.
+## The freeze is applied via set_time_scale(0.0). A timer restores it.
+func _freeze_enemy_time(enemy: Node3D) -> void:
+	if not enemy or not is_instance_valid(enemy):
+		return
+	if not enemy.has_method("set_time_scale"):
+		return
+	enemy.set_time_scale(0.0)
+	# Visual: ice crystals around the frozen enemy
+	ParticleEffects.spawn_explosion(get_parent(), enemy.global_position,
+		Color(0.6, 0.85, 1.0), 16, 0.4)
+	# Schedule unfreeze — use a scene-tree timer so it survives if this projectile dies
+	var tree := get_tree()
+	if tree:
+		var timer := tree.create_timer(GameConstants.TIME_FREEZE_RAY_DURATION, true, false, true)
+		timer.timeout.connect(func():
+			if is_instance_valid(enemy) and enemy.has_method("set_time_scale"):
+				enemy.set_time_scale(1.0)
+				# Shatter effect on unfreeze
+				ParticleEffects.spawn_explosion(enemy.get_parent(), enemy.global_position,
+					Color(0.6, 0.85, 1.0), 10, 0.3)
+		)
+	# Brief ice light on the enemy
+	var ice_light := OmniLight3D.new()
+	ice_light.light_color = Color(0.6, 0.85, 1.0)
+	ice_light.light_energy = 2.0
+	ice_light.omni_range = 4.0
+	get_parent().add_child(ice_light)
+	ice_light.global_position = enemy.global_position + Vector3(0, 1.0, 0)
+	var light_tw := ice_light.create_tween()
+	light_tw.tween_property(ice_light, "light_energy", 0.0, 0.5)
+	light_tw.tween_callback(ice_light.queue_free)
+
+## Phase 24: Shrink Beam — shrink the enemy for 5 seconds. While shrunk the
+## enemy moves at SHRINK_BEAM_SPEED_MULT, deals SHRINK_BEAM_DAMAGE_MULT damage,
+## and is visually scaled down. The effect is applied by reducing the enemy's
+## speed and storing the original values for restoration.
+func _shrink_enemy(enemy: Node3D) -> void:
+	if not enemy or not is_instance_valid(enemy):
+		return
+	# Avoid double-shrinking — if already shrunk, just refresh the timer via meta
+	if enemy.has_meta("is_shrunk") and enemy.get_meta("is_shrunk", false):
+		# Refresh: reset the restore timer
+		enemy.set_meta("shrink_restore_time", Time.get_ticks_msec() / 1000.0 + GameConstants.SHRINK_BEAM_DURATION)
+		return
+	# Store original values
+	var original_speed: float = float(enemy.get("speed")) if "speed" in enemy else 1.0
+	var original_damage: int = int(enemy.get("damage")) if "damage" in enemy else 10
+	var original_scale: Vector3 = enemy.scale if enemy is Node3D else Vector3.ONE
+	enemy.set_meta("is_shrunk", true)
+	enemy.set_meta("shrink_original_speed", original_speed)
+	enemy.set_meta("shrink_original_damage", original_damage)
+	enemy.set_meta("shrink_original_scale", original_scale)
+	enemy.set_meta("shrink_restore_time", Time.get_ticks_msec() / 1000.0 + GameConstants.SHRINK_BEAM_DURATION)
+	# Apply shrink effects
+	if "speed" in enemy:
+		enemy.set("speed", original_speed * GameConstants.SHRINK_BEAM_SPEED_MULT)
+	if "damage" in enemy:
+		enemy.set("damage", int(original_damage * GameConstants.SHRINK_BEAM_DAMAGE_MULT))
+	# Visual scale-down
+	var shrink_scale := original_scale * GameConstants.SHRINK_BEAM_SCALE_MULT
+	var shrink_tw := enemy.create_tween()
+	shrink_tw.tween_property(enemy, "scale", shrink_scale, 0.3) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	# Green aura visual
+	ParticleEffects.spawn_explosion(get_parent(), enemy.global_position,
+		Color(0.4, 0.9, 0.3), 14, 0.4)
+	# Schedule restore — poll via a tween that checks the restore time
+	var restore_tw := enemy.create_tween()
+	restore_tw.tween_interval(GameConstants.SHRINK_BEAM_DURATION)
+	restore_tw.tween_callback(func():
+		if not is_instance_valid(enemy):
+			return
+		if not enemy.get_meta("is_shrunk", false):
+			return  # Already restored (e.g. by another effect)
+		enemy.set_meta("is_shrunk", false)
+		if "speed" in enemy:
+			enemy.set("speed", original_speed)
+		if "damage" in enemy:
+			enemy.set("damage", original_damage)
+		# Restore scale (only if the enemy hasn't died and been freed)
+		if is_instance_valid(enemy):
+			var restore_scale_tw := enemy.create_tween()
+			restore_scale_tw.tween_property(enemy, "scale", original_scale, 0.3) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+			# Green burst on restore
+			ParticleEffects.spawn_explosion(enemy.get_parent(), enemy.global_position,
+				Color(0.4, 0.9, 0.3), 10, 0.3)
+	)
+
+## Phase 24: Lightning Storm — chain lightning to up to 8 nearby enemies with
+## damage falloff per jump. Visualized with electric arc particles between hits.
+func _lightning_storm(source_enemy: Node3D, dmg: int) -> void:
+	var chain_range: float = GameConstants.LIGHTNING_STORM_CHAIN_RANGE
+	var max_targets: int = GameConstants.LIGHTNING_STORM_MAX_TARGETS
+	var chained: Array[Node3D] = [source_enemy]
+	var current: Node3D = source_enemy
+	var current_dmg: int = dmg
+	for i in range(max_targets):
+		var next: Node3D = null
+		var next_dist: float = chain_range
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if not enemy.is_in_group("enemies"):
+				continue
+			if chained.has(enemy):
+				continue
+			var d: float = current.global_position.distance_to(enemy.global_position)
+			if d < next_dist:
+				next_dist = d
+				next = enemy
+		if next == null:
+			break
+		# Falloff per jump
+		current_dmg = int(current_dmg * (1.0 - GameConstants.LIGHTNING_STORM_FALLOFF_PER_JUMP))
+		if next.has_method("take_damage_from"):
+			next.take_damage_from(current_dmg, current.global_position)
+		else:
+			next.take_damage(current_dmg)
+		DamageNumber.spawn(get_parent(), next.global_position, current_dmg, false, false)
+		# Electric arc particle between current and next
+		var arc_mid: Vector3 = (current.global_position + next.global_position) / 2.0
+		ParticleEffects.spawn_explosion(get_parent(), arc_mid,
+			Color(0.7, 0.85, 1.0), 12, 0.3)
+		# Small spark at the hit enemy
+		ParticleEffects.spawn_explosion(get_parent(), next.global_position,
+			Color(0.7, 0.85, 1.0), 8, 0.2)
+		chained.append(next)
+		current = next
+
+## Phase 24: Meteor Strike — call down a meteor at the bolt's impact point.
+## The bolt itself deals small damage (METEOR_STRIKE_BOLT_DAMAGE); the meteor
+## falls from the sky after a short delay, dealing massive AoE damage on impact.
+func _call_meteor_strike(base_dmg: int) -> void:
+	var parent: Node = get_parent()
+	if not parent:
+		return
+	var impact_pos: Vector3 = global_position
+	# Telegraph: glowing ground patch at the impact point
+	var telegraph := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = GameConstants.METEOR_STRIKE_RADIUS
+	disc.bottom_radius = GameConstants.METEOR_STRIKE_RADIUS
+	disc.height = 0.15
+	telegraph.mesh = disc
+	var tg_mat := StandardMaterial3D.new()
+	tg_mat.albedo_color = Color(1.0, 0.4, 0.1, 0.5)
+	tg_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	tg_mat.emission_enabled = true
+	tg_mat.emission = Color(1.0, 0.4, 0.1)
+	tg_mat.emission_energy_multiplier = 1.5
+	tg_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	tg_mat.no_depth_test = true
+	telegraph.material_override = tg_mat
+	parent.add_child(telegraph)
+	telegraph.global_position = impact_pos + Vector3(0, 0.1, 0)
+	# Pulse the telegraph during the fall time
+	var tg_tween := telegraph.create_tween()
+	for _i in range(4):
+		tg_tween.tween_property(tg_mat, "emission_energy_multiplier", 0.5, 0.1)
+		tg_tween.tween_property(tg_mat, "emission_energy_multiplier", 2.5, 0.1)
+	# Spawn the falling meteor visual
+	var meteor := MeshInstance3D.new()
+	var meteor_mesh := SphereMesh.new()
+	meteor_mesh.radius = 1.5
+	meteor_mesh.height = 3.0
+	meteor_mesh.radial_segments = 12
+	meteor_mesh.rings = 6
+	meteor.mesh = meteor_mesh
+	var m_mat := StandardMaterial3D.new()
+	m_mat.albedo_color = Color(1.0, 0.4, 0.1)
+	m_mat.emission_enabled = true
+	m_mat.emission = Color(1.0, 0.5, 0.1)
+	m_mat.emission_energy_multiplier = 3.0
+	m_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	meteor.material_override = m_mat
+	parent.add_child(meteor)
+	meteor.global_position = impact_pos + Vector3(0, GameConstants.METEOR_STRIKE_FALL_HEIGHT, 0)
+	# Trail light on the meteor
+	var meteor_light := OmniLight3D.new()
+	meteor_light.light_color = Color(1.0, 0.5, 0.1)
+	meteor_light.light_energy = 5.0
+	meteor_light.omni_range = 8.0
+	meteor.add_child(meteor_light)
+	# Drop the meteor via tween
+	var drop_tw := meteor.create_tween()
+	drop_tw.tween_property(meteor, "global_position:y",
+		impact_pos.y + 1.0, GameConstants.METEOR_STRIKE_FALL_TIME) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	# Spin the meteor as it falls
+	drop_tw.parallel().tween_property(meteor, "rotation_degrees:y",
+		720.0, GameConstants.METEOR_STRIKE_FALL_TIME)
+	# On impact: massive AoE damage + explosion + camera shake
+	drop_tw.tween_callback(func():
+		if not is_instance_valid(meteor):
+			return
+		# AoE damage
+		var impact_dmg: int = int(base_dmg * GameConstants.METEOR_STRIKE_IMPACT_MULT)
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if not enemy.is_in_group("enemies"):
+				continue
+			var d: float = meteor.global_position.distance_to(enemy.global_position)
+			if d < GameConstants.METEOR_STRIKE_RADIUS:
+				var falloff: float = 1.0 - (d / GameConstants.METEOR_STRIKE_RADIUS) * 0.4
+				var hit_dmg: int = int(impact_dmg * falloff)
+				if enemy.has_method("take_damage_from"):
+					enemy.take_damage_from(hit_dmg, meteor.global_position)
+				elif enemy.has_method("take_damage"):
+					enemy.take_damage(hit_dmg)
+		# Massive explosion visual
+		ParticleEffects.spawn_mega_explosion(meteor.get_parent(),
+			meteor.global_position, Color(1.0, 0.4, 0.1))
+		# Impact light flash
+		var flash := OmniLight3D.new()
+		flash.light_color = Color(1.0, 0.5, 0.1)
+		flash.light_energy = 12.0
+		flash.omni_range = 18.0
+		meteor.get_parent().add_child(flash)
+		flash.global_position = meteor.global_position
+		var flash_tw := flash.create_tween()
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.5)
+		flash_tw.tween_callback(flash.queue_free)
+		# Camera shake
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.6)
+		# Remove the meteor + telegraph
+		meteor.queue_free()
+		if is_instance_valid(telegraph):
+			telegraph.queue_free()
+	)
+
+## Phase 24: Poison Nova — expanding ring of poison that damages all enemies it
+## touches, plus a lingering poison cloud at the impact point for DoT.
+func _spawn_poison_nova(base_dmg: int) -> void:
+	var parent: Node = get_parent()
+	if not parent:
+		return
+	var nova_pos: Vector3 = global_position
+	# Expanding ring visual
+	var ring := MeshInstance3D.new()
+	var ring_mesh := CylinderMesh.new()
+	ring_mesh.top_radius = 0.5
+	ring_mesh.bottom_radius = 0.5
+	ring_mesh.height = 0.3
+	ring_mesh.radial_segments = 24
+	ring_mesh.rings = 2
+	ring.mesh = ring_mesh
+	var ring_mat := StandardMaterial3D.new()
+	ring_mat.albedo_color = Color(0.5, 0.9, 0.2, 0.7)
+	ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ring_mat.emission_enabled = true
+	ring_mat.emission = Color(0.5, 0.9, 0.2) * 0.6
+	ring_mat.emission_energy_multiplier = 2.0
+	ring_mat.no_depth_test = true
+	ring.material_override = ring_mat
+	parent.add_child(ring)
+	ring.global_position = nova_pos + Vector3(0, 0.3, 0)
+	# Light flash
+	var nova_light := OmniLight3D.new()
+	nova_light.light_color = Color(0.5, 0.9, 0.2)
+	nova_light.light_energy = 4.0
+	nova_light.omni_range = 8.0
+	parent.add_child(nova_light)
+	nova_light.global_position = nova_pos + Vector3(0, 1.0, 0)
+	# Track which enemies the ring has already hit (each enemy hit once)
+	var hit_enemies: Array[Node3D] = []
+	# Expand the ring via a manual tween (we need per-frame hit detection)
+	var expand_duration: float = GameConstants.POISON_NOVA_RADIUS / GameConstants.POISON_NOVA_EXPAND_SPEED
+	var expand_tw := ring.create_tween()
+	# Use tween_method to update the ring each frame
+	expand_tw.tween_method(func(t: float):
+		if not is_instance_valid(ring):
+			return
+		var current_radius: float = t * GameConstants.POISON_NOVA_RADIUS
+		# Scale the ring (base mesh radius is 0.5)
+		var ring_scale_v := Vector3(current_radius / 0.5, 1.0, current_radius / 0.5)
+		ring.scale = ring_scale_v
+		# Fade as it expands
+		var fade: float = 1.0 - t
+		ring_mat.albedo_color.a = 0.7 * fade
+		ring_mat.emission_energy_multiplier = 2.0 * fade
+		nova_light.light_energy = 4.0 * fade
+		# Hit detection — damage enemies near the ring edge
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if not enemy.is_in_group("enemies"):
+				continue
+			if hit_enemies.has(enemy):
+				continue
+			var d: float = ring.global_position.distance_to(enemy.global_position)
+			if abs(d - current_radius) < 1.5:
+				if enemy.has_method("take_damage_from"):
+					enemy.take_damage_from(GameConstants.POISON_NOVA_RING_DAMAGE, ring.global_position)
+				elif enemy.has_method("take_damage"):
+					enemy.take_damage(GameConstants.POISON_NOVA_RING_DAMAGE)
+				hit_enemies.append(enemy)
+	, 0.0, 1.0, expand_duration)
+	expand_tw.tween_callback(ring.queue_free)
+	# Fade the light
+	var light_tw := nova_light.create_tween()
+	light_tw.tween_property(nova_light, "light_energy", 0.0, expand_duration + 0.2)
+	light_tw.tween_callback(nova_light.queue_free)
+	# Spawn the lingering poison cloud at the impact point
+	_spawn_poison_nova_cloud(nova_pos, base_dmg)
+
+## Spawn a lingering poison cloud at the nova's impact point for DoT.
+func _spawn_poison_nova_cloud(cloud_pos: Vector3, base_dmg: int) -> void:
+	var parent: Node = get_parent()
+	if not parent:
+		return
+	var cloud := Area3D.new()
+	var cloud_shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = GameConstants.POISON_NOVA_CLOUD_RADIUS
+	cloud_shape.shape = sphere
+	cloud.add_child(cloud_shape)
+	parent.add_child(cloud)
+	cloud.global_position = cloud_pos
+	# Visual: green translucent sphere
+	var cloud_mesh := MeshInstance3D.new()
+	var cloud_sphere := SphereMesh.new()
+	cloud_sphere.radius = GameConstants.POISON_NOVA_CLOUD_RADIUS
+	cloud_sphere.height = 1.0  # Flat pool
+	cloud_sphere.radial_segments = 14
+	cloud_mesh.mesh = cloud_sphere
+	var cloud_mat := StandardMaterial3D.new()
+	cloud_mat.albedo_color = Color(0.5, 0.9, 0.2, 0.4)
+	cloud_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	cloud_mat.emission_enabled = true
+	cloud_mat.emission = Color(0.4, 0.7, 0.1)
+	cloud_mat.emission_energy_multiplier = 1.0
+	cloud_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	cloud_mat.no_depth_test = true
+	cloud_mesh.material_override = cloud_mat
+	cloud.add_child(cloud_mesh)
+	# Cloud light
+	var cloud_light := OmniLight3D.new()
+	cloud_light.light_color = Color(0.5, 0.9, 0.2)
+	cloud_light.light_energy = 1.5
+	cloud_light.omni_range = GameConstants.POISON_NOVA_CLOUD_RADIUS
+	cloud.add_child(cloud_light)
+	# DoT ticks
+	var ticks: int = int(GameConstants.POISON_NOVA_CLOUD_DURATION / GameConstants.POISON_NOVA_CLOUD_TICK_INTERVAL)
+	var tick_dmg: int = GameConstants.POISON_NOVA_CLOUD_DAMAGE_PER_TICK
+	var tw := cloud.create_tween()
+	for _i in range(ticks):
+		tw.tween_callback(func():
+			if not is_instance_valid(cloud):
+				return
+			for enemy in GameManager.enemies:
+				if not is_instance_valid(enemy):
+					continue
+				if not enemy.is_in_group("enemies"):
+					continue
+				if cloud.global_position.distance_to(enemy.global_position) < GameConstants.POISON_NOVA_CLOUD_RADIUS:
+					if enemy.has_method("take_damage"):
+						enemy.take_damage(tick_dmg)
+			# Small bubble particles
+			ParticleEffects.spawn_explosion(cloud.get_parent(), cloud.global_position,
+				Color(0.5, 0.9, 0.2), 5, 0.15)
+		)
+		tw.tween_interval(GameConstants.POISON_NOVA_CLOUD_TICK_INTERVAL)
+	# Fade out and free
+	tw.tween_property(cloud_mat, "albedo_color:a", 0.0, 0.5)
+	tw.tween_callback(cloud.queue_free)
