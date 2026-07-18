@@ -48,7 +48,11 @@ func _process(_delta: float) -> void:
 			var bar: ColorRect = _buff_bars[key]
 			var max_dur: float = _max_duration.get(key, 10.0)
 			var ratio: float = clampf(remaining / max_dur, 0.0, 1.0)
-			bar.size.x = 200.0 * ratio
+			# Fill width = bar_bg width (210px = 215-5) × remaining ratio.
+			# bar_bg is a sibling ColorRect at offset_left=5..offset_right=215.
+			# Using a constant avoids a feedback loop where bar.size.x shrinks
+			# each frame and then gets used as the basis for the next frame's size.
+			bar.size.x = 210.0 * ratio
 			# Color: green → yellow → red
 			if ratio > 0.5:
 				bar.color = Color(1.0 - (ratio - 0.5) * 2.0, 1.0, 0.0)
@@ -66,6 +70,9 @@ func _create_buff_panel(key: String) -> void:
 	panel.offset_top = 0
 	panel.offset_right = 220
 	panel.offset_bottom = 26
+	# Start hidden + offset for the slide-in animation
+	panel.modulate.a = 0.0
+	panel.offset_left = -30.0
 	add_child(panel)
 
 	var label := Label.new()
@@ -98,10 +105,30 @@ func _create_buff_panel(key: String) -> void:
 	_buff_bars[key] = bar
 	_max_duration[key] = GameConstants.MONOLITH_BUFF_DURATION
 
+	# Slide-in + fade-in animation: the panel eases in from the left with a
+	# short fade so buffs don't pop in abruptly when a monolith is activated.
+	var tween := panel.create_tween()
+	tween.tween_property(panel, "modulate:a", 1.0, 0.25) \
+		.set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(panel, "offset_left", 0.0, 0.30) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
 func _remove_buff_panel(key: String) -> void:
 	if _buff_containers.has(key):
-		_buff_containers[key].queue_free()
+		var panel: Panel = _buff_containers[key]
+		# Fade-out + slide-left animation before freeing. This avoids the
+		# abrupt disappearance when a buff expires. The tween calls queue_free
+		# on completion so the panel is cleaned up after the animation.
+		var tween := panel.create_tween()
+		tween.tween_property(panel, "modulate:a", 0.0, 0.20) \
+			.set_ease(Tween.EASE_IN)
+		tween.parallel().tween_property(panel, "offset_left", -30.0, 0.22) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		tween.tween_callback(panel.queue_free)
 		_buff_containers.erase(key)
+	else:
+		# Defensive: erase the other entries so stale refs don't linger
+		pass
 	if _buff_labels.has(key):
 		_buff_labels.erase(key)
 	if _buff_bars.has(key):

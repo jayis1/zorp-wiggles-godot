@@ -245,6 +245,19 @@ func _on_menu_toggled(is_open: bool) -> void:
 		_update_equipped_label()
 		_clear_selection()
 		_result_label.text = ""
+		# Entrance animation: the background panel fades in + scales up from
+		# 0.92 with a gentle overshoot. Matches the pause menu's slide-in feel
+		# so all overlay menus share a cohesive "juice" language. The panel's
+		# pivot is set to center so the scale grows from the middle.
+		if _bg_panel:
+			_bg_panel.pivot_offset = Vector2(_bg_panel.size.x * 0.5, _bg_panel.size.y * 0.5)
+			_bg_panel.modulate.a = 0.0
+			_bg_panel.scale = Vector2(0.92, 0.92)
+			var tween := create_tween()
+			tween.tween_property(_bg_panel, "modulate:a", 1.0, 0.18) \
+				.set_ease(Tween.EASE_OUT)
+			tween.parallel().tween_property(_bg_panel, "scale", Vector2.ONE, 0.28) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	# Pause game when menu is open (but not if player is dead)
 	if GameManager.player_is_alive:
 		GameManager.is_paused = is_open

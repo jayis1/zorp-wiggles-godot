@@ -23,6 +23,8 @@ var _time_survived: float = 0.0
 # Phase 20: Try Again button
 var _try_again_btn: Button = null
 var _quit_btn: Button = null
+# Track hover tweens so we can kill them before starting a new one (avoid jitter)
+var _hover_tweens: Dictionary = {}  # button -> Tween
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -43,6 +45,8 @@ func _ready() -> void:
 	_try_again_btn.visible = false
 	_try_again_btn.process_mode = Node.PROCESS_MODE_ALWAYS
 	_try_again_btn.pressed.connect(_on_try_again)
+	# Hover pivot: center so scale grows from the middle
+	_try_again_btn.pivot_offset = Vector2(115.0, 25.0)
 	add_child(_try_again_btn)
 
 	_quit_btn = Button.new()
@@ -55,7 +59,13 @@ func _ready() -> void:
 	_quit_btn.visible = false
 	_quit_btn.process_mode = Node.PROCESS_MODE_ALWAYS
 	_quit_btn.pressed.connect(_on_quit)
+	_quit_btn.pivot_offset = Vector2(115.0, 25.0)
 	add_child(_quit_btn)
+
+	# Connect hover signals for death screen buttons (matches menu polish)
+	for btn in [_try_again_btn, _quit_btn]:
+		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
+		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
 
 func _on_player_died() -> void:
 	_is_shown = true
@@ -69,8 +79,13 @@ func _on_player_died() -> void:
 	_displayed_score = 0
 	_time_survived = GameManager.game_time
 	# Phase 20: Show buttons after fade-in (delayed via _process)
+	# Reset button visual state so the entrance animation plays cleanly
 	_try_again_btn.visible = false
+	_try_again_btn.modulate.a = 0.0
+	_try_again_btn.scale = Vector2(0.8, 0.8)
 	_quit_btn.visible = false
+	_quit_btn.modulate.a = 0.0
+	_quit_btn.scale = Vector2(0.8, 0.8)
 	# Unpause the tree so buttons are clickable (death screen uses PROCESS_MODE_ALWAYS)
 	get_tree().paused = false
 	GameManager.is_paused = false
@@ -81,8 +96,12 @@ func _on_game_restarted() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _try_again_btn:
 		_try_again_btn.visible = false
+		_try_again_btn.scale = Vector2.ONE  # Reset for next death
+		_try_again_btn.modulate.a = 1.0
 	if _quit_btn:
 		_quit_btn.visible = false
+		_quit_btn.scale = Vector2.ONE
+		_quit_btn.modulate.a = 1.0
 
 func _on_try_again() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
@@ -113,14 +132,50 @@ func _process(delta: float) -> void:
 		if abs(_displayed_score - target_score) < 5:
 			_displayed_score = target_score
 
-	# Phase 20: Show buttons when prompt fades in
+	# Phase 20: Show buttons when prompt fades in — with a staggered scale-in
+	# entrance animation (fade + scale up from 0.8 with overshoot). This makes
+	# the death screen feel less abrupt and gives the player a clear, juicy
+	# call-to-action. The buttons start hidden + transparent + scaled down
+	# (set in _on_player_died); here we make them visible and tween them in.
 	if _prompt_alpha > 0.5:
 		if _try_again_btn and not _try_again_btn.visible:
 			_try_again_btn.visible = true
+			_animate_button_in(_try_again_btn, 0.0)
 		if _quit_btn and not _quit_btn.visible:
 			_quit_btn.visible = true
+			_animate_button_in(_quit_btn, 0.08)
 
-	queue_redraw()
+queue_redraw()
+
+## Entrance animation for death-screen buttons: fade in + scale up from 0.8
+## with a gentle overshoot. The stagger delay offsets the second button so
+## they don't pop in simultaneously.
+func _animate_button_in(btn: Button, delay: float) -> void:
+	var tween := create_tween()
+	tween.tween_interval(delay)
+	tween.tween_property(btn, "modulate:a", 1.0, 0.25) \
+		.set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(btn, "scale", Vector2.ONE, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+## Hover effect: buttons grow slightly on hover, shrink on exit.
+## Mirrors the main/pause menu hover juice so all UI feels cohesive.
+## Uses a kill-and-recreate tween pattern to avoid jitter from overlapping tweens.
+func _on_button_hover(btn: Button, is_hovering: bool) -> void:
+	# Don't run hover while the entrance animation is still playing
+	if btn.modulate.a < 0.9:
+		return
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	var target_scale := Vector2(1.06, 1.06) if is_hovering else Vector2.ONE
+	tween.tween_property(btn, "scale", target_scale, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+	if is_hovering:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _is_shown:

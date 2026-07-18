@@ -16,6 +16,9 @@ var _quit_btn: Button
 var _settings_menu: Control = null
 var _is_paused: bool = false
 
+# Track hover tweens so we can kill them before starting a new one (avoid jitter)
+var _hover_tweens: Dictionary = {}  # button -> Tween
+
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -89,6 +92,11 @@ func _build_ui() -> void:
 	add_child(_quit_btn)
 	_quit_btn.pressed.connect(_on_quit)
 
+	# Connect hover signals for all pause menu buttons (matches main menu polish)
+	for btn in [_resume_btn, _settings_btn, _quit_btn]:
+		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
+		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+
 	# Settings menu (hidden by default)
 	var sm_script = load("res://scripts/settings_menu.gd")
 	_settings_menu = Control.new()
@@ -160,6 +168,25 @@ func _animate_pause_in() -> void:
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 
+## Hover effect: buttons grow slightly on hover, shrink on exit.
+## Mirrors the main menu's hover juice so both menus feel cohesive.
+## Uses a kill-and-recreate tween pattern to avoid jitter from overlapping tweens.
+## Plays a subtle UI click sound on enter only (not exit, to avoid spam).
+func _on_button_hover(btn: Button, is_hovering: bool) -> void:
+	# Kill any existing hover tween on this button
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	var target_scale := Vector2(1.06, 1.06) if is_hovering else Vector2.ONE
+	tween.tween_property(btn, "scale", target_scale, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+	if is_hovering:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+
+
 func _on_resume() -> void:
 	_is_paused = false
 	# ── Smooth fade-out: panel and buttons fade and scale down slightly before
@@ -188,6 +215,7 @@ func _on_resume() -> void:
 			_title.modulate.a = 1.0
 			for btn in [_resume_btn, _settings_btn, _quit_btn]:
 				btn.modulate.a = 1.0
+				btn.scale = Vector2.ONE  # Reset hover scale
 		)
 	else:
 		visible = false
