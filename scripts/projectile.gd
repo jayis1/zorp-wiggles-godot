@@ -416,6 +416,13 @@ func _on_body_entered(body: Node3D) -> void:
 		_impact_effect()
 		_is_consumed = true
 		queue_free()
+	elif body.is_in_group("interactive_object"):
+		# ── Phase 26: Breakable walls take damage from projectiles ──
+		if body.has_method("take_damage"):
+			body.take_damage(damage, global_position)
+		_impact_effect()
+		_is_consumed = true
+		queue_free()
 	else:
 		# Hit terrain/wall
 		# Enhancement: Spectral Beam — phases through walls and terrain, never blocked

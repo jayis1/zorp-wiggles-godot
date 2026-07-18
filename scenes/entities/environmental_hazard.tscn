@@ -1,0 +1,6 @@
+[gd_scene load_steps=3 format=3 uid="uid://envhazard01"]
+
+[ext_resource type="Script" path="res://scripts/environmental_hazard.gd" id="1_envhaz"]
+
+[node name="EnvironmentalHazard" type="Node3D"]
+script = ExtResource("1_envhaz")

@@ -299,6 +299,10 @@ func _spawn_structures() -> void:
 	_spawn_lore_stones()
 	_spawn_treasure_chests()
 	_spawn_wildlife()
+	# ── Phase 26: World Life — dialogue NPCs, environmental hazards, interactive objects ──
+	_spawn_dialogue_npcs()
+	_spawn_environmental_hazards()
+	_spawn_interactive_objects()
 
 # ── Phase 8: Spawn destructible crates & crystals across biomes ────────────────
 func _spawn_destructibles() -> void:
@@ -652,3 +656,132 @@ func _pick_wildlife_species_for_biome(biome: int) -> Dictionary:
 	if candidates.is_empty():
 		return {}
 	return candidates[randi() % candidates.size()]
+
+# ── Phase 26: Dialogue NPCs, Environmental Hazards, Interactive Objects ──────
+
+func _spawn_dialogue_npcs() -> void:
+	# Spawn a small number of dialogue NPCs across walkable biomes. Villagers
+	# cluster in friendly biomes (grass, forest, mushroom), elders in ancient
+	# ruins, and holograms in the digital grid. The player presses T to talk.
+	var npc_scene := preload("res://scenes/entities/dialogue_npc.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+	var count: int = 0
+	# Map archetypes to their preferred biomes.
+	var archetype_biomes: Dictionary = {
+		"villager": [GameConstants.Biome.GRASS, GameConstants.Biome.FOREST,
+			GameConstants.Biome.MUSHROOM, GameConstants.Biome.SWAMP,
+			GameConstants.Biome.FLOATING_ISLANDS, GameConstants.Biome.SKY_CITADEL],
+		"elder": [GameConstants.Biome.ANCIENT_RUINS, GameConstants.Biome.CRYSTAL,
+			GameConstants.Biome.CRYSTAL_CAVERNS, GameConstants.Biome.UNDERGROUND],
+		"hologram": [GameConstants.Biome.DIGITAL_GRID, GameConstants.Biome.ALIEN],
+	}
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			if not _is_biome_walkable(biome):
+				continue
+			# Sparse spawn — about 0.3% per tile to keep NPC count low.
+			if randf() > 0.003:
+				continue
+			# Pick an archetype that prefers this biome.
+			var archetype: String = ""
+			for a in archetype_biomes.keys():
+				if biome in archetype_biomes[a]:
+					archetype = a
+					break
+			if archetype == "":
+				continue
+			var wx: float = (x - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+			var wz: float = (z - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+			# Skip near spawn.
+			if Vector2(wx, wz).length() < 40:
+				continue
+			var npc := npc_scene.instantiate()
+			add_child(npc)
+			npc.global_position = Vector3(wx, 0.5, wz)
+			npc.archetype = archetype
+			count += 1
+	print("[WorldGenerator] Spawned %d dialogue NPCs" % count)
+
+func _spawn_environmental_hazards() -> void:
+	# Spawn environmental hazards in their preferred biomes. Each hazard type
+	# only spawns in biomes listed in ENV_HAZARD_TYPES. Hazards cycle through
+	# telegraph → active → cooldown indefinitely.
+	var hazard_scene := preload("res://scenes/entities/environmental_hazard.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+	var count: int = 0
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			# Pick a hazard type that prefers this biome.
+			var hazard_type_name: String = ""
+			var hazard_damage: int = GameConstants.ENV_HAZARD_DAMAGE
+			for entry in GameConstants.ENV_HAZARD_TYPES:
+				var biomes: Array = entry.get("biomes", [])
+				if biome in biomes:
+					hazard_type_name = entry.get("type", "")
+					hazard_damage = int(entry.get("damage", hazard_damage))
+					break
+			if hazard_type_name == "":
+				continue
+			if randf() > GameConstants.ENV_HAZARD_SPAWN_CHANCE:
+				continue
+			var wx: float = (x - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+			var wz: float = (z - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+			# Skip near spawn.
+			if Vector2(wx, wz).length() < 35:
+				continue
+			var hazard := hazard_scene.instantiate()
+			add_child(hazard)
+			hazard.global_position = Vector3(wx, 0, wz)
+			hazard.hazard_type_name = hazard_type_name
+			hazard.damage = hazard_damage
+			count += 1
+	print("[WorldGenerator] Spawned %d environmental hazards" % count)
+
+func _spawn_interactive_objects() -> void:
+	# Spawn interactive objects (switches, doors, breakable walls, hidden
+	# passages) across walkable biomes. Switches and doors are spawned in
+	# linked pairs — a switch with linked_id "A" toggles a door with linked_id
+	# "A". Breakable walls and hidden passages are standalone.
+	var obj_scene := preload("res://scenes/entities/interactive_object.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+	var count: int = 0
+	var link_counter: int = 0
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			if not _is_biome_walkable(biome):
+				continue
+			if randf() > GameConstants.INTERACTIVE_SPAWN_CHANCE:
+				continue
+			var wx: float = (x - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+			var wz: float = (z - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+			# Skip near spawn.
+			if Vector2(wx, wz).length() < 45:
+				continue
+			# Pick an object type. 40% switch, 30% door, 20% breakable wall,
+			# 10% hidden passage. Switches and doors are spawned in pairs.
+			var roll: float = randf()
+			var obj_type: String = ""
+			if roll < 0.4:
+				obj_type = "switch"
+			elif roll < 0.7:
+				obj_type = "door"
+			elif roll < 0.9:
+				obj_type = "breakable_wall"
+			else:
+				obj_type = "hidden_passage"
+			var obj := obj_scene.instantiate()
+			add_child(obj)
+			obj.global_position = Vector3(wx, 0, wz)
+			obj.object_type = obj_type
+			# Assign a linked_id so switches pair with nearby doors/passages.
+			if obj_type == "switch" or obj_type == "door" or obj_type == "hidden_passage":
+				obj.linked_id = "link_%d" % (link_counter / 2)
+				link_counter += 1
+			count += 1
+	print("[WorldGenerator] Spawned %d interactive objects" % count)

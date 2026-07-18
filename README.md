@@ -188,7 +188,7 @@ Phases 1-20 (core game + 12 new features) are **COMPLETE**. Ongoing development 
 - **Phase 23**: New enemy types (Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight, Plasma Stalker, Time Warden, Mirror Mimic implemented; Void Leviathan, Ancient Sentinel pending) — **IN PROGRESS** (7/10 enemy types implemented)
 - **Phase 24**: New weapon mods (Black Hole Launcher, Time Freeze Ray, Mind Control, Meteor Strike, Turret Deploy)
 - **Phase 25**: Progression systems (skill tree, prestige, daily challenges, endless mode, boss rush)
-- **Phase 26**: World life (wandering merchants, villages, wildlife, treasure chests, lore stones, fast travel) — **IN PROGRESS** (3/10 implemented: roaming wildlife with 8 biome-specific species, hidden treasure chests with traps, lore stones with 30 lore fragments)
+- **Phase 26**: World life (wandering merchants, villages, wildlife, treasure chests, lore stones, fast travel) — **IN PROGRESS** (6/10 implemented: roaming wildlife with 8 biome-specific species, hidden treasure chests with traps, lore stones with 30 lore fragments, NPC dialogue system with 3 archetypes + typewriter-effect HUD panel, environmental hazards with 4 types cycling through telegraph/active/cooldown, interactive objects with switches/doors/breakable walls/hidden passages linked via linked_id)
 - **Phase 27**: Pet evolution expansion (5 new paths, fusion, accessories, training, multi-pet)
 - **Phase 28**: Weather expansion (meteor shower, aurora, sandstorm, blood moon, eclipse, gravity anomaly)
 - **Phase 29**: Equipment (armor, consumables, accessories, upgrade system, set bonuses)

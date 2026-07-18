@@ -750,6 +750,14 @@ func _dash_smash_destructibles() -> void:
 		if global_position.distance_to(prop.global_position) < 2.0:
 			if prop.has_method("take_damage_from"):
 				prop.take_damage_from(999, global_position)  # Instant smash
+	# ── Phase 26: Breakable walls take dash damage ──
+	for obj in get_tree().get_nodes_in_group("interactive_object"):
+		if not is_instance_valid(obj):
+			continue
+		if "object_type" in obj and obj.object_type == "breakable_wall":
+			if global_position.distance_to(obj.global_position) < 2.5:
+				if obj.has_method("dash_hit"):
+					obj.dash_hit()
 
 func get_forward_dir_fallback() -> Vector3:
 	var cam: Camera3D = get_viewport().get_camera_3d()
@@ -833,6 +841,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				GameManager.add_message("🐾 Fetch cancelled")
 		else:
 			GameManager.add_message("🐾 No pet to fetch with! Press F to summon.")
+
+	# ── Phase 26: Interact key (T) — talk to NPCs, activate switches ──
+	if event.is_action_pressed("interact") and not GameManager.is_paused and GameManager.player_is_alive:
+		_try_interact()
 
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
@@ -1087,6 +1099,42 @@ func _update_mutation_material() -> void:
 
 
 # ── Phase 15: Alien Companion Pet — summon/fetch logic ────────────────────────
+
+# ── Phase 26: Interact — talk to NPCs, activate switches ──
+## Find the nearest interactable NPC or switch within range and activate it.
+## Prioritizes dialogue NPCs, then interactive objects (switches).
+func _try_interact() -> void:
+	# If a dialogue panel is active, the panel handles the interact key itself.
+	if DialoguePanel and DialoguePanel.is_active():
+		return
+	var best_npc: Node = null
+	var best_npc_dist: float = GameConstants.DIALOGUE_INTERACT_RANGE
+	for npc in get_tree().get_nodes_in_group("dialogue_npc"):
+		if not is_instance_valid(npc):
+			continue
+		if not npc.has_method("can_interact") or not npc.can_interact():
+			continue
+		var d: float = global_position.distance_to(npc.global_position)
+		if d < best_npc_dist:
+			best_npc_dist = d
+			best_npc = npc
+	if best_npc:
+		best_npc.interact()
+		return
+	# Otherwise, try interactive objects (switches).
+	var best_switch: Node = null
+	var best_switch_dist: float = GameConstants.INTERACTIVE_INTERACT_RANGE
+	for obj in get_tree().get_nodes_in_group("interactive_object"):
+		if not is_instance_valid(obj):
+			continue
+		if not obj.has_method("can_interact") or not obj.can_interact():
+			continue
+		var d2: float = global_position.distance_to(obj.global_position)
+		if d2 < best_switch_dist:
+			best_switch_dist = d2
+			best_switch = obj
+	if best_switch:
+		best_switch.interact()
 
 ## Toggle the pet on/off. Pressing F summons the pet if none exists, or
 ## dismisses it if one is already active.

@@ -233,6 +233,42 @@ func _draw_entity_dots(rect: Rect2) -> void:
 				if wdist <= GameConstants.WILDLIFE_FLEE_RANGE:
 					draw_circle(wpos, 1.5, creature.species_color)
 
+	# ── Phase 26: Dialogue NPC dots (small cyan) ──
+	for npc in get_tree().get_nodes_in_group("dialogue_npc"):
+		if not is_instance_valid(npc):
+			continue
+		var npos: Vector2 = _world_to_mini(npc.global_position.x, npc.global_position.z, px, pz, pixel_per_world)
+		if _is_in_rect(npos, rect):
+			draw_circle(npos, 2.5, Color(0.4, 0.9, 1.0))
+
+	# ── Phase 26: Environmental hazard dots (small orange/red) ──
+	for hazard in get_tree().get_nodes_in_group("env_hazard"):
+		if not is_instance_valid(hazard):
+			continue
+		var hpos: Vector2 = _world_to_mini(hazard.global_position.x, hazard.global_position.z, px, pz, pixel_per_world)
+		if _is_in_rect(hpos, rect):
+			var hcolor: Color = Color(1.0, 0.4, 0.2)
+			if "hazard_type_name" in hazard and hazard.hazard_type_name == "ice_patch":
+				hcolor = Color(0.7, 0.9, 1.0)
+			elif "hazard_type_name" in hazard and hazard.hazard_type_name == "toxic_vent":
+				hcolor = Color(0.4, 0.9, 0.2)
+			draw_circle(hpos, 2.0, hcolor)
+
+	# ── Phase 26: Interactive object dots (small yellow for switches) ──
+	for obj in get_tree().get_nodes_in_group("interactive_object"):
+		if not is_instance_valid(obj):
+			continue
+		if "object_type" not in obj:
+			continue
+		# Only show switches and breakable walls on the minimap — doors and
+		# hidden passages are revealed when the player approaches.
+		if obj.object_type != "switch" and obj.object_type != "breakable_wall":
+			continue
+		var opos: Vector2 = _world_to_mini(obj.global_position.x, obj.global_position.z, px, pz, pixel_per_world)
+		if _is_in_rect(opos, rect):
+			var ocolor: Color = Color(1.0, 0.9, 0.3) if obj.object_type == "switch" else Color(0.7, 0.5, 0.3)
+			draw_rect(Rect2(opos.x - 1.5, opos.y - 1.5, 3.0, 3.0), ocolor, true)
+
 	# ── Enemy dots (red, boss = magenta) ──
 	for enemy in GameManager.enemies:
 		if not is_instance_valid(enemy):

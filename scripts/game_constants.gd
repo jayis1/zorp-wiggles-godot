@@ -1987,3 +1987,174 @@ const WILDLIFE_SPECIES: Array[Dictionary] = [
 	},
 ]
 const POISON_NOVA_CLOUD_TICK_INTERVAL: float = 0.6
+
+# ─── Phase 26: World Life — NPC Dialogue, Environmental Hazards, Interactive Objects ─
+
+# NPC Dialogue System — talk to traders, villagers, ancient holograms.
+# Each NPC has a set of dialogue lines organized into "topics". The player
+# presses the interact key (T) when near a dialogue-capable NPC to advance
+# through the lines. Dialogue is shown as a HUD panel. Some NPCs give
+# missions or rewards through dialogue.
+const DIALOGUE_INTERACT_RANGE: float = 4.5        # Max distance to talk to an NPC
+const DIALOGUE_LINE_DISPLAY_TIME: float = 5.0    # Auto-advance time per line (0 = manual)
+const DIALOGUE_XP_REWARD: int = 10                # Small XP for completing a dialogue
+const DIALOGUE_TEXT_SPEED: float = 30.0           # Characters per second for typewriter effect
+const DIALOGUE_PANEL_WIDTH: float = 600.0         # HUD panel width in pixels
+const DIALOGUE_PANEL_HEIGHT: float = 160.0        # HUD panel height in pixels
+
+# Dialogue-capable NPC archetypes. Each archetype has a name pool, color,
+# and a set of dialogue topics. Topics are picked based on context (first
+# meeting, repeat meeting, mission available, etc.).
+const DIALOGUE_NPC_TYPES: Array[Dictionary] = [
+	{
+		"archetype": "villager",
+		"name_pool": ["Blib", "Worp", "Tix", "Vreep", "Nemmo", "Quill"],
+		"color": Color(0.7, 0.85, 0.5),
+		"hat_color": Color(0.5, 0.7, 0.3),
+		"scale": 0.9,
+	},
+	{
+		"archetype": "elder",
+		"name_pool": ["Ancient One", "The Keeper", "Old Zorp", "The Rememberer"],
+		"color": Color(0.9, 0.8, 0.4),
+		"hat_color": Color(0.6, 0.4, 0.2),
+		"scale": 1.1,
+	},
+	{
+		"archetype": "hologram",
+		"name_pool": ["Ancient Hologram", "Echo of the Past", "The Last Voice"],
+		"color": Color(0.4, 0.9, 1.0),
+		"hat_color": Color(0.2, 0.6, 0.9),
+		"scale": 1.0,
+	},
+]
+
+# Dialogue line pools. NPCs pick from these based on archetype and context.
+# Each entry is a single line shown in sequence. Topics are picked in order
+# for the first meeting, then random on repeat.
+const DIALOGUE_LINES: Dictionary = {
+	"villager_intro": [
+		"Oh! A visitor. We don't get many who wiggle quite like you.",
+		"The gardens used to sing. Now they only hum. But we tend them still.",
+		"If you see Glip, tell them I still have their spore-basket.",
+		"Be careful out there. The Void doesn't sleep, and neither should you.",
+	],
+	"villager_repeat": [
+		"Back again? The gardens missed you.",
+		"Stay warm. The Snow biome is colder than it looks.",
+		"If you find a Meteor Shard, don't sell it to the first trader you meet.",
+	],
+	"elder_intro": [
+		"I remember when the sky was whole. You have the look of one who can mend it.",
+		"The Zorpions were gardeners once. Then the Void came, and we became survivors.",
+		"Seek the lore stones. They hold the memory we lost when the Rifts opened.",
+		"When you face the Ancient Sentinel, remember: it was built to guard, not to destroy. The corruption changed it.",
+		"Go now. The world wiggles when you move through it. That is a good sign.",
+	],
+	"elder_repeat": [
+		"The world is still breathing. So are you. Good.",
+		"Prestige is not power. It is remembering who you were before.",
+		"The last lore stone holds no words. Only a mirror.",
+	],
+	"hologram_intro": [
+		"...you... are not... a recording... you are... real...",
+		"We uploaded ourselves to escape the Void. We did not escape. We only became... this.",
+		"The Digital Grid is our tomb. Do not pity us. We chose this. We were wrong.",
+		"If you can, sever the Grid from the core. Let us rest. Let us stop... looping.",
+	],
+	"hologram_repeat": [
+		"...still... here... so are... we... the loop... continues...",
+		"...the silence... between words... is where... we dream...",
+	],
+}
+
+# Environmental Hazards — world-spawned hazards (not arena-bound). These are
+# scattered across hostile biomes and add danger to exploration. Unlike
+# arena hazards (which are tied to a boss fight), these are persistent world
+# features that respawn on a timer.
+const ENV_HAZARD_SPAWN_CHANCE: float = 0.012      # Per-tile chance in hostile biomes
+const ENV_HAZARD_RESPAWN_TIME: float = 20.0       # Seconds before a hazard re-activates
+const ENV_HAZARD_TELEGRAPH_TIME: float = 1.2      # Warning time before activation
+const ENV_HAZARD_ACTIVE_TIME: float = 2.5         # Duration of the active danger phase
+const ENV_HAZARD_COOLDOWN_TIME: float = 8.0       # Cooldown between cycles
+const ENV_HAZARD_DAMAGE: int = 18                 # Damage per hit
+const ENV_HAZARD_RADIUS: float = 3.5              # Damage radius
+const ENV_HAZARD_KNOCKBACK: float = 12.0          # Knockback force
+
+# Hazard types — each spawns in specific biomes.
+#   LAVA_GEYSER:  erupts in LAVA / VOLCANO_CORE biomes
+#   FALLING_ROCK: drops from above in UNDERGROUND / ANCIENT_RUINS / MOUNTAIN areas
+#   TOXIC_VENT:   poisonous gas puff in TOXIC_BOG / SWAMP biomes
+#   ICE_PATCH:    slippery surface in SNOW / CRYSTAL_CAVERNS biomes (no damage, slide effect)
+const ENV_HAZARD_TYPES: Array[Dictionary] = [
+	{
+		"type": "lava_geyser",
+		"biomes": [Biome.LAVA, Biome.VOLCANO_CORE],
+		"color": Color(1.0, 0.4, 0.1),
+		"glow_color": Color(1.0, 0.6, 0.2),
+		"damage": 22,
+	},
+	{
+		"type": "falling_rock",
+		"biomes": [Biome.UNDERGROUND, Biome.ANCIENT_RUINS, Biome.CRYSTAL_CAVERNS],
+		"color": Color(0.5, 0.45, 0.4),
+		"glow_color": Color(0.7, 0.6, 0.5),
+		"damage": 25,
+	},
+	{
+		"type": "toxic_vent",
+		"biomes": [Biome.TOXIC_BOG, Biome.SWAMP],
+		"color": Color(0.4, 0.9, 0.2),
+		"glow_color": Color(0.5, 1.0, 0.3),
+		"damage": 12,
+	},
+	{
+		"type": "ice_patch",
+		"biomes": [Biome.SNOW, Biome.CRYSTAL_CAVERNS],
+		"color": Color(0.7, 0.9, 1.0),
+		"glow_color": Color(0.8, 0.95, 1.0),
+		"damage": 0,  # No damage — causes sliding
+	},
+]
+
+# Interactive Objects — switches, doors, breakable walls, hidden passages.
+# These add light puzzle/exploration elements to the world.
+#   SWITCH:     press interact to toggle; can open linked doors or reveal passages
+#   DOOR:       opens/closes when a linked switch is toggled; blocks movement when closed
+#   BREAKABLE_WALL: destroyed by weapons/dash; may hide a treasure chest behind it
+#   HIDDEN_PASSAGE: invisible until a switch is activated or player is close; reveals loot
+const INTERACTIVE_SPAWN_CHANCE: float = 0.006     # Per-tile chance
+const INTERACTIVE_INTERACT_RANGE: float = 3.5     # Distance to activate a switch
+const INTERACTIVE_BREAKABLE_HP: int = 30         # HP of breakable walls
+const INTERACTIVE_BREAKABLE_DASH_DAMAGE: int = 15  # Dash damage to breakable walls
+const INTERACTIVE_SWITCH_COOLDOWN: float = 0.5    # Cooldown between toggles
+const INTERACTIVE_DOOR_OPEN_TIME: float = 1.0    # Animation time for door opening
+const INTERACTIVE_HIDDEN_REVEAL_RANGE: float = 6.0  # Distance at which hidden passages reveal
+
+# Interactive object types — each has a color and biome preference.
+const INTERACTIVE_TYPES: Array[Dictionary] = [
+	{
+		"type": "switch",
+		"color": Color(0.9, 0.8, 0.2),
+		"glow_color": Color(1.0, 0.9, 0.3),
+		"scale": 0.6,
+	},
+	{
+		"type": "door",
+		"color": Color(0.6, 0.5, 0.4),
+		"glow_color": Color(0.8, 0.7, 0.5),
+		"scale": 1.5,
+	},
+	{
+		"type": "breakable_wall",
+		"color": Color(0.5, 0.45, 0.4),
+		"glow_color": Color(0.7, 0.5, 0.3),
+		"scale": 1.2,
+	},
+	{
+		"type": "hidden_passage",
+		"color": Color(0.3, 0.3, 0.4),
+		"glow_color": Color(0.5, 0.5, 0.7),
+		"scale": 1.0,
+	},
+]
