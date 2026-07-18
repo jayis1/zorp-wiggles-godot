@@ -105,11 +105,16 @@ func _spawn_poison_cloud() -> void:
 	life_timer.one_shot = true
 	cloud.add_child(life_timer)
 
-	# Tick: damage all entities within radius
-	tick_timer.timeout.connect(_on_cloud_tick.bind(cloud))
-
-	# Lifetime expiry: fade out the cloud then free it
-	life_timer.timeout.connect(_on_cloud_expire.bind(cloud, cloud_mat, cloud_light, tick_timer))
+	# ── IMPORTANT: The cloud must be self-contained. The spore (self) is freed
+	#    ~0.1s after _die() returns (base _die schedules queue_free via a timer).
+	#    If we connect the cloud's timers to methods on the spore instance, those
+	#    Callables become invalid once the spore is freed — the cloud would stop
+	#    ticking damage and never fade/free, becoming an orphaned node that
+	#    persists forever. Instead we attach a small script to the cloud node so
+	#    the tick/expire logic lives on the cloud itself, surviving the spore.
+	var cloud_script := preload("res://scripts/poison_cloud.gd")
+	cloud.set_script(cloud_script)
+	cloud.setup(cloud_mat, cloud_light, tick_timer, life_timer)
 
 	# Subtle pulsing animation while the cloud is alive
 	if cloud_mesh and cloud_mat:
@@ -124,54 +129,3 @@ func _spawn_poison_cloud() -> void:
 			if is_instance_valid(pulse_tween):
 				pulse_tween.kill()
 		)
-
-## Cloud damage tick callback. Damages players and enemies within the cloud radius.
-## Bound to the tick_timer via `_on_cloud_tick.bind(cloud)`.
-func _on_cloud_tick(cloud: Node3D) -> void:
-	if not is_instance_valid(cloud):
-		return
-	# Damage players
-	var p1: Node3D = cloud.get_tree().get_first_node_in_group("player")
-	if p1 and is_instance_valid(p1) and GameManager.player_is_alive and not GameManager.player_is_downed:
-		var d1: float = cloud.global_position.distance_to(p1.global_position)
-		if d1 < GameConstants.TOXIC_SPORE_CLOUD_RADIUS:
-			GameManager.take_damage(GameConstants.TOXIC_SPORE_CLOUD_DAMAGE_PER_TICK, cloud.global_position)
-	# Co-op: damage P2
-	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
-		if not CoOpManager.p2_is_downed:
-			var d2: float = cloud.global_position.distance_to(CoOpManager.p2_node.global_position)
-			if d2 < GameConstants.TOXIC_SPORE_CLOUD_RADIUS:
-				CoOpManager.p2_take_damage(GameConstants.TOXIC_SPORE_CLOUD_DAMAGE_PER_TICK, cloud.global_position)
-	# Damage enemies (friendly fire — reduced)
-	for enemy in cloud.get_tree().get_nodes_in_group("enemies"):
-		if not is_instance_valid(enemy):
-			continue
-		var eb: EnemyBase = enemy as EnemyBase
-		if eb == null or eb.is_dead:
-			continue
-		var ed: float = cloud.global_position.distance_to(eb.global_position)
-		if ed < GameConstants.TOXIC_SPORE_CLOUD_RADIUS:
-			var enemy_dmg: int = int(GameConstants.TOXIC_SPORE_CLOUD_DAMAGE_PER_TICK * GameConstants.TOXIC_SPORE_CLOUD_ENEMY_DAMAGE_MULT)
-			eb.take_damage_from(enemy_dmg, cloud.global_position)
-
-## Cloud lifetime expiry callback. Fades out the cloud mesh + light, then frees
-## the cloud node. Bound to the life_timer via `_on_cloud_expire.bind(...)`.
-func _on_cloud_expire(cloud: Node3D, cloud_mat: StandardMaterial3D,
-		cloud_light: OmniLight3D, tick_timer: Timer) -> void:
-	if not is_instance_valid(cloud):
-		return
-	tick_timer.stop()
-	# Fade the cloud mesh + light out over 0.5s
-	if cloud_mat and is_instance_valid(cloud_mat):
-		var fade_tween := cloud.create_tween()
-		fade_tween.set_parallel(true)
-		fade_tween.tween_property(cloud_mat, "albedo_color:a", 0.0, 0.5) \
-			.set_ease(Tween.EASE_IN)
-		fade_tween.tween_property(cloud_mat, "emission_energy_multiplier", 0.0, 0.5) \
-			.set_ease(Tween.EASE_IN)
-		if cloud_light:
-			fade_tween.tween_property(cloud_light, "light_energy", 0.0, 0.5) \
-				.set_ease(Tween.EASE_IN)
-		fade_tween.chain().tween_callback(cloud.queue_free)
-	else:
-		cloud.queue_free()
