@@ -86,7 +86,15 @@ func _buy_item(index: int) -> void:
 		GameManager.add_message("Not enough Space Gloop! Need %d, have %d" % [cost, gloop])
 		return
 	# Deduct Space Gloop
-	WeaponModSystem.remove_materials({GameConstants.CollectibleType.SPACE_GLOOP: cost})
+	# remove_materials expects an Array of material types (one entry per unit),
+	# not a Dictionary. Build an array with `cost` copies of SPACE_GLOOP so the
+	# function counts and removes the correct quantity. The previous call passed
+	# a Dictionary, which iterated as keys only — so it removed just 1 unit
+	# regardless of `cost`, letting players buy 5-cost items for 1 Space Gloop.
+	var materials_to_remove: Array = []
+	for _i in range(cost):
+		materials_to_remove.append(GameConstants.CollectibleType.SPACE_GLOOP)
+	WeaponModSystem.remove_materials(materials_to_remove)
 	# Add the item to inventory
 	WeaponModSystem.add_material(item["type"], 1)
 	GameManager.add_message("🛒 Traded %d Space Gloop for %s!" % [cost, item["name"]])
