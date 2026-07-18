@@ -154,6 +154,14 @@ func _ready() -> void:
 		prestige_light.omni_range = 4.0 + ProgressionSystem.get_prestige_level() * 0.5
 		prestige_light.omni_attenuation = 1.5
 		add_child(prestige_light)
+	# ── Damage impact reaction ── Connect to GameManager's damage signal so
+	# the player mesh squashes and flashes red when hit, giving visceral
+	# feedback beyond the camera shake and invuln blink. The squash is
+	# skipped during dash/slide (their tweens own mesh.scale) to avoid
+	# conflicts. The signal fires only when damage actually lands (after
+	# invuln/dash checks in GameManager.take_damage), so this won't trigger
+	# on blocked hits.
+	GameManager.damage_taken_from.connect(_on_player_damaged)
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused:
@@ -419,6 +427,62 @@ func _play_landing_effect() -> void:
 		Color(0.7, 0.65, 0.55), 0.6)
 	# Small camera shake on landing for weight
 	_trigger_camera_trauma(0.12)
+
+# ── Damage impact reaction ── When the player takes damage, Zorp's mesh
+#    squashes flat (compressed vertically, stretched horizontally) and the
+#    emission flashes red, then bounces back with elastic easing. This gives
+#    a visceral "I got hit" read that complements the camera shake and
+#    invuln blink — the player feels the impact through the mesh itself,
+#    not just the screen. Skipped during dash/slide (their tweens own
+#    mesh.scale) and uses a tracked tween so repeated hits don't stack.
+#    The squash direction is biased away from the damage source so Zorp
+#    visibly recoils from the attacker.
+var _dmg_squash_tween: Tween = null
+func _on_player_damaged(source_pos: Vector3) -> void:
+	# Skip if dash/slide tweens own mesh.scale — we'd fight them.
+	if is_dashing or is_sliding:
+		return
+	if not mesh:
+		return
+	# Kill any in-progress damage squash so the new hit restarts the pop
+	if _dmg_squash_tween and _dmg_squash_tween.is_valid():
+		_dmg_squash_tween.kill()
+	# Determine recoil direction (horizontal, away from source). If no
+	# source position, default to a uniform squash.
+	var recoil_dir: Vector3 = Vector3.ZERO
+	if source_pos != Vector3.ZERO:
+		recoil_dir = (global_position - source_pos)
+		recoil_dir.y = 0
+		if recoil_dir.length_squared() > 0.01:
+			recoil_dir = recoil_dir.normalized()
+	# Squash: compress vertically, stretch horizontally. The stretch is
+	# biased slightly toward the recoil direction so Zorp "flinches" away
+	# from the hit. This is the same juice language as the dash/landing
+	# squash but tuned for a hit (faster, sharper, less overshoot).
+	_dmg_squash_tween = create_tween()
+	# Impact frame: flat squash in 50ms (sharp, almost a freeze-frame)
+	_dmg_squash_tween.tween_property(mesh, "scale",
+		Vector3(1.35, 0.55, 1.35), 0.05) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	# Recoil bounce back with elastic for a wobbly recovery
+	_dmg_squash_tween.tween_property(mesh, "scale", Vector3.ONE, 0.28) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Emission flash red on the hit frame — a brief red glow that fades
+	# back to the idle/base color. This sells the "pain" read even in dark
+	# biomes where the silhouette squash might be hard to see. We tween
+	# emission_energy_multiplier down from a spike; the color is set
+	# directly to red and eased back by the idle/heartbeat systems.
+	if _player_material:
+		_player_material.emission = Color(1.0, 0.15, 0.1)
+		_player_material.emission_energy_multiplier = 3.0
+		var emit_tween := create_tween()
+		emit_tween.tween_property(_player_material, "emission_energy_multiplier",
+			1.0, 0.3) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		# Emission color eases back to base_color * 0.4 (the idle emission)
+		emit_tween.parallel().tween_property(_player_material, "emission",
+			base_color * 0.4, 0.35) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 func _handle_movement(delta: float) -> void:
 	# Read input

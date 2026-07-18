@@ -69,6 +69,20 @@ var _hp_bar_target_color: Color = Color(0.0, 1.0, 0.0)
 var _boss_bar_target_color: Color = Color(0.0, 1.0, 0.0)
 var _color_smoothing: float = 8.0  # Color lerp speed (slightly slower than bar for soft transition)
 
+# ── Boss bar damage flash ── When the boss takes damage, the HP bar flashes
+#    white and shakes horizontally for a brief moment. This gives each hit on
+#    the boss a visceral "impact" read on the UI, mirroring the enemy hit
+#    flash on the 3D mesh. We detect damage by comparing the boss's current
+#    HP ratio to the previous frame's value — a drop triggers the flash.
+#    The flash decays over BOSS_BAR_FLASH_DURATION and the shake uses a
+#    decaying sine wobble. State is tracked here so _process can drive it
+#    without needing a per-hit signal connection.
+var _boss_bar_prev_ratio: float = 1.0
+var _boss_bar_flash_timer: float = 0.0
+const BOSS_BAR_FLASH_DURATION: float = 0.18
+const BOSS_BAR_SHAKE_AMP: float = 6.0  # Max horizontal shake in pixels
+var _boss_bar_rest_left: float = 0.0   # Resting offset_left (for shake restore)
+
 # ── Phase 16: Weapon Mod indicator ──
 var _mod_indicator: Label = null
 
@@ -348,9 +362,23 @@ func _process(delta: float) -> void:
 		combo_timer_bar.visible = false
 
 	# Boss HP bar (smooth)
+	# NOTE: We do NOT touch boss_hp_container.visible here — the entrance
+	# and exit animations in _on_boss_spawned/_on_boss_defeated own the
+	# container's visibility, modulate, and offset_top. Forcing visible=true
+	# here would fight the exit fade-out tween; forcing visible=false would
+	# cut off the entrance slide-in. We only update the bar fill + color
+	# while a valid boss reference exists.
 	if boss_ref and is_instance_valid(boss_ref) and boss_ref.hp > 0:
-		boss_hp_container.visible = true
 		_boss_bar_target_ratio = float(boss_ref.hp) / float(boss_ref.max_hp) if boss_ref.max_hp > 0 else 0.0
+		# ── Damage flash detection ── Compare the boss's current HP ratio
+		# to last frame's value. A drop means the boss was hit this frame —
+		# trigger the white flash + horizontal shake. This is polled here
+		# rather than connected to EnemyBase.enemy_hit because that signal
+		# is per-enemy and we'd need to re-connect every time a new boss
+		# spawns. Polling the ratio is simpler and robust to boss swaps.
+		if _boss_bar_target_ratio < _boss_bar_prev_ratio - 0.001:
+			_boss_bar_flash_timer = BOSS_BAR_FLASH_DURATION
+		_boss_bar_prev_ratio = _boss_bar_target_ratio
 		var boss_bar_width: float = boss_hp_container.size.x - 4.0 if boss_hp_container.size.x > 0 else 496.0
 		var boss_current_ratio: float = boss_hp_bar.size.x / boss_bar_width if boss_bar_width > 0 else 0.0
 		boss_current_ratio = lerpf(boss_current_ratio, _boss_bar_target_ratio, weight)
@@ -361,10 +389,34 @@ func _process(delta: float) -> void:
 		boss_name_text.text = "☠ %s" % display_name
 		# Smooth boss bar color toward target (eases green → yellow → red)
 		_boss_bar_target_color = _ratio_to_bar_color(_boss_bar_target_ratio)
-		boss_hp_bar.color = boss_hp_bar.color.lerp(_boss_bar_target_color, 1.0 - exp(-_color_smoothing * delta))
+		# ── Damage flash: blend the bar color toward white while the flash
+		# timer is active, then ease back. The flash envelope is a decaying
+		# exponential so it punches in on the hit frame and fades smoothly.
+		var bar_color: Color = _boss_bar_target_color
+		if _boss_bar_flash_timer > 0.0:
+			_boss_bar_flash_timer = max(0.0, _boss_bar_flash_timer - delta)
+			var flash_env: float = _boss_bar_flash_timer / BOSS_BAR_FLASH_DURATION
+			# Ease-out cubic for a sharp onset and gentle tail
+			flash_env = 1.0 - pow(1.0 - flash_env, 3.0)
+			bar_color = bar_color.lerp(Color.WHITE, flash_env * 0.7)
+		boss_hp_bar.color = boss_hp_bar.color.lerp(bar_color, 1.0 - exp(-_color_smoothing * delta))
+		# ── Horizontal shake on the bar fill ── A decaying sine wobble
+		# biased by the flash envelope. The bar shakes left/right by a
+		# few pixels on each hit, reinforcing the impact. We shake the
+		# bar ColorRect's offset_left/right rather than the container so
+		# the border/name text stay steady and only the fill jitters.
+		if _boss_bar_flash_timer > 0.0:
+			var shake_env: float = _boss_bar_flash_timer / BOSS_BAR_FLASH_DURATION
+			var shake: float = sin(_boss_bar_flash_timer * 60.0) * BOSS_BAR_SHAKE_AMP * shake_env
+			boss_hp_bar.offset_left = 2.0 + shake
+		else:
+			boss_hp_bar.offset_left = 2.0
 	else:
-		boss_hp_container.visible = false
+		# Boss reference is gone — clear it so we don't keep querying a
+		# freed node. The container visibility is handled by the exit anim.
 		boss_ref = null
+		_boss_bar_prev_ratio = 1.0
+		_boss_bar_flash_timer = 0.0
 
 func _on_hp_changed(new_hp: int, max_hp: int) -> void:
 	var ratio := float(new_hp) / float(max_hp) if max_hp > 0 else 0.0
@@ -457,22 +509,84 @@ func show_message(text: String, duration: float = 2.0) -> void:
 func set_boss_reference(enemy: Node3D) -> void:
 	boss_ref = enemy
 
+# ── Boss HP bar entrance/exit tween ── Tracked so a re-spawn mid-fade-out
+#    doesn't stack tweens fighting over modulate/position. Killed before
+#    starting a new one.
+var _boss_bar_tween: Tween = null
+
 func _on_boss_spawned(boss: Node) -> void:
 	boss_ref = boss
 	GameManager.current_boss = boss
-	boss_hp_container.visible = true
 	if "enemy_name" in boss:
 		boss_name_text.text = "☠ %s" % boss.enemy_name
 		show_message("⚠ %s has appeared!" % boss.enemy_name, 3.0)
+	# ── Entrance animation: slide down from above + fade in ──
+	# The bar snaps in on a hard `visible = true` previously, which felt flat
+	# for such a dramatic event (a boss appearing). Now it slides down from
+	# 40px above its resting position with an ease-out-back overshoot and
+	# fades in modulate.a, so the boss bar "drops in" with weight. The
+	# container starts fully transparent and off-position so there's no
+	# one-frame flash of the resting bar before the tween kicks in.
+	if boss_hp_container:
+		if _boss_bar_tween and _boss_bar_tween.is_valid():
+			_boss_bar_tween.kill()
+		boss_hp_container.visible = true
+		boss_hp_container.modulate.a = 0.0
+		# Reset damage-flash state so the spawn doesn't register as a hit
+		_boss_bar_prev_ratio = 1.0
+		_boss_bar_flash_timer = 0.0
+		# Cache the resting offsets so we can tween relative to them
+		var rest_top: float = boss_hp_container.offset_top
+		# Start from 40px above the resting position BEFORE creating the
+		# tween so the tween reads the correct initial value on its first
+		# processing frame.
+		boss_hp_container.offset_top = rest_top - 40.0
+		_boss_bar_tween = create_tween()
+		_boss_bar_tween.set_parallel(true)
+		# Fade in
+		_boss_bar_tween.tween_property(boss_hp_container, "modulate:a", 1.0, 0.35) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		# Slide down from 40px above — ease-out-back gives a subtle overshoot
+		# for a "dropping in with weight" feel.
+		_boss_bar_tween.tween_property(boss_hp_container, "offset_top",
+			rest_top, 0.45) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 func _on_boss_defeated(boss: Node) -> void:
 	boss_ref = null
 	GameManager.current_boss = null
-	boss_hp_container.visible = false
 	var display_name: String = "Boss"
 	if "enemy_name" in boss:
 		display_name = boss.enemy_name
 	show_message("%s defeated!" % display_name, 3.0)
+	# ── Exit animation: fade out + slide up, then hide ──
+	# Previously the bar vanished instantly on boss death, which undercut the
+	# climactic moment. Now it fades out over 0.5s while sliding up 30px,
+	# giving the player a beat to register the kill before the UI clears.
+	# The container is hidden via tween_callback after the fade so the
+	# smooth exit completes fully.
+	if boss_hp_container:
+		if _boss_bar_tween and _boss_bar_tween.is_valid():
+			_boss_bar_tween.kill()
+		# If the bar is already hidden (e.g. boss died during spawn fade),
+		# skip the exit animation entirely.
+		if not boss_hp_container.visible:
+			return
+		var rest_top: float = boss_hp_container.offset_top
+		_boss_bar_tween = create_tween()
+		_boss_bar_tween.set_parallel(true)
+		_boss_bar_tween.tween_property(boss_hp_container, "modulate:a", 0.0, 0.5) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+		_boss_bar_tween.tween_property(boss_hp_container, "offset_top",
+			rest_top - 30.0, 0.5) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		# After the fade, hide and restore the resting position + modulate
+		# so the next boss spawn starts from a clean state.
+		_boss_bar_tween.chain().tween_callback(func():
+			boss_hp_container.visible = false
+			boss_hp_container.modulate.a = 1.0
+			boss_hp_container.offset_top = rest_top
+		)
 
 func _on_message_added(text: String) -> void:
 	show_message(text, 2.5)

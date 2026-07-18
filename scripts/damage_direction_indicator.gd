@@ -11,6 +11,14 @@ class_name DamageDirectionIndicator
 var _angle: float = 0.0       # Radians, 0 = up
 var _timer: float = 0.0       # Remaining lifetime
 var _alpha: float = 0.0       # Current alpha
+# ── Punch-in scale ── The arrow now pops in from 1.6x scale and eases down
+#    to 1.0x over the first ~120ms of its life, giving the indicator a
+#    urgent "stab" feel rather than a flat fade. The scale envelope is a
+#    decaying exponential so it punches in on the hit frame and settles
+#    smoothly. Driven in _process and applied in _draw.
+var _scale_pop: float = 1.0  # Current draw scale (1.0 = resting)
+const SCALE_POP_PEAK: float = 1.6
+const SCALE_POP_DURATION: float = 0.12
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -34,6 +42,8 @@ func _on_damage_taken_from(source_pos: Vector3) -> void:
 	_angle = atan2(dx, -dz)
 	_timer = GameConstants.DAMAGE_INDICATOR_DURATION
 	_alpha = GameConstants.DAMAGE_INDICATOR_MAX_ALPHA
+	# Trigger the punch-in scale pop on each new hit
+	_scale_pop = SCALE_POP_PEAK
 
 func _process(delta: float) -> void:
 	if _timer > 0:
@@ -42,9 +52,22 @@ func _process(delta: float) -> void:
 		var life_frac: float = _timer / GameConstants.DAMAGE_INDICATOR_DURATION
 		life_frac = clampf(life_frac, 0.0, 1.0)
 		_alpha = life_frac * GameConstants.DAMAGE_INDICATOR_MAX_ALPHA
+		# ── Scale pop decay ── Ease the scale from the peak back to 1.0
+		# over SCALE_POP_DURATION. Uses ease-out cubic so the pop is sharp
+		# on the hit frame and settles gently. Only active during the pop
+		# window (first 120ms); after that the scale stays at 1.0.
+		var pop_elapsed: float = GameConstants.DAMAGE_INDICATOR_DURATION - _timer
+		if pop_elapsed < SCALE_POP_DURATION:
+			var pop_t: float = clampf(pop_elapsed / SCALE_POP_DURATION, 0.0, 1.0)
+			# Ease-out cubic: 1 - (1-t)^3 — sharp onset, gentle landing
+			var eased: float = 1.0 - pow(1.0 - pop_t, 3.0)
+			_scale_pop = lerpf(SCALE_POP_PEAK, 1.0, eased)
+		else:
+			_scale_pop = 1.0
 		queue_redraw()
 	elif _alpha > 0.01:
 		_alpha = 0.0
+		_scale_pop = 1.0
 		queue_redraw()
 
 func _draw() -> void:
@@ -63,8 +86,11 @@ func _draw() -> void:
 		GameConstants.DAMAGE_INDICATOR_COLOR.b,
 		_alpha)
 
-	# Draw a triangular arrow pointing outward from center
-	var arrow_size: float = 14.0
+	# Draw a triangular arrow pointing outward from center.
+	# The arrow_size scales with _scale_pop so the arrow punches in large
+	# on the hit frame and eases down to its resting size. This gives the
+	# indicator an urgent "stab" feel that grabs the player's attention.
+	var arrow_size: float = 14.0 * _scale_pop
 	# Direction vector from center to arrow
 	var dir := Vector2(sin(_angle), -cos(_angle)).normalized()
 	# Perpendicular vector
