@@ -186,10 +186,12 @@ func _spawn_loot() -> void:
 		var collectible := collectible_scene.instantiate()
 		var angle: float = (float(i) / float(GameConstants.TREASURE_CHEST_LOOT_COUNT)) * TAU
 		var offset: Vector3 = Vector3(cos(angle), 0, sin(angle)) * 1.5
+		parent.add_child(collectible)
 		collectible.global_position = global_position + offset + Vector3(0, 1.0, 0)
 		collectible.set_type(loot_type)
-		parent.add_child(collectible)
 		GameManager.collectibles.append(collectible)
+		if not collectible.is_in_group("collectibles"):
+			collectible.add_to_group("collectibles")
 		# Give the collectible a little tumble for a "burst out" feel.
 		if collectible.has_method("start_tumble"):
 			collectible.start_tumble(Vector3(cos(angle), 0.5, sin(angle)))
@@ -198,26 +200,35 @@ func _trigger_trap() -> void:
 	# Deal damage to the player.
 	GameManager.take_damage(GameConstants.TREASURE_CHEST_TRAP_DAMAGE, global_position)
 	GameManager.add_message("💥 It's a trap! The chest was rigged!")
-	# Spawn a Swarm Mite as the "trap" enemy (if the scene exists).
+	# Spawn a "Chest Mimic" enemy. We use the blob scene (EnemyBase) rather than
+	# the Swarm Mite scene because SwarmMite._ready() overwrites enemy_name,
+	# max_hp, speed, damage, base_scale, and base_color with its own constants —
+	# which would discard the custom "mimic" stats below. EnemyBase._ready() does
+	# NOT overwrite those fields (they come from the scene's export values), so
+	# pre-add_child assignments survive. `hp` is set by EnemyBase._ready() to
+	# `max_hp`, so we set max_hp before add_child and then clamp hp after.
 	var parent: Node = get_parent()
 	if not parent:
 		return
-	var mite_scene_path := "res://scenes/entities/enemy_swarm_mite.tscn"
-	if not ResourceLoader.exists(mite_scene_path):
-		# Fallback: blob scene.
-		mite_scene_path = "res://scenes/entities/enemy_blob.tscn"
-	var enemy_scene: PackedScene = load(mite_scene_path)
+	var mimic_scene_path := "res://scenes/entities/enemy_blob.tscn"
+	if not ResourceLoader.exists(mimic_scene_path):
+		return  # No enemy scene available — skip the trap spawn.
+	var enemy_scene: PackedScene = load(mimic_scene_path)
 	var enemy: CharacterBody3D = enemy_scene.instantiate()
-	enemy.global_position = global_position + Vector3(0, 0.5, 0)
 	# Configure as a basic trap enemy (low HP, low damage — it's a nuisance).
+	# These must be set BEFORE add_child so EnemyBase._ready() picks them up
+	# (it reads base_color/base_scale to build the material and spawn tween).
 	enemy.enemy_name = "Chest Mimic"
 	enemy.max_hp = 20
-	enemy.hp = 20
 	enemy.speed = 5.0
 	enemy.damage = 8
 	enemy.base_scale = 0.5
 	enemy.base_color = GameConstants.TREASURE_CHEST_COLOR
 	parent.add_child(enemy)
+	enemy.global_position = global_position + Vector3(0, 0.5, 0)
+	# EnemyBase._ready() sets hp = max_hp, so hp is already 20 here. Set again
+	# explicitly for clarity / safety in case a subclass overrides _ready.
+	enemy.hp = 20
 	GameManager.enemies.append(enemy)
 	# Materialization particle burst.
 	if ParticleEffects:

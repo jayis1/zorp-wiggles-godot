@@ -200,10 +200,12 @@ func _drop_loot() -> void:
 	var collectible_scene := preload("res://scenes/entities/collectible.tscn")
 	# Always drop an XP orb.
 	var xp_drop := collectible_scene.instantiate()
+	parent.add_child(xp_drop)
 	xp_drop.global_position = global_position + Vector3(0, 0.5, 0)
 	xp_drop.set_type(GameConstants.CollectibleType.XP_ORB)
-	parent.add_child(xp_drop)
 	GameManager.collectibles.append(xp_drop)
+	if not xp_drop.is_in_group("collectibles"):
+		xp_drop.add_to_group("collectibles")
 	if xp_drop.has_method("start_tumble"):
 		xp_drop.start_tumble(Vector3(randf_range(-1, 1), 0.5, randf_range(-1, 1)).normalized())
 	# 30% chance to also drop a crafting material.
@@ -224,9 +226,11 @@ func _drop_loot() -> void:
 		]
 		var mat_type: int = material_table[randi() % material_table.size()]
 		var mat_drop := collectible_scene.instantiate()
+		parent.add_child(mat_drop)
 		mat_drop.global_position = global_position + Vector3(0, 0.5, 0)
 		mat_drop.set_type(mat_type)
-		parent.add_child(mat_drop)
 		GameManager.collectibles.append(mat_drop)
+		if not mat_drop.is_in_group("collectibles"):
+			mat_drop.add_to_group("collectibles")
 		if mat_drop.has_method("start_tumble"):
 			mat_drop.start_tumble(Vector3(randf_range(-1, 1), 0.5, randf_range(-1, 1)).normalized())

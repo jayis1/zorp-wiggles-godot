@@ -423,6 +423,8 @@ func _spawn_exit_collectibles() -> void:
 		coll.set_type(rare_type)
 
 		GameManager.collectibles.append(coll)
+		if not coll.is_in_group("collectibles"):
+			coll.add_to_group("collectibles")
 
 	GameManager.add_message("✨ Rift rewards materialized!")
 

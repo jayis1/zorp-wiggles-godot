@@ -537,10 +537,12 @@ func _spawn_collectible_at(type: int, pos: Vector3) -> void:
 	# Spawn a collectible of the given type at the given position.
 	var collectible_scene := preload("res://scenes/entities/collectible.tscn")
 	var collectible := collectible_scene.instantiate()
+	add_child(collectible)
 	collectible.global_position = pos
 	collectible.set_type(type)
-	add_child(collectible)
 	GameManager.collectibles.append(collectible)
+	if not collectible.is_in_group("collectibles"):
+		collectible.add_to_group("collectibles")
 
 func get_biome_at(world_pos: Vector3) -> int:
 	# Get the biome type at a world position.
