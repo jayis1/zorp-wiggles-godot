@@ -149,6 +149,14 @@ func _define_achievements() -> void:
 		{"id": "wildlife_1", "title": "Critter Catcher", "desc": "Catch your first wildlife", "icon": "🦌", "category": "Collection", "target": 1, "progress_key": "wildlife_caught"},
 		{"id": "wildlife_25", "title": "Wildlife Wrangler", "desc": "Catch 25 wildlife", "icon": "🦌🦌", "category": "Collection", "target": 25, "progress_key": "wildlife_caught"},
 		{"id": "wildlife_100", "title": "Beast Master", "desc": "Catch 100 wildlife", "icon": "🐾", "category": "Collection", "target": 100, "progress_key": "wildlife_caught"},
+		# ── Phase 26: World Life — wandering merchants, world bosses, fast travel ──
+		{"id": "merchant_1", "title": "Rare Customer", "desc": "Trade with a wandering merchant", "icon": "🛍", "category": "Collection", "target": 1, "progress_key": "merchant_trades"},
+		{"id": "merchant_10", "title": "Merchant Regular", "desc": "Trade with wandering merchants 10 times", "icon": "🛍🛍", "category": "Collection", "target": 10, "progress_key": "merchant_trades"},
+		{"id": "world_boss_1", "title": "World Slayer", "desc": "Defeat your first world boss", "icon": "🌍", "category": "Combat", "target": 1, "progress_key": "world_bosses_defeated"},
+		{"id": "world_boss_5", "title": "Apex Predator", "desc": "Defeat 5 world bosses", "icon": "🌍🌍", "category": "Combat", "target": 5, "progress_key": "world_bosses_defeated"},
+		{"id": "fast_travel_1", "title": "Pathfinder", "desc": "Activate your first fast travel waypoint", "icon": "🧭", "category": "Exploration", "target": 1, "progress_key": "waypoints_activated"},
+		{"id": "fast_travel_6", "title": "Navigator", "desc": "Activate 6 fast travel waypoints", "icon": "🧭🧭", "category": "Exploration", "target": 6, "progress_key": "waypoints_activated"},
+		{"id": "fast_travel_12", "title": "Cartographer Supreme", "desc": "Activate all 12 fast travel waypoints", "icon": "🗺", "category": "Exploration", "target": 12, "progress_key": "waypoints_activated"},
 	]
 	for def in defs:
 		var ach := Achievement.new()
@@ -291,6 +299,12 @@ func _unlock(achievement_id: String) -> void:
 	while _popups.size() > 3:
 		_popups.pop_front()
 	GameManager.add_message("🏆 Achievement: %s" % ach.title)
+
+# Phase 26: Public unlock entry point so external systems (WorldBossManager,
+# FastTravelNetwork, WanderingMerchant) can trigger one-shot achievements
+# without duplicating the popup logic. Safe to call with an unknown id.
+func unlock(achievement_id: String) -> void:
+	_unlock(achievement_id)
 
 func _process(delta: float) -> void:
 	if _popups.is_empty():

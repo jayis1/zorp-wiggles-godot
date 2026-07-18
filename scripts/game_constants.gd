@@ -2250,3 +2250,80 @@ const INTERACTIVE_TYPES: Array[Dictionary] = [
 		"scale": 1.0,
 	},
 ]
+
+# ─── Phase 26: Wandering Merchants ──────────────────────────────────────────
+# Rare traveling merchants that appear periodically near the player (unlike the
+# two stationary Phase 3 traders). They despawn after a while or when the player
+# trades, and carry a premium stock of rare items at a discounted Space Gloop
+# cost. They are clearly distinguishable from regular traders by a vivid magenta
+# canopy + a "Rare Goods" banner.
+const WANDERING_MERCHANT_SPAWN_INTERVAL_MIN: float = 180.0   # Earliest a merchant can appear (seconds)
+const WANDERING_MERCHANT_SPAWN_INTERVAL_MAX: float = 360.0   # Latest a merchant can appear
+const WANDERING_MERCHANT_LIFETIME: float = 120.0             # How long they stay before despawning
+const WANDERING_MERCHANT_SPAWN_DISTANCE: float = 35.0        # Distance from player at which they appear
+const WANDERING_MERCHANT_TRADE_RANGE: float = 5.0            # Distance to open the trade menu
+const WANDERING_MERCHANT_TRADE_RANGE_DESPAWN: float = 90.0   # Despawn if player wanders too far
+const WANDERING_MERCHANT_SPEED: float = 1.4                  # Slow wander speed
+const WANDERING_MERCHANT_WANDER_RADIUS: float = 8.0          # Tight wander radius (stays near spawn)
+const WANDERING_MERCHANT_MAX_ALIVE: int = 1                  # Only one wandering merchant at a time
+const WANDERING_MERCHANT_BODY_COLOR: Color = Color(0.85, 0.3, 0.9)  # Vivid magenta
+const WANDERING_MERCHANT_HAT_COLOR: Color = Color(1.0, 0.85, 0.2)    # Gold canopy
+const WANDERING_MERCHANT_GLOW_COLOR: Color = Color(1.0, 0.4, 1.0)
+const WANDERING_MERCHANT_NAMES: Array[String] = ["Vex the Wanderer", "Glip-Who-Walks", "Orbix Prime", "Zara of the Rifts", "Fweem the Rare"]
+# Wandering merchant rare stock — discounted from the regular trader (cost 3 vs 5).
+const WANDERING_MERCHANT_STOCK: Array[Dictionary] = [
+	{"name": "Meteor Shard", "type": GameConstants.CollectibleType.METEOR_SHARD, "cost": 3, "icon": "☄"},
+	{"name": "Quantum Fuzz", "type": GameConstants.CollectibleType.QUANTUM_FUZZ, "cost": 3, "icon": "✦"},
+	{"name": "Nebula Dust", "type": GameConstants.CollectibleType.NEBULA_DUST, "cost": 3, "icon": "🌌"},
+	{"name": "Shield Crystal", "type": GameConstants.CollectibleType.SHIELD_CRYSTAL, "cost": 3, "icon": "🛡"},
+	{"name": "Magnet Core", "type": GameConstants.CollectibleType.MAGNET_CORE, "cost": 3, "icon": "🧲"},
+	{"name": "Toxic Extract", "type": GameConstants.CollectibleType.TOXIC_EXTRACT, "cost": 3, "icon": "☠"},
+]
+
+# ─── Phase 26: World Bosses ──────────────────────────────────────────────────
+# Roaming bosses not tied to the BossArena system. They spawn very rarely at a
+# distance from the player, wander the open world, and drop a large loot shower
+# on death. Unlike arena bosses, they do NOT seal the player in — the player can
+# flee. They are flagged as world bosses so the HUD/minimap can highlight them.
+const WORLD_BOSS_SPAWN_INTERVAL_MIN: float = 300.0    # Earliest a world boss can spawn (5 min)
+const WORLD_BOSS_SPAWN_INTERVAL_MAX: float = 600.0   # Latest (10 min)
+const WORLD_BOSS_SPAWN_DISTANCE: float = 60.0       # Spawn far from the player
+const WORLD_BOSS_DESPAWN_DISTANCE: float = 180.0   # Despawn if player flees too far
+const WORLD_BOSS_MAX_ALIVE: int = 1                # Only one world boss at a time
+const WORLD_BOSS_HP_MULT: float = 1.6              # 60% tougher than the base boss stats
+const WORLD_BOSS_DAMAGE_MULT: float = 1.2          # 20% more damage
+const WORLD_BOSS_XP_MULT: float = 2.0              # Double XP
+const WORLD_BOSS_SCORE_MULT: float = 2.5           # 2.5x score
+const WORLD_BOSS_LOOT_COUNT: int = 8               # Number of collectibles dropped on death
+const WORLD_BOSS_TELEGRAPH_TIME: float = 3.0       # Warning time before the boss materializes
+const WORLD_BOSS_COLOR: Color = Color(1.0, 0.2, 0.2)  # Distinct red tint for the minimap
+# Which enemy types can be promoted to world boss (must have a boss-tier scene).
+const WORLD_BOSS_CANDIDATES: Array[int] = [
+	GameConstants.EnemyType.DRAKE,
+	GameConstants.EnemyType.VOID_LEVIATHAN,
+	GameConstants.EnemyType.ANCIENT_SENTINEL,
+	GameConstants.EnemyType.GRAVITY_ELEMENTAL,
+]
+const WORLD_BOSS_NAMES: Dictionary = {
+	GameConstants.EnemyType.DRAKE: "Apex Plasma Drake",
+	GameConstants.EnemyType.VOID_LEVIATHAN: "Colossal Void Leviathan",
+	GameConstants.EnemyType.ANCIENT_SENTINEL: "Rogue Ancient Sentinel",
+	GameConstants.EnemyType.GRAVITY_ELEMENTAL: "Singularity Elemental",
+}
+
+# ─── Phase 26: Fast Travel Network ───────────────────────────────────────────
+# Waypoints scattered across the world. The player activates one by stepping on
+# it (or pressing the interact key), after which it can be selected from the
+# fast-travel menu to teleport back. Only activated waypoints appear in the
+# menu. Teleporting costs a small amount of Space Gloop to discourage spam.
+const FAST_TRAVEL_SPAWN_CHANCE: float = 0.004        # Per-tile chance
+const FAST_TRAVEL_ACTIVATE_RANGE: float = 4.0        # Distance to activate a waypoint
+const FAST_TRAVEL_SKIP_NEAR_SPAWN: float = 55.0      # Skip waypoints near spawn
+const FAST_TRAVEL_TELEPORT_COST: int = 2            # Space Gloop per teleport
+const FAST_TRAVEL_COLOR: Color = Color(0.3, 1.0, 0.7)  # Teal
+const FAST_TRAVEL_GLOW_COLOR: Color = Color(0.5, 1.0, 0.85)
+const FAST_TRAVEL_INACTIVE_COLOR: Color = Color(0.4, 0.4, 0.45)  # Grey when not yet activated
+const FAST_TRAVEL_HEIGHT: float = 2.5                # Pillar height
+const FAST_TRAVEL_RADIUS: float = 1.8                # Activation ring radius
+const FAST_TRAVEL_MAX_WAYPOINTS: int = 12            # Cap on total waypoints in the world
+const FAST_TRAVEL_MENU_KEY: String = "fast_travel"   # Input action name

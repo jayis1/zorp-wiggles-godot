@@ -24,21 +24,38 @@ const TRADE_ITEMS: Array[Dictionary] = [
 	{"name": "Toxic Extract", "type": GameConstants.CollectibleType.TOXIC_EXTRACT, "cost": 5, "icon": "☠"},
 ]
 
+# Phase 26: The active item list — defaults to TRADE_ITEMS but is replaced with
+# the wandering merchant's discounted `stock_override` when one is open. This
+# lets the same TradeMenu UI serve both stationary traders and wandering
+# merchants without a separate panel.
+var _active_items: Array[Dictionary] = []
+
 # Click hitboxes for each item (updated each draw frame)
 var _item_rects: Array[Rect2] = []
 var _close_rect: Rect2 = Rect2()
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_STOP  # Capture clicks when visible
+	# IGNORE when closed so mouse clicks pass through to the player's
+	# _unhandled_input (shooting, fetch mode). Switched to STOP in open()
+	# so the menu captures clicks for item purchase. Keeping STOP always-on
+	# would block all left-click shooting even when the menu is invisible.
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = true  # Always visible for drawing, uses alpha for fade
 
 func open(trader: Node) -> void:
 	if _is_open:
 		return
 	_trader = trader
+	# Phase 26: Wandering merchants carry a discounted `stock_override`. Use it
+	# when present; otherwise fall back to the standard trader stock.
+	if trader and "stock_override" in trader and trader.stock_override is Array and not trader.stock_override.is_empty():
+		_active_items = trader.stock_override
+	else:
+		_active_items = TRADE_ITEMS
 	_is_open = true
 	GameManager.is_paused = true
+	mouse_filter = Control.MOUSE_FILTER_STOP
 
 func close() -> void:
 	if not _is_open:
@@ -46,6 +63,7 @@ func close() -> void:
 	_is_open = false
 	_trader = null
 	GameManager.is_paused = false
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _process(delta: float) -> void:
 	var target: float = 1.0 if _is_open else 0.0
@@ -76,9 +94,9 @@ func _input(event: InputEvent) -> void:
 		_gui_click(event.position)
 
 func _buy_item(index: int) -> void:
-	if index < 0 or index >= TRADE_ITEMS.size():
+	if index < 0 or index >= _active_items.size():
 		return
-	var item: Dictionary = TRADE_ITEMS[index]
+	var item: Dictionary = _active_items[index]
 	var cost: int = item["cost"]
 	# Check Space Gloop balance
 	var gloop: int = WeaponModSystem.get_material_count(GameConstants.CollectibleType.SPACE_GLOOP)
@@ -98,6 +116,9 @@ func _buy_item(index: int) -> void:
 	# Add the item to inventory
 	WeaponModSystem.add_material(item["type"], 1)
 	GameManager.add_message("🛒 Traded %d Space Gloop for %s!" % [cost, item["name"]])
+	# Phase 26: Notify wandering merchants so they can react/despawn.
+	if _trader and is_instance_valid(_trader) and _trader.has_method("on_trade_completed"):
+		_trader.on_trade_completed(item["name"])
 	# Camera shake
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
@@ -133,12 +154,23 @@ func _draw() -> void:
 
 	# ── Title ──
 	var trader_name: String = "Trader"
-	if _trader and is_instance_valid(_trader) and "trader_name" in _trader:
-		trader_name = _trader.trader_name
+	var is_wandering: bool = false
+	if _trader and is_instance_valid(_trader):
+		if "trader_name" in _trader:
+			trader_name = _trader.trader_name
+		elif "merchant_name" in _trader:
+			trader_name = _trader.merchant_name
+		# Phase 26: Wandering merchants use a magenta border + "Rare Goods" title.
+		is_wandering = _trader.is_in_group("wandering_merchant")
+	var title_color: Color = border_col
+	var title_text: String = "🛒 %s's Trade Post" % trader_name
+	if is_wandering:
+		title_color = Color(0.85, 0.3, 0.9, 0.9 * a)
+		title_text = "🛍 %s — Rare Goods" % trader_name
 	font.draw_string(get_canvas_item(),
 		Vector2(panel_x + 20, panel_y + 30),
-		"🛒 %s's Trade Post" % trader_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22,
-		border_col)
+		title_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 22,
+		title_color)
 
 	# Space Gloop balance
 	var gloop: int = WeaponModSystem.get_material_count(GameConstants.CollectibleType.SPACE_GLOOP)
@@ -158,7 +190,7 @@ func _draw() -> void:
 	var item_h: float = 70.0
 	var start_y: float = panel_y + 60
 
-	for i in range(TRADE_ITEMS.size()):
+	for i in range(_active_items.size()):
 		var col: int = i % cols
 		var row: int = i / cols
 		var ix: float = panel_x + 20 + col * (item_w + 10)
@@ -167,7 +199,7 @@ func _draw() -> void:
 		if iy + item_h > panel_y + panel_h - 40:
 			break
 
-		var item: Dictionary = TRADE_ITEMS[i]
+		var item: Dictionary = _active_items[i]
 		var rect := Rect2(ix, iy, item_w, item_h)
 		_item_rects.append(rect)
 

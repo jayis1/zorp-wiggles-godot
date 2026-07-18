@@ -137,15 +137,16 @@ func _physics_process(delta: float) -> void:
 			_open_trade_menu()
 
 func _open_trade_menu() -> void:
-	# Find the trade menu in the HUD and open it
+	# Find the TradeMenu in the HUD and open it
 	var hud: CanvasLayer = GameManager.hud
 	if not hud:
 		# Fallback to old instant trade if HUD not available
 		_try_trade()
 		return
-	# Find TradeMenu control
+	# Find TradeMenu control by class — `has_method("open")` is too loose
+	# now that FastTravelMenu (open() with no args) also lives in the HUD.
 	for child in hud.get_children():
-		if child is Control and child.has_method("open"):
+		if child is TradeMenu:
 			child.open(self)
 			return
 	# Fallback to old instant trade

@@ -128,6 +128,10 @@ deploy_ability={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":86,"physical_keycode":0,"key_label":0,"unicode":118,"location":0,"echo":false,"script":null)]
 }
+fast_travel={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":66,"physical_keycode":0,"key_label":0,"unicode":98,"location":0,"echo":false,"script":null)]
+}
 
 [autoload]
 
@@ -146,3 +150,6 @@ Statistics="*res://scripts/statistics.gd"
 ProgressionSystem="*res://scripts/progression_system.gd"
 DialoguePanel="*res://scripts/dialogue_panel.gd"
 DeployableSystem="*res://scripts/deployable_system.gd"
+WorldBossManager="*res://scripts/world_boss_manager.gd"
+FastTravelNetwork="*res://scripts/fast_travel_network.gd"
+WanderingMerchantSpawner="*res://scripts/wandering_merchant_spawner.gd"

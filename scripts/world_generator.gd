@@ -303,6 +303,12 @@ func _spawn_structures() -> void:
 	_spawn_dialogue_npcs()
 	_spawn_environmental_hazards()
 	_spawn_interactive_objects()
+	# ── Phase 26: World Life — fast travel waypoints ──
+	_spawn_fast_travel_waypoints()
+	# Note: Wandering merchants are spawned periodically by the
+	# WanderingMerchantSpawner autoload (every 3–6 minutes near the player),
+	# not at world-gen time. World bosses are spawned by the WorldBossManager
+	# autoload. No world-gen spawn is needed for either.
 
 # ── Phase 8: Spawn destructible crates & crystals across biomes ────────────────
 func _spawn_destructibles() -> void:
@@ -797,3 +803,34 @@ func _spawn_interactive_objects() -> void:
 			obj.global_position = Vector3(wx, 0, wz)
 			count += 1
 	print("[WorldGenerator] Spawned %d interactive objects" % count)
+
+func _spawn_fast_travel_waypoints() -> void:
+	# Spawn fast travel waypoints across walkable biomes. These are sparse
+	# (0.4% per tile) and capped at FAST_TRAVEL_MAX_WAYPOINTS total. The player
+	# activates them by walking within FAST_TRAVEL_ACTIVATE_RANGE.
+	var waypoint_scene := preload("res://scenes/entities/fast_travel_waypoint.tscn")
+	var half_grid: float = GRID_SIZE / 2.0
+	var count: int = 0
+	for x in range(GRID_SIZE):
+		for z in range(GRID_SIZE):
+			var idx: int = x * GRID_SIZE + z
+			var biome: int = grid[idx]
+			if not _is_biome_walkable(biome):
+				continue
+			if randf() > GameConstants.FAST_TRAVEL_SPAWN_CHANCE:
+				continue
+			if count >= GameConstants.FAST_TRAVEL_MAX_WAYPOINTS:
+				break
+			var wx: float = (x - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+			var wz: float = (z - half_grid) * TILE_SIZE + randf_range(-1.5, 1.5)
+			# Skip near spawn.
+			if Vector2(wx, wz).length() < GameConstants.FAST_TRAVEL_SKIP_NEAR_SPAWN:
+				continue
+			var wp := waypoint_scene.instantiate()
+			# Assign a biome-themed name before add_child so _ready() sees it.
+			var biome_name: String = GameConstants.BIOME_NAMES.get(biome, "Unknown")
+			wp.waypoint_name = "%s Waypoint" % biome_name
+			add_child(wp)
+			wp.global_position = Vector3(wx, 0, wz)
+			count += 1
+	print("[WorldGenerator] Spawned %d fast travel waypoints" % count)

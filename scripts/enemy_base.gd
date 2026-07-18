@@ -26,6 +26,14 @@ signal enemy_hit(enemy: EnemyBase, damage: int)
 # When true, _die() emits boss_defeated so the arena dissolves.
 var is_arena_boss: bool = false
 
+# ── Phase 26: World Bosses — flag for roaming open-world bosses ──
+# Set by WorldBossManager when promoting a boss-type enemy to a world boss.
+# When true, _die() emits boss_defeated so the WorldBossManager drops the
+# loot shower and clears its active-world-boss reference. Distinct from
+# is_arena_boss because world bosses do NOT seal the player in an arena
+# and should NOT call GameManager.clear_current_boss() (no arena to clear).
+var is_world_boss: bool = false
+
 # ─── State ────────────────────────────────────────────────────────────────────
 var hp: int = 50
 var is_alerted: bool = false
@@ -550,6 +558,11 @@ func _die() -> void:
 	if is_arena_boss:
 		GameManager.boss_defeated.emit(self)
 		GameManager.clear_current_boss()
+	# ── Phase 26: World Bosses — emit boss_defeated so WorldBossManager drops
+	# the loot shower and clears its active-world-boss reference. World bosses
+	# are NOT arena-bound, so we do NOT call clear_current_boss() here. ──
+	if is_world_boss:
+		GameManager.boss_defeated.emit(self)
 	# Remove from GameManager's enemy list to prevent the array from growing
 	# with invalid references over time (performance leak).
 	GameManager.enemies.erase(self)
@@ -609,6 +622,28 @@ func _die() -> void:
 	var tree := get_tree()
 	if tree:
 		tree.create_timer(0.1).timeout.connect(queue_free)
+
+## ── Phase 26: Public despawn fade for world bosses ──
+## Called by WorldBossManager when a world boss despawns without dying (player
+## fled or player died). Marks the enemy dead so the normal death sequence is
+## skipped, then fades the body out + shrinks it before queue_free(). This
+## encapsulates the private _material/body_mesh access so external systems
+## don't reach into enemy internals.
+func despawn_fade(duration: float = 0.8) -> void:
+	is_dead = true  # Prevent normal death sequence from running.
+	GameManager.enemies.erase(self)
+	if ai_controller:
+		ai_controller.cleanup()
+		ai_controller = null
+	if _material and body_mesh:
+		var t := create_tween()
+		t.set_parallel(true)
+		t.tween_property(_material, "albedo_color:a", 0.0, duration)
+		t.tween_property(body_mesh, "scale", Vector3(0.01, 0.01, 0.01), duration) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		t.chain().tween_callback(queue_free)
+	else:
+		queue_free()
 
 ## ── Phase 8: Enemy corpse physics ──────────────────────────────────────────────
 ## Spawns a RigidBody3D proxy corpse that tumbles and settles on the ground

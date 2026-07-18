@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://wandmerch01"]
+
+[ext_resource type="Script" path="res://scripts/wandering_merchant.gd" id="1_wm"]
+
+[sub_resource type="SphereShape3D" id="WandMerchShape"]
+radius = 1.0
+
+[node name="WanderingMerchant" type="CharacterBody3D"]
+script = ExtResource("1_wm")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("WandMerchShape")

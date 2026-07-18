@@ -256,6 +256,14 @@ func _ready() -> void:
 	tm_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(tm_ctrl)
 
+	# ── Phase 26: Fast Travel Menu (B key) ──
+	var ft_script := load("res://scripts/fast_travel_menu.gd")
+	var ft_ctrl := Control.new()
+	ft_ctrl.set_script(ft_script)
+	ft_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ft_ctrl.add_to_group("fast_travel_menu")
+	add_child(ft_ctrl)
+
 	# ── Phase 25: Statistics Page (F2) ──
 	var sp_script := load("res://scripts/statistics_page.gd")
 	var sp_ctrl := Control.new()

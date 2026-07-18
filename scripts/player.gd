@@ -859,6 +859,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("deploy_ability") and not GameManager.is_paused and GameManager.player_is_alive:
 		_try_deploy_ability()
 
+	# ── Phase 26: Fast travel menu (B key) — open the waypoint teleport panel ──
+	# Toggles the FastTravelMenu HUD child. Only opens if at least one waypoint
+	# is activated (otherwise shows a hint message).
+	if event.is_action_pressed("fast_travel") and GameManager.player_is_alive:
+		_toggle_fast_travel_menu()
+
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig:
@@ -1259,3 +1265,35 @@ func _try_deploy_ability() -> void:
 	# ── Phase 25: Statistics tracking ──
 	if Statistics:
 		Statistics.record_shot()
+
+# ── Phase 26: Fast travel menu toggle (B key) ──
+# Opens the FastTravelMenu HUD child if any waypoints are activated; otherwise
+# shows a hint message guiding the player to find teal waypoint pillars.
+func _toggle_fast_travel_menu() -> void:
+	# If the fast travel menu is already open, close it (toggle) — this must
+	# be checked BEFORE the is_paused guard, because open() sets is_paused.
+	var hud: CanvasLayer = GameManager.hud
+	if hud:
+		for child in hud.get_children():
+			if child is Control and child.has_method("open") and child.is_in_group("fast_travel_menu"):
+				if child.is_open():
+					child.close()
+					return
+	# Don't open over another menu (trade menu, pause menu, etc.).
+	if GameManager.is_paused:
+		return
+	if not FastTravelNetwork:
+		GameManager.add_message("Fast travel network unavailable.")
+		return
+	var waypoints: Array = FastTravelNetwork.get_activated_waypoints()
+	if waypoints.is_empty():
+		GameManager.add_message("🧭 No waypoints activated yet. Find teal waypoint pillars to unlock fast travel.")
+		return
+	# Find the FastTravelMenu in the HUD and open it.
+	if not hud:
+		return
+	for child in hud.get_children():
+		if child is Control and child.has_method("open") and child.is_in_group("fast_travel_menu"):
+			child.open()
+			return
+	GameManager.add_message("Fast travel menu not found in HUD.")

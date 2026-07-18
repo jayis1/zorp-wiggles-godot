@@ -193,7 +193,11 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			continue
 		var pos: Vector2 = _world_to_mini(trader.global_position.x, trader.global_position.z, px, pz, pixel_per_world)
 		if _is_in_rect(pos, rect):
-			draw_circle(pos, 2.5, GameConstants.MINIMAP_TRADER_DOT_COLOR)
+			# Phase 26: Wandering merchants get a distinct magenta dot.
+			if trader.is_in_group("wandering_merchant"):
+				draw_circle(pos, 3.0, Color(0.85, 0.3, 0.9))
+			else:
+				draw_circle(pos, 2.5, GameConstants.MINIMAP_TRADER_DOT_COLOR)
 
 	# ── Phase 26: Lore stone dots (small purple, pulsing) ──
 	for stone in get_tree().get_nodes_in_group("lore_stone"):
@@ -269,7 +273,29 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			var ocolor: Color = Color(1.0, 0.9, 0.3) if obj.object_type == "switch" else Color(0.7, 0.5, 0.3)
 			draw_rect(Rect2(opos.x - 1.5, opos.y - 1.5, 3.0, 3.0), ocolor, true)
 
-	# ── Enemy dots (red, boss = magenta) ──
+	# ── Phase 26: Fast travel waypoint dots (teal when activated, grey when not) ──
+	for wp in get_tree().get_nodes_in_group("fast_travel_waypoint"):
+		if not is_instance_valid(wp):
+			continue
+		var wpos: Vector2 = _world_to_mini(wp.global_position.x, wp.global_position.z, px, pz, pixel_per_world)
+		if not _is_in_rect(wpos, rect):
+			continue
+		var wp_color: Color = GameConstants.FAST_TRAVEL_INACTIVE_COLOR
+		if "is_activated" in wp and wp.is_activated():
+			# Pulsing teal for activated waypoints.
+			var pulse: float = 0.7 + 0.3 * sin(Time.get_ticks_msec() * 0.003)
+			wp_color = Color(GameConstants.FAST_TRAVEL_COLOR.r, GameConstants.FAST_TRAVEL_COLOR.g, GameConstants.FAST_TRAVEL_COLOR.b, pulse)
+		# Draw a small diamond for waypoints.
+		var s: float = 2.5
+		var pts := PackedVector2Array([
+			Vector2(wpos.x, wpos.y - s),
+			Vector2(wpos.x + s, wpos.y),
+			Vector2(wpos.x, wpos.y + s),
+			Vector2(wpos.x - s, wpos.y),
+		])
+		draw_colored_polygon(pts, wp_color)
+
+	# ── Enemy dots (red, boss = magenta, world boss = red ring) ──
 	for enemy in GameManager.enemies:
 		if not is_instance_valid(enemy):
 			continue
@@ -280,6 +306,13 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			var is_boss: bool = false
 			if "enemy_type" in enemy and enemy.enemy_type == GameConstants.EnemyType.DRAKE:
 				is_boss = true
+			# Phase 26: World bosses get a distinct pulsing red ring.
+			var is_world_boss: bool = "is_world_boss" in enemy and enemy.is_world_boss
+			if is_world_boss:
+				var wb_pulse: float = 0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.004)
+				draw_circle(pos, 5.0, Color(1.0, 0.2, 0.2, wb_pulse))
+				draw_circle(pos, 3.0, Color(1.0, 0.2, 0.2))
+				continue
 			if is_boss:
 				draw_circle(pos, 4.0, GameConstants.MINIMAP_BOSS_DOT_COLOR)
 				draw_circle(pos, 6.0, Color(GameConstants.MINIMAP_BOSS_DOT_COLOR.r,

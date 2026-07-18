@@ -342,6 +342,33 @@ func record_wildlife_caught(species_name: String = "Unknown") -> void:
 	_inc_dict_session("wildlife_by_type", species_name)
 	stats_updated.emit()
 
+# ── Phase 26: World Life — wandering merchants, world bosses, fast travel ──
+func record_merchant_trade() -> void:
+	_add_lifetime("merchant_trades", 1.0)
+	_add_session("merchant_trades", 1.0)
+	stats_updated.emit()
+
+func record_world_boss_defeated(boss_name: String = "Unknown") -> void:
+	_add_lifetime("world_bosses_defeated", 1.0)
+	_add_session("world_bosses_defeated", 1.0)
+	_inc_dict_lifetime("world_bosses_by_type", boss_name)
+	_inc_dict_session("world_bosses_by_type", boss_name)
+	stats_updated.emit()
+
+func record_waypoint_activated(waypoint_name: String = "Unknown") -> void:
+	_add_lifetime("waypoints_activated", 1.0)
+	_add_session("waypoints_activated", 1.0)
+	_inc_dict_lifetime("waypoints_by_name", waypoint_name)
+	_inc_dict_session("waypoints_by_name", waypoint_name)
+	stats_updated.emit()
+
+func record_fast_travel(waypoint_name: String = "Unknown") -> void:
+	_add_lifetime("fast_travels", 1.0)
+	_add_session("fast_travels", 1.0)
+	_inc_dict_lifetime("fast_travels_by_destination", waypoint_name)
+	_inc_dict_session("fast_travels_by_destination", waypoint_name)
+	stats_updated.emit()
+
 func add_biome_time(biome_id: int, seconds: float) -> void:
 	# Called periodically by BiomeEffects or GameManager for per-biome time tracking
 	var key: String = str(biome_id)
