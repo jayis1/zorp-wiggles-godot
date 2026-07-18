@@ -342,7 +342,165 @@ Target: Godot 4.4 GDScript with full feature parity + 12 new features
 - [ ] Web export (HTML5 via Emscripten)
 - [ ] Export presets configured in project.godot
 
-NOTE: Cron jobs should implement phases 1-20 ONLY. Do NOT implement Phase 21 (export). Stop after Phase 20 is complete.
+NOTE: Cron jobs should implement phases 1-20 and 22-35. Do NOT implement Phase 21 (export).
+
+### Phase 22: New Biomes & World Expansion (TODO) 🆕
+- [ ] Deep Ocean biome (underwater sections, buoyancy physics, bioluminescent creatures)
+- [ ] Volcano Core biome (erupting terrain, lava rivers, heat damage zones)
+- [ ] Sky Citadel biome (floating platforms, wind currents, cloud navigation)
+- [ ] Digital Grid biome (cyberpunk aesthetic, wireframe terrain, glitch effects)
+- [ ] Biome transition zones (blended terrain between adjacent biomes)
+- [ ] Underground caverns (subterranean areas with limited light, unique enemies)
+- [ ] Crystal Caverns ( reflective surfaces, prism light puzzles, crystal enemies)
+- [ ] Ancient Ruins biome (decayed structures, hidden traps, relic collectibles)
+
+### Phase 23: New Enemy Types (TODO) 🆕
+- [ ] Void Leviathan (giant serpentine boss, multi-stage, swims through terrain)
+- [ ] Crystal Wraith (shatters into shards on death, shards reform into mini-wraiths)
+- [ ] Plasma Stalker (turns invisible, only visible by particle trail)
+- [ ] Gravity Elemental (manipulates gravity fields, flips player upside down)
+- [ ] Swarm Queen (spawns Swarm Mites continuously, must be killed to stop spawns)
+- [ ] Time Warden (slows player in AoE, speeds up self, teleport attacks)
+- [ ] Mirror Mimic (copies player's weapon mod, fires it back at them)
+- [ ] Ancient Sentinel (mega-boss, multiple attack phases, arena-wide hazards)
+- [ ] Toxic Spore (explodes into poison cloud on death, cloud damages over time)
+- [ ] Echo Knight (creates shadow copies of itself, all attack simultaneously)
+
+### Phase 24: New Weapon Mods & Abilities (TODO) 🆕
+- [ ] Black Hole Launcher (creates gravity well that sucks enemies in, then explodes)
+- [ ] Time Freeze Ray (freezes enemy in place for 3 seconds)
+- [ ] Shrink Beam (enemy becomes tiny and slow for 5 seconds)
+- [ ] Mind Control Dart (enemy fights for you for 8 seconds)
+- [ ] Reflective Barrier (spawn wall that reflects enemy projectiles)
+- [ ] Meteor Strike (call down meteor from sky at cursor location)
+- [ ] Lightning Storm (chain lightning hits all enemies in radius)
+- [ ] Poison Nova (expanding ring of poison, DoT to all enemies hit)
+- [ ] Shield Bubble (encase player in bubble, absorbs X damage, reflects projectiles)
+- [ ] Turret Deploy (stationary turret that auto-fires at nearest enemy for 15s)
+- [ ] Gravity Flip Field (area where gravity reverses, enemies fall up)
+- [ ] Void Rift Cutter (opens a dimensional rift that damages enemies passing through)
+
+### Phase 25: Progression & Meta-Systems (TODO) 🆕
+- [ ] Skill Tree (3 branches: Combat, Survival, Exploration — spend skill points from leveling)
+- [ ] Permanent upgrades (persist across runs: +HP, +damage, +speed, +XP gain)
+- [ ] Prestige system (reset level for permanent multiplier, unlock cosmetic skins)
+- [ ] Daily Challenge (seed-based run, fixed biome/enemies/loot, one attempt per day)
+- [ ] Weekly Challenge (longer run with modifiers, global leaderboard seed)
+- [ ] Endless Mode (wave-based escalation, no world exploration, pure combat)
+- [ ] Boss Rush Mode (fight all bosses back-to-back, timer tracking)
+- [ ] Speedrun Timer (track biome-to-biome splits, total run time, personal best)
+- [ ] Achievement tracking system (50+ achievements with progress bars)
+- [ ] Statistics page (lifetime kills, distance traveled, time per biome, items collected)
+
+### Phase 26: NPC & World Life (TODO) 🆕
+- [ ] Wandering merchants (random NPCs that appear, sell rare items for Space Gloop)
+- [ ] Friendly alien villages (small settlements with NPCs that give missions)
+- [ ] Roaming wildlife (non-hostile creatures that flee from player, drop loot)
+- [ ] Environmental hazards (lava geysers, falling rocks, toxic vents, ice slides)
+- [ ] Interactive objects (switches, doors, breakable walls, hidden passages)
+- [ ] Hidden treasure chests (buried, found via visual clues, contain rare loot)
+- [ ] World bosses (roaming bosses not tied to arenas, very rare, very rewarding)
+- [ ] NPC dialogue system (talk to traders, villagers, ancient holograms)
+- [ ] Lore stones (scattered relics that reveal game lore when collected)
+- [ ] Fast travel network (activate waypoints to teleport between explored biomes)
+
+### Phase 27: Pet Evolution Expansion (TODO) 🆕
+- [ ] 5 new pet evolution paths (Fire Pet, Ice Pet, Electric Pet, Void Pet, Nature Pet)
+- [ ] Pet fusion system (combine 2 adult pets for a unique fusion pet)
+- [ ] Pet accessories (equip items: collar, wings, armor — each gives passive bonus)
+- [ ] Pet training mini-games (increase pet stats through active play)
+- [ ] Pet emote system (pet reacts to events: happy on pickup, scared on damage, angry on enemy)
+- [ ] Pet evolution stones (rare drops that force specific evolution path)
+- [ ] Multi-pet system (own up to 3 pets, swap between them)
+- [ ] Pet questline (series of missions that unlock new pet types)
+
+### Phase 28: Weather Expansion (TODO) 🆕
+- [ ] Meteor Shower (meteors fall from sky, damage everything in impact zone, rare materials)
+- [ ] Aurora Borealis (beautiful light show, boosts XP gain while active)
+- [ ] Sandstorm (reduces visibility to near-zero, enemies ambush from dust clouds)
+- [ ] Magnetic Storm (disables minimap and radar, random EMP pulses disable dashing)
+- [ ] Blood Moon (all enemies stronger and faster, but drop 3x loot and XP)
+- [ ] Eclipse (darkness falls, shadow enemies spawn, light sources become critical)
+- [ ] pollen Storm (heals everything slowly, peaceful period, good for exploration)
+- [ ] Gravity Anomaly (random gravity shifts every 10 seconds, affects movement)
+- [ ] Dimensional Storm (rifts open randomly during storm, dimension shifts every 15s)
+- [ ] Weather combo system (two weather types can overlap for unique effects)
+
+### Phase 29: Crafting & Equipment Expansion (TODO) 🆕
+- [ ] Armor system (head, body, accessory slots — craft from enemy drops)
+- [ ] Consumable items (craft health potions, speed potions, shield potions, bombs)
+- [ ] Ring/Amulet accessories (passive bonuses: +crit, +XP, +speed, +loot)
+- [ ] Upgrade system (spend materials to upgrade existing weapon mods to +1, +2, +3)
+- [ ] Rare crafting materials (boss drops, weather-specific drops, biome-specific drops)
+- [ ] Crafting recipes book (discovered recipes stay, undiscovered show as ???)
+- [ ] Material refinement (combine 3 common materials into 1 rare material)
+- [ ] Set bonuses (wearing matching armor pieces gives bonus effects)
+
+### Phase 30: Visual & Audio Polish (TODO) 🆕
+- [ ] Character selection screen (choose Zorp or Zerp with stat previews)
+- [ ] Skin system (unlock cosmetic skins for Zorp: golden, void, crystal, lava)
+- [ ] Trail customization (choose dash trail color and particle style)
+- [ ] Death replay (show last 5 seconds of gameplay before death, slow-mo)
+- [ ] Victory screen (for boss rush / endless modes with ranking)
+- [ ] Dynamic music intensity (music intensifies as combo counter rises)
+- [ ] Adaptive sound effects (weapon mods change shoot sound, biome changes ambient)
+- [ ] Color filter modes (sepia, noir, thermal, x-ray — unlockable cosmetics)
+- [ ] Photo mode (freeze game, free camera, capture screenshots with filters)
+- [ ] Intro cinematic (procedural animation showing Zorp landing on the planet)
+
+### Phase 31: Quality of Life (TODO) 🆕
+- [ ] Auto-save system (saves game state every 30 seconds and on biome change)
+- [ ] Save/load system (save to file: player stats, inventory, world seed, explored biomes)
+- [ ] UI scaling option (adjust HUD size for different screen resolutions)
+- [ ] Colorblind modes (protanopia, deuteranopia, tritanopia, achromatopsia)
+- [ ] Control rebinding (customize all keys, save to settings)
+- [ ] Tutorial mode (first-time player gets guided intro with tooltips)
+- [ ] Tooltip system (hover over items/mods/enemies for info popups)
+- [ ] Minimap zoom (scroll to zoom minimap in/out)
+- [ ] Ping system (press key to ping location, shows marker on minimap and world)
+- [ ] FPS counter and performance overlay (toggle with key, shows fps/draw calls/memory)
+
+### Phase 32: Mutliplayer & Social (TODO) 🆕
+- [ ] Online leaderboards (submit scores to server, view global rankings)
+- [ ] Ghost mode (race against a replay of your best run, translucent ghost)
+- [ ] Spectator mode (watch other players' runs in real-time via server)
+- [ ] Challenge friends (send a seed to a friend, both run it, compare scores)
+- [ ] 3-4 player co-op (expand beyond 2 players, shared screen or online)
+- [ ] PvP arena mode (fight other players in an enclosed arena)
+- [ ] Weekly tournaments (seed-based competition, top scores get cosmetic rewards)
+- [ ] Replay system (record and play back gameplay, share replays)
+
+### Phase 33: Procedural Content (TODO) 🆕
+- [ ] Procedural dungeons (underground areas with rooms, corridors, traps, boss at end)
+- [ ] Procedural quests (dynamically generated missions based on player level and biome)
+- [ ] Procedural enemy variants (elite/golden/champion enemies with random modifiers)
+- [ ] Procedural weapon mod fusions (combine any 2 mods for random unique effect)
+- [ ] Procedural biomes (beyond the 12 fixed — algorithmically generate new biome types)
+- [ ] Procedural music (generate ambient tracks from biome properties)
+- [ ] Procedural boss generation (assemble boss from random attack patterns + visual parts)
+- [ ] World modifiers (random rules each run: double enemies, no dash, extra loot, etc.)
+
+### Phase 34: Endgame Content (TODO) 🆕
+- [ ] New Game+ (enemies 2x stronger, new weapon mod slots, rare-only loot, new enemy types)
+- [ ] New Game++ (3x enemies, all bosses roam freely, no minimap, permadeath option)
+- [ ] Ultimate Challenge (all bosses at once, all weather active, all dimensions cycling)
+- [ ] Survival Mode (no healing, no shops, one life, how long can you last)
+- [ ] Gauntlet Mode (sequential biome challenges, no breaks between, timer running)
+- [ ] Boss Gauntlet (every boss type in sequence, escalating difficulty, no healing between)
+- [ ] Loot Cave (hidden area full of rare collectibles but guarded by elite enemies)
+- [ ] Ancient Vault (puzzle-locked area with legendary loot, requires collecting lore stones)
+
+### Phase 35: Polish & Bug Pass (TODO) 🆕
+- [ ] Full playthrough QA pass (test every biome, enemy, weapon mod, dimension, weather)
+- [ ] Performance optimization (object pooling, LOD, draw call reduction, texture compression)
+- [ ] Memory leak audit (check all spawn/queue_free cycles for leaks)
+- [ ] Balance pass (enemy stats, XP curve, loot tables, weapon mod damage, pet abilities)
+- [ ] Difficulty curve audit (ensure smooth progression from spawn to endgame)
+- [ ] Edge case testing (what happens at world borders, 0 HP during dimension shift, etc.)
+- [ ] Input handling audit (no dropped inputs, all actions responsive in all states)
+- [ ] Scene transition polish (smooth loading, no hitches, fade transitions between modes)
+- [ ] Godot 4.5 compatibility check (verify all APIs still valid)
+- [ ] Final code cleanup (remove dead code, unused variables, consolidate duplicate logic)
 
 ## Notes
 - All Ursina color.rgb() 0-255 values converted to Godot Color() 0-1 range
