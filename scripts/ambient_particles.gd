@@ -29,6 +29,14 @@ const BIOME_PARTICLE_MAP: Dictionary = {
 	GameConstants.Biome.CRYSTAL: "dust",
 	GameConstants.Biome.FLOATING_ISLANDS: "dust",
 	GameConstants.Biome.TOXIC_BOG: "spores",
+	# ── Phase 22: New biome particles ──
+	GameConstants.Biome.DEEP_OCEAN: "bubbles",
+	GameConstants.Biome.VOLCANO_CORE: "embers",
+	GameConstants.Biome.SKY_CITADEL: "dust",
+	GameConstants.Biome.DIGITAL_GRID: "spores",
+	GameConstants.Biome.CRYSTAL_CAVERNS: "dust",
+	GameConstants.Biome.ANCIENT_RUINS: "dust",
+	GameConstants.Biome.UNDERGROUND: "spores",
 }
 
 # ─── Phase 11: Biome → Atmosphere Particle Type ───────────────────────────────
@@ -48,6 +56,14 @@ const BIOME_ATMOSPHERE_MAP: Dictionary = {
 	GameConstants.Biome.CRYSTAL: "fireflies",
 	GameConstants.Biome.FLOATING_ISLANDS: "dust",
 	GameConstants.Biome.TOXIC_BOG: "pollen",
+	# ── Phase 22: New biome atmosphere ──
+	GameConstants.Biome.DEEP_OCEAN: "fireflies",
+	GameConstants.Biome.VOLCANO_CORE: "fireflies",
+	GameConstants.Biome.SKY_CITADEL: "dust",
+	GameConstants.Biome.DIGITAL_GRID: "fireflies",
+	GameConstants.Biome.CRYSTAL_CAVERNS: "fireflies",
+	GameConstants.Biome.ANCIENT_RUINS: "dust",
+	GameConstants.Biome.UNDERGROUND: "fireflies",
 }
 
 func _ready() -> void:

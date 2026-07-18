@@ -107,6 +107,14 @@ enum Biome {
 	MUSHROOM,
 	FLOATING_ISLANDS,
 	TOXIC_BOG,
+	# ── Phase 22: New biomes ──
+	DEEP_OCEAN,      # Underwater sections, buoyancy physics, bioluminescent creatures
+	VOLCANO_CORE,    # Erupting terrain, lava rivers, heat damage zones
+	SKY_CITADEL,     # Floating platforms, wind currents, cloud navigation
+	DIGITAL_GRID,    # Cyberpunk aesthetic, wireframe terrain, glitch effects
+	CRYSTAL_CAVERNS, # Reflective surfaces, prism light, crystal enemies
+	ANCIENT_RUINS,   # Decayed structures, hidden traps, relic collectibles
+	UNDERGROUND,     # Subterranean caverns with limited light, unique enemies
 }
 
 # ─── Enemy Types ─────────────────────────────────────────────────────────────
@@ -449,6 +457,76 @@ const FLOATING_ISLAND_COLOR: Color = Color(160.0 / 255.0, 120.0 / 255.0, 220.0 /
 const RUINS_PILLAR_CHANCE: float = 0.08
 const RUINS_WALL_CHANCE: float = 0.05
 
+# ─── Phase 22: New Biomes ─────────────────────────────────────────────────────
+# Deep Ocean — underwater biome with buoyancy physics and bioluminescent life.
+# Player experiences reduced gravity (floats up slowly) and slower movement.
+const DEEP_OCEAN_DEPTH: float = -2.5               # Terrain height (below water plane)
+const DEEP_OCEAN_BUOYANCY: float = 4.0              # Upward force on player per second
+const DEEP_OCEAN_SPEED_MULT: float = 0.6            # Player moves slower while "swimming"
+const DEEP_OCEAN_DAMAGE_INTERVAL: float = 0.0      # No damage — just buoyancy (set >0 to drown)
+const DEEP_OCEAN_GLOW_CHANCE: float = 0.25          # Per-tile chance of bioluminescent deco
+const DEEP_OCEAN_COLOR: Color = Color(10.0 / 255.0, 60.0 / 255.0, 130.0 / 255.0)
+const DEEP_OCEAN_DEEP_COLOR: Color = Color(5.0 / 255.0, 20.0 / 255.0, 70.0 / 255.0)
+
+# Volcano Core — erupting terrain, lava rivers, heat damage zones.
+const VOLCANO_CORE_HEIGHT: float = 0.8              # Slightly raised terrain
+const VOLCANO_CORE_HEAT_DAMAGE: int = 3            # Per-tick damage to exposed entities
+const VOLCANO_CORE_HEAT_INTERVAL: float = 1.5      # Seconds between heat ticks
+const VOLCANO_CORE_ERUPTION_CHANCE: float = 0.12   # Per-tile chance of lava-vent decoration
+const VOLCANO_CORE_COLOR: Color = Color(120.0 / 255.0, 30.0 / 255.0, 10.0 / 255.0)
+const VOLCANO_CORE_GLOW_COLOR: Color = Color(1.0, 100.0 / 255.0, 20.0 / 255.0, 80.0 / 255.0)
+
+# Sky Citadel — floating platforms, wind currents, cloud navigation.
+const SKY_CITADEL_HEIGHT: float = 8.0               # High altitude terrain
+const SKY_CITADEL_WIND_FORCE: float = 3.0          # Horizontal wind push (varies direction)
+const SKY_CITADEL_WIND_CHANGE_INTERVAL: float = 6.0  # Seconds between wind direction shifts
+const SKY_CITADEL_PLATFORM_CHANCE: float = 0.18    # Per-tile chance of floating platform
+const SKY_CITADEL_COLOR: Color = Color(200.0 / 255.0, 220.0 / 255.0, 240.0 / 255.0)
+const SKY_CITADEL_CLOUD_COLOR: Color = Color(1.0, 1.0, 1.0, 0.5)
+
+# Digital Grid — cyberpunk aesthetic, wireframe terrain, glitch effects.
+const DIGITAL_GRID_GLITCH_CHANCE: float = 0.04     # Per-tile chance of glitch deco
+const DIGITAL_GRID_COLOR: Color = Color(20.0 / 255.0, 40.0 / 255.0, 60.0 / 255.0)
+const DIGITAL_GRID_NEON_COLOR: Color = Color(0.0, 1.0, 1.0)
+const DIGITAL_GRID_PINK_COLOR: Color = Color(1.0, 0.2, 0.8)
+
+# Crystal Caverns — reflective surfaces, prism light, crystal enemies.
+const CRYSTAL_CAVERNS_HEIGHT: float = -1.5         # Sunken cavern floor
+const CRYSTAL_CAVERNS_CRYSTAL_CHANCE: float = 0.22  # Per-tile chance of crystal cluster
+const CRYSTAL_CAVERNS_COLOR: Color = Color(60.0 / 255.0, 130.0 / 255.0, 180.0 / 255.0)
+const CRYSTAL_CAVERNS_PRISM_COLORS: Array[Color] = [
+	Color(1.0, 0.2, 0.2),  # Red prism
+	Color(1.0, 0.6, 0.0),  # Orange prism
+	Color(1.0, 1.0, 0.0),  # Yellow prism
+	Color(0.2, 1.0, 0.2),  # Green prism
+	Color(0.2, 0.6, 1.0),  # Blue prism
+	Color(0.6, 0.2, 1.0),  # Violet prism
+]
+
+# Ancient Ruins — decayed structures, hidden traps, relic collectibles.
+const ANCIENT_RUINS_HEIGHT: float = 0.3
+const ANCIENT_RUINS_PILLAR_CHANCE: float = 0.10    # Per-tile chance of ruined pillar
+const ANCIENT_RUINS_TRAP_CHANCE: float = 0.06      # Per-tile chance of hidden trap
+const ANCIENT_RUINS_RELIC_CHANCE: float = 0.03     # Per-tile chance of relic collectible
+const ANCIENT_RUINS_COLOR: Color = Color(140.0 / 255.0, 120.0 / 255.0, 80.0 / 255.0)
+const ANCIENT_RUINS_STONE_COLOR: Color = Color(110.0 / 255.0, 100.0 / 255.0, 80.0 / 255.0)
+const ANCIENT_RUINS_TRAP_DAMAGE: int = 20
+const ANCIENT_RUINS_TRAP_RADIUS: float = 3.0
+
+# Underground — subterranean caverns with limited light, unique enemies.
+const UNDERGROUND_HEIGHT: float = -4.0             # Deep below surface
+const UNDERGROUND_STALACTITE_CHANCE: float = 0.15
+const UNDERGROUND_STALAGMITE_CHANCE: float = 0.12
+const UNDERGROUND_GLOW_CHANCE: float = 0.08        # Glowing mushroom/fungus
+const UNDERGROUND_COLOR: Color = Color(40.0 / 255.0, 35.0 / 255.0, 30.0 / 255.0)
+const UNDERGROUND_DARKNESS: float = 0.85            # Ambient light reduction (0..1)
+
+# Biome transition zones — blended terrain between adjacent biomes.
+# When the player is within TRANSITION_BLEND_DISTANCE of a biome boundary,
+# the terrain color and fog cross-fade smoothly between the two biomes.
+const TRANSITION_BLEND_DISTANCE: float = 8.0       # Tiles near boundary to blend
+const TRANSITION_BLEND_SPEED: float = 2.0          # Lerp speed for color/fog blend
+
 # ─── Biome Fog (0-1 normalized colors, converted from Ursina 0-255) ──────────
 const BIOME_FOG: Dictionary = {
 	GameConstants.Biome.GRASS: {"color": Color(30.0 / 255.0, 10.0 / 255.0, 60.0 / 255.0), "density": 0.006},
@@ -463,6 +541,14 @@ const BIOME_FOG: Dictionary = {
 	GameConstants.Biome.ALIEN: {"color": Color(60.0 / 255.0, 20.0 / 255.0, 70.0 / 255.0), "density": 0.010},
 	GameConstants.Biome.FLOATING_ISLANDS: {"color": Color(40.0 / 255.0, 25.0 / 255.0, 60.0 / 255.0), "density": 0.005},
 	GameConstants.Biome.TOXIC_BOG: {"color": Color(50.0 / 255.0, 60.0 / 255.0, 15.0 / 255.0), "density": 0.018},
+	# ── Phase 22: New biome fog ──
+	GameConstants.Biome.DEEP_OCEAN: {"color": Color(5.0 / 255.0, 15.0 / 255.0, 50.0 / 255.0), "density": 0.024},
+	GameConstants.Biome.VOLCANO_CORE: {"color": Color(80.0 / 255.0, 15.0 / 255.0, 5.0 / 255.0), "density": 0.022},
+	GameConstants.Biome.SKY_CITADEL: {"color": Color(150.0 / 255.0, 180.0 / 255.0, 230.0 / 255.0), "density": 0.004},
+	GameConstants.Biome.DIGITAL_GRID: {"color": Color(10.0 / 255.0, 30.0 / 255.0, 40.0 / 255.0), "density": 0.008},
+	GameConstants.Biome.CRYSTAL_CAVERNS: {"color": Color(20.0 / 255.0, 50.0 / 255.0, 70.0 / 255.0), "density": 0.009},
+	GameConstants.Biome.ANCIENT_RUINS: {"color": Color(60.0 / 255.0, 50.0 / 255.0, 30.0 / 255.0), "density": 0.013},
+	GameConstants.Biome.UNDERGROUND: {"color": Color(10.0 / 255.0, 8.0 / 255.0, 5.0 / 255.0), "density": 0.030},
 }
 const FOG_TRANSITION_SPEED: float = 4.0
 
@@ -582,6 +668,14 @@ const BIOME_NAMES: Dictionary = {
 	GameConstants.Biome.MUSHROOM: "Mushroom Grove",
 	GameConstants.Biome.FLOATING_ISLANDS: "Floating Isles",
 	GameConstants.Biome.TOXIC_BOG: "Toxic Bog",
+	# ── Phase 22: New biomes ──
+	GameConstants.Biome.DEEP_OCEAN: "Deep Ocean",
+	GameConstants.Biome.VOLCANO_CORE: "Volcano Core",
+	GameConstants.Biome.SKY_CITADEL: "Sky Citadel",
+	GameConstants.Biome.DIGITAL_GRID: "Digital Grid",
+	GameConstants.Biome.CRYSTAL_CAVERNS: "Crystal Caverns",
+	GameConstants.Biome.ANCIENT_RUINS: "Ancient Ruins",
+	GameConstants.Biome.UNDERGROUND: "Underground",
 }
 const BIOME_INDICATOR_TEXT_COLOR: Color = Color(0.9, 0.9, 1.0, 0.85)
 
@@ -646,6 +740,11 @@ const BIOME_SHADER_MAP: Dictionary = {
 	GameConstants.Biome.ALIEN: "chromatic_aberration",
 	GameConstants.Biome.TOXIC_BOG: "dissolve",
 	GameConstants.Biome.CRYSTAL: "crystal_refraction",
+	# ── Phase 22: New biome shader mappings ──
+	GameConstants.Biome.VOLCANO_CORE: "heat_distortion",      # Hot shimmer
+	GameConstants.Biome.DIGITAL_GRID: "chromatic_aberration",  # Glitch RGB split
+	GameConstants.Biome.CRYSTAL_CAVERNS: "crystal_refraction", # Prismatic shimmer
+	GameConstants.Biome.DEEP_OCEAN: "frost_vignette",          # Cold blue tint at edges
 }
 
 # Ambient shader strength per biome (0..1). Tuned so the effect is noticeable
@@ -656,6 +755,11 @@ const BIOME_SHADER_STRENGTH: Dictionary = {
 	GameConstants.Biome.ALIEN: 0.45,
 	GameConstants.Biome.TOXIC_BOG: 0.5,
 	GameConstants.Biome.CRYSTAL: 0.4,
+	# ── Phase 22: New biome shader strengths ──
+	GameConstants.Biome.VOLCANO_CORE: 0.7,
+	GameConstants.Biome.DIGITAL_GRID: 0.55,
+	GameConstants.Biome.CRYSTAL_CAVERNS: 0.5,
+	GameConstants.Biome.DEEP_OCEAN: 0.35,
 }
 
 # Low-HP warning vignette config
@@ -1201,13 +1305,13 @@ const SANDSTORM_SHELTER_REDUCTION: float = 0.80      # 80% damage reduction unde
 # Weather → biome affinity (weather more likely in thematic biomes)
 # Each weather type maps to a list of biomes where it has a higher chance of starting.
 const WEATHER_BIOME_AFFINITY: Dictionary = {
-	Weather.ACID_RAIN: [GameConstants.Biome.TOXIC_BOG, GameConstants.Biome.SWAMP],
-	Weather.SOLAR_FLARE: [GameConstants.Biome.LAVA, GameConstants.Biome.DESERT],
-	Weather.FOG: [GameConstants.Biome.WATER, GameConstants.Biome.SWAMP, GameConstants.Biome.FOREST],
-	Weather.THUNDERSTORM: [GameConstants.Biome.WATER, GameConstants.Biome.GRASS, GameConstants.Biome.FLOATING_ISLANDS],
-	Weather.SNOW_STORM: [GameConstants.Biome.SNOW, GameConstants.Biome.CRYSTAL],
+	Weather.ACID_RAIN: [GameConstants.Biome.TOXIC_BOG, GameConstants.Biome.SWAMP, GameConstants.Biome.DEEP_OCEAN],
+	Weather.SOLAR_FLARE: [GameConstants.Biome.LAVA, GameConstants.Biome.DESERT, GameConstants.Biome.VOLCANO_CORE],
+	Weather.FOG: [GameConstants.Biome.WATER, GameConstants.Biome.SWAMP, GameConstants.Biome.FOREST, GameConstants.Biome.UNDERGROUND, GameConstants.Biome.CRYSTAL_CAVERNS],
+	Weather.THUNDERSTORM: [GameConstants.Biome.WATER, GameConstants.Biome.GRASS, GameConstants.Biome.FLOATING_ISLANDS, GameConstants.Biome.SKY_CITADEL, GameConstants.Biome.DEEP_OCEAN],
+	Weather.SNOW_STORM: [GameConstants.Biome.SNOW, GameConstants.Biome.CRYSTAL, GameConstants.Biome.SKY_CITADEL],
 	# Enhancement: New weather biome affinities
-	Weather.METEOR_SHOWER: [GameConstants.Biome.LAVA, GameConstants.Biome.DESERT, GameConstants.Biome.ALIEN],
+	Weather.METEOR_SHOWER: [GameConstants.Biome.LAVA, GameConstants.Biome.DESERT, GameConstants.Biome.ALIEN, GameConstants.Biome.VOLCANO_CORE],
 	Weather.AURORA: [GameConstants.Biome.SNOW, GameConstants.Biome.CRYSTAL, GameConstants.Biome.FLOATING_ISLANDS],
 	Weather.SANDSTORM: [GameConstants.Biome.DESERT, GameConstants.Biome.LAVA, GameConstants.Biome.ALIEN],
 }

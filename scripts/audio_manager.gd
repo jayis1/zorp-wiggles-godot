@@ -385,6 +385,21 @@ func _generate_all_music() -> void:
 	_music_streams[GameConstants.Biome.MUSHROOM] = _gen_ambient_drone(138.59, 277.18, 4.0, 0.28)
 	_music_streams[GameConstants.Biome.FLOATING_ISLANDS] = _gen_ambient_drone(155.56, 311.13, 5.5, 0.22)
 	_music_streams[GameConstants.Biome.TOXIC_BOG] = _gen_ambient_drone(77.78, 155.56, 3.0, 0.33)
+	# ── Phase 22: New biome music ──
+	# Deep Ocean — deep, slow, watery drone with low harmonic.
+	_music_streams[GameConstants.Biome.DEEP_OCEAN] = _gen_ambient_drone(65.41, 130.81, 7.0, 0.18)
+	# Volcano Core — aggressive low rumble, short decay for tension.
+	_music_streams[GameConstants.Biome.VOLCANO_CORE] = _gen_ambient_drone(61.74, 116.54, 2.5, 0.38)
+	# Sky Citadel — bright, airy, high drone for floating serenity.
+	_music_streams[GameConstants.Biome.SKY_CITADEL] = _gen_ambient_drone(196.0, 392.0, 6.5, 0.18)
+	# Digital Grid — dissonant, tense, mid-range for cyberpunk feel.
+	_music_streams[GameConstants.Biome.DIGITAL_GRID] = _gen_ambient_drone(123.47, 246.94, 3.5, 0.3)
+	# Crystal Caverns — bright, shimmering, high-pitched for prismatic clarity.
+	_music_streams[GameConstants.Biome.CRYSTAL_CAVERNS] = _gen_ambient_drone(174.61, 349.23, 5.5, 0.22)
+	# Ancient Ruins — slow, dusty, mid-low drone for age and mystery.
+	_music_streams[GameConstants.Biome.ANCIENT_RUINS] = _gen_ambient_drone(92.5, 185.0, 5.0, 0.25)
+	# Underground — deep, dark, very low drone for claustrophobic caves.
+	_music_streams[GameConstants.Biome.UNDERGROUND] = _gen_ambient_drone(55.0, 110.0, 7.5, 0.15)
 
 	# Boss music — intense, fast-tempo drone
 	_boss_music_stream = _gen_boss_music()

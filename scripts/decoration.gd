@@ -68,6 +68,34 @@ func _spawn_tile_decorations(biome: int, wx: float, wz: float) -> void:
 			_spawn_water_overlay(wx, wz)
 		GameConstants.Biome.LAVA:
 			_spawn_lava_overlay(wx, wz)
+		# ── Phase 22: New biome decorations ──
+		GameConstants.Biome.DEEP_OCEAN:
+			_spawn_deep_ocean_overlay(wx, wz)
+			if randf() < GameConstants.DEEP_OCEAN_GLOW_CHANCE:
+				_spawn_bioluminescent(wx, wz)
+		GameConstants.Biome.VOLCANO_CORE:
+			_spawn_volcano_overlay(wx, wz)
+			if randf() < GameConstants.VOLCANO_CORE_ERUPTION_CHANCE:
+				_spawn_lava_vent(wx, wz)
+		GameConstants.Biome.SKY_CITADEL:
+			if randf() < GameConstants.SKY_CITADEL_PLATFORM_CHANCE:
+				_spawn_sky_platform(wx, wz)
+		GameConstants.Biome.DIGITAL_GRID:
+			if randf() < GameConstants.DIGITAL_GRID_GLITCH_CHANCE:
+				_spawn_digital_glitch(wx, wz)
+		GameConstants.Biome.CRYSTAL_CAVERNS:
+			if randf() < GameConstants.CRYSTAL_CAVERNS_CRYSTAL_CHANCE:
+				_spawn_crystal_cavern_cluster(wx, wz)
+		GameConstants.Biome.ANCIENT_RUINS:
+			if randf() < GameConstants.ANCIENT_RUINS_PILLAR_CHANCE:
+				_spawn_ancient_pillar(wx, wz)
+		GameConstants.Biome.UNDERGROUND:
+			if randf() < GameConstants.UNDERGROUND_STALACTITE_CHANCE:
+				_spawn_stalactite(wx, wz)
+			if randf() < GameConstants.UNDERGROUND_STALAGMITE_CHANCE:
+				_spawn_stalagmite(wx, wz)
+			if randf() < GameConstants.UNDERGROUND_GLOW_CHANCE:
+				_spawn_underground_glow(wx, wz)
 
 # ─── Tree (Forest biome) ─────────────────────────────────────────────────────
 
@@ -286,6 +314,217 @@ func _spawn_lava_overlay(wx: float, wz: float) -> void:
 	)
 	_lava_overlays.append(glow)
 	add_child(glow)
+
+# ── Phase 22: New biome decorations ───────────────────────────────────────────
+
+# Deep Ocean — translucent dark water surface with depth gradient.
+func _spawn_deep_ocean_overlay(wx: float, wz: float) -> void:
+	var overlay := _create_ground_quad(
+		Vector3(wx, GameConstants.DEEP_OCEAN_DEPTH + 0.1, wz),
+		GameConstants.TILE_SCALE,
+		Color(5.0 / 255.0, 25.0 / 255.0, 80.0 / 255.0, 130.0 / 255.0)
+	)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(5.0 / 255.0, 25.0 / 255.0, 80.0 / 255.0, 0.55)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	overlay.material_override = mat
+	_water_overlays.append(overlay)
+	add_child(overlay)
+
+# Bioluminescent floating orbs that glow in the deep ocean.
+func _spawn_bioluminescent(wx: float, wz: float) -> void:
+	var glow_colors: Array[Color] = [
+		Color(0.1, 1.0, 0.8),   # Cyan
+		Color(0.4, 0.6, 1.0),   # Soft blue
+		Color(0.7, 0.3, 1.0),   # Violet
+	]
+	var col: Color = glow_colors[randi() % glow_colors.size()]
+	var orb := _create_sphere(
+		Vector3(wx, randf_range(-2.0, 0.5), wz),
+		randf_range(0.3, 0.7),
+		col
+	)
+	# Make it emissive so it actually glows in the dark.
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = col
+	mat.emission_enabled = true
+	mat.emission = col
+	mat.emission_energy_multiplier = 2.5
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	orb.material_override = mat
+	_decorations.append(orb)
+	add_child(orb)
+
+# Volcano Core — dark basalt floor with glowing lava river overlay.
+func _spawn_volcano_overlay(wx: float, wz: float) -> void:
+	var overlay := _create_ground_quad(
+		Vector3(wx, 0.07, wz),
+		GameConstants.TILE_SCALE,
+		GameConstants.VOLCANO_CORE_GLOW_COLOR
+	)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = GameConstants.VOLCANO_CORE_GLOW_COLOR
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.4, 0.05)
+	mat.emission_energy_multiplier = 1.5
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	overlay.material_override = mat
+	_lava_overlays.append(overlay)
+	add_child(overlay)
+
+# Lava vent — small bright cone that pulses with heat.
+func _spawn_lava_vent(wx: float, wz: float) -> void:
+	var vent := _create_box(
+		Vector3(wx, 1.0, wz),
+		Vector3(0.8, 2.0, 0.8),
+		Color(1.0, 0.3, 0.05)
+	)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.5, 0.1, 0.0)
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.4, 0.05)
+	mat.emission_energy_multiplier = 3.0
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	vent.material_override = mat
+	_decorations.append(vent)
+	add_child(vent)
+
+# Sky Citadel — floating cloud platform with soft white pad.
+func _spawn_sky_platform(wx: float, wz: float) -> void:
+	var platform := _create_box(
+		Vector3(wx, randf_range(6.0, 10.0), wz),
+		Vector3(randf_range(2.0, 4.0), 0.4, randf_range(2.0, 4.0)),
+		GameConstants.SKY_CITADEL_CLOUD_COLOR
+	)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = GameConstants.SKY_CITADEL_CLOUD_COLOR
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	platform.material_override = mat
+	_decorations.append(platform)
+	add_child(platform)
+
+	# Soft cloud shadow on the ground far below.
+	var shadow := _create_ground_quad(
+		Vector3(wx, 0.04, wz),
+		2.5,
+		Color(0.8, 0.85, 0.95, 40.0 / 255.0)
+	)
+	_decorations.append(shadow)
+	add_child(shadow)
+
+# Digital Grid — neon wireframe glitch cube.
+func _spawn_digital_glitch(wx: float, wz: float) -> void:
+	# Neon cube with wireframe-style material (emissive edges).
+	var cube := _create_box(
+		Vector3(wx, randf_range(1.0, 3.0), wz),
+		Vector3(0.7, 0.7, 0.7),
+		GameConstants.DIGITAL_GRID_NEON_COLOR
+	)
+	var mat := StandardMaterial3D.new()
+	# Alternate between cyan and pink for cyberpunk duality.
+	var use_pink := randf() < 0.5
+	mat.albedo_color = Color(0.05, 0.05, 0.1)
+	mat.emission_enabled = true
+	mat.emission = GameConstants.DIGITAL_GRID_PINK_COLOR if use_pink else GameConstants.DIGITAL_GRID_NEON_COLOR
+	mat.emission_energy_multiplier = 2.0
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	cube.material_override = mat
+	_decorations.append(cube)
+	add_child(cube)
+
+# Crystal Caverns — cluster of prism crystals cycling through rainbow colors.
+func _spawn_crystal_cavern_cluster(wx: float, wz: float) -> void:
+	var count: int = randi_range(2, 5)
+	for _i in range(count):
+		var prism_color: Color = GameConstants.CRYSTAL_CAVERNS_PRISM_COLORS[
+			randi() % GameConstants.CRYSTAL_CAVERNS_PRISM_COLORS.size()
+		]
+		var height: float = randf_range(1.5, 4.0)
+		var offset_x: float = randf_range(-1.0, 1.0)
+		var offset_z: float = randf_range(-1.0, 1.0)
+		var crystal := _create_box(
+			Vector3(wx + offset_x, GameConstants.CRYSTAL_CAVERNS_HEIGHT + height / 2.0 + 0.5, wz + offset_z),
+			Vector3(0.4, height, 0.4),
+			prism_color
+		)
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = prism_color
+		mat.emission_enabled = true
+		mat.emission = prism_color
+		mat.emission_energy_multiplier = 1.5
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		crystal.material_override = mat
+		_decorations.append(crystal)
+		add_child(crystal)
+
+# Ancient Ruins — broken stone pillar with mossy tint.
+func _spawn_ancient_pillar(wx: float, wz: float) -> void:
+	var pillar_h: float = randf_range(2.5, 5.5)
+	var pillar := _create_box(
+		Vector3(wx, GameConstants.ANCIENT_RUINS_HEIGHT + pillar_h / 2.0 + 0.5, wz),
+		Vector3(0.6, pillar_h, 0.6),
+		GameConstants.ANCIENT_RUINS_STONE_COLOR
+	)
+	_decorations.append(pillar)
+	add_child(pillar)
+	# Occasional broken wall segment.
+	if randf() < 0.4:
+		var wall := _create_box(
+			Vector3(wx, GameConstants.ANCIENT_RUINS_HEIGHT + 0.75, wz),
+			Vector3(randf_range(1.5, 3.0), 1.5, 0.3),
+			GameConstants.ANCIENT_RUINS_STONE_COLOR
+		)
+		_decorations.append(wall)
+		add_child(wall)
+
+# Underground — hanging stalactite from the ceiling.
+func _spawn_stalactite(wx: float, wz: float) -> void:
+	var h: float = randf_range(0.8, 2.5)
+	# Position above the player's head in the cavern space.
+	var stal := _create_box(
+		Vector3(wx, GameConstants.UNDERGROUND_HEIGHT + 6.0 - h / 2.0, wz),
+		Vector3(0.3, h, 0.3),
+		Color(70.0 / 255.0, 60.0 / 255.0, 55.0 / 255.0)
+	)
+	_decorations.append(stal)
+	add_child(stal)
+
+# Underground — rising stalagmite from cavern floor.
+func _spawn_stalagmite(wx: float, wz: float) -> void:
+	var h: float = randf_range(0.6, 2.0)
+	var stal := _create_box(
+		Vector3(wx, GameConstants.UNDERGROUND_HEIGHT + h / 2.0 + 0.5, wz),
+		Vector3(0.35, h, 0.35),
+		Color(60.0 / 255.0, 55.0 / 255.0, 50.0 / 255.0)
+	)
+	_decorations.append(stal)
+	add_child(stal)
+
+# Underground — glowing fungus mushroom for ambient light.
+func _spawn_underground_glow(wx: float, wz: float) -> void:
+	var glow_colors: Array[Color] = [
+		Color(0.6, 1.0, 0.3),
+		Color(0.3, 0.8, 1.0),
+		Color(1.0, 0.5, 0.9),
+	]
+	var col: Color = glow_colors[randi() % glow_colors.size()]
+	var cap := _create_sphere(
+		Vector3(wx, GameConstants.UNDERGROUND_HEIGHT + 0.8, wz),
+		randf_range(0.4, 0.8),
+		col
+	)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = col
+	mat.emission_enabled = true
+	mat.emission = col
+	mat.emission_energy_multiplier = 2.5
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	cap.material_override = mat
+	_decorations.append(cap)
+	add_child(cap)
 
 # ─── Mesh helpers ────────────────────────────────────────────────────────────
 

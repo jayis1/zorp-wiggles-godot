@@ -9,7 +9,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 ## 🎮 Features
 
 ### Core Gameplay
-- **3D open world** with 12+ procedurally-generated biomes (grass, desert, water, lava, forest, crystal, snow, swamp, alien, mushroom, floating islands, toxic bog)
+- **3D open world** with 19 procedurally-generated biomes (grass, desert, water, lava, forest, crystal, snow, swamp, alien, mushroom, floating islands, toxic bog + Phase 22: deep ocean, volcano core, sky citadel, digital grid, crystal caverns, ancient ruins, underground)
 - **18+ enemy types** with unique AI behaviors (Slime Blob, Plasma Drake, Graviton, Void Wisp, Spore Spitter, Starburst Sentinel, Plasma Serpent, and more)
 - **Smart enemy AI** with NavMesh pathfinding, flanking, retreat, ambush, pack coordination, line-of-sight checks, and enrage systems
 - **Combat system** with crit chains, kill combos, pickup streaks, damage numbers, and 20+ weapon mods
@@ -160,8 +160,9 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 - **70+ files** (scripts + scenes + shaders)
 - **20+ enemy types** with unique AI
 - **20+ weapon mods** craftable
-- **12 biomes** with procedural generation
-- **6 weather types** with gameplay effects
+- **19 biomes** with procedural generation (12 original + 7 Phase 22 new)
+- **9 weather types** with gameplay effects
+- **13 biome mutations** (6 original + 7 Phase 22 new)
 - **4 dimensional rifts** with unique mechanics
 - **3 pet evolution stages** with abilities
 - **Local co-op** with Player 2 "Zerp"
@@ -174,7 +175,7 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 
 Phases 1-20 (core game + 12 new features) are **COMPLETE**. Ongoing development includes:
 
-- **Phase 22**: New biomes (Deep Ocean, Volcano Core, Sky Citadel, Digital Grid, underground caverns)
+- **Phase 22**: New biomes (Deep Ocean, Volcano Core, Sky Citadel, Digital Grid, Crystal Caverns, Ancient Ruins, Underground) — **IN PROGRESS** (7/8 biomes implemented with decorations, mutations, biome effects, audio, weather affinities)
 - **Phase 23**: New enemy types (Void Leviathan, Crystal Wraith, Plasma Stalker, Swarm Queen, Time Warden, Echo Knight)
 - **Phase 24**: New weapon mods (Black Hole Launcher, Time Freeze Ray, Mind Control, Meteor Strike, Turret Deploy)
 - **Phase 25**: Progression systems (skill tree, prestige, daily challenges, endless mode, boss rush)

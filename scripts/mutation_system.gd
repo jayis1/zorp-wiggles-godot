@@ -21,6 +21,14 @@ enum Mutation {
 	ALIEN,      # Gravity flip + plasma burst
 	FOREST,     # Nature's ally (enemies passive in forest)
 	TOXIC,      # Poison trail (DoT zone)
+	# ── Phase 22: New mutations for new biomes ──
+	DEEP_OCEAN, # Tidal veil (slow fall + swim speed boost)
+	VOLCANO,    # Magma skin (heat immunity + burn aura)
+	SKY,        # Wind walker (wind currents boost speed)
+	DIGITAL,    # Glitch step (random short teleports)
+	CAVERN,     # Crystal resonance (extra crystal damage)
+	ANCIENT,    # Relic ward (trap immunity + relic bonus)
+	UNDERGROUND, # Night eye (darkness vision + stealth)
 }
 
 # ─── Biome → Mutation Mapping ─────────────────────────────────────────────────
@@ -33,6 +41,14 @@ const BIOME_MUTATION_MAP: Dictionary = {
 	GameConstants.Biome.TOXIC_BOG: Mutation.TOXIC,
 	GameConstants.Biome.SWAMP: Mutation.TOXIC,   # Swamp also gives toxic
 	GameConstants.Biome.MUSHROOM: Mutation.TOXIC, # Mushroom biome gives toxic
+	# ── Phase 22: New biome → mutation mappings ──
+	GameConstants.Biome.DEEP_OCEAN: Mutation.DEEP_OCEAN,
+	GameConstants.Biome.VOLCANO_CORE: Mutation.VOLCANO,
+	GameConstants.Biome.SKY_CITADEL: Mutation.SKY,
+	GameConstants.Biome.DIGITAL_GRID: Mutation.DIGITAL,
+	GameConstants.Biome.CRYSTAL_CAVERNS: Mutation.CAVERN,
+	GameConstants.Biome.ANCIENT_RUINS: Mutation.ANCIENT,
+	GameConstants.Biome.UNDERGROUND: Mutation.UNDERGROUND,
 }
 
 # ─── Configuration ────────────────────────────────────────────────────────────
@@ -62,6 +78,14 @@ const MUTATION_NAMES: Dictionary = {
 	Mutation.ALIEN: "Void Step",
 	Mutation.FOREST: "Nature's Pact",
 	Mutation.TOXIC: "Venom Trail",
+	# ── Phase 22: New mutation names ──
+	Mutation.DEEP_OCEAN: "Tidal Veil",
+	Mutation.VOLCANO: "Magma Skin",
+	Mutation.SKY: "Wind Walker",
+	Mutation.DIGITAL: "Glitch Step",
+	Mutation.CAVERN: "Crystal Resonance",
+	Mutation.ANCIENT: "Relic Ward",
+	Mutation.UNDERGROUND: "Night Eye",
 }
 
 const MUTATION_COLORS: Dictionary = {
@@ -71,6 +95,14 @@ const MUTATION_COLORS: Dictionary = {
 	Mutation.ALIEN: Color(0.6, 0.2, 0.7),
 	Mutation.FOREST: Color(0.2, 0.6, 0.2),
 	Mutation.TOXIC: Color(0.5, 0.8, 0.15),
+	# ── Phase 22: New mutation colors ──
+	Mutation.DEEP_OCEAN: Color(0.1, 0.4, 0.9),
+	Mutation.VOLCANO: Color(0.9, 0.2, 0.05),
+	Mutation.SKY: Color(0.8, 0.9, 1.0),
+	Mutation.DIGITAL: Color(0.0, 1.0, 1.0),
+	Mutation.CAVERN: Color(0.4, 0.7, 1.0),
+	Mutation.ANCIENT: Color(0.85, 0.75, 0.5),
+	Mutation.UNDERGROUND: Color(0.35, 0.3, 0.25),
 }
 
 func _ready() -> void:
@@ -200,17 +232,61 @@ func has_combo() -> bool:
 func get_fire_resistance() -> float:
 	if has_mutation(Mutation.LAVA):
 		return 0.5 if has_combo() else 0.3
+	# Phase 22: Volcano mutation also grants heat resistance (stronger — full immunity with combo)
+	if has_mutation(Mutation.VOLCANO):
+		var vol: float = 0.6 if has_combo() else 0.4
+		return max(vol, 0.3 if has_mutation(Mutation.LAVA) else vol)
 	return 0.0
 
 ## Get damage reduction from Snow mutation (ice armor).
 func get_damage_reduction() -> float:
 	if has_mutation(Mutation.SNOW):
 		return 0.3 if has_combo() else 0.2
+	# Phase 22: Ancient mutation grants trap/relic damage reduction.
+	if has_mutation(Mutation.ANCIENT):
+		var anc: float = 0.25 if has_combo() else 0.15
+		return max(anc, 0.2 if has_mutation(Mutation.SNOW) else anc)
 	return 0.0
 
 ## Check if enemies should be passive (Forest mutation).
 func enemies_passive() -> bool:
 	return has_mutation(Mutation.FOREST) and _current_biome == GameConstants.Biome.FOREST
+
+## Phase 22: Get player movement speed multiplier from mutations.
+## Sky mutation grants 1.2x speed; Deep Ocean reduces by 0.6x while swimming.
+func get_speed_multiplier() -> float:
+	var mult: float = 1.0
+	if has_mutation(Mutation.SKY):
+		mult *= 1.2 if has_combo() else 1.1
+	if has_mutation(Mutation.DEEP_OCEAN):
+		mult *= 0.7  # Swimming is slower even with the mutation
+	return mult
+
+## Phase 22: Check if the player should glide (slow fall) — Deep Ocean mutation.
+func get_buoyancy() -> float:
+	if has_mutation(Mutation.DEEP_OCEAN):
+		return 6.0 if has_combo() else 4.0
+	return 0.0
+
+## Phase 22: Check if traps should be disabled (Ancient mutation).
+func traps_disabled() -> bool:
+	return has_mutation(Mutation.ANCIENT)
+
+## Phase 22: Check if the player can see in darkness (Underground mutation).
+func has_night_eye() -> bool:
+	return has_mutation(Mutation.UNDERGROUND)
+
+## Phase 22: Get a random short teleport offset for the Digital mutation.
+## Returns Vector3.ZERO if the Digital mutation is not active.
+func get_glitch_step() -> Vector3:
+	if not has_mutation(Mutation.DIGITAL):
+		return Vector3.ZERO
+	# 15% chance per call to glitch-step a small distance.
+	if randf() > 0.15:
+		return Vector3.ZERO
+	var angle: float = randf() * TAU
+	var dist: float = randf_range(2.0, 5.0)
+	return Vector3(cos(angle) * dist, 0.0, sin(angle) * dist)
 
 ## Get the mutation for the current biome (or NONE).
 func get_pending_mutation() -> int:

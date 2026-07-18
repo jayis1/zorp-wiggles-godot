@@ -22,6 +22,14 @@ const BIOME_COLORS: Dictionary = {
 	GameConstants.Biome.MUSHROOM: Color(200.0 / 255.0, 40.0 / 255.0, 120.0 / 255.0),
 	GameConstants.Biome.FLOATING_ISLANDS: Color(160.0 / 255.0, 120.0 / 255.0, 220.0 / 255.0),
 	GameConstants.Biome.TOXIC_BOG: Color(80.0 / 255.0, 120.0 / 255.0, 20.0 / 255.0),
+	# ── Phase 22: New biome colors ──
+	GameConstants.Biome.DEEP_OCEAN: Color(10.0 / 255.0, 60.0 / 255.0, 130.0 / 255.0),
+	GameConstants.Biome.VOLCANO_CORE: Color(120.0 / 255.0, 30.0 / 255.0, 10.0 / 255.0),
+	GameConstants.Biome.SKY_CITADEL: Color(200.0 / 255.0, 220.0 / 255.0, 240.0 / 255.0),
+	GameConstants.Biome.DIGITAL_GRID: Color(20.0 / 255.0, 40.0 / 255.0, 60.0 / 255.0),
+	GameConstants.Biome.CRYSTAL_CAVERNS: Color(60.0 / 255.0, 130.0 / 255.0, 180.0 / 255.0),
+	GameConstants.Biome.ANCIENT_RUINS: Color(140.0 / 255.0, 120.0 / 255.0, 80.0 / 255.0),
+	GameConstants.Biome.UNDERGROUND: Color(40.0 / 255.0, 35.0 / 255.0, 30.0 / 255.0),
 }
 
 # ─── State ────────────────────────────────────────────────────────────────────
@@ -108,12 +116,26 @@ func _classify_biome(elevation: float, moisture: float, temperature: float) -> i
 	if elevation < -0.3:
 		if temperature > 0.3:
 			return GameConstants.Biome.LAVA
+		# Phase 22: Very deep water → Deep Ocean; regular low → Water
+		if elevation < -0.45:
+			return GameConstants.Biome.DEEP_OCEAN
 		return GameConstants.Biome.WATER
-	
-	# Very high elevation → floating islands
+
+	# Extremely deep (caverns / underground)
+	if elevation < -0.2 and moisture > 0.2:
+		return GameConstants.Biome.UNDERGROUND
+
+	# Very high elevation → floating islands or sky citadel
 	if elevation > 0.5:
+		# Phase 22: Highest peaks → Sky Citadel (above the floating islands)
+		if elevation > 0.65 and temperature < 0.0:
+			return GameConstants.Biome.SKY_CITADEL
 		return GameConstants.Biome.FLOATING_ISLANDS
-	
+
+	# Hot + very dry + high elevation → Volcano Core (Phase 22)
+	if elevation > 0.25 and temperature > 0.45 and moisture < -0.1:
+		return GameConstants.Biome.VOLCANO_CORE
+
 	# Temperature-based
 	if temperature < -0.3:
 		return GameConstants.Biome.SNOW
@@ -123,13 +145,16 @@ func _classify_biome(elevation: float, moisture: float, temperature: float) -> i
 		if moisture > 0.3:
 			return GameConstants.Biome.SWAMP
 		return GameConstants.Biome.GRASS
-	
+
 	# Moisture-based
 	if moisture > 0.4:
 		return GameConstants.Biome.FOREST
 	if moisture < -0.4:
+		# Phase 22: Very low moisture + moderate temp → Crystal Caverns
+		if temperature < 0.1 and elevation < 0.1:
+			return GameConstants.Biome.CRYSTAL_CAVERNS
 		return GameConstants.Biome.CRYSTAL
-	
+
 	# Random rare biomes
 	var roll := randf()
 	if roll < 0.03:
@@ -138,7 +163,12 @@ func _classify_biome(elevation: float, moisture: float, temperature: float) -> i
 		return GameConstants.Biome.MUSHROOM
 	if roll < 0.09:
 		return GameConstants.Biome.TOXIC_BOG
-	
+	# Phase 22: Very rare new biomes
+	if roll < 0.105:
+		return GameConstants.Biome.DIGITAL_GRID
+	if roll < 0.115:
+		return GameConstants.Biome.ANCIENT_RUINS
+
 	return GameConstants.Biome.GRASS
 
 func _build_terrain_mesh() -> void:
@@ -205,6 +235,21 @@ func _get_tile_height(biome: int, x: int, z: int) -> float:
 			return 2.0 + randf() * 3.0
 		GameConstants.Biome.SNOW:
 			return 0.1 + randf() * 0.3
+		# ── Phase 22: New biome heights ──
+		GameConstants.Biome.DEEP_OCEAN:
+			return GameConstants.DEEP_OCEAN_DEPTH
+		GameConstants.Biome.VOLCANO_CORE:
+			return GameConstants.VOLCANO_CORE_HEIGHT + randf_range(-0.2, 0.4)
+		GameConstants.Biome.SKY_CITADEL:
+			return GameConstants.SKY_CITADEL_HEIGHT + randf_range(-0.5, 0.5)
+		GameConstants.Biome.DIGITAL_GRID:
+			return 0.0
+		GameConstants.Biome.CRYSTAL_CAVERNS:
+			return GameConstants.CRYSTAL_CAVERNS_HEIGHT
+		GameConstants.Biome.ANCIENT_RUINS:
+			return GameConstants.ANCIENT_RUINS_HEIGHT + randf_range(-0.1, 0.15)
+		GameConstants.Biome.UNDERGROUND:
+			return GameConstants.UNDERGROUND_HEIGHT
 		_:
 			return 0.0
 
@@ -399,7 +444,17 @@ func _spawn_healing_shrines() -> void:
 
 func _is_biome_walkable(biome: int) -> bool:
 	# Check if a biome type is walkable (not water or lava).
-	return biome != GameConstants.Biome.WATER and biome != GameConstants.Biome.LAVA
+	# Phase 22: Deep Ocean, Volcano Core, Crystal Caverns and Underground are
+	# considered walkable for spawning purposes — the player can traverse them
+	# (with buoyancy/heat effects applied via the biome system). Only surface
+	# water and lava are treated as unwalkable liquid tiles.
+	match biome:
+		GameConstants.Biome.WATER:
+			return false
+		GameConstants.Biome.LAVA:
+			return false
+		_:
+			return true
 
 func _random_world_position() -> Vector3:
 	# Random position within the world bounds.
