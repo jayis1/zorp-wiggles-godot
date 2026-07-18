@@ -131,6 +131,11 @@ enum EnemyType {
 	SWARM_MITE,       # Tiny, fast, spawns in packs — low HP but overwhelms
 	CRYSTAL_GUARDIAN, # Slow, tanky, fires crystal shard projectiles
 	PHASE_SHIFTER,    # Periodically becomes intangible — must time shots to hit it
+	# ── Phase 23: New enemy types ──
+	TOXIC_SPORE,      # Explodes into poison cloud on death, cloud damages over time
+	SWARM_QUEEN,      # Spawns Swarm Mites continuously, must be killed to stop spawns
+	CRYSTAL_WRAITH,   # Shatters into shards on death, shards reform into mini-wraiths
+	ECHO_KNIGHT,      # Creates shadow copies of itself, all attack simultaneously
 }
 
 # ─── Enemy Spawn & Difficulty ────────────────────────────────────────────────
@@ -1443,4 +1448,104 @@ const COOP_CAMERA_PLAYER_SPACING_THRESH: float = 15.0  # Distance at which max z
 
 # Drop-in / drop-out
 const COOP_DROP_IN_KEY: String = "p2_start"   # Input action name for P2 drop-in
+
+# ─── Phase 23: New Enemy Types ────────────────────────────────────────────────
+
+# ── Toxic Spore ──────────────────────────────────────────────────────────────
+# On death, explodes into a lingering poison cloud that damages any entity
+# (player or enemy) standing inside it. The cloud persists for several seconds,
+# creating a temporary hazard zone. The spore itself is slow and weak in melee,
+# but the player is incentivized to kill it at range so the cloud spawns far
+# away. Enemies caught in the cloud take damage too — friendly-fire pressure.
+const TOXIC_SPORE_HP: int = 40
+const TOXIC_SPORE_SPEED: float = 2.8
+const TOXIC_SPORE_DAMAGE: int = 10          # Melee damage (low — the cloud is the threat)
+const TOXIC_SPORE_SCALE: float = 0.85
+const TOXIC_SPORE_XP: int = 30
+const TOXIC_SPORE_SCORE: int = 110
+const TOXIC_SPORE_DETECT_RANGE: float = 28.0
+const TOXIC_SPORE_ATTACK_RANGE: float = 1.6
+const TOXIC_SPORE_ATTACK_COOLDOWN: float = 1.4
+const TOXIC_SPORE_COLOR: Color = Color(0.35, 0.78, 0.20)  # Sickly green
+# Poison cloud (spawned on death)
+const TOXIC_SPORE_CLOUD_RADIUS: float = 4.5        # Damage radius
+const TOXIC_SPORE_CLOUD_DURATION: float = 5.0      # Seconds the cloud persists
+const TOXIC_SPORE_CLOUD_DAMAGE_PER_TICK: int = 6   # Damage per tick
+const TOXIC_SPORE_CLOUD_TICK_INTERVAL: float = 0.7 # Seconds between damage ticks
+const TOXIC_SPORE_CLOUD_COLOR: Color = Color(0.35, 0.78, 0.20, 0.35)  # Translucent green
+const TOXIC_SPORE_CLOUD_ENEMY_DAMAGE_MULT: float = 0.5  # Enemies take half damage
+
+# ── Swarm Queen ──────────────────────────────────────────────────────────────
+# Continuously spawns Swarm Mites from her body. The mites stream out and rush
+# the player. The Queen herself is slow and tanky — she must be killed to stop
+# the spawn. High HP, slow speed, high reward. Mites spawn every few seconds in
+# small batches (1-3). The Queen will not exceed the global enemy cap.
+const SWARM_QUEEN_HP: int = 280
+const SWARM_QUEEN_SPEED: float = 1.6
+const SWARM_QUEEN_DAMAGE: int = 18
+const SWARM_QUEEN_SCALE: float = 2.0
+const SWARM_QUEEN_XP: int = 120
+const SWARM_QUEEN_SCORE: int = 450
+const SWARM_QUEEN_DETECT_RANGE: float = 32.0
+const SWARM_QUEEN_ATTACK_RANGE: float = 2.2
+const SWARM_QUEEN_ATTACK_COOLDOWN: float = 1.8
+const SWARM_QUEEN_COLOR: Color = Color(0.55, 0.25, 0.55)  # Muted magenta
+const SWARM_QUEEN_SPAWN_INTERVAL_MIN: float = 3.0  # Seconds between mite batches
+const SWARM_QUEEN_SPAWN_INTERVAL_MAX: float = 5.0
+const SWARM_QUEEN_SPAWN_BATCH_MIN: int = 1
+const SWARM_QUEEN_SPAWN_BATCH_MAX: int = 3
+const SWARM_QUEEN_SPAWN_RADIUS: float = 2.5  # Mites spawn around the queen
+const SWARM_QUEEN_MAX_MITES_ALIVE: int = 12  # Hard cap on concurrent queen-spawned mites
+
+# ── Crystal Wraith ───────────────────────────────────────────────────────────
+# On death, shatters into 3-5 crystal shards that fly outward. Each shard then
+# reforms into a mini-wraith (low HP, fast, low damage) that continues attacking
+# the player. This creates a "hydra" feel — killing the wraith spawns more
+# enemies, so the player must be ready to deal with the mini-wraiths. The wraith
+# itself is medium-tier: moderate HP, fast, melee.
+const CRYSTAL_WRAITH_HP: int = 90
+const CRYSTAL_WRAITH_SPEED: float = 5.5
+const CRYSTAL_WRAITH_DAMAGE: int = 16
+const CRYSTAL_WRAITH_SCALE: float = 1.2
+const CRYSTAL_WRAITH_XP: int = 55
+const CRYSTAL_WRAITH_SCORE: int = 180
+const CRYSTAL_WRAITH_DETECT_RANGE: float = 32.0
+const CRYSTAL_WRAITH_ATTACK_RANGE: float = 1.8
+const CRYSTAL_WRAITH_ATTACK_COOLDOWN: float = 1.2
+const CRYSTAL_WRAITH_COLOR: Color = Color(0.45, 0.75, 1.0)  # Ice blue
+const CRYSTAL_WRAITH_SHARD_COUNT_MIN: int = 3
+const CRYSTAL_WRAITH_SHARD_COUNT_MAX: int = 5
+const CRYSTAL_WRAITH_SHARD_SCATTER_SPEED: float = 8.0
+const CRYSTAL_WRAITH_SHARD_REFORM_DELAY: float = 0.9  # Seconds before shard becomes mini-wraith
+# Mini-wraith (spawned from shards)
+const CRYSTAL_WRAITH_MINI_HP: int = 18
+const CRYSTAL_WRAITH_MINI_SPEED: float = 7.0
+const CRYSTAL_WRAITH_MINI_DAMAGE: int = 6
+const CRYSTAL_WRAITH_MINI_SCALE: float = 0.4
+const CRYSTAL_WRAITH_MINI_XP: int = 8
+const CRYSTAL_WRAITH_MINI_SCORE: int = 30
+const CRYSTAL_WRAITH_MINI_COLOR: Color = Color(0.6, 0.85, 1.0)
+
+# ── Echo Knight ──────────────────────────────────────────────────────────────
+# Creates 2 shadow copies of itself at fixed offsets. All three entities share
+# the same movement and attack in sync — when the real knight attacks, all
+# copies attack simultaneously in the same pattern. Copies are intangible
+# (can't be damaged) and fade when the real knight dies. The player must
+# identify the real knight (slightly brighter / has a subtle aura) and focus it
+# down; the copies are a constant threat that can't be removed any other way.
+const ECHO_KNIGHT_HP: int = 110
+const ECHO_KNIGHT_SPEED: float = 4.0
+const ECHO_KNIGHT_DAMAGE: int = 14
+const ECHO_KNIGHT_SCALE: float = 1.1
+const ECHO_KNIGHT_XP: int = 50
+const ECHO_KNIGHT_SCORE: int = 160
+const ECHO_KNIGHT_DETECT_RANGE: float = 30.0
+const ECHO_KNIGHT_ATTACK_RANGE: float = 2.0
+const ECHO_KNIGHT_ATTACK_COOLDOWN: float = 1.3
+const ECHO_KNIGHT_COLOR: Color = Color(0.6, 0.6, 0.7)  # Pale grey-blue
+const ECHO_KNIGHT_REAL_COLOR: Color = Color(0.85, 0.85, 1.0)  # Brighter — the real one
+const ECHO_KNIGHT_COPY_COUNT: int = 2
+const ECHO_KNIGHT_COPY_OFFSET: float = 3.0   # Meters from the real knight
+const ECHO_KNIGHT_COPY_ALPHA: float = 0.45   # Translucent copies
+const ECHO_KNIGHT_COPY_DAMAGE_MULT: float = 0.6  # Copies deal reduced damage
 const COOP_DROP_OUT_HOLD_TIME: float = 2.0     # Hold drop-in key this long to drop out

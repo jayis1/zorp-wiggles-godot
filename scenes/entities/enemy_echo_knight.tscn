@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://eechoknight"]
+
+[ext_resource type="Script" path="res://scripts/enemy_echo_knight.gd" id="1_ek"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_1"]
+radius = 0.55
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.55
+height = 1.1
+
+[node name="EnemyEchoKnight" type="CharacterBody3D" groups=["enemies"]]
+script = ExtResource("1_ek")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("SphereMesh_1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("SphereShape3D_1")
+
+[node name="AlertIndicator" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+text = "!"
+visible = false
+billboard = 1
+font_size = 32

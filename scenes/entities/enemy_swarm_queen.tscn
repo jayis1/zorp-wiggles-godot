@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://eswarmqueen"]
+
+[ext_resource type="Script" path="res://scripts/enemy_swarm_queen.gd" id="1_sq"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_1"]
+radius = 1.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 1.0
+height = 2.0
+
+[node name="EnemySwarmQueen" type="CharacterBody3D" groups=["enemies"]]
+script = ExtResource("1_sq")
+
+[node name="BodyMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("SphereMesh_1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+shape = SubResource("SphereShape3D_1")
+
+[node name="AlertIndicator" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+text = "!"
+visible = false
+billboard = 1
+font_size = 32

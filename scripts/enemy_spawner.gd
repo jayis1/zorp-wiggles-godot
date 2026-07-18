@@ -19,6 +19,7 @@ const EASY_TYPES: Array[int] = [
 	GameConstants.EnemyType.BLOB,
 	GameConstants.EnemyType.WISP,
 	GameConstants.EnemyType.SWARM_MITE,  # Enhancement: Swarm Mites in easy tier
+	GameConstants.EnemyType.TOXIC_SPORE, # Phase 23: Toxic Spore in easy tier
 ]
 const MEDIUM_TYPES: Array[int] = [
 	GameConstants.EnemyType.BLOB,
@@ -29,6 +30,9 @@ const MEDIUM_TYPES: Array[int] = [
 	GameConstants.EnemyType.WISP,
 	GameConstants.EnemyType.SWARM_MITE,  # Enhancement: Mites also in medium
 	GameConstants.EnemyType.PHASE_SHIFTER,  # Enhancement: Phase Shifter in medium
+	GameConstants.EnemyType.TOXIC_SPORE,     # Phase 23: Toxic Spore also in medium
+	GameConstants.EnemyType.CRYSTAL_WRAITH,  # Phase 23: Crystal Wraith in medium
+	GameConstants.EnemyType.ECHO_KNIGHT,     # Phase 23: Echo Knight in medium
 ]
 const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.SERPENT,
@@ -39,6 +43,9 @@ const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.DRAKE,
 	GameConstants.EnemyType.CRYSTAL_GUARDIAN,  # Enhancement: Guardian in hard tier
 	GameConstants.EnemyType.PHASE_SHIFTER,     # Enhancement: Phase Shifter also in hard
+	GameConstants.EnemyType.SWARM_QUEEN,       # Phase 23: Swarm Queen in hard tier
+	GameConstants.EnemyType.CRYSTAL_WRAITH,    # Phase 23: Crystal Wraith also in hard
+	GameConstants.EnemyType.ECHO_KNIGHT,       # Phase 23: Echo Knight also in hard
 ]
 
 # Enemy scene paths by type
@@ -55,6 +62,11 @@ const ENEMY_SCENES: Dictionary = {
 	GameConstants.EnemyType.SWARM_MITE: "res://scenes/entities/enemy_swarm_mite.tscn",
 	GameConstants.EnemyType.CRYSTAL_GUARDIAN: "res://scenes/entities/enemy_crystal_guardian.tscn",
 	GameConstants.EnemyType.PHASE_SHIFTER: "res://scenes/entities/enemy_phase_shifter.tscn",
+	# Phase 23: New enemy types
+	GameConstants.EnemyType.TOXIC_SPORE: "res://scenes/entities/enemy_toxic_spore.tscn",
+	GameConstants.EnemyType.SWARM_QUEEN: "res://scenes/entities/enemy_swarm_queen.tscn",
+	GameConstants.EnemyType.CRYSTAL_WRAITH: "res://scenes/entities/enemy_crystal_wraith.tscn",
+	GameConstants.EnemyType.ECHO_KNIGHT: "res://scenes/entities/enemy_echo_knight.tscn",
 }
 
 # Enemy type enum → name string (for looking up type data from EnemyTypeData)
@@ -71,6 +83,11 @@ const ENEMY_TYPE_NAMES: Dictionary = {
 	GameConstants.EnemyType.SWARM_MITE: "Swarm Mite",
 	GameConstants.EnemyType.CRYSTAL_GUARDIAN: "Crystal Guardian",
 	GameConstants.EnemyType.PHASE_SHIFTER: "Phase Shifter",
+	# Phase 23: New enemy types
+	GameConstants.EnemyType.TOXIC_SPORE: "Toxic Spore",
+	GameConstants.EnemyType.SWARM_QUEEN: "Swarm Queen",
+	GameConstants.EnemyType.CRYSTAL_WRAITH: "Crystal Wraith",
+	GameConstants.EnemyType.ECHO_KNIGHT: "Echo Knight",
 }
 
 func _ready() -> void:

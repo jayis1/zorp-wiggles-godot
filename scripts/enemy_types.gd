@@ -103,6 +103,27 @@ static var TYPES: Dictionary = {
 		"hp": 160,  "speed": 1.8,  "damage": 22,  "scale": 1.6,
 		"model": "cube",    "decor": "shards",  "detect": 26,
 	},
+	# ── Phase 23: New enemy types ──
+	"Toxic Spore": {
+		"color": Color(0.35, 0.78, 0.20),         # Sickly green
+		"hp": 40,   "speed": 2.8,  "damage": 10,  "scale": 0.85,
+		"model": "sphere",  "decor": "spikes",  "detect": 28,
+	},
+	"Swarm Queen": {
+		"color": Color(0.55, 0.25, 0.55),         # Muted magenta
+		"hp": 280,  "speed": 1.6,  "damage": 18,  "scale": 2.0,
+		"model": "sphere",  "decor": "aura",    "detect": 32,
+	},
+	"Crystal Wraith": {
+		"color": Color(0.45, 0.75, 1.0),         # Ice blue
+		"hp": 90,   "speed": 5.5,  "damage": 16,  "scale": 1.2,
+		"model": "diamond", "decor": "shards",  "detect": 32,
+	},
+	"Echo Knight": {
+		"color": Color(0.85, 0.85, 1.0),         # Pale grey-blue (real knight is brighter)
+		"hp": 110,  "speed": 4.0,  "damage": 14,  "scale": 1.1,
+		"model": "diamond", "decor": "aura",    "detect": 30,
+	},
 }
 
 static var EASY_TYPES: Array[String] = ["Slime Blob", "Space Beetle", "Swarm Mite", "Void Wisp"]
@@ -130,6 +151,11 @@ static var LOOT_DROPS: Dictionary = {
 	"Void Wisp":          [1, 3],
 	"Echo Wraith":         [2, 4],
 	"Shard Golem":         [2, 4],
+	# ── Phase 23: New enemy types ──
+	"Toxic Spore":         [2, 3],
+	"Swarm Queen":         [4, 6],
+	"Crystal Wraith":      [2, 4],
+	"Echo Knight":         [2, 4],
 }
 
 static func get_type(name: String) -> Dictionary:
