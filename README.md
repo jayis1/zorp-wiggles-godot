@@ -24,7 +24,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 6. **Biome Mutation System** — Zorp evolves based on time spent in biomes (fire resistance, ice armor, refractive cloak, nature's pact, poison trail, void step)
 7. **Dimensional Rifts** — 4 alternate dimensions: Void (shadow clone boss), Mirror (enemies friendly, items hostile), Time-Slow (world at 0.3x speed), Reverse Gravity (walk on ceiling)
 8. **Alien Companion Pet** — Summonable pet with 3 evolution stages (baby → adolescent → adult), auto-collects items, fetch command, idle animations, adult stage shields Zorp
-9. **Weapon Mod Crafting** — 30 craftable weapon mods (homing laser, chain lightning, freeze ray, vampire beam, black hole, ricochet, spread shot, piercing, bouncing, black hole launcher, time freeze ray, shrink beam, meteor strike, lightning storm, poison nova, and more)
+9. **Weapon Mod Crafting** — 34 craftable weapon mods (homing laser, chain lightning, freeze ray, vampire beam, black hole, ricochet, spread shot, piercing, bouncing, black hole launcher, time freeze ray, shrink beam, meteor strike, lightning storm, poison nova, shield bubble, turret deploy, gravity flip field, void rift cutter, and more)
 10. **Dynamic Weather** — 6 weather types (clear, acid rain, solar flare, fog, thunderstorm, snow) with gameplay effects (damage, fire rate boost, stealth, lightning, slow)
 11. **Boss Arenas** — 3 arena types (lava, crystal, void) with walls, cover, environmental hazards, shrinking floors, and auto-spawn system
 12. **Local Co-op** — Player 2 "Zerp" drops in anytime, shared camera with dynamic zoom, enemy scaling, shared combo, revive system, mega pulse wave sync, 7 co-op achievements
@@ -70,6 +70,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 | F | Summon/dismiss companion pet |
 | G | Pet fetch mode (click collectible to fetch) |
 | C | Open weapon mod crafting menu |
+| V | Deploy ability (activate equipped deployable mod: Shield Bubble, Turret, Gravity Flip, Void Rift) |
 | K | Open skill tree |
 | F2 | Open statistics page |
 | **Player 2 (Zerp)** | |
@@ -186,7 +187,7 @@ Phases 1-20 (core game + 12 new features) are **COMPLETE**. Ongoing development 
 
 - **Phase 22**: New biomes (Deep Ocean, Volcano Core, Sky Citadel, Digital Grid, Crystal Caverns, Ancient Ruins, Underground) — **IN PROGRESS** (7/8 biomes implemented with decorations, mutations, biome effects, audio, weather affinities)
 - **Phase 23**: New enemy types (Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight, Plasma Stalker, Time Warden, Mirror Mimic implemented; Void Leviathan, Ancient Sentinel pending) — **IN PROGRESS** (7/10 enemy types implemented)
-- **Phase 24**: New weapon mods (Black Hole Launcher, Time Freeze Ray, Mind Control, Meteor Strike, Turret Deploy)
+- **Phase 24**: New weapon mods (Black Hole Launcher, Time Freeze Ray, Shrink Beam, Meteor Strike, Lightning Storm, Poison Nova, Shield Bubble, Turret Deploy, Gravity Flip Field, Void Rift Cutter)
 - **Phase 25**: Progression systems (skill tree, prestige, daily challenges, endless mode, boss rush)
 - **Phase 26**: World life (wandering merchants, villages, wildlife, treasure chests, lore stones, fast travel) — **IN PROGRESS** (6/10 implemented: roaming wildlife with 8 biome-specific species, hidden treasure chests with traps, lore stones with 30 lore fragments, NPC dialogue system with 3 archetypes + typewriter-effect HUD panel, environmental hazards with 4 types cycling through telegraph/active/cooldown, interactive objects with switches/doors/breakable walls/hidden passages linked via linked_id)
 - **Phase 27**: Pet evolution expansion (5 new paths, fusion, accessories, training, multi-pet)

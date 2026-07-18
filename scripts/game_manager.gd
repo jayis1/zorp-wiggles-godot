@@ -300,6 +300,17 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# ── Phase 16: Reflective Shield weapon mod reduces incoming damage ──
 	if WeaponModSystem and WeaponModSystem.get_equipped_mod() == GameConstants.WeaponMod.REFLECTIVE_SHIELD:
 		actual_amount = int(actual_amount * 0.6)  # 40% damage reduction
+	# ── Phase 24: Shield Bubble deployable absorbs damage ──
+	if DeployableSystem and DeployableSystem.is_shield_bubble_active():
+		# The bubble absorbs what it can; the rest passes through
+		actual_amount = DeployableSystem.absorb_damage(actual_amount)
+		if actual_amount <= 0:
+			# Fully absorbed by the bubble — no damage to player
+			return
+		# Apply the bubble's damage reduction to the remaining damage
+		var bubble_reduction: float = DeployableSystem.get_shield_bubble_damage_reduction()
+		if bubble_reduction > 0:
+			actual_amount = int(actual_amount * (1.0 - bubble_reduction))
 	# ── Phase 25: Progression System damage reduction (skill tree) ──
 	if ProgressionSystem:
 		var prog_dmg_reduce: float = ProgressionSystem.get_damage_reduction()

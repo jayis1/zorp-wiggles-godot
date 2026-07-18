@@ -1035,6 +1035,11 @@ enum WeaponMod {
 	METEOR_STRIKE,       # 28 — Meteor Shard + Fireball Scroll + Nebula Dust — calls down a meteor at cursor
 	LIGHTNING_STORM,     # 29 — Regen Crystal + Magnet Core + Quantum Fuzz — chain lightning storm
 	POISON_NOVA,         # 30 — Nebula Dust + Space Gloop + Toxic Extract — expanding ring of poison, DoT to all hit
+	# ── Phase 24: Deployable weapon mods (triggered via deploy_ability key) ──
+	SHIELD_BUBBLE,       # 31 — Shield Crystal + Regen Crystal — encases player in a bubble that absorbs damage & reflects projectiles
+	TURRET_DEPLOY,       # 32 — Magnet Core + Shield Crystal + Fireball Scroll — stationary turret that auto-fires at nearest enemy
+	GRAVITY_FLIP_FIELD,  # 33 — Magnet Core + Nebula Dust + Quantum Fuzz — area where gravity reverses, enemies fall up
+	VOID_RIFT_CUTTER,    # 34 — Nebula Dust + Meteor Shard + Toxic Extract — opens a dimensional rift that damages enemies passing through
 }
 
 const WEAPON_MOD_NAMES: Array[String] = [
@@ -1071,6 +1076,11 @@ const WEAPON_MOD_NAMES: Array[String] = [
 	"Meteor Strike",
 	"Lightning Storm",
 	"Poison Nova",
+	# Phase 24: Deployable weapon mods
+	"Shield Bubble",
+	"Turret Deploy",
+	"Gravity Flip Field",
+	"Void Rift Cutter",
 ]
 
 const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
@@ -1107,6 +1117,11 @@ const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
 	"Calls down a meteor from the sky at the cursor location, dealing massive AoE damage on impact.",
 	"Chain lightning storm — bolts arc between all nearby enemies, dealing damage to each.",
 	"Expanding ring of poison that damages all enemies it touches, with lingering DoT.",
+	# Phase 24: Deployable weapon mods
+	"Encases Zorp in a protective bubble that absorbs damage and reflects enemy projectiles back at them.",
+	"Deploys a stationary turret at your location that auto-fires at the nearest enemy for 15 seconds.",
+	"Creates a gravity-flip field where enemies fall upward, then take fall damage when the field ends.",
+	"Opens a dimensional rift that damages all enemies passing through it, persisting for several seconds.",
 ]
 
 # Colors for each weapon mod (laser color)
@@ -1144,6 +1159,11 @@ const WEAPON_MOD_COLORS: Array[Color] = [
 	Color(1.0, 0.4, 0.1),    # Meteor Strike: fiery orange-red
 	Color(0.7, 0.85, 1.0),   # Lightning Storm: electric pale blue
 	Color(0.5, 0.9, 0.2),    # Poison Nova: toxic green
+	# Phase 24: Deployable weapon mods
+	Color(0.3, 0.7, 1.0),    # Shield Bubble: sky blue (protective)
+	Color(0.7, 0.85, 0.3),   # Turret Deploy: military green
+	Color(0.6, 0.4, 1.0),    # Gravity Flip Field: anti-gravity purple
+	Color(0.3, 0.1, 0.5),    # Void Rift Cutter: dark void purple
 ]
 
 # Damage multiplier per weapon mod
@@ -1181,6 +1201,11 @@ const WEAPON_MOD_DAMAGE_MULT: Array[float] = [
 	2.8,   # Meteor Strike (massive single-hit AoE)
 	1.2,   # Lightning Storm (chains to many enemies)
 	1.3,   # Poison Nova (AoE + DoT)
+	# Phase 24: Deployable weapon mods (these are utility/deployables, damage is from the deployable not the bolt)
+	0.5,   # Shield Bubble (defensive utility — no projectile, bubble absorbs damage)
+	0.4,   # Turret Deploy (the turret does the damage, not the trigger bolt)
+	0.3,   # Gravity Flip Field (utility — the fall damage is the threat)
+	0.5,   # Void Rift Cutter (the rift does the damage, not the bolt)
 ]
 
 # Fire rate multiplier (lower = faster)
@@ -1218,6 +1243,11 @@ const WEAPON_MOD_FIRE_RATE_MULT: Array[float] = [
 	3.0,   # Meteor Strike (very slow — calling down a meteor)
 	2.2,   # Lightning Storm (slow charge-up)
 	1.8,   # Poison Nova (slow — expanding ring)
+	# Phase 24: Deployable weapon mods (deployables have their own cooldowns, fire rate is the trigger cooldown)
+	3.0,   # Shield Bubble (very slow — one bubble at a time, long cooldown)
+	3.5,   # Turret Deploy (very slow — one turret at a time)
+	3.2,   # Gravity Flip Field (slow — field duration is long)
+	3.0,   # Void Rift Cutter (slow — rift persists)
 ]
 
 # Projectile speed multiplier
@@ -1255,6 +1285,11 @@ const WEAPON_MOD_SPEED_MULT: Array[float] = [
 	0.4,   # Meteor Strike (slow — the bolt is the meteor strike marker)
 	1.0,   # Lightning Storm (moderate)
 	0.8,   # Poison Nova (slow-ish — expanding ring)
+	# Phase 24: Deployable weapon mods (these don't fire a traditional bolt; speed is for the trigger marker)
+	1.0,   # Shield Bubble (no projectile — bubble appears instantly)
+	1.0,   # Turret Deploy (no projectile — turret appears at player location)
+	1.0,   # Gravity Flip Field (no projectile — field appears at player location)
+	1.0,   # Void Rift Cutter (no projectile — rift appears at player location)
 ]
 
 # Crafting recipes: maps a sorted key string "typeA,typeB[,typeC]" → WeaponMod enum value
@@ -1295,6 +1330,11 @@ const CRAFTING_RECIPES: Dictionary = {
 	"MAGNET_CORE,QUANTUM_FUZZ,REGEN_CRYSTAL": WeaponMod.LIGHTNING_STORM,
 	# Poison Nova uses a 3-item recipe to avoid colliding with Void Ray's key
 	"NEBULA_DUST,SPACE_GLOOP,TOXIC_EXTRACT": WeaponMod.POISON_NOVA,
+	# Phase 24: Deployable weapon mods
+	"REGEN_CRYSTAL,SHIELD_CRYSTAL,SPACE_GLOOP": WeaponMod.SHIELD_BUBBLE,
+	"FIREBALL_SCROLL,MAGNET_CORE,SHIELD_CRYSTAL": WeaponMod.TURRET_DEPLOY,
+	"MAGNET_CORE,NEBULA_DUST,QUANTUM_FUZZ": WeaponMod.GRAVITY_FLIP_FIELD,
+	"METEOR_SHARD,NEBULA_DUST,TOXIC_EXTRACT": WeaponMod.VOID_RIFT_CUTTER,
 }
 
 # Crafting material type names for recipe key lookup
@@ -1987,6 +2027,58 @@ const WILDLIFE_SPECIES: Array[Dictionary] = [
 	},
 ]
 const POISON_NOVA_CLOUD_TICK_INTERVAL: float = 0.6
+
+# ── Phase 24: Deployable Weapon Mod Tuning ───────────────────────────────────
+# These mods are triggered by the deploy_ability input (V key) when equipped.
+# They don't fire a traditional projectile — instead they spawn a deployable
+# effect at/near the player. Each has its own duration and behavior.
+
+# Shield Bubble — encases the player in a protective bubble. The bubble absorbs
+# a fixed amount of incoming damage (a "shield HP" pool) before breaking. While
+# active, enemy projectiles that touch the bubble are reflected back at the
+# shooter with 50% increased speed. The bubble also grants 30% damage reduction
+# on melee/contact damage that gets through. Lasts 8 seconds or until the shield
+# HP is depleted. Only one bubble can be active at a time.
+const SHIELD_BUBBLE_DURATION: float = 8.0
+const SHIELD_BUBBLE_HP: int = 80
+const SHIELD_BUBBLE_RADIUS: float = 1.8
+const SHIELD_BUBBLE_DAMAGE_REDUCTION: float = 0.3
+const SHIELD_BUBBLE_REFLECT_SPEED_MULT: float = 1.5
+const SHIELD_BUBBLE_REFLECT_DAMAGE_MULT: float = 0.7
+
+# Turret Deploy — spawns a stationary turret at the player's location. The turret
+# auto-targets the nearest enemy within range and fires bolts at a steady rate.
+# Lasts 15 seconds. The turret has its own HP (can be destroyed by enemies).
+# Only one turret can be active at a time (deploying a new one removes the old).
+const TURRET_DEPLOY_DURATION: float = 15.0
+const TURRET_DEPLOY_RANGE: float = 25.0
+const TURRET_DEPLOY_FIRE_RATE: float = 0.35  # Seconds between shots
+const TURRET_DEPLOY_DAMAGE: int = 18
+const TURRET_DEPLOY_HP: int = 60
+const TURRET_DEPLOY_PROJECTILE_SPEED: float = 28.0
+const TURRET_DEPLOY_ROTATE_SPEED: float = 4.0  # How fast it tracks targets (rad/s)
+
+# Gravity Flip Field — creates a cylindrical field around the player. Enemies
+# inside the field have their gravity reversed — they're launched upward, then
+# fall back down when the field ends (taking fall damage on landing). The field
+# persists for 4 seconds. Player is unaffected (Zorp has magnetic boots).
+const GRAVITY_FLIP_FIELD_DURATION: float = 4.0
+const GRAVITY_FLIP_FIELD_RADIUS: float = 8.0
+const GRAVITY_FLIP_FIELD_HEIGHT: float = 15.0
+const GRAVITY_FLIP_FIELD_UPWARD_FORCE: float = 18.0
+const GRAVITY_FLIP_FIELD_FALL_DAMAGE: int = 30
+const GRAVITY_FLIP_FIELD_TICK_INTERVAL: float = 0.2
+
+# Void Rift Cutter — opens a dimensional rift at the player's location that
+# persists for 6 seconds. The rift is a planar slice through space; any enemy
+# that touches the rift takes damage (with a per-enemy cooldown so they don't
+# get melted in one pass). The rift slowly rotates and emits void particles.
+const VOID_RIFT_CUTTER_DURATION: float = 6.0
+const VOID_RIFT_CUTTER_LENGTH: float = 8.0
+const VOID_RIFT_CUTTER_WIDTH: float = 0.8
+const VOID_RIFT_CUTTER_DAMAGE: int = 25
+const VOID_RIFT_CUTTER_TICK_INTERVAL: float = 0.5  # Per-enemy damage cooldown
+const VOID_RIFT_CUTTER_ROTATE_SPEED: float = 0.8  # rad/s
 
 # ─── Phase 26: World Life — NPC Dialogue, Environmental Hazards, Interactive Objects ─
 

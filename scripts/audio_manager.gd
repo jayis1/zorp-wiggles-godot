@@ -75,6 +75,7 @@ const SFX_REVIVE: String = "revive"
 const SFX_PET: String = "pet"
 const SFX_CRAFT: String = "craft"
 const SFX_ARENA: String = "arena"
+const SFX_SHIELD: String = "shield"  # Phase 24: Shield Bubble deployable
 
 
 func _ready() -> void:
@@ -388,6 +389,8 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_PET] = _gen_blip(900.0, 0.05, 0.25)
 	_sfx_streams[SFX_CRAFT] = _gen_chime([659.0, 880.0], 0.12, 0.3)
 	_sfx_streams[SFX_ARENA] = _gen_rumble(50.0, 1.2, 0.5)
+	# Phase 24: Shield Bubble — a warm protective chime
+	_sfx_streams[SFX_SHIELD] = _gen_chime([523.0, 784.0, 1047.0], 0.3, 0.35)
 
 
 func _generate_all_music() -> void:

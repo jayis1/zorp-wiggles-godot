@@ -852,6 +852,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	# ── Phase 26: Interact key (T) — talk to NPCs, activate switches ──
 	if event.is_action_pressed("interact") and not GameManager.is_paused and GameManager.player_is_alive:
 		_try_interact()
+	
+	# ── Phase 24: Deploy ability (V key) — activate the equipped deployable weapon mod ──
+	# When a deployable mod (Shield Bubble, Turret, Gravity Flip, Void Rift) is equipped,
+	# pressing V triggers the deployable effect instead of firing a projectile.
+	if event.is_action_pressed("deploy_ability") and not GameManager.is_paused and GameManager.player_is_alive:
+		_try_deploy_ability()
 
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
@@ -1212,3 +1218,44 @@ func _try_fetch_click() -> void:
 				pet.send_to_fetch(nearest)
 			else:
 				GameManager.add_message("🐾 No collectible found at click location")
+
+# ── Phase 24: Deployable Weapon Mods ──────────────────────────────────────────
+## Try to activate the equipped deployable weapon mod (Shield Bubble, Turret,
+## Gravity Flip Field, or Void Rift Cutter). These mods are triggered by the
+## deploy_ability input (V key) instead of firing a projectile. They use the
+## same shoot cooldown as the regular fire, so the player can't deploy and
+## shoot simultaneously — the deploy IS the shot.
+func _try_deploy_ability() -> void:
+	if shoot_cooldown_timer > 0:
+		return
+	if not WeaponModSystem:
+		return
+	var mod_id: int = WeaponModSystem.get_equipped_mod()
+	# Only the 4 deployable mods respond to the V key
+	match mod_id:
+		GameConstants.WeaponMod.SHIELD_BUBBLE, \
+		GameConstants.WeaponMod.TURRET_DEPLOY, \
+		GameConstants.WeaponMod.GRAVITY_FLIP_FIELD, \
+		GameConstants.WeaponMod.VOID_RIFT_CUTTER:
+			pass  # It's a deployable mod
+		_:
+			# Not a deployable mod — show a hint and return
+			GameManager.add_message("⚠ Equip a deployable mod (Shield Bubble, Turret, Gravity Flip, or Void Rift) to use V")
+			return
+	# Apply the mod's fire rate multiplier as the deploy cooldown
+	var cooldown: float = GameConstants.SHOOT_COOLDOWN
+	cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
+	# Apply weather + progression multipliers (same as shooting)
+	cooldown *= WeatherSystem.get_fire_rate_multiplier()
+	if ProgressionSystem:
+		cooldown *= ProgressionSystem.get_fire_rate_mult()
+	shoot_cooldown_timer = cooldown
+	# Activate the deployable via the DeployableSystem singleton
+	if DeployableSystem:
+		var success: bool = DeployableSystem.try_activate_deployable(mod_id, self)
+		if not success:
+			# Activation failed (e.g. already active for non-refreshable types)
+			shoot_cooldown_timer = 0.0  # Refund the cooldown
+	# ── Phase 25: Statistics tracking ──
+	if Statistics:
+		Statistics.record_shot()
