@@ -23,7 +23,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 5. **Animation System** — AnimationPlayer library with squash-and-stretch, walk cycles, hit reactions, blend trees
 6. **Biome Mutation System** — Zorp evolves based on time spent in biomes (fire resistance, ice armor, refractive cloak, nature's pact, poison trail, void step)
 7. **Dimensional Rifts** — 4 alternate dimensions: Void (shadow clone boss), Mirror (enemies friendly, items hostile), Time-Slow (world at 0.3x speed), Reverse Gravity (walk on ceiling)
-8. **Alien Companion Pet** — Summonable pet with 3 evolution stages (baby → adolescent → adult), auto-collects items, fetch command, idle animations, adult stage shields Zorp
+8. **Alien Companion Pet** — Summonable pet with 3 evolution stages (baby → adolescent → adult), auto-collects items, fetch command, idle animations, adult stage shields Zorp; **Phase 27: 5 elemental evolution paths** (Fire/Ice/Electric/Void/Nature) each with unique passive abilities, ranged attacks for Fire/Void, pet emote system (8 emotes reacting to game events), and evolution stones as rare biome-themed drops
 9. **Weapon Mod Crafting** — 34 craftable weapon mods (homing laser, chain lightning, freeze ray, vampire beam, black hole, ricochet, spread shot, piercing, bouncing, black hole launcher, time freeze ray, shrink beam, meteor strike, lightning storm, poison nova, shield bubble, turret deploy, gravity flip field, void rift cutter, and more)
 10. **Dynamic Weather** — 6 weather types (clear, acid rain, solar flare, fog, thunderstorm, snow) with gameplay effects (damage, fire rate boost, stealth, lightning, slow)
 11. **Boss Arenas** — 3 arena types (lava, crystal, void) with walls, cover, environmental hazards, shrinking floors, and auto-spawn system
@@ -69,6 +69,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 | P | Pause |
 | F | Summon/dismiss companion pet |
 | G | Pet fetch mode (click collectible to fetch) |
+| B | Use evolution stone on pet (locks in elemental path) |
 | C | Open weapon mod crafting menu |
 | V | Deploy ability (activate equipped deployable mod: Shield Bubble, Turret, Gravity Flip, Void Rift) |
 | K | Open skill tree |
@@ -189,8 +190,8 @@ Phases 1-20 (core game + 12 new features) are **COMPLETE**. Ongoing development 
 - **Phase 23**: New enemy types (Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight, Plasma Stalker, Time Warden, Mirror Mimic implemented; Void Leviathan, Ancient Sentinel pending) — **IN PROGRESS** (7/10 enemy types implemented)
 - **Phase 24**: New weapon mods (Black Hole Launcher, Time Freeze Ray, Shrink Beam, Meteor Strike, Lightning Storm, Poison Nova, Shield Bubble, Turret Deploy, Gravity Flip Field, Void Rift Cutter)
 - **Phase 25**: Progression systems (skill tree, prestige, daily challenges, endless mode, boss rush)
-- **Phase 26**: World life (wandering merchants, villages, wildlife, treasure chests, lore stones, fast travel) — **IN PROGRESS** (6/10 implemented: roaming wildlife with 8 biome-specific species, hidden treasure chests with traps, lore stones with 30 lore fragments, NPC dialogue system with 3 archetypes + typewriter-effect HUD panel, environmental hazards with 4 types cycling through telegraph/active/cooldown, interactive objects with switches/doors/breakable walls/hidden passages linked via linked_id)
-- **Phase 27**: Pet evolution expansion (5 new paths, fusion, accessories, training, multi-pet)
+- **Phase 26**: World life (wandering merchants, villages, wildlife, treasure chests, lore stones, fast travel) — **COMPLETE** (10/10: wandering merchants with discounted rare goods, friendly alien villages via clustered dialogue NPCs, roaming wildlife with 8 biome-specific species, hidden treasure chests with traps, lore stones with 30 lore fragments, NPC dialogue system with 3 archetypes + typewriter-effect HUD panel, environmental hazards with 4 types cycling through telegraph/active/cooldown, interactive objects with switches/doors/breakable walls/hidden passages linked via linked_id, world bosses that roam the open world with loot showers, fast travel network with auto-activating waypoints)
+- **Phase 27**: Pet evolution expansion (5 new paths, fusion, accessories, training, multi-pet) — **IN PROGRESS** (3/8 implemented: 5 elemental evolution paths [Fire/Ice/Electric/Void/Nature] with unique passive abilities + ranged attacks for Fire/Void, pet emote system with 8 emotes reacting to game events, pet evolution stones as rare biome-themed drops with dedicated inventory + B-key to use)
 - **Phase 28**: Weather expansion (meteor shower, aurora, sandstorm, blood moon, eclipse, gravity anomaly)
 - **Phase 29**: Equipment (armor, consumables, accessories, upgrade system, set bonuses)
 - **Phase 30**: Visual polish (character select, skins, photo mode, intro cinematic)

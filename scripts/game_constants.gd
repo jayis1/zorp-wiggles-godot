@@ -299,6 +299,12 @@ enum CollectibleType {
 	REGEN_CRYSTAL,    # Green regenerative crystal
 	MAGNET_CORE,      # Metallic magnetic core
 	TOXIC_EXTRACT,    # Sickly green toxic extract
+	# ── Phase 27: Pet Evolution Stones (rare drops that force a pet path) ──
+	EMBER_STONE,      # Fire path
+	FROST_STONE,     # Ice path
+	SPARK_STONE,     # Electric path
+	VOID_STONE,      # Void path
+	LEAF_STONE,      # Nature path
 }
 
 # Collectible types that are crafting materials (used by weapon mod system)
@@ -942,6 +948,22 @@ const PET_FEED_VALUES: Dictionary = {
 	GameConstants.CollectibleType.REGEN_CRYSTAL: 35,
 	GameConstants.CollectibleType.MAGNET_CORE: 30,
 	GameConstants.CollectibleType.TOXIC_EXTRACT: 30,
+	# Phase 27: Evolution stones also feed the pet a large chunk (60 pts)
+	GameConstants.CollectibleType.EMBER_STONE: 60,
+	GameConstants.CollectibleType.FROST_STONE: 60,
+	GameConstants.CollectibleType.SPARK_STONE: 60,
+	GameConstants.CollectibleType.VOID_STONE: 60,
+	GameConstants.CollectibleType.LEAF_STONE: 60,
+}
+
+# Maps a CollectibleType evolution stone to its PetPath. Looked up by the
+# companion pet when it consumes a stone via the player's "use_stone" action.
+const PET_STONE_TO_PATH: Dictionary = {
+	GameConstants.CollectibleType.EMBER_STONE: 1,  # PetPath.FIRE
+	GameConstants.CollectibleType.FROST_STONE: 2,  # PetPath.ICE
+	GameConstants.CollectibleType.SPARK_STONE: 3,  # PetPath.ELECTRIC
+	GameConstants.CollectibleType.VOID_STONE: 4,   # PetPath.VOID
+	GameConstants.CollectibleType.LEAF_STONE: 5,   # PetPath.NATURE
 }
 
 # Pet stats per stage
@@ -997,6 +1019,269 @@ const PET_FETCH_RANGE: float = 60.0            # Max distance for fetch command
 const PET_HEAL_PER_PICKUP: float = 2.0         # Pet heals itself per item collected
 const PET_IDLE_ANIMATION_INTERVAL: float = 5.0 # Seconds between random idle anims
 const PET_SPAWN_OFFSET: Vector3 = Vector3(2.0, 1.0, 0.0)  # Initial spawn offset from player
+
+# ─── Phase 27: Pet Evolution Expansion ────────────────────────────────────────
+# Elemental evolution paths. The default pet (no stone used) follows the
+# "PRISMATIC" path which is the original cyan→teal→blue-purple stage config
+# above. Feeding the pet a matching Evolution Stone locks it into one of the
+# five elemental paths — each path overrides the stage config colors, stats,
+# and grants a unique passive ability.
+
+enum PetPath {
+	PRISMATIC,   # 0 — default path (original cyan/teal/blue-purple)
+	FIRE,        # 1 — Ember Stone → burns attackers, fireball attack
+	ICE,         # 2 — Frost Stone → slows nearby enemies, ice shard attack
+	ELECTRIC,    # 3 — Spark Stone → chain-zaps nearby enemies on attack
+	VOID,        # 4 — Void Stone → absorbs enemy projectiles, void bolt attack
+	NATURE,      # 5 — Leaf Stone → regenerates Zorp's HP, vine lash attack
+}
+
+const PET_PATH_NAMES: Array[String] = [
+	"Prismatic", "Fire", "Ice", "Electric", "Void", "Nature",
+]
+
+# Evolution stones — rare collectible-type items that force a specific path.
+# These reuse the CollectibleType enum but use the high end of the ID space
+# so they don't collide with existing materials. See CollectibleType below.
+# Drop chances and loot tables are in LootDrops / Wildlife / TreasureChest.
+
+# Path-specific stage config overrides. Index by [path][stage]. Any key
+# missing here falls back to the base PET_STAGE_CONFIG value, so each path
+# only needs to specify what it changes. This keeps the data compact and
+# makes it easy to add new paths later.
+#
+# Per-path abilities (active at Adolescent+ unless noted):
+#   FIRE      — "Ember Aura": melee attackers take 4 fire damage (DoT 2s, 3s cd);
+#                Adolescent+ attack fires a small fireball projectile (14 dmg).
+#   ICE       — "Frost Aura": enemies within 6m are slowed to 0.6× speed;
+#                Adolescent+ attack fires an ice shard that slows the target 1.5s.
+#   ELECTRIC  — "Static Field": each attack chains 4 dmg to up to 2 nearby enemies;
+#                Adolescent+ attack deals +2 dmg per chain target.
+#   VOID      — "Void Veil": 12% chance to absorb incoming enemy projectiles;
+#                Adolescent+ attack fires a void bolt that pierces 1 enemy.
+#   NATURE    — "Bloom": regenerates Zorp's HP by 1.0/sec when within 10m;
+#                Adolescent+ attack is a vine lash (range 5m, 10 dmg).
+const PET_PATH_CONFIG: Array = [
+	# 0: PRISMATIC — no overrides, uses base config
+	[{}, {}, {}],
+	# 1: FIRE
+	[
+		{
+			"color": Color(1.0, 0.45, 0.15),         # Warm orange
+			"emission": Color(1.0, 0.3, 0.05),
+			"ability": "ember_aura",
+			"ability_label": "Ember Aura",
+		},
+		{
+			"color": Color(1.0, 0.35, 0.1),
+			"emission": Color(0.9, 0.2, 0.0),
+			"attack_damage": 10,
+			"attack_range": 5.0,
+			"ability": "ember_aura",
+			"ability_label": "Ember Aura + Fireball",
+		},
+		{
+			"color": Color(1.0, 0.25, 0.05),
+			"emission": Color(0.85, 0.1, 0.0),
+			"attack_damage": 18,
+			"attack_range": 7.0,
+			"shield_reduction": 0.10,  # Fire favors offense over defense
+			"ability": "ember_aura",
+			"ability_label": "Ember Aura + Fireball + Blast",
+		},
+	],
+	# 2: ICE
+	[
+		{
+			"color": Color(0.55, 0.85, 1.0),         # Pale ice blue
+			"emission": Color(0.3, 0.6, 1.0),
+			"ability": "frost_aura",
+			"ability_label": "Frost Aura",
+		},
+		{
+			"color": Color(0.4, 0.75, 1.0),
+			"emission": Color(0.2, 0.5, 0.95),
+			"attack_damage": 7,
+			"attack_range": 5.0,
+			"ability": "frost_aura",
+			"ability_label": "Frost Aura + Ice Shard",
+		},
+		{
+			"color": Color(0.3, 0.7, 1.0),
+			"emission": Color(0.15, 0.45, 0.9),
+			"attack_damage": 13,
+			"attack_range": 7.0,
+			"shield_reduction": 0.20,  # Ice favors defense
+			"ability": "frost_aura",
+			"ability_label": "Frost Aura + Ice Shard + Blizzard",
+		},
+	],
+	# 3: ELECTRIC
+	[
+		{
+			"color": Color(1.0, 0.95, 0.3),         # Bright yellow
+			"emission": Color(1.0, 0.85, 0.1),
+			"ability": "static_field",
+			"ability_label": "Static Field",
+		},
+		{
+			"color": Color(1.0, 0.9, 0.2),
+			"emission": Color(0.95, 0.75, 0.05),
+			"attack_damage": 9,
+			"attack_range": 5.0,
+			"attack_cooldown": 1.0,  # Faster attacks
+			"ability": "static_field",
+			"ability_label": "Static Field + Chain Zap",
+		},
+		{
+			"color": Color(1.0, 0.85, 0.1),
+			"emission": Color(0.9, 0.65, 0.0),
+			"attack_damage": 16,
+			"attack_range": 7.0,
+			"attack_cooldown": 0.8,
+			"shield_reduction": 0.12,
+			"ability": "static_field",
+			"ability_label": "Static Field + Chain Zap + Overload",
+		},
+	],
+	# 4: VOID
+	[
+		{
+			"color": Color(0.4, 0.15, 0.55),        # Deep purple
+			"emission": Color(0.25, 0.05, 0.4),
+			"ability": "void_veil",
+			"ability_label": "Void Veil",
+		},
+		{
+			"color": Color(0.3, 0.1, 0.45),
+			"emission": Color(0.2, 0.05, 0.35),
+			"attack_damage": 12,
+			"attack_range": 6.0,
+			"ability": "void_veil",
+			"ability_label": "Void Veil + Void Bolt",
+		},
+		{
+			"color": Color(0.2, 0.05, 0.35),
+			"emission": Color(0.15, 0.0, 0.3),
+			"attack_damage": 20,
+			"attack_range": 8.0,
+			"shield_reduction": 0.18,
+			"ability": "void_veil",
+			"ability_label": "Void Veil + Void Bolt + Pierce",
+		},
+	],
+	# 5: NATURE
+	[
+		{
+			"color": Color(0.35, 0.85, 0.4),        # Leaf green
+			"emission": Color(0.2, 0.6, 0.25),
+			"ability": "bloom",
+			"ability_label": "Bloom",
+		},
+		{
+			"color": Color(0.25, 0.75, 0.3),
+			"emission": Color(0.15, 0.5, 0.2),
+			"attack_damage": 8,
+			"attack_range": 5.0,
+			"ability": "bloom",
+			"ability_label": "Bloom + Vine Lash",
+		},
+		{
+			"color": Color(0.2, 0.65, 0.25),
+			"emission": Color(0.1, 0.45, 0.15),
+			"attack_damage": 14,
+			"attack_range": 6.0,
+			"shield_reduction": 0.22,  # Nature favors defense and regen
+			"ability": "bloom",
+			"ability_label": "Bloom + Vine Lash + Regrowth",
+		},
+	],
+]
+
+# Tuning constants for path abilities
+const PET_FIRE_AURA_DAMAGE: int = 4            # Damage to melee attackers
+const PET_FIRE_AURA_DOT_DURATION: float = 2.0  # Burn DoT duration
+const PET_FIRE_AURA_COOLDOWN: float = 3.0      # Per-attacker cooldown
+const PET_FIRE_AURA_RANGE: float = 2.5         # Melee contact range
+const PET_FIREBALL_DAMAGE: int = 14            # Adolescent+ ranged attack
+const PET_FIREBALL_SPEED: float = 18.0
+const PET_FIREBALL_LIFETIME: float = 2.0
+
+const PET_ICE_AURA_RANGE: float = 6.0          # Slow aura radius
+const PET_ICE_AURA_SLOW_MULT: float = 0.6      # Enemy speed multiplier
+const PET_ICE_SHARD_SLOW_DURATION: float = 1.5 # Slow on hit
+
+const PET_ELECTRIC_CHAIN_COUNT: int = 2        # Extra targets per attack
+const PET_ELECTRIC_CHAIN_DAMAGE: int = 4       # Per-chain damage
+const PET_ELECTRIC_CHAIN_RANGE: float = 5.0    # Max chain jump distance
+
+const PET_VOID_VEIL_ABSORB_CHANCE: float = 0.12 # 12% projectile absorb
+const PET_VOID_BOLT_PIERCE: int = 1             # Enemies a void bolt pierces
+
+const PET_NATURE_REGEN_PER_SEC: float = 1.0    # HP/sec to Zorp
+const PET_NATURE_REGEN_RANGE: float = 10.0     # Max distance for regen
+const PET_NATURE_VINE_RANGE: float = 5.0       # Melee vine lash range
+
+# Evolution stone drop chance — adds a small chance for any enemy kill to drop
+# a path stone. Bosses always drop one stone (random path).
+const PET_STONE_DROP_CHANCE: float = 0.015      # 1.5% normal enemy
+const PET_STONE_BOSS_DROP_CHANCE: float = 1.0   # 100% boss
+const PET_STONE_DROP_BIOME_BONUS: Dictionary = {
+	# Bonus weight added to the drop roll when the kill happens in these biomes
+	# (matches the path's thematic biome).
+	GameConstants.Biome.LAVA: 0.02,           # Fire stone
+	GameConstants.Biome.SNOW: 0.02,           # Ice stone
+	GameConstants.Biome.ALIEN: 0.02,          # Electric stone
+	GameConstants.Biome.VOLCANO_CORE: 0.03,   # Fire stone (high bonus)
+	GameConstants.Biome.CRYSTAL_CAVERNS: 0.02, # Ice stone
+	GameConstants.Biome.UNDERGROUND: 0.02,    # Void stone
+	GameConstants.Biome.FOREST: 0.02,         # Nature stone
+	GameConstants.Biome.MUSHROOM: 0.02,       # Nature stone
+	GameConstants.Biome.DEEP_OCEAN: 0.02,     # Ice stone
+}
+
+# Stone item names for collectible spawn and inventory display
+const PET_STONE_NAMES: Array[String] = [
+	"", "Ember Stone", "Frost Stone", "Spark Stone", "Void Stone", "Leaf Stone",
+]
+const PET_STONE_COLORS: Array[Color] = [
+	Color(0.5, 0.7, 1.0), # unused (prismatic has no stone)
+	Color(1.0, 0.4, 0.1), # Fire — orange
+	Color(0.4, 0.75, 1.0), # Ice — ice blue
+	Color(1.0, 0.9, 0.2), # Electric — yellow
+	Color(0.3, 0.1, 0.45), # Void — purple
+	Color(0.3, 0.8, 0.35), # Nature — green
+]
+
+# Pet emote definitions — short visual reactions to game events.
+# Each emote is a brief expression shown above the pet's head as a Label3D
+# plus a small visual flourish (color flash, particle puff, scale pop).
+enum PetEmote {
+	NONE,       # 0
+	HAPPY,      # 1 — pickup / level up / evolution
+	SCARED,     # 2 — player took damage / low HP
+	ANGRY,      # 3 — enemy nearby / pet under attack
+	CURIOUS,    # 4 — new biome entered / new NPC seen
+	SLEEPY,     # 5 — idle for a long time
+	LOVE,       # 6 — player healed / pet evolved
+	HUNGRY,     # 7 — low evolution progress for a while
+}
+const PET_EMOTE_TEXTS: Array[String] = [
+	"", ":D", "D:", ">:(", "?", "zZz", "<3", ":o",
+]
+const PET_EMOTE_COLORS: Array[Color] = [
+	Color(1, 1, 1, 0),
+	Color(1.0, 0.95, 0.3),   # Happy — yellow
+	Color(0.6, 0.7, 1.0),    # Scared — pale blue
+	Color(1.0, 0.4, 0.3),    # Angry — red
+	Color(0.7, 0.9, 1.0),    # Curious — light cyan
+	Color(0.7, 0.7, 0.8),    # Sleepy — grey
+	Color(1.0, 0.5, 0.8),    # Love — pink
+	Color(1.0, 0.7, 0.3),    # Hungry — orange
+]
+const PET_EMOTE_DURATION: float = 1.6          # How long an emote stays visible
+const PET_EMOTE_COOLDOWN: float = 3.0          # Min time between emotes
+const PET_EMOTE_SCALE_POP: float = 1.4        # Pop-in scale
 
 # ─── Phase 16: Weapon Mod Crafting ────────────────────────────────────────────
 

@@ -1,9 +1,11 @@
-## Zorp Wiggles — Companion Pet HUD Indicator (Phase 15)
+## Zorp Wiggles — Companion Pet HUD Indicator (Phase 15 + Phase 27)
 ## Displays pet status at the bottom-left of the screen:
-##   - Pet name + current stage
+##   - Pet name + current stage + evolution path (Phase 27)
 ##   - HP bar (small)
 ##   - Evolution progress bar (fills as pet is fed)
 ##   - Current state (Follow/Fetch/Attack)
+##   - Active ability label (Phase 27)
+##   - Evolution stone inventory summary (Phase 27)
 ##
 ## The pet is optional — the HUD only shows when a pet exists.
 
@@ -18,11 +20,15 @@ var _evo_bar_bg: ColorRect = null
 var _evo_bar: ColorRect = null
 var _evo_text: Label = null
 var _state_label: Label = null
+# ── Phase 27: Path + ability + stone inventory labels ──
+var _path_label: Label = null
+var _ability_label: Label = null
+var _stone_label: Label = null
 
 var _pet: Node = null
 
 const PANEL_W: float = 240.0
-const PANEL_H: float = 110.0
+const PANEL_H: float = 168.0  # Taller to fit path/ability/stone lines
 const PANEL_MARGIN: float = 20.0
 const BAR_W: float = 210.0
 const BAR_H: float = 8.0
@@ -124,6 +130,46 @@ func _ready() -> void:
 	_state_label.add_theme_color_override("font_color", Color(0.6, 0.8, 0.6))
 	_container.add_child(_state_label)
 
+	# ── Phase 27: Evolution path label ──
+	_path_label = Label.new()
+	_path_label.offset_left = 8.0
+	_path_label.offset_top = 106.0
+	_path_label.offset_right = PANEL_W - 8.0
+	_path_label.offset_bottom = 124.0
+	_path_label.text = "Path: Prismatic"
+	_path_label.add_theme_font_size_override("font_size", 12)
+	_path_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.9))
+	_container.add_child(_path_label)
+
+	# ── Phase 27: Active ability label ──
+	_ability_label = Label.new()
+	_ability_label.offset_left = 8.0
+	_ability_label.offset_top = 124.0
+	_ability_label.offset_right = PANEL_W - 8.0
+	_ability_label.offset_bottom = 140.0
+	_ability_label.text = "Ability: —"
+	_ability_label.add_theme_font_size_override("font_size", 11)
+	_ability_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.8))
+	_container.add_child(_ability_label)
+
+	# ── Phase 27: Stone inventory summary ──
+	_stone_label = Label.new()
+	_stone_label.offset_left = 8.0
+	_stone_label.offset_top = 142.0
+	_stone_label.offset_right = PANEL_W - 8.0
+	_stone_label.offset_bottom = 160.0
+	_stone_label.text = "Stones: none (B to use)"
+	_stone_label.add_theme_font_size_override("font_size", 11)
+	_stone_label.add_theme_color_override("font_color", Color(0.9, 0.8, 0.4))
+	_container.add_child(_stone_label)
+
+	# Connect to PetStoneInventory signals for live stone count updates
+	if PetStoneInventory:
+		if not PetStoneInventory.stone_added.is_connected(_on_stone_changed):
+			PetStoneInventory.stone_added.connect(_on_stone_changed)
+		if not PetStoneInventory.stone_consumed.is_connected(_on_stone_changed):
+			PetStoneInventory.stone_consumed.connect(_on_stone_changed)
+
 
 func _process(_delta: float) -> void:
 	# Find pet if we don't have a reference
@@ -137,6 +183,8 @@ func _process(_delta: float) -> void:
 	# Update displays
 	if _pet and is_instance_valid(_pet):
 		_update_display()
+	# Always update stone inventory (it's independent of pet existence)
+	_update_stone_display()
 
 
 func _connect_pet_signals() -> void:
@@ -150,6 +198,9 @@ func _connect_pet_signals() -> void:
 		_pet.pet_hp_changed.connect(_on_hp_changed)
 	if not _pet.pet_state_changed.is_connected(_on_state_changed):
 		_pet.pet_state_changed.connect(_on_state_changed)
+	# ── Phase 27: Path changed signal ──
+	if "pet_path_changed" in _pet and not _pet.pet_path_changed.is_connected(_on_path_changed):
+		_pet.pet_path_changed.connect(_on_path_changed)
 
 
 func _update_display() -> void:
@@ -167,6 +218,32 @@ func _update_display() -> void:
 			2: state_name = "Attack"
 			3: state_name = "Idle"
 	_state_label.text = "State: %s" % state_name
+	# ── Phase 27: Path + ability ──
+	if _pet.has_method("get_path_name"):
+		var path_name: String = _pet.get_path_name()
+		_path_label.text = "Path: %s" % path_name
+		# Color the path label based on the path
+		var path_id: int = _pet.get_path_id() if _pet.has_method("get_path_id") else 0
+		_path_label.add_theme_color_override("font_color", _path_color(path_id))
+	else:
+		_path_label.text = "Path: Prismatic"
+	if _pet.has_method("get_ability_name"):
+		var ability: String = _pet.get_ability_name()
+		_ability_label.text = "Ability: %s" % ability if ability != "" else "Ability: —"
+	else:
+		_ability_label.text = "Ability: —"
+
+
+# ── Phase 27: Stone inventory display ──
+func _update_stone_display() -> void:
+	if not PetStoneInventory:
+		_stone_label.text = "Stones: —"
+		return
+	var summary: String = PetStoneInventory.get_summary()
+	if summary == "":
+		_stone_label.text = "Stones: none (B to use)"
+	else:
+		_stone_label.text = "Stones: %s  [B]" % summary
 
 
 func _on_stage_changed(new_stage: int) -> void:
@@ -209,6 +286,43 @@ func _on_state_changed(state_name: String) -> void:
 		"idle":
 			col = Color(0.5, 0.7, 0.9)  # Idle = blue
 	_state_label.add_theme_color_override("font_color", col)
+
+
+# ── Phase 27: Path changed callback ──
+func _on_path_changed(new_path: int) -> void:
+	var path_name: String = GameConstants.PET_PATH_NAMES[new_path]
+	_path_label.text = "Path: %s" % path_name
+	_path_label.add_theme_color_override("font_color", _path_color(new_path))
+	# Flash the panel border in the path color
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.03, 0.1, 0.8)
+	style.set_border_width_all(2)
+	style.border_color = _path_color(new_path)
+	style.set_corner_radius_all(4)
+	_container.add_theme_stylebox_override("panel", style)
+
+
+# ── Phase 27: Stone inventory changed callback ──
+func _on_stone_changed(_type: int, _count: int) -> void:
+	_update_stone_display()
+
+
+# Returns a HUD color for a given pet path ID.
+func _path_color(path_id: int) -> Color:
+	match path_id:
+		GameConstants.PetPath.PRISMATIC:
+			return Color(0.7, 0.8, 1.0)
+		GameConstants.PetPath.FIRE:
+			return Color(1.0, 0.45, 0.15)
+		GameConstants.PetPath.ICE:
+			return Color(0.4, 0.75, 1.0)
+		GameConstants.PetPath.ELECTRIC:
+			return Color(1.0, 0.9, 0.2)
+		GameConstants.PetPath.VOID:
+			return Color(0.5, 0.3, 0.7)
+		GameConstants.PetPath.NATURE:
+			return Color(0.3, 0.8, 0.35)
+	return Color(0.8, 0.8, 0.9)
 
 
 func _ratio_to_color(ratio: float) -> Color:

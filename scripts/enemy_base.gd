@@ -570,6 +570,9 @@ func _die() -> void:
 	# ── Phase 16: Drop crafting materials on death ──
 	_drop_crafting_material()
 
+	# ── Phase 27: Drop pet evolution stones on death ──
+	_drop_pet_stone()
+
 	# ── Phase 10: Clean up AI controller ──
 	if ai_controller:
 		ai_controller.cleanup()
@@ -843,3 +846,76 @@ static func _weighted_pick(table: Dictionary) -> int:
 	# Fallback (shouldn't reach here due to float rounding)
 	var keys: Array = table.keys()
 	return keys[keys.size() - 1]
+
+
+# ─── Phase 27: Pet Evolution Stone Drops ──────────────────────────────────────
+
+## Drop a pet evolution stone when the enemy dies. Normal enemies have a 1.5%
+## chance (plus biome bonus); bosses always drop one. The stone type is chosen
+## via a weighted table that biases toward the current biome's thematic path
+## (e.g. Lava → Ember Stone, Snow → Frost Stone).
+func _drop_pet_stone() -> void:
+	var is_boss: bool = base_scale >= 2.0 or max_hp >= 200 or is_arena_boss or is_world_boss
+	var drop_chance: float = GameConstants.PET_STONE_BOSS_DROP_CHANCE if is_boss \
+		else GameConstants.PET_STONE_DROP_CHANCE
+	# Biome bonus — adds to the drop chance based on current biome
+	var biome: int = GameManager.current_biome if "current_biome" in GameManager else -1
+	if biome >= 0 and GameConstants.PET_STONE_DROP_BIOME_BONUS.has(biome):
+		drop_chance += GameConstants.PET_STONE_DROP_BIOME_BONUS[biome]
+	# Clamp for normal enemies (bosses can exceed 1.0 — always drops)
+	if not is_boss:
+		drop_chance = minf(1.0, drop_chance)
+	if randf() > drop_chance:
+		return
+	# Pick a stone type via a weighted table biased by current biome.
+	var stone_type: int = _pick_pet_stone_type(biome)
+	# Spawn a collectible at the enemy's position
+	var drop: Area3D = COLLECTIBLE_DROP_SCENE.instantiate()
+	get_parent().add_child(drop)
+	drop.global_position = global_position + Vector3(0, 0.5, 0)
+	# Small random scatter so drops don't stack with crafting mats
+	drop.global_position.x += randf_range(-1.2, 1.2)
+	drop.global_position.z += randf_range(-1.2, 1.2)
+	if drop.has_method("set_type"):
+		drop.set_type(stone_type)
+	# Tumble physics for a satisfying drop
+	if drop.has_method("start_tumble"):
+		var scatter_dir: Vector3 = Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).normalized()
+		drop.start_tumble(scatter_dir)
+	# Add to GameManager's collectibles list
+	GameManager.collectibles.append(drop)
+	if not drop.is_in_group("collectibles"):
+		drop.add_to_group("collectibles")
+
+
+## Pick a pet stone type via a weighted table. The current biome biases the
+## selection toward its thematic path (e.g. Lava → Ember Stone). Falls back
+## to a uniform random pick if the biome has no bias.
+func _pick_pet_stone_type(biome: int) -> int:
+	# Base equal-weight table for all 5 stones
+	var base_weights: Dictionary = {
+		GameConstants.CollectibleType.EMBER_STONE: 1.0,
+		GameConstants.CollectibleType.FROST_STONE: 1.0,
+		GameConstants.CollectibleType.SPARK_STONE: 1.0,
+		GameConstants.CollectibleType.VOID_STONE: 1.0,
+		GameConstants.CollectibleType.LEAF_STONE: 1.0,
+	}
+	# Biome biases — add extra weight to the thematic stone
+	var biome_bias: Dictionary = {
+		GameConstants.Biome.LAVA: GameConstants.CollectibleType.EMBER_STONE,
+		GameConstants.Biome.VOLCANO_CORE: GameConstants.CollectibleType.EMBER_STONE,
+		GameConstants.Biome.SNOW: GameConstants.CollectibleType.FROST_STONE,
+		GameConstants.Biome.CRYSTAL_CAVERNS: GameConstants.CollectibleType.FROST_STONE,
+		GameConstants.Biome.DEEP_OCEAN: GameConstants.CollectibleType.FROST_STONE,
+		GameConstants.Biome.ALIEN: GameConstants.CollectibleType.SPARK_STONE,
+		GameConstants.Biome.DIGITAL_GRID: GameConstants.CollectibleType.SPARK_STONE,
+		GameConstants.Biome.UNDERGROUND: GameConstants.CollectibleType.VOID_STONE,
+		GameConstants.Biome.CRYSTAL: GameConstants.CollectibleType.VOID_STONE,
+		GameConstants.Biome.FOREST: GameConstants.CollectibleType.LEAF_STONE,
+		GameConstants.Biome.MUSHROOM: GameConstants.CollectibleType.LEAF_STONE,
+		GameConstants.Biome.SWAMP: GameConstants.CollectibleType.LEAF_STONE,
+	}
+	if biome_bias.has(biome):
+		var favored: int = biome_bias[biome]
+		base_weights[favored] = base_weights[favored] + 2.0  # +2 weight for the biome's stone
+	return _weighted_pick(base_weights)

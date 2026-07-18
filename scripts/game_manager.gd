@@ -297,6 +297,12 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 			var pet_shield: float = pet.get_shield_reduction()
 			if pet_shield > 0:
 				actual_amount = int(actual_amount * (1.0 - pet_shield))
+		# ── Phase 27: Void path Void Veil — chance to absorb incoming damage ──
+		# (represents absorbing the enemy projectile/breath)
+		if pet and is_instance_valid(pet) and pet.has_method("try_absorb_projectile"):
+			if pet.try_absorb_projectile(source_pos if source_pos != Vector3.ZERO else player.global_position):
+				# Fully absorbed — no damage to player
+				return
 	# ── Phase 16: Reflective Shield weapon mod reduces incoming damage ──
 	if WeaponModSystem and WeaponModSystem.get_equipped_mod() == GameConstants.WeaponMod.REFLECTIVE_SHIELD:
 		actual_amount = int(actual_amount * 0.6)  # 40% damage reduction

@@ -29,12 +29,15 @@ signal pet_stage_changed(stage: int)
 signal pet_evolution_progress(pct: float)
 signal pet_hp_changed(hp: int, max_hp: int)
 signal pet_state_changed(state: String)
+signal pet_path_changed(path: int)            # Phase 27: elemental path locked in
+signal pet_emote(emote_id: int)               # Phase 27: emote reaction fired
 
 # ─── State ────────────────────────────────────────────────────────────────────
 var stage: int = GameConstants.PetStage.BABY
 var evolution_points: int = 0
 var hp: int = 30
 var max_hp: int = 30
+var evolution_path: int = GameConstants.PetPath.PRISMATIC  # Phase 27
 
 # Behavior state machine
 enum PetState { FOLLOW, FETCH, ATTACK, IDLE_ANIM }
@@ -61,6 +64,19 @@ var _facing_dir: Vector3 = Vector3.FORWARD
 # Navigation
 var _nav_agent: NavigationAgent3D = null
 var _nav_repath_timer: float = 0.0
+
+# ── Phase 27: Path ability state ──
+# Per-attacker cooldowns for the Fire aura, slow aura tick timing, etc.
+var _fire_aura_cooldowns: Dictionary = {}  # {enemy: cooldown_remaining}
+var _ice_aura_tick_timer: float = 0.0
+var _nature_regen_tick: float = 0.0
+var _void_absorb_checked_this_frame: bool = false
+
+# ── Phase 27: Emote system ──
+var _emote_label: Label3D = null
+var _emote_timer: float = 0.0       # Time left on current emote
+var _emote_cooldown: float = 0.0     # Time before next emote allowed
+var _current_emote: int = GameConstants.PetEmote.NONE
 
 # ─── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -174,21 +190,54 @@ func _build_visuals() -> void:
 	col.shape = shape
 	add_child(col)
 
+	# ── Phase 27: Emote label (floating text above pet's head) ──
+	_emote_label = Label3D.new()
+	_emote_label.text = ""
+	_emote_label.font_size = 32
+	_emote_label.outline_size = 8
+	_emote_label.outline_modulate = Color(0, 0, 0, 0.8)
+	_emote_label.pixel_size = 0.025
+	_emote_label.position = Vector3(0, 1.6, 0)
+	_emote_label.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	_emote_label.no_depth_test = true
+	_emote_label.visible = false
+	add_child(_emote_label)
+
 
 # ─── Stage Management ─────────────────────────────────────────────────────────
 
+## Returns the merged stage config: base config overridden by any path-specific
+## overrides for the current stage. Missing keys fall back to the base config.
 func _stage_config() -> Dictionary:
-	return GameConstants.PET_STAGE_CONFIG[stage]
+	var base: Dictionary = GameConstants.PET_STAGE_CONFIG[stage]
+	if evolution_path == GameConstants.PetPath.PRISMATIC:
+		return base
+	# Path overrides only specify the keys they change — merge over the base.
+	var path_overrides: Dictionary = GameConstants.PET_PATH_CONFIG[evolution_path][stage]
+	if path_overrides.is_empty():
+		return base
+	# Duplicate the base so we don't mutate the shared constant.
+	var merged: Dictionary = base.duplicate(true)
+	for key in path_overrides.keys():
+		merged[key] = path_overrides[key]
+	return merged
 
 func _stage_color() -> Color:
-	return GameConstants.PET_STAGE_CONFIG[stage]["color"]
+	return _stage_config()["color"]
+
+func _stage_emission() -> Color:
+	return _stage_config()["emission"]
+
+func _ability_name() -> String:
+	var cfg: Dictionary = _stage_config()
+	return cfg.get("ability_label", "")
 
 func _apply_stage_config() -> void:
 	var cfg: Dictionary = _stage_config()
 	# Mesh scale
 	if _mesh:
 		_mesh.scale = Vector3.ONE * cfg["scale"]
-	# Material colors
+	# Material colors — path overrides replace both albedo and emission
 	if _mat:
 		_mat.albedo_color = cfg["color"]
 		_mat.emission = cfg["emission"]
@@ -212,8 +261,14 @@ func _apply_stage_config() -> void:
 
 
 ## Feed the pet a collectible, granting evolution points. Triggers evolution
-## when the threshold for the next stage is reached.
+## when the threshold for the next stage is reached. If the collectible is an
+## evolution stone, the pet's elemental path is locked in (or changed).
 func feed(collectible_type: int) -> void:
+	# ── Phase 27: Evolution stones lock in a path before awarding points ──
+	if GameConstants.PET_STONE_TO_PATH.has(collectible_type):
+		var new_path: int = GameConstants.PET_STONE_TO_PATH[collectible_type]
+		if evolution_path != new_path:
+			_set_path(new_path)
 	var value: int = GameConstants.PET_FEED_VALUES.get(collectible_type, 5)
 	evolution_points += value
 	# Heal the pet slightly per pickup
@@ -224,6 +279,32 @@ func feed(collectible_type: int) -> void:
 	# ── Phase 25: Statistics tracking — record pet feeding ──
 	if Statistics:
 		Statistics.record_pet_feeding()
+	# ── Phase 27: Happy emote on feed ──
+	_trigger_emote(GameConstants.PetEmote.HAPPY)
+
+
+## Lock in (or change) the pet's elemental evolution path. Re-applies the
+## stage config so colors/abilities update immediately. Fires the
+## pet_path_changed signal and a burst of particles in the new path color.
+func _set_path(new_path: int) -> void:
+	evolution_path = new_path
+	_apply_stage_config()
+	pet_path_changed.emit(new_path)
+	# Path-lock particle burst
+	ParticleEffects.spawn_combo_fireworks(get_parent(), global_position, new_path + 1)
+	ParticleEffects.spawn_pickup_sparkle(get_parent(), global_position + Vector3(0, 1, 0), _stage_color())
+	# Evolution scale punch (same as stage evolution)
+	if _mesh:
+		var punch := create_tween()
+		punch.tween_property(_mesh, "scale", Vector3.ONE * _stage_config()["scale"] * 1.6, 0.18) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		punch.tween_property(_mesh, "scale", Vector3.ONE * _stage_config()["scale"], 0.3) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	var path_name: String = GameConstants.PET_PATH_NAMES[new_path]
+	GameManager.add_message("✨ Pet path locked: %s!" % path_name)
+	# Emote: LOVE on path change (it's exciting!)
+	_trigger_emote(GameConstants.PetEmote.LOVE)
+	print("[Pet] Path set to %s" % path_name)
 
 
 func _check_evolution() -> void:
@@ -247,8 +328,16 @@ func _evolve_to(new_stage: int) -> void:
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 		punch.tween_property(_mesh, "scale", Vector3.ONE * _stage_config()["scale"], 0.3) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
-	GameManager.add_message("✨ Pet evolved to %s!" % GameConstants.PET_STAGE_NAMES[stage])
-	print("[Pet] Evolved to %s (points=%d)" % [GameConstants.PET_STAGE_NAMES[stage], evolution_points])
+	GameManager.add_message("✨ Pet evolved to %s!%s" % [
+		GameConstants.PET_STAGE_NAMES[stage],
+		" (%s)" % GameConstants.PET_PATH_NAMES[evolution_path] if evolution_path != GameConstants.PetPath.PRISMATIC else ""
+	])
+	# ── Phase 27: LOVE emote on evolution ──
+	_trigger_emote(GameConstants.PetEmote.LOVE)
+	print("[Pet] Evolved to %s (points=%d, path=%s)" % [
+		GameConstants.PET_STAGE_NAMES[stage], evolution_points,
+		GameConstants.PET_PATH_NAMES[evolution_path]
+	])
 
 
 func _emit_progress() -> void:
@@ -325,6 +414,8 @@ func _physics_process(delta: float) -> void:
 	# Auto-attack nearby enemies (Adolescent+)
 	if stage >= GameConstants.PetStage.ADOLESCENT:
 		_auto_attack(delta)
+	# ── Phase 27: Path passive abilities ──
+	_tick_path_abilities(delta)
 
 	# Idle animation random trigger (only when following and idle)
 	if current_state == PetState.FOLLOW:
@@ -336,6 +427,9 @@ func _physics_process(delta: float) -> void:
 
 	# Visual bob + facing
 	_update_visuals(delta)
+
+	# ── Phase 27: Emote timer ──
+	_update_emote(delta)
 
 
 func _refresh_player_cache() -> void:
@@ -419,18 +513,38 @@ func _update_attack(delta: float) -> void:
 	var enemy: Node3D = _attack_target
 	var cfg: Dictionary = _stage_config()
 	var d: float = global_position.distance_to(enemy.global_position)
+	# ── Phase 27: Fire & Void paths use ranged attacks at Adolescent+ ──
+	# Move into range first, then fire a projectile instead of melee.
+	var is_ranged_path: bool = (
+		evolution_path == GameConstants.PetPath.FIRE
+		or evolution_path == GameConstants.PetPath.VOID
+	)
+	var effective_range: float = cfg["attack_range"]
+	if is_ranged_path:
+		effective_range = cfg["attack_range"] * 0.9  # Stop a bit short to fire
 	# Move toward the enemy
-	if d > cfg["attack_range"] * 0.6:
+	if d > effective_range * 0.6:
 		_move_toward(enemy.global_position + Vector3(0, 0.5, 0), cfg["speed"] * 1.2, delta)
 		return
 	# In range — attack
 	if _attack_cooldown_timer <= 0:
 		_attack_cooldown_timer = cfg["attack_cooldown"]
 		var dmg: int = cfg["attack_damage"]
-		if enemy.has_method("take_damage_from"):
-			enemy.take_damage_from(dmg, global_position)
-		elif enemy.has_method("take_damage"):
-			enemy.take_damage(dmg)
+		# ── Phase 27: Ranged attack for Fire/Void paths ──
+		if is_ranged_path:
+			_fire_pet_projectile(enemy, dmg, cfg)
+		else:
+			# Melee attack (default + Ice shard + Electric + Nature vine)
+			if enemy.has_method("take_damage_from"):
+				enemy.take_damage_from(dmg, global_position)
+			elif enemy.has_method("take_damage"):
+				enemy.take_damage(dmg)
+			# ── Phase 27: Ice shard slows the target on hit ──
+			if evolution_path == GameConstants.PetPath.ICE:
+				_apply_ice_shard_slow(enemy)
+			# ── Phase 27: Electric chain zap on melee hit ──
+			if evolution_path == GameConstants.PetPath.ELECTRIC:
+				_electric_chain_zap(enemy, dmg)
 		# Visual pop on attack
 		if _mesh:
 			var pop := create_tween()
@@ -440,6 +554,400 @@ func _update_attack(delta: float) -> void:
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 		# Small sparkle
 		ParticleEffects.spawn_pickup_sparkle(get_parent(), enemy.global_position + Vector3(0, 1, 0), _stage_color())
+
+
+# ── Phase 27: Ranged pet projectile (Fire fireball / Void bolt) ──
+# Spawns a simple Area3D bolt that travels toward the target and deals damage
+# on contact. Void bolts pierce 1 enemy; fireballs explode on impact.
+func _fire_pet_projectile(target: Node3D, dmg: int, cfg: Dictionary) -> void:
+	var parent: Node = get_parent()
+	if not parent:
+		return
+	var bolt := Area3D.new()
+	bolt.name = "PetProjectile"
+	bolt.collision_layer = 16  # Pet projectile layer (doesn't collide with player)
+	bolt.collision_mask = 2    # Hit enemies
+	var col := CollisionShape3D.new()
+	var shape := SphereShape3D.new()
+	shape.radius = 0.25
+	col.shape = shape
+	bolt.add_child(col)
+	# Visual mesh
+	var mesh_inst := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.25
+	sphere.height = 0.5
+	sphere.radial_segments = 8
+	sphere.rings = 4
+	mesh_inst.mesh = sphere
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.emission_enabled = true
+	mat.albedo_color = _stage_color()
+	mat.emission = _stage_emission()
+	mat.emission_energy_multiplier = 2.0
+	mesh_inst.material_override = mat
+	bolt.add_child(mesh_inst)
+	# Glow light
+	var light := OmniLight3D.new()
+	light.light_color = _stage_emission()
+	light.light_energy = 1.5
+	light.omni_range = 3.0
+	bolt.add_child(light)
+	parent.add_child(bolt)
+	bolt.global_position = global_position + Vector3(0, 0.5, 0)
+	# Aim at target
+	var target_pos: Vector3 = target.global_position + Vector3(0, 0.5, 0)
+	var dir: Vector3 = (target_pos - bolt.global_position).normalized()
+	var speed: float = GameConstants.PET_FIREBALL_SPEED if evolution_path == GameConstants.PetPath.FIRE else 22.0
+	var pierce: int = GameConstants.PET_VOID_BOLT_PIERCE if evolution_path == GameConstants.PetPath.VOID else 0
+	# Store metadata for the bolt's _process
+	bolt.set_meta("pet_proj_dir", dir)
+	bolt.set_meta("pet_proj_speed", speed)
+	bolt.set_meta("pet_proj_damage", dmg)
+	bolt.set_meta("pet_proj_pierce_left", pierce)
+	bolt.set_meta("pet_proj_path", evolution_path)
+	bolt.set_meta("pet_proj_owner", self)
+	bolt.set_meta("pet_proj_lifetime", GameConstants.PET_FIREBALL_LIFETIME)
+	bolt.set_meta("pet_proj_hit_enemies", [])  # Track to avoid double-hits
+	# Attach a small script-like behavior via _process on a helper node
+	# We use a tween + body_entered signal for simplicity
+	bolt.body_entered.connect(_on_pet_proj_body_entered.bind(bolt))
+	# Movement tween — we'll drive position manually via a per-frame process
+	# using a one-shot Timer + tween_method for smooth motion.
+	var tween := bolt.create_tween()
+	tween.set_loops(int(GameConstants.PET_FIREBALL_LIFETIME * 60))  # ~60fps for 2s
+	tween.tween_method(_advance_pet_proj.bind(bolt), 0.0, 1.0, 1.0 / 60.0)
+	# Lifetime expiry
+	var life_timer := bolt.create_tween()
+	life_timer.tween_interval(GameConstants.PET_FIREBALL_LIFETIME)
+	life_timer.tween_callback(bolt.queue_free)
+
+
+# Per-frame advance for pet projectile (called via tween_method)
+func _advance_pet_proj(_t: float, bolt: Area3D) -> void:
+	if not is_instance_valid(bolt):
+		return
+	var dir: Vector3 = bolt.get_meta("pet_proj_dir", Vector3.FORWARD)
+	var speed: float = bolt.get_meta("pet_proj_speed", 18.0)
+	bolt.global_position += dir * speed * (1.0 / 60.0)
+	# Spin the mesh for visual flair
+	var mesh_inst: Node = bolt.get_child_or_null(1)  # MeshInstance3D
+	if mesh_inst and mesh_inst is MeshInstance3D:
+		mesh_inst.rotation.y += 0.3
+
+
+# Body entered callback for pet projectile
+func _on_pet_proj_body_entered(body: Node3D, bolt: Area3D) -> void:
+	if not is_instance_valid(bolt):
+		return
+	if not body.is_in_group("enemies"):
+		# Hit terrain — fireball explodes, void bolt just fizzles
+		if evolution_path == GameConstants.PetPath.FIRE:
+			_pet_proj_explode(bolt)
+		bolt.queue_free()
+		return
+	# Hit an enemy
+	var dmg: int = bolt.get_meta("pet_proj_damage", 10)
+	if body.has_method("take_damage_from"):
+		body.take_damage_from(dmg, bolt.global_position)
+	elif body.has_method("take_damage"):
+		body.take_damage(dmg)
+	# Sparkle on hit
+	ParticleEffects.spawn_pickup_sparkle(get_parent(), body.global_position + Vector3(0, 1, 0), _stage_color())
+	# Track hit enemies to avoid double-hits on pierce
+	var hit: Array = bolt.get_meta("pet_proj_hit_enemies", [])
+	if not hit.has(body):
+		hit.append(body)
+		bolt.set_meta("pet_proj_hit_enemies", hit)
+	# Fire path: explode on impact. Void path: pierce if pierce_left > 0.
+	if evolution_path == GameConstants.PetPath.FIRE:
+		_pet_proj_explode(bolt)
+		bolt.queue_free()
+		return
+	var pierce_left: int = bolt.get_meta("pet_proj_pierce_left", 0)
+	if pierce_left <= 0:
+		bolt.queue_free()
+	else:
+		bolt.set_meta("pet_proj_pierce_left", pierce_left - 1)
+
+
+# Fire path explosion: small AoE damage + particles
+func _pet_proj_explode(bolt: Area3D) -> void:
+	if not is_instance_valid(bolt):
+		return
+	var pos: Vector3 = bolt.global_position
+	# AoE damage to nearby enemies
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if not enemy.has_method("take_damage_from") and not enemy.has_method("take_damage"):
+			continue
+		var d: float = pos.distance_to(enemy.global_position)
+		if d < 3.0:
+			if enemy.has_method("take_damage_from"):
+				enemy.take_damage_from(int(GameConstants.PET_FIREBALL_DAMAGE * 0.5), pos)
+			elif enemy.has_method("take_damage"):
+				enemy.take_damage(int(GameConstants.PET_FIREBALL_DAMAGE * 0.5))
+	# Explosion particles
+	ParticleEffects.spawn_explosion(get_parent(), pos, _stage_color(), 20, 0.5)
+	# Light flash
+	var flash := OmniLight3D.new()
+	flash.light_color = _stage_emission()
+	flash.light_energy = 3.0
+	flash.omni_range = 5.0
+	get_parent().add_child(flash)
+	flash.global_position = pos
+	var fade := flash.create_tween()
+	fade.tween_property(flash, "light_energy", 0.0, 0.2)
+	fade.tween_callback(flash.queue_free)
+
+
+# ── Phase 27: Ice shard slow on hit ──
+func _apply_ice_shard_slow(enemy: Node3D) -> void:
+	if not is_instance_valid(enemy):
+		return
+	# Apply a slow via the enemy's _time_scale if it has one, or via a meta flag
+	# that enemy_base.gd checks. We use a temporary slow timer via meta.
+	if "set_time_scale" in enemy:
+		enemy.set_time_scale(0.5)
+		# Restore after duration via a scene-tree timer (survives pet death)
+		var restore_timer := get_tree().create_timer(GameConstants.PET_ICE_SHARD_SLOW_DURATION)
+		restore_timer.timeout.connect(func():
+			if is_instance_valid(enemy) and "set_time_scale" in enemy:
+				enemy.set_time_scale(1.0)
+		)
+	# Small ice particle burst
+	ParticleEffects.spawn_pickup_sparkle(get_parent(), enemy.global_position + Vector3(0, 1, 0), Color(0.4, 0.75, 1.0))
+
+
+# ── Phase 27: Electric chain zap ──
+func _electric_chain_zap(primary_target: Node3D, base_dmg: int) -> void:
+	if not is_instance_valid(primary_target):
+		return
+	var chain_count: int = GameConstants.PET_ELECTRIC_CHAIN_COUNT
+	var chain_range: float = GameConstants.PET_ELECTRIC_CHAIN_RANGE
+	var chain_dmg: int = GameConstants.PET_ELECTRIC_CHAIN_DAMAGE
+	var hit: Array[Node3D] = [primary_target]
+	var current: Node3D = primary_target
+	for i in range(chain_count):
+		var next: Node3D = null
+		var next_dist: float = chain_range
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if hit.has(enemy):
+				continue
+			if not enemy.has_method("take_damage_from") and not enemy.has_method("take_damage"):
+				continue
+			var d: float = current.global_position.distance_to(enemy.global_position)
+			if d < next_dist:
+				next_dist = d
+				next = enemy
+		if next == null:
+			break
+		# Zap the next enemy
+		if next.has_method("take_damage_from"):
+			next.take_damage_from(chain_dmg, current.global_position)
+		elif next.has_method("take_damage"):
+			next.take_damage(chain_dmg)
+		# Electric arc particle between current and next
+		ParticleEffects.spawn_pickup_sparkle(get_parent(), next.global_position + Vector3(0, 1, 0), Color(1.0, 0.9, 0.2))
+		hit.append(next)
+		current = next
+
+
+# ─── Phase 27: Path Passive Abilities ──────────────────────────────────────────
+
+## Tick per-frame path passive abilities. Called every _physics_process.
+func _tick_path_abilities(delta: float) -> void:
+	if evolution_path == GameConstants.PetPath.PRISMATIC:
+		return
+	var ability: String = _stage_config().get("ability", "")
+	match ability:
+		"ember_aura":
+			_tick_fire_aura(delta)
+		"frost_aura":
+			_tick_ice_aura(delta)
+		"static_field":
+			pass  # Electric passive only triggers on attack (handled in _update_attack)
+		"void_veil":
+			pass  # Void projectile absorb is event-driven (see absorb_enemy_projectile)
+		"bloom":
+			_tick_nature_bloom(delta)
+
+
+# Fire Aura: any enemy that touches the pet (within PET_FIRE_AURA_RANGE) takes
+# fire damage, with a per-enemy cooldown. Also applies a burn DoT via a tween
+# bound to the enemy (same pattern as Blaze Trail weapon mod).
+func _tick_fire_aura(delta: float) -> void:
+	# Decrement cooldowns
+	var to_remove: Array = []
+	for enemy in _fire_aura_cooldowns.keys():
+		var cd: float = _fire_aura_cooldowns[enemy]
+		cd -= delta
+		if cd <= 0.0:
+			to_remove.append(enemy)
+		else:
+			_fire_aura_cooldowns[enemy] = cd
+	for enemy in to_remove:
+		_fire_aura_cooldowns.erase(enemy)
+	# Check enemies in range
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			_fire_aura_cooldowns.erase(enemy)
+			continue
+		if _fire_aura_cooldowns.has(enemy):
+			continue
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < GameConstants.PET_FIRE_AURA_RANGE:
+			# Apply fire damage
+			if enemy.has_method("take_damage_from"):
+				enemy.take_damage_from(GameConstants.PET_FIRE_AURA_DAMAGE, global_position)
+			elif enemy.has_method("take_damage"):
+				enemy.take_damage(GameConstants.PET_FIRE_AURA_DAMAGE)
+			# Apply burn DoT via a tween bound to the enemy (survives pet death)
+			_apply_burn_dot(enemy, GameConstants.PET_FIRE_AURA_DAMAGE)
+			_fire_aura_cooldowns[enemy] = GameConstants.PET_FIRE_AURA_COOLDOWN
+			# Small flame particle
+			ParticleEffects.spawn_pickup_sparkle(get_parent(), enemy.global_position + Vector3(0, 0.5, 0), Color(1.0, 0.4, 0.1))
+
+
+# Apply a burn DoT to an enemy via a tween bound to the enemy (not the pet).
+# This ensures the burn continues even if the pet dies or is dismissed.
+func _apply_burn_dot(enemy: Node3D, base_dmg: int) -> void:
+	if not is_instance_valid(enemy):
+		return
+	if not enemy.has_method("take_damage") and not enemy.has_method("take_damage_from"):
+		return
+	var burn_dmg: int = max(1, int(base_dmg * 0.5))
+	var ticks: int = int(GameConstants.PET_FIRE_AURA_DOT_DURATION)
+	var tw := enemy.create_tween()
+	tw.tween_interval(1.0)
+	for _i in range(ticks):
+		tw.tween_callback(func():
+			if is_instance_valid(enemy):
+				if enemy.has_method("take_damage"):
+					enemy.take_damage(burn_dmg)
+				elif enemy.has_method("take_damage_from"):
+					enemy.take_damage_from(burn_dmg, enemy.global_position)
+				ParticleEffects.spawn_explosion(enemy.get_parent(), enemy.global_position, Color(1.0, 0.5, 0.2), 6, 0.2)
+		)
+		tw.tween_interval(1.0)
+
+
+# Ice Aura: enemies within PET_ICE_AURA_RANGE are slowed. We apply the slow
+# via the enemy's _time_scale (if it has one) every tick, with a smooth
+# falloff toward the aura edge.
+func _tick_ice_aura(delta: float) -> void:
+	_ice_aura_tick_timer -= delta
+	if _ice_aura_tick_timer > 0:
+		return
+	_ice_aura_tick_timer = 0.2  # Re-apply every 0.2s
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if not ("set_time_scale" in enemy):
+			continue
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < GameConstants.PET_ICE_AURA_RANGE:
+			# Smooth falloff: at center apply full slow, at edge apply 1.0
+			var t: float = 1.0 - (d / GameConstants.PET_ICE_AURA_RANGE)
+			var slow_mult: float = lerpf(1.0, GameConstants.PET_ICE_AURA_SLOW_MULT, t)
+			enemy.set_time_scale(slow_mult)
+		else:
+			# Restore to 1.0 if outside (only if we were slowing it)
+			if enemy.get_meta("pet_ice_slow_active", false):
+				enemy.set_time_scale(1.0)
+				enemy.set_meta("pet_ice_slow_active", false)
+		# Mark enemies we're actively slowing
+		if d < GameConstants.PET_ICE_AURA_RANGE:
+			enemy.set_meta("pet_ice_slow_active", true)
+
+
+# Nature Bloom: regenerate the player's HP when within range. Tick-based.
+func _tick_nature_bloom(delta: float) -> void:
+	if not _cached_player or not is_instance_valid(_cached_player):
+		return
+	_nature_regen_tick += delta
+	if _nature_regen_tick < 1.0:  # 1 HP per second
+		return
+	_nature_regen_tick = 0.0
+	var d: float = global_position.distance_to(_cached_player.global_position)
+	if d < GameConstants.PET_NATURE_REGEN_RANGE:
+		# Only regen if player is below max HP
+		if GameManager.player_hp < GameManager.player_max_hp:
+			GameManager.heal(int(GameConstants.PET_NATURE_REGEN_PER_SEC))
+			# Small green sparkle on player
+			ParticleEffects.spawn_pickup_sparkle(get_parent(), _cached_player.global_position + Vector3(0, 1.5, 0), Color(0.3, 0.8, 0.35))
+
+
+# ── Phase 27: Void Veil — try to absorb an incoming enemy projectile ──
+# Called by the player's take_damage path (or the enemy projectile) before
+# damage is applied. Returns true if the projectile was absorbed.
+func try_absorb_projectile(projectile_pos: Vector3) -> bool:
+	if evolution_path != GameConstants.PetPath.VOID:
+		return false
+	if stage < GameConstants.PetStage.ADOLESCENT:
+		return false  # Void Veil only active at Adolescent+
+	# Only absorb if the projectile is near the pet
+	if global_position.distance_to(projectile_pos) > 3.0:
+		return false
+	if randf() < GameConstants.PET_VOID_VEIL_ABSORB_CHANCE:
+		# Absorbed! Small void particle effect
+		ParticleEffects.spawn_pickup_sparkle(get_parent(), projectile_pos, Color(0.3, 0.1, 0.45))
+		return true
+	return false
+
+
+# ─── Phase 27: Emote System ───────────────────────────────────────────────────
+
+## Trigger a pet emote (visual reaction). Respects cooldown so emotes don't
+## spam. Emotes show as a floating Label3D above the pet's head + a small
+## color flash on the pet's material.
+func _trigger_emote(emote_id: int) -> void:
+	if emote_id == GameConstants.PetEmote.NONE:
+		return
+	if _emote_cooldown > 0.0:
+		return  # On cooldown
+	if not _emote_label:
+		return
+	_current_emote = emote_id
+	_emote_timer = GameConstants.PET_EMOTE_DURATION
+	_emote_cooldown = GameConstants.PET_EMOTE_COOLDOWN
+	# Set label text + color
+	_emote_label.text = GameConstants.PET_EMOTE_TEXTS[emote_id]
+	_emote_label.modulate = GameConstants.PET_EMOTE_COLORS[emote_id]
+	_emote_label.visible = true
+	# Pop-in scale animation
+	_emote_label.scale = Vector3.ONE * 0.001
+	var pop := create_tween()
+	pop.tween_property(_emote_label, "scale", Vector3.ONE * GameConstants.PET_EMOTE_SCALE_POP, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	pop.tween_property(_emote_label, "scale", Vector3.ONE, 0.18) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Small material flash in the emote color
+	if _mat:
+		var old_emission: float = _mat.emission_energy_multiplier
+		_mat.emission_energy_multiplier = 3.0
+		var flash := create_tween()
+		flash.tween_property(_mat, "emission_energy_multiplier", old_emission, 0.3)
+	# Emit signal for HUD integration
+	pet_emote.emit(emote_id)
+
+
+## Per-frame emote update — countdown timers and hide when expired.
+func _update_emote(delta: float) -> void:
+	if _emote_cooldown > 0.0:
+		_emote_cooldown -= delta
+	if _emote_timer > 0.0:
+		_emote_timer -= delta
+		if _emote_timer <= 0.0:
+			# Hide the emote
+			if _emote_label:
+				_emote_label.visible = false
+				_emote_label.text = ""
+			_current_emote = GameConstants.PetEmote.NONE
 
 
 # ─── Idle Animations ──────────────────────────────────────────────────────────
@@ -610,6 +1118,8 @@ func take_damage(amount: int) -> void:
 	var cam: Node3D = GameManager.camera_rig
 	if cam and cam.has_method("add_trauma"):
 		cam.add_trauma(0.15)
+	# ── Phase 27: SCARED emote on taking damage ──
+	_trigger_emote(GameConstants.PetEmote.SCARED)
 	if hp <= 0:
 		_die()
 
@@ -620,6 +1130,8 @@ func _die() -> void:
 	ParticleEffects.spawn_death_poof(get_parent(), global_position, _stage_color(), 1.0)
 	ParticleEffects.spawn_explosion(get_parent(), global_position, _stage_color(), 30, 0.6)
 	GameManager.add_message("🐾 Pet was defeated! It will respawn in 10s...")
+	# ── Phase 27: Clean up path ability effects on death ──
+	_cleanup_path_effects()
 	# Respawn timer — re-summon at follow position after delay
 	var respawn_tween := create_tween()
 	respawn_tween.tween_interval(10.0)
@@ -632,6 +1144,28 @@ func _die() -> void:
 	if _aura:
 		_aura.visible = false
 	_set_state(PetState.FOLLOW)
+
+
+## Clean up any active path ability effects (ice slows on enemies, etc.)
+## Called when the pet dies or is dismissed.
+func _cleanup_path_effects() -> void:
+	# Restore time_scale on any enemies we were slowing with the Ice aura
+	if evolution_path == GameConstants.PetPath.ICE:
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			if not ("set_time_scale" in enemy):
+				continue
+			if enemy.get_meta("pet_ice_slow_active", false):
+				enemy.set_time_scale(1.0)
+				enemy.set_meta("pet_ice_slow_active", false)
+	# Clear fire aura cooldowns
+	_fire_aura_cooldowns.clear()
+	# Hide emote
+	if _emote_label:
+		_emote_label.visible = false
+		_emote_label.text = ""
+	_current_emote = GameConstants.PetEmote.NONE
 
 
 func _respawn() -> void:
@@ -660,6 +1194,8 @@ func _respawn() -> void:
 
 func _on_player_died() -> void:
 	# Pet vanishes when player dies
+	# ── Phase 27: Clean up path ability effects before freeing ──
+	_cleanup_path_effects()
 	ParticleEffects.spawn_death_poof(get_parent(), global_position, _stage_color(), 1.0)
 	queue_free()
 
@@ -677,3 +1213,35 @@ func get_evolution_pct() -> float:
 		var span: int = GameConstants.PET_EVOLVE_TO_ADULT - base
 		return clampf(float(evolution_points - base) / float(span), 0.0, 1.0)
 	return 1.0
+
+
+# ── Phase 27: Path public API ──
+
+func get_path_name() -> String:
+	return GameConstants.PET_PATH_NAMES[evolution_path]
+
+func get_path_id() -> int:
+	return evolution_path
+
+func get_ability_name() -> String:
+	return _ability_name()
+
+## Force the pet onto a specific evolution path. Used by the player's
+## "use_stone" action (consumes a stone from PetStoneInventory).
+func set_path_from_stone(stone_type: int) -> bool:
+	if not GameConstants.PET_STONE_TO_PATH.has(stone_type):
+		return false
+	var new_path: int = GameConstants.PET_STONE_TO_PATH[stone_type]
+	if evolution_path == new_path:
+		GameManager.add_message("🐾 Pet is already on the %s path!" % GameConstants.PET_PATH_NAMES[new_path])
+		return false
+	_set_path(new_path)
+	return true
+
+## Get the current emote ID (for HUD display).
+func get_current_emote() -> int:
+	return _current_emote
+
+## Externally trigger an emote (e.g. from player events like biome change).
+func trigger_emote(emote_id: int) -> void:
+	_trigger_emote(emote_id)

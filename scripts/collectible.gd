@@ -45,6 +45,12 @@ const TYPE_CONFIG := {
 	GameConstants.CollectibleType.REGEN_CRYSTAL: {"color": Color(0.2, 1.0, 0.4), "value": 35, "scale": 0.45},
 	GameConstants.CollectibleType.MAGNET_CORE: {"color": Color(0.6, 0.6, 0.7), "value": 30, "scale": 0.4},
 	GameConstants.CollectibleType.TOXIC_EXTRACT: {"color": Color(0.5, 0.9, 0.1), "value": 30, "scale": 0.4},
+	# ── Phase 27: Pet Evolution Stones (rare, glowing, large) ──
+	GameConstants.CollectibleType.EMBER_STONE: {"color": Color(1.0, 0.4, 0.1), "value": 80, "scale": 0.55},
+	GameConstants.CollectibleType.FROST_STONE: {"color": Color(0.4, 0.75, 1.0), "value": 80, "scale": 0.55},
+	GameConstants.CollectibleType.SPARK_STONE: {"color": Color(1.0, 0.9, 0.2), "value": 80, "scale": 0.55},
+	GameConstants.CollectibleType.VOID_STONE: {"color": Color(0.3, 0.1, 0.45), "value": 80, "scale": 0.55},
+	GameConstants.CollectibleType.LEAF_STONE: {"color": Color(0.3, 0.8, 0.35), "value": 80, "scale": 0.55},
 }
 
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
@@ -207,7 +213,12 @@ func _apply_type_config() -> void:
 				or collectible_type == GameConstants.CollectibleType.FIREBALL_SCROLL \
 				or collectible_type == GameConstants.CollectibleType.REGEN_CRYSTAL \
 				or collectible_type == GameConstants.CollectibleType.MAGNET_CORE \
-				or collectible_type == GameConstants.CollectibleType.TOXIC_EXTRACT:
+				or collectible_type == GameConstants.CollectibleType.TOXIC_EXTRACT \
+				or collectible_type == GameConstants.CollectibleType.EMBER_STONE \
+				or collectible_type == GameConstants.CollectibleType.FROST_STONE \
+				or collectible_type == GameConstants.CollectibleType.SPARK_STONE \
+				or collectible_type == GameConstants.CollectibleType.VOID_STONE \
+				or collectible_type == GameConstants.CollectibleType.LEAF_STONE:
 			var glow := OmniLight3D.new()
 			glow.light_color = config["color"]
 			glow.light_energy = 1.2
@@ -253,7 +264,12 @@ func _physics_process(delta: float) -> void:
 		if collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
 				or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
 				or collectible_type == GameConstants.CollectibleType.NEBULA_DUST \
-				or GameConstants.CRAFTING_MATERIALS.has(collectible_type):
+				or GameConstants.CRAFTING_MATERIALS.has(collectible_type) \
+				or collectible_type == GameConstants.CollectibleType.EMBER_STONE \
+				or collectible_type == GameConstants.CollectibleType.FROST_STONE \
+				or collectible_type == GameConstants.CollectibleType.SPARK_STONE \
+				or collectible_type == GameConstants.CollectibleType.VOID_STONE \
+				or collectible_type == GameConstants.CollectibleType.LEAF_STONE:
 			rarity_spin = 3.0
 		elif collectible_type == GameConstants.CollectibleType.STAR_FRUIT \
 				or collectible_type == GameConstants.CollectibleType.HEALTH_FRAGMENT:
@@ -405,6 +421,15 @@ func _collect() -> void:
 		if WeaponModSystem:
 			WeaponModSystem.add_material(collectible_type, 1)
 
+	# ── Phase 27: Pet Evolution Stones — add to PetStoneInventory autoload ──
+	if GameConstants.PET_STONE_TO_PATH.has(collectible_type):
+		if PetStoneInventory:
+			PetStoneInventory.add_stone(collectible_type, 1)
+		# Stones also feed the active pet automatically (if one exists)
+		var pet: Node = get_tree().get_first_node_in_group("companion_pet")
+		if pet and is_instance_valid(pet) and pet.has_method("feed"):
+			pet.feed(collectible_type)
+
 	# Award XP (shared in co-op — both players benefit from the same XP pool)
 	if xp_value > 0:
 		GameManager.gain_xp(xp_value)
@@ -442,7 +467,12 @@ func _collect() -> void:
 	if collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
 			or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
 			or collectible_type == GameConstants.CollectibleType.NEBULA_DUST \
-			or GameConstants.CRAFTING_MATERIALS.has(collectible_type):
+			or GameConstants.CRAFTING_MATERIALS.has(collectible_type) \
+			or collectible_type == GameConstants.CollectibleType.EMBER_STONE \
+			or collectible_type == GameConstants.CollectibleType.FROST_STONE \
+			or collectible_type == GameConstants.CollectibleType.SPARK_STONE \
+			or collectible_type == GameConstants.CollectibleType.VOID_STONE \
+			or collectible_type == GameConstants.CollectibleType.LEAF_STONE:
 		flash_intensity = 3.5
 		flash_range = 5.0
 	pickup_light.light_energy = flash_intensity
@@ -481,6 +511,11 @@ func _collect() -> void:
 		GameConstants.CollectibleType.METEOR_SHARD,
 		GameConstants.CollectibleType.QUANTUM_FUZZ,
 		GameConstants.CollectibleType.NEBULA_DUST,
+		GameConstants.CollectibleType.EMBER_STONE,
+		GameConstants.CollectibleType.FROST_STONE,
+		GameConstants.CollectibleType.SPARK_STONE,
+		GameConstants.CollectibleType.VOID_STONE,
+		GameConstants.CollectibleType.LEAF_STONE,
 	]
 	if is_rare:
 		AudioManager.play_sfx(AudioManager.SFX_PICKUP_RARE)

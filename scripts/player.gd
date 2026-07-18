@@ -162,6 +162,29 @@ func _ready() -> void:
 	# invuln/dash checks in GameManager.take_damage), so this won't trigger
 	# on blocked hits.
 	GameManager.damage_taken_from.connect(_on_player_damaged)
+	# ── Phase 27: Pet emote triggers — biome change → CURIOUS, damage → SCARED ──
+	if not GameManager.biome_changed.is_connected(_on_biome_changed_pet_emote):
+		GameManager.biome_changed.connect(_on_biome_changed_pet_emote)
+	if not GameManager.damage_taken_from.is_connected(_on_player_damaged_pet_emote):
+		GameManager.damage_taken_from.connect(_on_player_damaged_pet_emote)
+	if not GameManager.level_up.is_connected(_on_player_levelup_pet_emote):
+		GameManager.level_up.connect(_on_player_levelup_pet_emote)
+
+
+# ── Phase 27: Pet emote reaction callbacks ──
+# These trigger emotes on the active pet in response to player events.
+# They're no-ops if no pet is summoned.
+func _on_biome_changed_pet_emote(_biome_id: int) -> void:
+	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
+		pet.trigger_emote(GameConstants.PetEmote.CURIOUS)
+
+func _on_player_damaged_pet_emote(_source_pos: Vector3) -> void:
+	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
+		pet.trigger_emote(GameConstants.PetEmote.ANGRY)
+
+func _on_player_levelup_pet_emote(_level: int) -> void:
+	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
+		pet.trigger_emote(GameConstants.PetEmote.HAPPY)
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused:
@@ -849,6 +872,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			GameManager.add_message("🐾 No pet to fetch with! Press F to summon.")
 
+	# ── Phase 27: Use evolution stone (B key) — feed a stone to the pet ──
+	# Consumes the first stone in the player's inventory and feeds it to the
+	# active pet, locking in the corresponding elemental evolution path.
+	if event.is_action_pressed("use_stone") and not GameManager.is_paused and GameManager.player_is_alive:
+		_use_pet_stone()
+
 	# ── Phase 26: Interact key (T) — talk to NPCs, activate switches ──
 	if event.is_action_pressed("interact") and not GameManager.is_paused and GameManager.player_is_alive:
 		_try_interact()
@@ -1190,6 +1219,35 @@ func _toggle_pet() -> void:
 		# Phase 20: Audio — pet summon SFX
 		AudioManager.play_sfx(AudioManager.SFX_PET)
 		print("[Player] Pet summoned at %s" % pet.global_position)
+
+
+# ── Phase 27: Use an evolution stone from inventory on the active pet ──
+# Consumes the first available stone and feeds it to the pet, locking in
+# the corresponding elemental evolution path. If the pet is already on
+# that path, the stone is still consumed (it feeds the pet for evolution
+# points) but the path doesn't change.
+func _use_pet_stone() -> void:
+	if not pet or not is_instance_valid(pet):
+		GameManager.add_message("🐾 No pet to feed! Press F to summon one first.")
+		return
+	if not PetStoneInventory or not PetStoneInventory.has_any_stone():
+		GameManager.add_message("🪨 No evolution stones! Defeat bosses or explore to find some.")
+		return
+	var stone_type: int = PetStoneInventory.get_first_stone_type()
+	if stone_type < 0:
+		GameManager.add_message("🪨 No evolution stones in inventory.")
+		return
+	# Consume the stone from inventory
+	if not PetStoneInventory.consume_stone(stone_type):
+		GameManager.add_message("🪨 Failed to use stone.")
+		return
+	# Feed it to the pet — this locks in the path and grants evolution points
+	pet.feed(stone_type)
+	# Phase 20: Audio — pet summon SFX (reused as a "stone use" chime)
+	AudioManager.play_sfx(AudioManager.SFX_PET)
+	var path_idx: int = GameConstants.PET_STONE_TO_PATH[stone_type]
+	var stone_name: String = GameConstants.PET_STONE_NAMES[path_idx]
+	print("[Player] Used %s on pet (path=%s)" % [stone_name, GameConstants.PET_PATH_NAMES[path_idx]])
 
 
 ## When in fetch mode, left-click raycasts to find a collectible under the
