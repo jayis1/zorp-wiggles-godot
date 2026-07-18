@@ -10,9 +10,9 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 
 ### Core Gameplay
 - **3D open world** with 19 procedurally-generated biomes (grass, desert, water, lava, forest, crystal, snow, swamp, alien, mushroom, floating islands, toxic bog + Phase 22: deep ocean, volcano core, sky citadel, digital grid, crystal caverns, ancient ruins, underground)
-- **21+ enemy types** with unique AI behaviors (Slime Blob, Plasma Drake, Graviton, Void Wisp, Spore Spitter, Starburst Sentinel, Plasma Serpent, Swarm Mite, Crystal Guardian, Phase Shifter, Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight, Plasma Stalker, Time Warden, Mirror Mimic, and more)
+- **24+ enemy types** with unique AI behaviors (Slime Blob, Plasma Drake, Graviton, Void Wisp, Spore Spitter, Starburst Sentinel, Plasma Serpent, Swarm Mite, Crystal Guardian, Phase Shifter, Toxic Spore, Swarm Queen, Crystal Wraith, Echo Knight, Plasma Stalker, Time Warden, Mirror Mimic, **Void Leviathan** boss, **Ancient Sentinel** mega-boss, **Gravity Elemental** elite, and more)
 - **Smart enemy AI** with NavMesh pathfinding, flanking, retreat, ambush, pack coordination, line-of-sight checks, and enrage systems
-- **Combat system** with crit chains, kill combos, pickup streaks, damage numbers, and 20+ weapon mods
+- **Combat system** with crit chains, kill combos, pickup streaks, damage numbers, and 30+ weapon mods
 - **Full HUD** with HP/XP bars, minimap, radar, boss HP bar, combo counter, kill feed, biome indicator, dash cooldown, achievement popups, death screen
 
 ### 12 New Features (beyond the original Ursina game)
@@ -24,7 +24,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 6. **Biome Mutation System** — Zorp evolves based on time spent in biomes (fire resistance, ice armor, refractive cloak, nature's pact, poison trail, void step)
 7. **Dimensional Rifts** — 4 alternate dimensions: Void (shadow clone boss), Mirror (enemies friendly, items hostile), Time-Slow (world at 0.3x speed), Reverse Gravity (walk on ceiling)
 8. **Alien Companion Pet** — Summonable pet with 3 evolution stages (baby → adolescent → adult), auto-collects items, fetch command, idle animations, adult stage shields Zorp
-9. **Weapon Mod Crafting** — 20 craftable weapon mods (homing laser, chain lightning, freeze ray, vampire beam, black hole, ricochet, spread shot, piercing, bouncing, and more)
+9. **Weapon Mod Crafting** — 30 craftable weapon mods (homing laser, chain lightning, freeze ray, vampire beam, black hole, ricochet, spread shot, piercing, bouncing, black hole launcher, time freeze ray, shrink beam, meteor strike, lightning storm, poison nova, and more)
 10. **Dynamic Weather** — 6 weather types (clear, acid rain, solar flare, fog, thunderstorm, snow) with gameplay effects (damage, fire rate boost, stealth, lightning, slow)
 11. **Boss Arenas** — 3 arena types (lava, crystal, void) with walls, cover, environmental hazards, shrinking floors, and auto-spawn system
 12. **Local Co-op** — Player 2 "Zerp" drops in anytime, shared camera with dynamic zoom, enemy scaling, shared combo, revive system, mega pulse wave sync, 7 co-op achievements
