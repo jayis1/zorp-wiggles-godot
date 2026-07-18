@@ -263,7 +263,7 @@ func _draw_stat_line(font, label: String, value: String, col_x: float, y: float,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(1.0, 0.9, 0.4, a))
 
 func _draw_centered_text(font, text: String, pos: Vector2, font_size: int, color: Color) -> void:
-	var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var text_size: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	font.draw_string(get_canvas_item(),
 		Vector2(pos.x - text_size.x / 2.0, pos.y + text_size.y / 2.0),
 		text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
