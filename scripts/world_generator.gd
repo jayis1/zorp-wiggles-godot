@@ -524,7 +524,9 @@ func _spawn_enemy_at(type_name: String, pos: Vector3) -> void:
 	var scene_path: String = scene_map.get(type_name, "res://scenes/entities/enemy_blob.tscn")
 	var enemy_scene: PackedScene = load(scene_path)
 	var enemy: CharacterBody3D = enemy_scene.instantiate()
-	enemy.global_position = pos
+	# Set local position before add_child (avoids !is_inside_tree error when
+	# reading global_position). The World node is at origin, so local == global.
+	enemy.position = pos
 	# Configure enemy with type data
 	enemy.enemy_name = type_name
 	enemy.max_hp = type_data["hp"]

@@ -3,6 +3,7 @@
 // Intensity scales with how low HP is (closer to death = stronger pulse).
 shader_type canvas_item;
 
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 uniform float strength : hint_range(0.0, 1.0) = 0.0;       // 0 = off, 1 = max danger
 uniform float pulse_speed : hint_range(0.5, 10.0) = 4.0;   // Heartbeat-like pulse rate
 uniform float vignette_radius : hint_range(0.3, 1.0) = 0.55;
@@ -12,7 +13,7 @@ uniform float max_alpha : hint_range(0.0, 1.0) = 0.75;
 
 void fragment() {
 	vec2 uv = SCREEN_UV;
-	vec4 src = texture(SCREEN_TEXTURE, uv);
+	vec4 src = texture(screen_texture, uv);
 
 	// Pulsing intensity (heartbeat: quick spike, slower fade)
 	float t = TIME * pulse_speed;

@@ -26,7 +26,7 @@ fog_light_color = Color(0.6, 0.7, 0.9, 1)
 
 [node name="Main" type="Node3D"]
 
-[node name="WorldEnvironment" type="WorldEnvironment"]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("WorldEnv")
 
 [node name="World" type="Node3D" parent="."]

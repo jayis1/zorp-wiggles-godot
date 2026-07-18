@@ -3,6 +3,7 @@
 // Used as a CanvasItem (2D) overlay shader via ShaderMaterial on a ColorRect.
 shader_type canvas_item;
 
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 uniform float strength : hint_range(0.0, 1.0) = 0.5;       // Overall effect intensity
 uniform float speed : hint_range(0.1, 10.0) = 2.0;          // Wave speed
 uniform float wave_amplitude : hint_range(0.0, 0.05) = 0.008; // Max UV shift
@@ -27,7 +28,7 @@ void fragment() {
 	float shift = wave * wave_amplitude * strength * vertical_factor;
 
 	// Sample the screen with slight horizontal shift for a "heat haze" look
-	vec4 src = texture(SCREEN_TEXTURE, vec2(uv.x + shift, uv.y));
+	vec4 src = texture(screen_texture, vec2(uv.x + shift, uv.y));
 
 	// Radial vignette mask — heat is stronger near edges, fades in center
 	vec2 centered = uv - 0.5;

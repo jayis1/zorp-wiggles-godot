@@ -3,6 +3,7 @@
 // as if viewing the world through faceted crystal. Adds cool blue-purple tint.
 shader_type canvas_item;
 
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 uniform float strength : hint_range(0.0, 1.0) = 0.5;
 uniform float refraction_scale : hint_range(0.0, 0.02) = 0.004;
 uniform float shimmer_speed : hint_range(0.1, 10.0) = 1.5;
@@ -40,7 +41,7 @@ void fragment() {
 	float edge = smoothstep(0.4, 0.95, dist);
 	shift *= (0.5 + edge);
 
-	vec4 src = texture(SCREEN_TEXTURE, uv + shift);
+	vec4 src = texture(screen_texture, uv + shift);
 
 	// Prismatic color tint — varies by facet, gives rainbow refraction feel
 	vec3 prism = mix(prism_color_a, prism_color_b, h);

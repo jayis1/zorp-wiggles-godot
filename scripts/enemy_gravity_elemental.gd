@@ -85,7 +85,7 @@ func _create_field_visual() -> void:
 	_field_mesh.material_override = _field_material
 	add_child(_field_mesh)
 	_field_mesh.position = Vector3(0, 0.5, 0)
-	_field_mesh.scale = Vector3.ZERO  # Grow during charge
+	_field_mesh.scale = Vector3(0.001, 0.001, 0.001)  # Grow during charge
 
 	# Soft blue light
 	_field_light = OmniLight3D.new()
@@ -248,7 +248,7 @@ func _end_field() -> void:
 	_field_state = FieldState.IDLE
 	_field_timer = GameConstants.GRAVITY_ELEMENTAL_FIELD_COOLDOWN
 	if _field_mesh:
-		_field_mesh.scale = Vector3.ZERO
+		_field_mesh.scale = Vector3(0.001, 0.001, 0.001)
 	if _field_material:
 		_field_material.emission_energy_multiplier = 0.0
 	if _field_light:

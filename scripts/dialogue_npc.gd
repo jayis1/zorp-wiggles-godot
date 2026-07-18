@@ -175,7 +175,7 @@ func _process(_delta: float) -> void:
 			_prompt_shown = true
 			_prompt_label.visible = true
 			# Pop-in animation.
-			_prompt_label.scale = Vector3.ZERO
+			_prompt_label.scale = Vector3(0.001, 0.001, 0.001)
 			var t := create_tween()
 			t.tween_property(_prompt_label, "scale", Vector3.ONE, 0.25) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)

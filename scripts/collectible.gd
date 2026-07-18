@@ -192,7 +192,7 @@ func _apply_type_config() -> void:
 		
 		# Spawn pop-in: bounce from scale 0 → 1 with overshoot for a juicy
 		# appearance instead of popping in at full size.
-		scale = Vector3.ZERO
+		scale = Vector3(0.001, 0.001, 0.001)
 		var pop_tween := create_tween()
 		pop_tween.tween_property(self, "scale", Vector3.ONE, 0.35) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)

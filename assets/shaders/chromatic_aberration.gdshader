@@ -3,6 +3,7 @@
 // Intensity can be modulated by the manager for biome ambiance or boss enrage.
 shader_type canvas_item;
 
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 uniform float strength : hint_range(0.0, 1.0) = 0.5;       // Overall effect 0..1
 uniform float max_shift : hint_range(0.0, 0.02) = 0.006;    // Max UV shift per channel
 uniform float edge_falloff : hint_range(0.3, 1.0) = 0.55;   // Radius where shift begins
@@ -30,9 +31,9 @@ void fragment() {
 	// Sample each channel at a slightly different UV
 	// R shifts outward along radial direction, B shifts inward
 	vec2 dir = dist > 0.0001 ? normalize(centered) : vec2(0.0);
-	float r = texture(SCREEN_TEXTURE, uv + dir * shift).r;
-	float g = texture(SCREEN_TEXTURE, uv).g;
-	float b = texture(SCREEN_TEXTURE, uv - dir * shift).b;
+	float r = texture(screen_texture, uv + dir * shift).r;
+	float g = texture(screen_texture, uv).g;
+	float b = texture(screen_texture, uv - dir * shift).b;
 
 	vec3 col = vec3(r, g, b);
 

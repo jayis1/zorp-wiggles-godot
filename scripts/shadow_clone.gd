@@ -74,7 +74,7 @@ func _ready() -> void:
 	GameManager.boss_spawned.emit(self)
 
 	# Fade in animation
-	_mesh.scale = Vector3.ZERO
+	_mesh.scale = Vector3(0.001, 0.001, 0.001)
 	var tween := create_tween()
 	tween.tween_property(_mesh, "scale", Vector3.ONE, 0.5) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)

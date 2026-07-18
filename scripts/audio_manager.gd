@@ -21,6 +21,10 @@ var master_volume: float = 1.0
 var sfx_volume: float = 0.8
 var music_volume: float = 0.5
 
+# dB value used for "silent" — finite so tweens interpolate cleanly.
+# (linear_to_db(0.0) returns -inf, which produces NaN when tweened toward.)
+const SILENT_DB: float = -80.0
+
 # ─── Audio Players ────────────────────────────────────────────────────────────
 # SFX pool — multiple players so overlapping sounds don't cut each other off.
 const SFX_POOL_SIZE: int = 12
@@ -138,7 +142,7 @@ func play_sfx(sfx_name: String) -> void:
 		return
 	var player = _next_sfx_player()
 	player.stream = _sfx_streams[sfx_name]
-	player.volume_db = linear_to_db(sfx_volume * master_volume)
+	player.volume_db = linear_to_db(maxf(sfx_volume * master_volume, 0.0001))
 	# Pitch variation for combat sounds — keeps rapid fire from sounding robotic
 	if sfx_name in _PITCH_VARIATION_SFX:
 		player.pitch_scale = 1.0 + randf_range(-_PITCH_VARIATION_AMOUNT, _PITCH_VARIATION_AMOUNT)
@@ -180,7 +184,7 @@ func play_music_biome(biome_id: int) -> void:
 	_music_player.stream = _music_streams[biome_id]
 	# Start from silence and fade in — prevents the jarring hard-pop of the
 	# drone cutting in instantly when crossing a biome boundary.
-	_music_player.volume_db = linear_to_db(0.0)
+	_music_player.volume_db = SILENT_DB
 	_music_player.play()
 	_fade_player(_music_player, music_volume * master_volume, MUSIC_FADE_IN_DURATION, "_music_fade_tween")
 
@@ -206,7 +210,7 @@ func play_boss_music() -> void:
 		_boss_music_player.bus = "Master"
 		add_child(_boss_music_player)
 	_boss_music_player.stream = _boss_music_stream
-	_boss_music_player.volume_db = linear_to_db(0.0)
+	_boss_music_player.volume_db = SILENT_DB
 	_boss_music_player.play()
 	_fade_player(_boss_music_player, music_volume * master_volume, MUSIC_FADE_IN_DURATION, "_boss_fade_tween")
 
@@ -249,8 +253,8 @@ func set_music_volume(vol: float) -> void:
 
 
 func _apply_volumes() -> void:
-	# Master bus volume
-	AudioServer.set_bus_volume_db(0, linear_to_db(master_volume))
+	# Master bus volume (clamp away from 0 to avoid -inf from linear_to_db)
+	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(master_volume, 0.0001)))
 	_apply_music_volume()
 
 
@@ -263,7 +267,7 @@ func _apply_music_volume() -> void:
 	# in-progress fade. When no fade is active, apply the volume directly.
 	var music_fading: bool = _music_fade_tween != null and is_instance_valid(_music_fade_tween) and _music_fade_tween.is_running()
 	var boss_fading: bool = _boss_fade_tween != null and is_instance_valid(_boss_fade_tween) and _boss_fade_tween.is_running()
-	var vol_db = linear_to_db(music_volume * master_volume)
+	var vol_db = linear_to_db(maxf(music_volume * master_volume, 0.0001))
 	if _music_player and not music_fading:
 		_music_player.volume_db = vol_db
 	if _boss_music_player and not boss_fading:
@@ -280,7 +284,7 @@ func _stop_music_player() -> void:
 			_music_fade_tween.kill()
 		_music_fade_tween = create_tween()
 		_music_fade_tween.tween_property(_music_player, "volume_db",
-			linear_to_db(0.0), MUSIC_FADE_OUT_DURATION) \
+			SILENT_DB, MUSIC_FADE_OUT_DURATION) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		var player_to_stop := _music_player
 		_music_fade_tween.tween_callback(func():
@@ -298,7 +302,7 @@ func _stop_boss_music() -> void:
 			_boss_fade_tween.kill()
 		_boss_fade_tween = create_tween()
 		_boss_fade_tween.tween_property(_boss_music_player, "volume_db",
-			linear_to_db(0.0), MUSIC_FADE_OUT_DURATION) \
+			SILENT_DB, MUSIC_FADE_OUT_DURATION) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		var player_to_stop := _boss_music_player
 		_boss_fade_tween.tween_callback(func():
@@ -320,8 +324,11 @@ func _fade_player(player: AudioStreamPlayer, target_linear: float,
 	if existing and is_instance_valid(existing):
 		existing.kill()
 	var fade_tween := create_tween()
+	# Clamp target away from 0 so linear_to_db doesn't return -inf, which
+	# would make the tween interpolate through NaN.
+	var target_db: float = linear_to_db(maxf(target_linear, 0.0001))
 	fade_tween.tween_property(player, "volume_db",
-		linear_to_db(target_linear), duration) \
+		target_db, duration) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	set(tween_prop_name, fade_tween)
 

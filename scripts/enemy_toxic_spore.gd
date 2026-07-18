@@ -125,7 +125,11 @@ func _spawn_poison_cloud() -> void:
 		pulse_tween.tween_property(cloud_mat, "emission_energy_multiplier", 1.2, 0.8) \
 			.set_ease(Tween.EASE_IN_OUT)
 		# Stop the pulse when the lifetime ends
-		life_timer.timeout.connect(func():
-			if is_instance_valid(pulse_tween):
-				pulse_tween.kill()
-		)
+		life_timer.timeout.connect(_on_cloud_life_expired.bind(pulse_tween))
+
+## Called when the poison cloud's life timer expires — kills the pulse tween.
+## Kept as a named method (not an inline lambda) to avoid GDScript parser issues
+## with lambdas at the end of a file.
+func _on_cloud_life_expired(pulse_tween: Tween) -> void:
+	if is_instance_valid(pulse_tween):
+		pulse_tween.kill()

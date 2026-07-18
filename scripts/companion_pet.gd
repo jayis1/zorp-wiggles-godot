@@ -85,7 +85,7 @@ func _ready() -> void:
 	_set_state(PetState.FOLLOW)
 
 	# Spawn pop-in
-	_mesh.scale = Vector3.ZERO
+	_mesh.scale = Vector3(0.001, 0.001, 0.001)
 	var tween := create_tween()
 	tween.tween_property(_mesh, "scale", Vector3.ONE, 0.5) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
@@ -643,7 +643,7 @@ func _respawn() -> void:
 	pet_hp_changed.emit(hp, max_hp)
 	if _mesh:
 		_mesh.visible = true
-		_mesh.scale = Vector3.ZERO
+		_mesh.scale = Vector3(0.001, 0.001, 0.001)
 		var tween := create_tween()
 		tween.tween_property(_mesh, "scale", Vector3.ONE * _stage_config()["scale"], 0.5) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)

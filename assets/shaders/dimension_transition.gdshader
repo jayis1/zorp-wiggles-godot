@@ -3,6 +3,7 @@ shader_type canvas_item;
 // Used during entry/exit of dimensional rifts.
 // 'progress' goes from 0.0 to 1.0 during the transition.
 
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 uniform float progress = 0.0;       // 0 = start, 1 = end
 uniform vec3 wipe_color : source_color = vec3(0.5, 0.7, 1.0);
 uniform float wipe_speed = 2.0;     // How many "bands" sweep across
@@ -20,9 +21,9 @@ void fragment() {
 	float ca = chromatic_amount * (1.0 - smoothstep(0.0, 0.3, edge_dist)) * progress;
 
 	vec2 ca_offset = vec2(ca, 0.0);
-	vec4 col_r = texture(SCREEN_TEXTURE, uv + ca_offset);
-	vec4 col_g = texture(SCREEN_TEXTURE, uv);
-	vec4 col_b = texture(SCREEN_TEXTURE, uv - ca_offset);
+	vec4 col_r = texture(screen_texture, uv + ca_offset);
+	vec4 col_g = texture(screen_texture, uv);
+	vec4 col_b = texture(screen_texture, uv - ca_offset);
 
 	vec4 col = vec4(col_r.r, col_g.g, col_b.b, 1.0);
 

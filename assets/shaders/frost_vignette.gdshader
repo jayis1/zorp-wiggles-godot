@@ -3,6 +3,7 @@
 // and a subtle cold tint over the whole screen.
 shader_type canvas_item;
 
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 uniform float strength : hint_range(0.0, 1.0) = 0.5;
 uniform float frost_intensity : hint_range(0.0, 1.0) = 0.4;  // Edge frost opacity
 uniform float vignette_radius : hint_range(0.3, 1.0) = 0.62;
@@ -21,7 +22,7 @@ float hash21(vec2 p) {
 
 void fragment() {
 	vec2 uv = SCREEN_UV;
-	vec4 src = texture(SCREEN_TEXTURE, uv);
+	vec4 src = texture(screen_texture, uv);
 
 	// Radial vignette
 	vec2 centered = uv - 0.5;

@@ -3,6 +3,7 @@
 // when the boss is enraged (HP below threshold). Conveys danger and pressure.
 shader_type canvas_item;
 
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 uniform float strength : hint_range(0.0, 1.0) = 0.0;       // 0 = calm, 1 = full enrage
 uniform float pulse_speed : hint_range(0.5, 15.0) = 6.0;
 uniform float max_shift : hint_range(0.0, 0.02) = 0.008;
@@ -25,9 +26,9 @@ void fragment() {
 	float edge = smoothstep(0.45, 0.95, dist);
 	vec2 dir = dist > 0.0001 ? normalize(centered) : vec2(0.0);
 	float shift = max_shift * edge * intensity;
-	float r = texture(SCREEN_TEXTURE, uv + dir * shift).r;
-	float g = texture(SCREEN_TEXTURE, uv).g;
-	float b = texture(SCREEN_TEXTURE, uv - dir * shift).b;
+	float r = texture(screen_texture, uv + dir * shift).r;
+	float g = texture(screen_texture, uv).g;
+	float b = texture(screen_texture, uv - dir * shift).b;
 	vec3 col = vec3(r, g, b);
 
 	// Red vignette

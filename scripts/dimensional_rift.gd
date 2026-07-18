@@ -73,8 +73,9 @@ func _ready() -> void:
 	light.omni_range = 8.0
 	add_child(light)
 
-	# Start with a spawn animation — scale up from 0
-	scale = Vector3.ZERO
+	# Start with a spawn animation — scale up from near-zero (not exactly
+	# zero, which creates a degenerate basis that logs "det == 0" errors).
+	scale = Vector3(0.001, 0.001, 0.001)
 	var spawn_tween := create_tween()
 	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.6) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)

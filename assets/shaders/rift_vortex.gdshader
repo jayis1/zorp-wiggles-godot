@@ -8,6 +8,7 @@ uniform float time_scale = 1.0;
 uniform vec3 dimension_color : source_color = vec3(0.8, 0.9, 1.0);
 uniform float swirl_strength = 8.0;
 uniform float strength = 1.0;
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 
 void fragment() {
 	// Use UV coordinates centered on the disc (0.5, 0.5 = center)
@@ -34,9 +35,9 @@ void fragment() {
 	vec2 ca_dir = normalize(offset + vec2(0.001));
 
 	// Sample the screen texture for a portal "see-through" effect
-	vec4 col_r = texture(SCREEN_TEXTURE, SCREEN_UV + ca_dir * ca_amount);
-	vec4 col_g = texture(SCREEN_TEXTURE, SCREEN_UV);
-	vec4 col_b = texture(SCREEN_TEXTURE, SCREEN_UV - ca_dir * ca_amount);
+	vec4 col_r = texture(screen_texture, SCREEN_UV + ca_dir * ca_amount);
+	vec4 col_g = texture(screen_texture, SCREEN_UV);
+	vec4 col_b = texture(screen_texture, SCREEN_UV - ca_dir * ca_amount);
 
 	vec3 col = vec3(col_r.r, col_g.g, col_b.b);
 

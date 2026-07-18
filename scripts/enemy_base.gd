@@ -249,7 +249,7 @@ func _update_ai(delta: float) -> void:
 			alert_indicator.text = "!"
 			# Pop-in bounce: scale from 0 → 1.4 → 1.0 for a juicy "!" appearance.
 			# Kills any prior tween so repeated alerts don't stack.
-			alert_indicator.scale = Vector3.ZERO
+			alert_indicator.scale = Vector3(0.001, 0.001, 0.001)
 			var alert_tween := create_tween()
 			alert_tween.tween_property(alert_indicator, "scale",
 				Vector3.ONE * GameConstants.ENEMY_ALERT_INDICATOR_SCALE, 0.12) \

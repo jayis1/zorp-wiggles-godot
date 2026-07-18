@@ -4,6 +4,7 @@
 // Applied as a CanvasItem overlay that draws a colored corrosive fringe.
 shader_type canvas_item;
 
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 uniform float strength : hint_range(0.0, 1.0) = 0.5;       // Overall intensity
 uniform float dissolve_amount : hint_range(0.0, 1.0) = 0.3; // How much is dissolved (0=none, 1=full)
 uniform float noise_scale : hint_range(5.0, 80.0) = 30.0;  // Spatial frequency of dissolve noise
@@ -34,7 +35,7 @@ float value_noise(vec2 p) {
 
 void fragment() {
 	vec2 uv = SCREEN_UV;
-	vec4 src = texture(SCREEN_TEXTURE, uv);
+	vec4 src = texture(screen_texture, uv);
 
 	// Noise field — scrolls downward over time (dripping effect)
 	float t = TIME * drip_speed;
