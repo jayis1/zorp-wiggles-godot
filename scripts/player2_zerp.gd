@@ -291,14 +291,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("p2_pulse_wave") and not GameManager.is_paused and CoOpManager.p2_active and not CoOpManager.p2_is_downed:
 		_try_pulse_wave_or_buffer()
 
-func _try_shoot() -> void:
-	if shoot_cooldown_timer > 0:
-		return
+func _compute_shoot_cooldown() -> float:
 	var cooldown: float = GameConstants.SHOOT_COOLDOWN
 	if WeaponModSystem:
 		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
 	cooldown *= WeatherSystem.get_fire_rate_multiplier()
-	shoot_cooldown_timer = cooldown
+	return cooldown
+
+## Fire a shot immediately. Assumes the caller has already verified the
+## cooldown is ready (the buffered-shot consumer pre-checks before calling).
+func _try_shoot() -> void:
+	shoot_cooldown_timer = _compute_shoot_cooldown()
 	_spawn_projectile()
 
 func _try_shoot_or_buffer() -> void:
@@ -306,10 +309,7 @@ func _try_shoot_or_buffer() -> void:
 		_shoot_buffer_timer = SHOOT_BUFFER_WINDOW
 		return
 	_shoot_buffer_timer = 0.0
-	var cooldown: float = GameConstants.SHOOT_COOLDOWN
-	if WeaponModSystem:
-		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
-	shoot_cooldown_timer = cooldown
+	shoot_cooldown_timer = _compute_shoot_cooldown()
 	_spawn_projectile()
 
 func _spawn_projectile() -> void:

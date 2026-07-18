@@ -869,11 +869,16 @@ func _apply_camera_rotation() -> void:
 		if cam_rig.has_method("set_camera_pitch"):
 			cam_rig.set_camera_pitch(camera_pitch)
 
-func _try_shoot() -> void:
-	if shoot_cooldown_timer > 0:
-		return
-	# Phase 16: Apply weapon mod fire rate multiplier
+## Compute the effective shoot cooldown after all fire-rate multipliers
+## (weapon mod, weather, progression skill tree). Centralized here so the
+## direct-click and buffered-shot paths can never drift out of sync —
+## previously _try_shoot() and _try_shoot_or_buffer() each computed the
+## cooldown independently, and the buffered consumer called _try_shoot()
+## which silently dropped the shot if cooldown wasn't ready (a race when
+## the buffer tick and cooldown expiry land on the same frame).
+func _compute_shoot_cooldown() -> float:
 	var cooldown: float = GameConstants.SHOOT_COOLDOWN
+	# Phase 16: Apply weapon mod fire rate multiplier
 	if WeaponModSystem:
 		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
 	# Phase 17: Solar Flare weather boosts fire rate
@@ -881,7 +886,14 @@ func _try_shoot() -> void:
 	# ── Phase 25: Progression System fire rate bonus (skill tree) ──
 	if ProgressionSystem:
 		cooldown *= ProgressionSystem.get_fire_rate_mult()
-	shoot_cooldown_timer = cooldown
+	return cooldown
+
+## Fire a shot immediately, applying all fire-rate multipliers. Assumes the
+## caller has already verified the cooldown is ready (checked via
+## shoot_cooldown_timer <= 0). Used by the buffered-shot consumer in
+## _physics_process, which pre-checks the cooldown before calling.
+func _try_shoot() -> void:
+	shoot_cooldown_timer = _compute_shoot_cooldown()
 	_spawn_projectile()
 	# ── Phase 25: Statistics tracking ──
 	if Statistics:
@@ -895,16 +907,7 @@ func _try_shoot_or_buffer() -> void:
 		_shoot_buffer_timer = SHOOT_BUFFER_WINDOW
 		return
 	_shoot_buffer_timer = 0.0
-	# Phase 16: Apply weapon mod fire rate multiplier
-	var cooldown: float = GameConstants.SHOOT_COOLDOWN
-	if WeaponModSystem:
-		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
-	# Phase 17: Solar Flare weather boosts fire rate
-	cooldown *= WeatherSystem.get_fire_rate_multiplier()
-	# ── Phase 25: Progression System fire rate bonus (skill tree) ──
-	if ProgressionSystem:
-		cooldown *= ProgressionSystem.get_fire_rate_mult()
-	shoot_cooldown_timer = cooldown
+	shoot_cooldown_timer = _compute_shoot_cooldown()
 	_spawn_projectile()
 	# ── Phase 25: Statistics tracking ──
 	if Statistics:
@@ -1243,12 +1246,9 @@ func _try_deploy_ability() -> void:
 			GameManager.add_message("⚠ Equip a deployable mod (Shield Bubble, Turret, Gravity Flip, or Void Rift) to use V")
 			return
 	# Apply the mod's fire rate multiplier as the deploy cooldown
-	var cooldown: float = GameConstants.SHOOT_COOLDOWN
-	cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
-	# Apply weather + progression multipliers (same as shooting)
-	cooldown *= WeatherSystem.get_fire_rate_multiplier()
-	if ProgressionSystem:
-		cooldown *= ProgressionSystem.get_fire_rate_mult()
+	var cooldown: float = _compute_shoot_cooldown()
+	# Apply weather + progression multipliers (same as shooting) — already
+	# folded into _compute_shoot_cooldown(), so no separate multiplication.
 	shoot_cooldown_timer = cooldown
 	# Activate the deployable via the DeployableSystem singleton
 	if DeployableSystem:

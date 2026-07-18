@@ -692,13 +692,17 @@ func _freeze_enemy(enemy: Node3D) -> void:
 	# The private variable is _time_scale, so we must use the setter, not set("time_scale").
 	if enemy.has_method("set_time_scale"):
 		enemy.set_time_scale(0.3)
-		# Create a timer to unfreeze
-		var tw := create_tween()
-		tw.tween_interval(2.0)
-		tw.tween_callback(func():
-			if is_instance_valid(enemy) and enemy.has_method("set_time_scale"):
-				enemy.set_time_scale(1.0)
-		)
+		# Schedule the unfreeze on the SceneTree (ignore_time_scale=true) so the
+		# restore survives this projectile's queue_free() the same frame. A tween
+		# bound to `self` would be killed on free and leave the enemy frozen at
+		# 0.3× speed forever — the same class of bug we already fixed for hit-stop.
+		var tree := get_tree()
+		if tree:
+			var timer := tree.create_timer(2.0, true, false, true)
+			timer.timeout.connect(func():
+				if is_instance_valid(enemy) and enemy.has_method("set_time_scale"):
+					enemy.set_time_scale(1.0)
+			)
 	# Visual: ice particles
 	ParticleEffects.spawn_explosion(get_parent(), enemy.global_position, Color(0.3, 0.9, 1.0), 12, 0.3)
 
@@ -729,8 +733,13 @@ func _ricochet_to_next(source: Node3D, dmg: int) -> void:
 func _set_enemy_on_fire(enemy: Node3D, dmg: int) -> void:
 	var burn_dmg: int = max(2, int(dmg * 0.2))
 	var burns_remaining: int = 3
-	# Use a tween for periodic burn damage
-	var tw := create_tween()
+	# Bind the burn tween to the enemy (not `self`) — this projectile queue_free()s
+	# the same frame for non-piercing mods, which would kill a self-bound tween
+	# and the burn would never tick. Tying it to the enemy also means the burn
+	# continues correctly if the projectile is freed mid-pierce.
+	if not is_instance_valid(enemy):
+		return
+	var tw := enemy.create_tween()
 	tw.tween_interval(1.0)
 	for _i in range(burns_remaining):
 		tw.tween_callback(func():
