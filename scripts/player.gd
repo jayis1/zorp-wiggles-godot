@@ -209,6 +209,13 @@ func _ready() -> void:
 	# ── Level-up celebration reaction (mesh pop + golden emission flash) ──
 	if not GameManager.level_up.is_connected(_on_player_levelup_visual):
 		GameManager.level_up.connect(_on_player_levelup_visual)
+	# ── Heal reaction (green emission flash + gentle scale pop) ──
+	# Distinct from level-up (gold/green, big pop) and damage (red, squash):
+	# healing is a soft positive beat, so the pop is smaller and the emission
+	# is a calm mint-green rather than gold. Skipped during dash/slide (their
+	# tweens own mesh.scale) to avoid conflicts, just like the other reactions.
+	if not GameManager.player_healed.is_connected(_on_player_healed_visual):
+		GameManager.player_healed.connect(_on_player_healed_visual)
 	# ── Phase 30: Apply selected character profile (Zorp vs Zerp) ──
 	# In solo runs, the player's chosen character overrides base color, HP,
 	# damage, speed, and dash speed. In co-op, P1 is always Zorp (the CoOpManager
@@ -740,6 +747,55 @@ func _on_player_levelup_visual(_level: int) -> void:
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		emit_tween.parallel().tween_property(_player_material, "emission",
 			base_color * 0.4, 0.45) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+# ── Heal reaction ── When the player is healed, Zorp's mesh does a soft,
+#    gentle "breathe-in" pop (smaller than the level-up pop, since healing is
+#    a calm positive beat rather than a triumphant milestone) and the emission
+#    flashes a soft mint-green — distinct from the level-up's gold-green and
+#    the damage red. The pop scales slightly with heal size so a big heal
+#    (e.g. boss-rush between-fight heal) reads as more impactful than a 1-HP
+#    regen tick, but is clamped so trash heals don't overshoot. Skipped during
+#    dash/slide (their tweens own mesh.scale) and uses a tracked tween so
+#    rapid regen ticks (Pollen Storm, pet Nature Regen) don't stack into a
+#    vibrating mess — each new heal restarts the tween cleanly.
+var _heal_tween: Tween = null
+func _on_player_healed_visual(amount: int) -> void:
+	if is_dashing or is_sliding:
+		return
+	# Skip if dead — the death tween owns mesh.scale and a heal tick landing
+	# during the death sequence (e.g. pet regen) would fight it.
+	if not GameManager.player_is_alive:
+		return
+	if not mesh:
+		return
+	# Kill any in-progress heal tween so rapid regen ticks restart cleanly
+	# instead of stacking (Pollen Storm heals every 2s, pet regen every 1s).
+	if _heal_tween and _heal_tween.is_valid():
+		_heal_tween.kill()
+	# Scale the pop with heal size: 1.10x for a small heal, up to 1.20x for a
+	# big heal. Clamped so a huge heal doesn't overshoot into level-up territory.
+	var pop_scale: float = lerpf(1.10, 1.20, clampf(float(amount) / 50.0, 0.0, 1.0))
+	_heal_tween = create_tween()
+	# Gentle grow with a slight overshoot (TRANS_BACK), then settle with a
+	# soft elastic. Smaller and slower than the level-up pop — healing is a
+	# calm beat, not a triumphant one.
+	_heal_tween.tween_property(mesh, "scale", Vector3.ONE * pop_scale, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_heal_tween.tween_property(mesh, "scale", Vector3.ONE, 0.30) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Soft mint-green emission flash — distinct from level-up's gold and
+	# damage's red. Lower energy spike than level-up (2.2 vs 3.5) so it reads
+	# as a gentle "soothing" glow rather than a triumphant burst.
+	if _player_material:
+		_player_material.emission = Color(0.3, 1.0, 0.6)
+		_player_material.emission_energy_multiplier = 2.2
+		var emit_tween := create_tween()
+		emit_tween.tween_property(_player_material, "emission_energy_multiplier",
+			1.0, 0.35) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		emit_tween.parallel().tween_property(_player_material, "emission",
+			base_color * 0.4, 0.40) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 func _handle_movement(delta: float) -> void:
@@ -1584,6 +1640,19 @@ func _use_pulse_wave() -> void:
 	pulse.global_position = global_position
 	# Camera shake on pulse wave
 	_trigger_camera_trauma(0.25)
+	# ── Hit-stop on cast ── A brief, gentle world freeze (60ms at 0.25x scale)
+	# sells the pulse wave as a weighty "moment" rather than a button press.
+	# Lighter than the crit hit-stop (45ms @ 0.08x) and the boss-kill hit-stop
+	# (90ms @ 0.04x) — this is an ability cast, not a kill blow, so the freeze
+	# is perceptible but doesn't disrupt flow. The restore is scheduled on the
+	# scene tree with ignore_time_scale=true (matching the projectile hit-stop
+	# pattern) so the timer counts real-time seconds and the freeze lasts
+	# exactly 60ms regardless of the current time scale. Restores to 1.0 because
+	# DimensionSystem uses per-node _time_scale multipliers, so the global
+	# Engine.time_scale should always be 1.0 at rest.
+	Engine.time_scale = 0.25
+	var restore_timer := get_tree().create_timer(0.06, true, false, true)
+	restore_timer.timeout.connect(func(): Engine.time_scale = 1.0)
 	# Phase 20: Audio — pulse wave SFX
 	AudioManager.play_sfx(AudioManager.SFX_PULSE_WAVE)
 	# ── Phase 25: Statistics tracking ──

@@ -222,6 +222,17 @@ func _trigger_mega_pulse() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.6)
+	# ── Hit-stop on mega pulse ── A heavier freeze than the solo pulse wave
+	# (90ms @ 0.12x) because the mega pulse is a rare, triumphant co-op
+	# climax moment — the synced cast deserves a weightier beat than a solo
+	# cast. Mirrors the boss-kill hit-stop duration (90ms) but with a gentler
+	# time scale (0.12x vs 0.04x) so it reads as a dramatic pause, not a
+	# stutter. Scheduled on the scene tree with ignore_time_scale=true so
+	# the restore fires in real-time seconds. Restores to 1.0 because
+	# DimensionSystem uses per-node _time_scale multipliers.
+	Engine.time_scale = 0.12
+	var restore_timer := get_tree().create_timer(0.09, true, false, true)
+	restore_timer.timeout.connect(func(): Engine.time_scale = 1.0)
 	# Clear pending
 	_p1_pulse_pending = false
 	_p2_pulse_pending = false

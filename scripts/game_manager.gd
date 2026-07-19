@@ -7,6 +7,12 @@ extends Node
 signal hp_changed(new_hp: int, max_hp: int)
 signal xp_changed(new_xp: int, xp_to_next: int)
 signal level_up(level: int)
+## Phase polish: fires whenever the player is healed (any source). Carries the
+## heal amount so listeners can scale their reaction to the size of the heal.
+## Distinct from hp_changed (which also fires on damage) so the player mesh can
+## play a positive green flash + scale pop only on actual healing, not on every
+## HP change. This mirrors the damage_taken_from pattern.
+signal player_healed(amount: int)
 signal combo_changed(count: int)
 signal score_changed(new_score: int)
 signal player_died()
@@ -381,8 +387,18 @@ func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> 
 		cam_rig.add_trauma(amount, bias_dir)
 
 func heal(amount: int) -> void:
+	# Clamp to 0 so we never emit a heal signal for a no-op (e.g. full HP).
+	# This prevents the player mesh from flashing green when nothing actually
+	# changed, which would be confusing visual noise.
+	var actual_heal: int = min(amount, player_max_hp - player_hp)
+	if actual_heal <= 0:
+		return
 	player_hp = min(player_max_hp, player_hp + amount)
 	hp_changed.emit(player_hp, player_max_hp)
+	# Phase polish: emit a dedicated heal signal so the player mesh can play a
+	# positive green flash + scale pop. Distinct from hp_changed (which also
+	# fires on damage) so the reaction is heal-specific.
+	player_healed.emit(actual_heal)
 	# Phase 20: Audio — heal SFX
 	AudioManager.play_sfx(AudioManager.SFX_HEAL)
 
