@@ -14,7 +14,7 @@ class_name EndlessWaveHUD
 var _fade_alpha: float = 0.0
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_TOP_CENTER)
+	set_anchors_preset(Control.PRESET_CENTER_TOP)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	offset_left = -140.0
 	offset_top = 70.0

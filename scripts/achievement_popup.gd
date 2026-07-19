@@ -248,7 +248,13 @@ func _check_progress_achievements() -> void:
 			continue  # One-shot achievement — skip
 		if _unlocked.has(ach.id):
 			continue  # Already unlocked
-		var current: float = float(Statistics.get_lifetime_stat(ach.progress_key))
+		# Statistics.get_lifetime_stat returns a Variant that may be null (key
+		# not yet set) or a Dictionary (for composite stats like biome_time).
+		# float() cannot convert null or Dictionary, so guard those cases.
+		var raw: Variant = Statistics.get_lifetime_stat(ach.progress_key)
+		var current: float = 0.0
+		if typeof(raw) == TYPE_FLOAT or typeof(raw) == TYPE_INT:
+			current = float(raw)
 		_progress[ach.id] = current
 		if current >= ach.target:
 			_unlock(ach.id)

@@ -23,7 +23,7 @@ var _completed: bool = false
 var _completed_anim: float = 0.0  # 0..1 badge scale-in
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_TOP_CENTER)
+	set_anchors_preset(Control.PRESET_CENTER_TOP)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Position below the biome indicator (which sits at the top-left area).
 	# We anchor top-center and offset to a centered position.
