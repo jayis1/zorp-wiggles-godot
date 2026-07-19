@@ -308,6 +308,27 @@ func _ready() -> void:
 	fps_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(fps_ctrl)
 
+	# ── Phase 25: Game Mode HUDs — Speedrun Timer, Boss Rush, Endless Wave ──
+	# These overlays only draw when their respective mode is active; otherwise
+	# they stay invisible (alpha 0) and consume negligible overhead.
+	var srt_script := load("res://scripts/speedrun_timer.gd")
+	var srt_ctrl := Control.new()
+	srt_ctrl.set_script(srt_script)
+	srt_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(srt_ctrl)
+
+	var brh_script := load("res://scripts/boss_rush_hud.gd")
+	var brh_ctrl := Control.new()
+	brh_ctrl.set_script(brh_script)
+	brh_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(brh_ctrl)
+
+	var ewh_script := load("res://scripts/endless_wave_hud.gd")
+	var ewh_ctrl := Control.new()
+	ewh_ctrl.set_script(ewh_script)
+	ewh_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(ewh_ctrl)
+
 	# ── Phase 30/31: Register HUD with AccessibilityManager for UI scaling ──
 	# AccessibilityManager scales the fixed-offset HUD children (HP bar, minimap,
 	# labels) based on the persisted ui_scale setting. Full-rect menus are skipped.

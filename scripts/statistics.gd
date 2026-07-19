@@ -429,6 +429,22 @@ func get_items_by_type() -> Dictionary:
 func get_bosses_by_type() -> Dictionary:
 	return _lifetime.get("bosses_by_type", {})
 
+# ── Phase 25: Public lifetime setters (for GameModeManager personal bests) ──
+# These let external systems (Boss Rush, Speedrun) persist best-time records
+# without reaching into the private _lifetime dictionary.
+
+func set_lifetime_max(key: String, value: float) -> void:
+	# Public wrapper around _set_lifetime_max — only updates if the new value
+	# exceeds the existing one (used for "best" stats where higher is better).
+	_set_lifetime_max(key, value)
+
+func set_lifetime_stat(key: String, value: Variant) -> void:
+	# Direct write (overwrites). Used for split dictionaries and any stat
+	# where the caller has already computed the "best" externally.
+	_lifetime[key] = value
+	_dirty = true
+	lifetime_stat_unlocked.emit(key, float(value) if typeof(value) == TYPE_FLOAT or typeof(value) == TYPE_INT else 0.0)
+
 func format_time(seconds: float) -> String:
 	var s: int = int(seconds)
 	var h: int = s / 3600

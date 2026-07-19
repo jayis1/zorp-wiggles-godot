@@ -180,6 +180,7 @@ WanderingMerchantSpawner="*res://scripts/wandering_merchant_spawner.gd"
 PetStoneInventory="*res://scripts/pet_stone_inventory.gd"
 EquipmentSystem="*res://scripts/equipment_system.gd"
 AccessibilityManager="*res://scripts/accessibility_manager.gd"
+GameModeManager="*res://scripts/game_mode_manager.gd"
 # HermesVerify autoload REMOVED — it was a temporary ad-hoc verification script
 # that calls get_tree().quit() in _ready(), which immediately exits the game on
 # every launch. This made the game unplayable. To run verification, temporarily

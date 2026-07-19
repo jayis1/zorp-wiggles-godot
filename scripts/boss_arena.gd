@@ -80,7 +80,10 @@ func _process(delta: float) -> void:
 func _update_idle(delta: float) -> void:
 	if GameManager.current_boss != null and is_instance_valid(GameManager.current_boss):
 		return  # A boss is already active (spawned by normal spawner)
-
+	# ── Phase 25: Boss Rush mode — GameModeManager drives sequential boss
+	# spawns; the arena's auto-spawn timer is disabled to avoid conflicts. ──
+	if GameModeManager and GameModeManager.is_boss_rush():
+		return
 	# Don't auto-spawn until player has minimum score
 	if GameManager.player_score < GameConstants.BOSS_ARENA_SPAWN_MIN_SCORE:
 		return

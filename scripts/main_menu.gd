@@ -11,6 +11,7 @@ extends Control
 @onready var subtitle_label: Label = $Subtitle
 @onready var controls_label: Label = $Controls
 var _settings_menu: Control = null
+var _mode_selector: Control = null
 
 # Track hover tweens so we can kill them before starting a new one (avoid jitter)
 var _hover_tweens: Dictionary = {}  # button -> Tween
@@ -31,8 +32,80 @@ func _ready() -> void:
 	_settings_menu.mouse_filter = Control.MOUSE_FILTER_STOP
 	_settings_menu.visible = false
 	add_child(_settings_menu)
+	# ── Phase 25: Create Mode Selector UI ──
+	# A full-screen overlay that lets the player pick Normal/Endless/Boss Rush/Speedrun.
+	# The selected mode persists via GameModeManager and is used when the game starts.
+	var ms_script = load("res://scripts/mode_selector.gd")
+	_mode_selector = Control.new()
+	_mode_selector.set_script(ms_script)
+	_mode_selector.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_mode_selector.mouse_filter = Control.MOUSE_FILTER_STOP
+	_mode_selector.visible = false
+	add_child(_mode_selector)
+	# Add a "Mode Select" button between Settings and Quit
+	_add_mode_select_button()
+	# Show the currently selected mode on the subtitle
+	_update_mode_subtitle()
 	# Play entrance animation
 	_animate_entrance()
+
+# ── Phase 25: Add a "Mode Select" button to the menu programmatically ──
+# We create it in code rather than editing the .tscn so the scene file stays
+# stable. The button sits between Settings and Quit, matching their style.
+func _add_mode_select_button() -> void:
+	var mode_btn := Button.new()
+	mode_btn.name = "ModeSelectButton"
+	mode_btn.offset_left = 490.0
+	mode_btn.offset_top = 460.0
+	mode_btn.offset_right = 790.0
+	mode_btn.offset_bottom = 520.0
+	mode_btn.add_theme_font_size_override("font_size", 24)
+	# Label includes the current mode so the player sees what's selected
+	mode_btn.text = "🎮  MODE: %s" % (GameModeManager.get_mode_name() if GameModeManager else "Normal")
+	mode_btn.pressed.connect(_on_mode_select_pressed)
+	mode_btn.mouse_entered.connect(_on_button_hover.bind(mode_btn, true))
+	mode_btn.mouse_exited.connect(_on_button_hover.bind(mode_btn, false))
+	# Insert before the Quit button so the order is Start → Settings → Mode → Quit
+	# We use move_child to reposition if needed; add_child appends by default.
+	add_child(mode_btn)
+	# Move it to be before the Quit button in the tree
+	# get_index() returns the child's position in the parent's children list
+	if quit_button:
+		var quit_idx: int = quit_button.get_index()
+		if quit_idx >= 0:
+			move_child(mode_btn, quit_idx)
+	# Shift the Quit button down to make room (its offset_top is 480 → 540)
+	if quit_button:
+		quit_button.offset_top = 540.0
+		quit_button.offset_bottom = 600.0
+	# Also shift the controls label down
+	if controls_label:
+		controls_label.offset_top = 650.0
+		controls_label.offset_bottom = 760.0
+	# Connect to mode-changed signal so the button label updates live
+	if GameModeManager:
+		GameModeManager.mode_changed.connect(_on_mode_changed)
+
+func _update_mode_subtitle() -> void:
+	if not GameModeManager:
+		return
+	var mode_name: String = GameModeManager.get_mode_name()
+	var mode_icon: String = GameModeManager.get_mode_icon()
+	subtitle_label.text = "Godot Edition  |  %s %s mode" % [mode_icon, mode_name]
+
+func _on_mode_select_pressed() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	if _mode_selector:
+		_mode_selector.show_selector()
+
+# ── Phase 25: Update the mode button label when the mode changes ──
+# Connected to GameModeManager.mode_changed so the button always shows the
+# currently selected mode (e.g. after picking one in the selector overlay).
+func _on_mode_changed(_new_mode: int) -> void:
+	var mode_btn: Button = get_node_or_null("ModeSelectButton")
+	if mode_btn:
+		mode_btn.text = "🎮  MODE: %s" % (GameModeManager.get_mode_name() if GameModeManager else "Normal")
+	_update_mode_subtitle()
 
 ## Entrance animation: title fades + scales in, subtitle fades, buttons stagger up.
 ## Gives the menu a polished "presentation" feel instead of snapping in instantly.
@@ -52,7 +125,12 @@ func _animate_entrance() -> void:
 	sub_tween.tween_property(subtitle_label, "modulate:a", 1.0, 0.3) \
 		.set_ease(Tween.EASE_OUT)
 	# Buttons: slide up from below with staggered delay
-	var buttons: Array[Button] = [start_button, settings_button, quit_button]
+	# ── Phase 25: Include the Mode Select button in the stagger animation ──
+	var mode_btn_node: Button = get_node_or_null("ModeSelectButton")
+	var buttons: Array[Button] = [start_button, settings_button]
+	if mode_btn_node:
+		buttons.append(mode_btn_node)
+	buttons.append(quit_button)
 	for i in range(buttons.size()):
 		var btn: Button = buttons[i]
 		var orig_y: float = btn.offset_top

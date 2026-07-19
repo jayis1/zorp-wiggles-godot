@@ -112,6 +112,9 @@ func _process(delta: float) -> void:
 	_check_difficulty_tier_change()
 	# ── Phase 25: Progression System HP regen (Survival branch) ──
 	_update_hp_regen(delta)
+	# ── Phase 25: Game Mode Manager — per-frame mode updates (waves, timers) ──
+	if GameModeManager:
+		GameModeManager.update(delta)
 
 func _check_difficulty_tier_change() -> void:
 	var current_tier: int = get_time_difficulty_tier()
@@ -283,6 +286,9 @@ func _start_game() -> void:
 		if equip_hp > 0:
 			player_max_hp += equip_hp
 			player_hp = min(player_max_hp, player_hp + equip_hp)
+	# ── Phase 25: Game Mode Manager — reset mode-specific run state ──
+	if GameModeManager:
+		GameModeManager.start_run()
 	hp_changed.emit(player_hp, player_max_hp)
 	xp_changed.emit(player_xp, player_xp_to_next)
 

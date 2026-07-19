@@ -123,6 +123,10 @@ func _process(delta: float) -> void:
 		return
 	if not GameManager.player_is_alive and CoOpManager.p2_active and CoOpManager.p2_is_downed:
 		return  # Both players downed — stop spawning
+	# ── Phase 25: Boss Rush mode — normal spawning is disabled; the
+	# GameModeManager drives sequential boss spawns instead. ──
+	if GameModeManager and GameModeManager.is_boss_rush():
+		return
 
 	# Update pending spawns (spawn warnings)
 	_update_pending_spawns(delta)
@@ -321,6 +325,10 @@ func _scale_enemy_to_player_level(enemy: Node3D) -> void:
 			# ── Phase 28: Blood Moon weather — enemies empowered ──
 			new_hp = int(new_hp * WeatherSystem.get_enemy_hp_multiplier())
 			new_dmg = int(new_dmg * WeatherSystem.get_enemy_damage_multiplier())
+			# ── Phase 25: Endless Mode — wave-based difficulty escalation ──
+			if GameModeManager and GameModeManager.is_endless():
+				new_hp = int(new_hp * GameModeManager.get_endless_wave_hp_mult())
+				new_dmg = int(new_dmg * GameModeManager.get_endless_wave_damage_mult())
 			enemy.max_hp = new_hp
 			enemy.hp = new_hp
 			enemy.damage = new_dmg
@@ -330,6 +338,9 @@ func _scale_enemy_to_player_level(enemy: Node3D) -> void:
 				# ── Phase 28: Blood Moon weather — enemies faster ──
 				if WeatherSystem.get_current_weather() == GameConstants.Weather.BLOOD_MOON:
 					enemy.speed *= GameConstants.BLOOD_MOON_ENEMY_SPEED_MULT
+				# ── Phase 25: Endless Mode — wave-based speed escalation ──
+				if GameModeManager and GameModeManager.is_endless():
+					enemy.speed *= GameModeManager.get_endless_wave_speed_mult()
 
 func _reset_spawn_timer() -> void:
 	# Base interval decreases with player level
@@ -342,6 +353,9 @@ func _reset_spawn_timer() -> void:
 	interval /= CoOpManager.get_spawn_rate_mult()
 	# ── Phase 7: Time-based difficulty — faster spawns over time ──
 	interval *= GameManager.get_time_spawn_interval_mult()
+	# ── Phase 25: Endless Mode — wave-based spawn acceleration ──
+	if GameModeManager and GameModeManager.is_endless():
+		interval *= GameModeManager.get_endless_wave_spawn_interval_mult()
 
 	# Throttle if too many nearby enemies
 	var player: Node3D = get_tree().get_first_node_in_group("player")
