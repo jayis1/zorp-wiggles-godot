@@ -408,6 +408,14 @@ func _level_up() -> void:
 	if player and is_instance_valid(player):
 		ParticleEffects.spawn_levelup_burst(player.get_parent(), player.global_position)
 		ParticleEffects.spawn_levelup_shockwave(player.get_parent(), player.global_position)
+	# ── Level-up camera juice ── A small trauma bump + FOV kick makes leveling
+	# up feel like a moment. The trauma is gentle (0.25) so it reads as a
+	# celebratory rumble rather than a damage shake, and the FOV kick widens
+	# the view briefly for a "surge of power" sensation. The camera rig eases
+	# both back automatically (trauma decays, FOV lerps to default).
+	_trigger_camera_trauma(0.25)
+	if camera_rig and camera_rig.has_method("kick_fov"):
+		camera_rig.kick_fov(8.0)  # Widen FOV by 8° — eases back over ~1s
 
 func add_score(amount: int) -> void:
 	player_score += amount

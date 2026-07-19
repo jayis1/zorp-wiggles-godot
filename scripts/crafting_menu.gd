@@ -43,6 +43,12 @@ var _discovered_list: VBoxContainer
 var _material_buttons: Dictionary = {}  # CollectibleType → Button
 var _equipped_name_label: Label
 
+# Track hover tweens so we can kill them before starting a new one (avoid jitter).
+# Matches the hover-juice pattern used in main_menu, pause_menu, and death_screen
+# so all Button-based menus share a cohesive feel: buttons grow ~6% on hover with
+# a quick ease-out quad, and play a subtle UI click sound on enter (not exit).
+var _hover_tweens: Dictionary = {}  # button -> Tween
+
 func _ready() -> void:
 	# Build the entire UI programmatically (no .tscn needed)
 	_build_ui()
@@ -135,6 +141,10 @@ func _build_ui() -> void:
 		btn.custom_minimum_size = Vector2(180, 50)
 		btn.add_theme_font_size_override("font_size", 12)
 		btn.pressed.connect(_on_material_button_pressed.bind(mat_type))
+		# Hover juice — material buttons get the same scale-up + click-sound
+		# treatment as the action buttons for a cohesive feel.
+		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
+		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
 		_material_grid.add_child(btn)
 		_material_buttons[mat_type] = btn
 	
@@ -177,6 +187,12 @@ func _build_ui() -> void:
 	_close_button.custom_minimum_size = Vector2(160, 32)
 	_close_button.pressed.connect(_on_close_pressed)
 	left_vbox.add_child(_close_button)
+	
+	# Connect hover signals for the action buttons (craft, clear, close) so
+	# they get the same scale-up + click-sound juice as the main/pause menus.
+	for btn in [_craft_button, _clear_button, _close_button]:
+		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
+		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
 	
 	# Right column: Discovered mods
 	_discovered_panel = Panel.new()
@@ -361,9 +377,47 @@ func _update_discovered_list() -> void:
 			equip_btn.custom_minimum_size = Vector2(60, 24)
 			equip_btn.add_theme_font_size_override("font_size", 11)
 			equip_btn.pressed.connect(_on_equip_mod_pressed.bind(mod_id))
+			# Hover juice on dynamically-created equip buttons too.
+			equip_btn.mouse_entered.connect(_on_button_hover.bind(equip_btn, true))
+			equip_btn.mouse_exited.connect(_on_button_hover.bind(equip_btn, false))
 			entry.add_child(equip_btn)
 
 # ─── Button Handlers ──────────────────────────────────────────────────────────
+
+## Hover effect: buttons grow slightly (~6%) on hover and shrink back on exit.
+## Mirrors the main/pause/death-screen hover juice so all Button-based menus
+## share a cohesive feel. Uses a kill-and-recreate tween pattern to avoid jitter
+## from overlapping tweens. Plays a subtle UI click sound on enter only (not exit,
+## to avoid sound spam). Disabled buttons are skipped so they don't feel
+## interactive. The _hover_tweens dict is cleaned of freed entries opportunistically
+## — equip buttons are freed/recreated when the discovered list refreshes, so
+## stale entries would otherwise accumulate.
+func _on_button_hover(btn: Button, is_hovering: bool) -> void:
+	if not is_instance_valid(btn):
+		return
+	# Skip the grow effect for disabled buttons, but still allow the shrink
+	# (exit) to run so a button that was scaled up before being disabled
+	# (e.g. a material button that ran out of stock mid-hover) resets cleanly.
+	if btn.disabled and is_hovering:
+		return
+	# Kill any existing hover tween on this button
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+		_hover_tweens.erase(btn)
+	# Opportunistic cleanup: drop entries for freed buttons (equip buttons get
+	# recreated on each _update_discovered_list call).
+	for key in _hover_tweens.keys():
+		if not is_instance_valid(key):
+			_hover_tweens.erase(key)
+	var tween := create_tween()
+	var target_scale := Vector2(1.06, 1.06) if is_hovering else Vector2.ONE
+	tween.tween_property(btn, "scale", target_scale, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+	if is_hovering and not btn.disabled:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 
 func _on_material_button_pressed(mat_type: int) -> void:
 	if _selected_materials.has(mat_type):

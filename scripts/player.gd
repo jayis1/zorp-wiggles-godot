@@ -169,6 +169,9 @@ func _ready() -> void:
 		GameManager.damage_taken_from.connect(_on_player_damaged_pet_emote)
 	if not GameManager.level_up.is_connected(_on_player_levelup_pet_emote):
 		GameManager.level_up.connect(_on_player_levelup_pet_emote)
+	# ── Level-up celebration reaction (mesh pop + golden emission flash) ──
+	if not GameManager.level_up.is_connected(_on_player_levelup_visual):
+		GameManager.level_up.connect(_on_player_levelup_visual)
 
 
 # ── Phase 27: Pet emote reaction callbacks ──
@@ -475,6 +478,16 @@ func _play_landing_effect() -> void:
 #    The squash direction is biased away from the damage source so Zorp
 #    visibly recoils from the attacker.
 var _dmg_squash_tween: Tween = null
+
+# ── Level-up celebration reaction ── When Zorp levels up, the mesh does a
+#    quick celebratory "grow" pop (scale up to 1.3 then settle with elastic
+#    wobble) and the emission flashes gold-green. This is the positive
+#    counterpart to the damage squash — a joyful bounce instead of a painful
+#    flattening. Skipped during dash/slide (their tweens own mesh.scale) and
+#    uses a tracked tween so rapid level-ups don't stack. The golden emission
+#    is distinct from the red damage flash so the player can read both states
+#    at a glance.
+var _levelup_tween: Tween = null
 func _on_player_damaged(source_pos: Vector3) -> void:
 	# Skip if dash/slide tweens own mesh.scale — we'd fight them.
 	if is_dashing or is_sliding:
@@ -519,6 +532,42 @@ func _on_player_damaged(source_pos: Vector3) -> void:
 		# Emission color eases back to base_color * 0.4 (the idle emission)
 		emit_tween.parallel().tween_property(_player_material, "emission",
 			base_color * 0.4, 0.35) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+## Level-up celebration: Zorp's mesh does a joyful "grow" pop (scale up to 1.3x
+## then settle with an elastic wobble) and the emission flashes gold-green —
+## the positive counterpart to the damage squash. Skipped during dash/slide
+## (their tweens own mesh.scale) and uses a tracked tween so rapid level-ups
+## don't stack. The golden emission is distinct from the red damage flash so
+## the player can read both states at a glance.
+func _on_player_levelup_visual(_level: int) -> void:
+	if is_dashing or is_sliding:
+		return
+	if not mesh:
+		return
+	# Kill any in-progress level-up tween so repeated level-ups restart cleanly
+	if _levelup_tween and _levelup_tween.is_valid():
+		_levelup_tween.kill()
+	_levelup_tween = create_tween()
+	# Joyful grow: scale up to 1.3x in 80ms with a slight overshoot, then
+	# settle back to 1.0 with an elastic wobble. This is the inverse of the
+	# damage squash (which flattens) — growing reads as "powering up".
+	_levelup_tween.tween_property(mesh, "scale", Vector3.ONE * 1.3, 0.08) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_levelup_tween.tween_property(mesh, "scale", Vector3.ONE, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Golden-green emission flash — distinct from the red damage flash.
+	# The energy spikes then eases back to the idle level; the color eases
+	# from gold back to the base alien-green emission.
+	if _player_material:
+		_player_material.emission = Color(1.0, 0.85, 0.2)
+		_player_material.emission_energy_multiplier = 3.5
+		var emit_tween := create_tween()
+		emit_tween.tween_property(_player_material, "emission_energy_multiplier",
+			1.0, 0.4) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		emit_tween.parallel().tween_property(_player_material, "emission",
+			base_color * 0.4, 0.45) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 func _handle_movement(delta: float) -> void:
