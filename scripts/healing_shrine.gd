@@ -14,6 +14,16 @@ var _bob_offset: float = 0.0
 var _glow_phase: float = 0.0
 var _time: float = 0.0
 
+# ── Discharge animation ── When the player touches the shrine, the crystal
+#    does a quick scale-pop and the OmniLight flashes bright before fading
+#    back to its ambient glow. The _process loop drives the crystal's scale
+#    every frame (a sine pulse), so a direct scale tween would be overwritten.
+#    Instead we tween a multiplier (_discharge_scale_mult) that _process
+#    folds into the pulse — the pop layers on top of the breathing animation
+#    without fighting it. Heal particles also burst on activation.
+var _discharge_scale_mult: float = 1.0
+var _discharge_light_energy: float = 0.0  # Extra light energy added on top of ambient
+
 # ─── Child nodes ─────────────────────────────────────────────────────────────
 var _base: MeshInstance3D
 var _crystal: MeshInstance3D
@@ -88,7 +98,10 @@ func _process(delta: float) -> void:
 	# Pulse the central crystal
 	if _crystal:
 		var pulse: float = 0.9 + 0.3 * sin(_time * 2.5 + _glow_phase)
-		_crystal.scale = Vector3(pulse, pulse, pulse)
+		# Fold the discharge multiplier in so the activation pop layers on
+		# top of the breathing pulse without fighting the per-frame scale set.
+		var s: float = pulse * _discharge_scale_mult
+		_crystal.scale = Vector3(s, s, s)
 
 	# Rotate ring slowly
 	if _ring:
@@ -111,7 +124,7 @@ func _process(delta: float) -> void:
 			if mat3:
 				mat3.albedo_color = Color(60.0 / 255.0, 100.0 / 255.0, 70.0 / 255.0, 10.0 / 255.0)
 		if _light:
-			_light.light_energy = 0.3
+			_light.light_energy = 0.3 + _discharge_light_energy
 	else:
 		# Active/ready state — vibrant green glow
 		var glow_a: float = (80.0 + 40.0 * sin(_time * 3.0)) / 255.0
@@ -128,7 +141,7 @@ func _process(delta: float) -> void:
 			if mat3:
 				mat3.albedo_color = Color(100.0 / 255.0, 1.0, 150.0 / 255.0, 30.0 / 255.0)
 		if _light:
-			_light.light_energy = 1.0 + 0.3 * sin(_time * 3.0)
+			_light.light_energy = 1.0 + 0.3 * sin(_time * 3.0) + _discharge_light_energy
 
 func _on_body_entered(body: Node3D) -> void:
 	if not body.is_in_group("player"):
@@ -146,6 +159,39 @@ func _on_body_entered(body: Node3D) -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.1)
+
+	# ── Discharge animation ── The crystal pops in scale and the OmniLight
+	#    flashes bright, then both ease back to their ambient state. The
+	#    scale pop is driven via _discharge_scale_mult (tweened here, folded
+	#    into the breathing pulse by _process) so it doesn't fight the
+	#    per-frame scale set. The light flash adds extra energy on top of
+	#    the ambient glow, also via _process. Together they give the heal a
+	#    satisfying "discharge" read — the shrine visibly expends energy.
+	_play_discharge_animation()
+	# Heal particles — green sparkle burst rising from the crystal.
+	if ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(get_parent(), global_position + Vector3(0, 3.0, 0),
+			GameConstants.SHRINE_CRYSTAL_COLOR)
+
+## Play the activation discharge: crystal scale-pop + light flash burst.
+## The scale multiplier snaps to 1.5 (a sharp "snap" to the pop peak) then
+## eases back to 1.0 with an elastic settle so the crystal wobbles back to
+## its breathing pulse. The light energy spikes to 4.0 then fades to 0 over
+## 0.5s (ease-out-quad) so the flash is punchy then gentle. Both tweens are
+## independent (no tracking needed) because the multiplier/energy are simple
+## floats that _process reads each frame — a new activation while a previous
+## tween is still running just restarts the values from the snap point.
+func _play_discharge_animation() -> void:
+	# Scale pop: snap to 1.5, elastic settle back to 1.0.
+	_discharge_scale_mult = 1.5
+	var scale_tween := create_tween()
+	scale_tween.tween_property(self, "_discharge_scale_mult", 1.0, 0.45) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Light flash: spike to 4.0 extra energy, fade to 0 over 0.5s.
+	_discharge_light_energy = 4.0
+	var light_tween := create_tween()
+	light_tween.tween_property(self, "_discharge_light_energy", 0.0, 0.5) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 # ─── Mesh helpers ────────────────────────────────────────────────────────────
 

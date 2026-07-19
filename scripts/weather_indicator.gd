@@ -20,6 +20,15 @@ var _current_color: Color = Color(1, 1, 0.5)
 # ── Phase 28: Weather combo indicator ──
 var _combo_label: Label = null
 
+# ── Icon pop animation ── When the weather changes, the icon used to just
+#    snap-swap its text and color. Now it does a quick scale-pop (shrink to
+#    0.6, then overshoot back to 1.0 with an elastic settle) so the change
+#    reads as a deliberate "shift" rather than a silent text replace. The
+#    tween is tracked and killed before starting a new one so rapid weather
+#    changes don't stack. The icon's pivot is set to its center in _ready
+#    so the scale grows from the middle, not the top-left corner.
+var _icon_pop_tween: Tween = null
+
 func _ready() -> void:
 	# Position top-right corner (below where minimap usually sits)
 	set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -43,6 +52,10 @@ func _ready() -> void:
 	_icon_label.add_theme_font_size_override("font_size", 22)
 	_icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_icon_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
+	# Center the pivot so the weather-change scale-pop grows from the middle
+	# of the icon, not the top-left corner. The icon rect is 40×30, so the
+	# center is at (20, 15) in local coordinates.
+	_icon_label.pivot_offset = Vector2(20.0, 15.0)
 	add_child(_icon_label)
 
 	# Weather name label
@@ -129,6 +142,7 @@ func _process(delta: float) -> void:
 
 func _on_weather_changed(new_weather: int, old_weather: int) -> void:
 	_update_display(new_weather)
+	_play_icon_pop()
 
 func _on_transition_started(new_weather: int) -> void:
 	_transition_timer = GameConstants.WEATHER_TRANSITION_DURATION
@@ -138,6 +152,7 @@ func _on_transition_ended(weather: int) -> void:
 	if _transition_label:
 		_transition_label.text = ""
 	_update_display(weather)
+	_play_icon_pop()
 
 func _on_timer_changed(time_remaining: float) -> void:
 	# Update timer bar width based on remaining time
@@ -169,6 +184,26 @@ func _update_display(weather: int) -> void:
 		var c: Color = col
 		c.a = 0.9
 		_timer_bar.color = c
+
+## Play a quick scale-pop on the weather icon so a weather change reads as
+## a deliberate visual "shift" rather than a silent text swap. The icon
+## shrinks to 0.6 (a small "wind-up"), then overshoots back to 1.0 with an
+## elastic settle — the same juice language used on combo text and level-up
+## popups. The tween is tracked and killed before starting a new one so
+## rapid weather changes (e.g. combo transitions) don't stack into jitter.
+## Skipped if the icon node is missing or being freed.
+func _play_icon_pop() -> void:
+	if not _icon_label or not is_instance_valid(_icon_label):
+		return
+	if _icon_pop_tween and _icon_pop_tween.is_valid():
+		_icon_pop_tween.kill()
+	_icon_pop_tween = create_tween()
+	# Quick shrink to 0.6 in 60ms — the "wind-up" before the pop.
+	_icon_pop_tween.tween_property(_icon_label, "scale", Vector2(0.6, 0.6), 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	# Overshoot back to 1.0 with an elastic settle for a bouncy, juicy return.
+	_icon_pop_tween.tween_property(_icon_label, "scale", Vector2.ONE, 0.22) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 # ── Phase 28: Weather combo indicator handlers ──
 func _on_combo_started(combo_weather: int, primary_weather: int) -> void:
