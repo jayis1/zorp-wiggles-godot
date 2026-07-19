@@ -25,6 +25,9 @@ var _cb_label: Label
 var _cb_btn: Button
 var _scale_label: Label
 var _scale_slider: HSlider
+var _rebind_menu: Control = null  # Phase 31: Control rebinding overlay
+var _autosave_btn: Button = null  # Phase 31: Auto-save toggle
+var _tutorial_btn: Button = null  # Phase 31: Tutorial replay button
 # Track the entrance tween so we can kill it before starting a new one
 var _entrance_tween: Tween = null
 # Track whether the menu is currently animating out (prevents re-show flicker)
@@ -167,6 +170,57 @@ func _build_ui() -> void:
 	_scale_slider.value_changed.connect(_on_ui_scale_changed)
 	add_child(_scale_slider)
 
+	# ── Phase 31: Rebind Controls button ──
+	# Opens the control rebinding overlay (full-screen). Sits below the UI
+	# scale slider and above the back button.
+	var rebind_btn := Button.new()
+	rebind_btn.offset_left = 320.0
+	rebind_btn.offset_top = acc_y + 130.0
+	rebind_btn.offset_right = 840.0
+	rebind_btn.offset_bottom = acc_y + 160.0
+	rebind_btn.text = "⌨  Rebind Controls..."
+	rebind_btn.add_theme_font_size_override("font_size", 14)
+	add_child(rebind_btn)
+	rebind_btn.pressed.connect(_on_rebind_controls)
+	# Create the rebind menu (hidden by default)
+	var rb_script = load("res://scripts/control_rebind_menu.gd")
+	_rebind_menu = Control.new()
+	_rebind_menu.set_script(rb_script)
+	_rebind_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_rebind_menu.mouse_filter = Control.MOUSE_FILTER_STOP
+	_rebind_menu.visible = false
+	add_child(_rebind_menu)
+
+	# ── Phase 31: Gameplay section — auto-save toggle, tutorial replay ──
+	var game_y: float = acc_y + 175.0
+	var game_label := _make_label("── Gameplay ──", 320.0, game_y, 360.0, 24.0)
+	game_label.add_theme_color_override("font_color", Color(0.85, 0.9, 1.0))
+	add_child(game_label)
+
+	# Auto-save toggle button
+	var autosave_label := _make_label("Auto-Save", 320.0, game_y + 30.0, 200.0, 30.0)
+	add_child(autosave_label)
+	_autosave_btn = Button.new()
+	_autosave_btn.offset_left = 540.0
+	_autosave_btn.offset_top = game_y + 28.0
+	_autosave_btn.offset_right = 840.0
+	_autosave_btn.offset_bottom = game_y + 56.0
+	_autosave_btn.add_theme_font_size_override("font_size", 14)
+	add_child(_autosave_btn)
+	_autosave_btn.pressed.connect(_on_autosave_toggle)
+	_refresh_autosave_label()
+
+	# Tutorial replay button
+	_tutorial_btn = Button.new()
+	_tutorial_btn.offset_left = 320.0
+	_tutorial_btn.offset_top = game_y + 65.0
+	_tutorial_btn.offset_right = 840.0
+	_tutorial_btn.offset_bottom = game_y + 95.0
+	_tutorial_btn.text = "🎓  Replay Tutorial"
+	_tutorial_btn.add_theme_font_size_override("font_size", 14)
+	add_child(_tutorial_btn)
+	_tutorial_btn.pressed.connect(_on_tutorial_replay)
+
 	# Back button
 	_back_btn = Button.new()
 	_back_btn.offset_left = 490.0
@@ -179,7 +233,7 @@ func _build_ui() -> void:
 	_back_btn.pressed.connect(_on_back)
 	# Connect hover signals for all settings buttons so they share the
 	# cohesive hover-juice used across every other Button-based menu.
-	for btn in [_back_btn, _filter_btn, _cb_btn]:
+	for btn in [_back_btn, _filter_btn, _cb_btn, rebind_btn]:
 		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
 
@@ -218,6 +272,7 @@ func show_menu() -> void:
 	# Refresh accessibility controls
 	_refresh_filter_label()
 	_refresh_colorblind_label()
+	_refresh_autosave_label()
 	if _scale_slider:
 		_scale_slider.value = AccessibilityManager.get_ui_scale() * 100.0
 	# ── Entrance animation: background fades in, panel scales up from 0.85
@@ -287,7 +342,7 @@ func _refresh_filter_label() -> void:
 		return
 	var mode: int = AccessibilityManager.get_filter()
 	_filter_btn.text = AccessibilityManager.FILTER_NAMES[mode] + "  ▸"
-	_filter_btn.modulate = Color(1.0, 1.0, 1.0) if mode == 0 else Color(1.2, 1.1, 0.9)
+	_filter_btn.modulate = Color(1.0, 1.0, 1.0) if mode == 0 else Color(1.0, 0.95, 0.8)
 
 func _on_colorblind_cycle() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
@@ -299,11 +354,42 @@ func _refresh_colorblind_label() -> void:
 		return
 	var mode: int = AccessibilityManager.get_colorblind_mode()
 	_cb_btn.text = AccessibilityManager.COLORBLIND_NAMES[mode] + "  ▸"
-	_cb_btn.modulate = Color(1.0, 1.0, 1.0) if mode == 0 else Color(1.1, 1.2, 1.0)
+	_cb_btn.modulate = Color(1.0, 1.0, 1.0) if mode == 0 else Color(0.9, 1.0, 0.9)
 
 func _on_ui_scale_changed(value: float) -> void:
 	AccessibilityManager.set_ui_scale(value / 100.0)
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+
+# ── Phase 31: Open the control rebinding overlay ──
+func _on_rebind_controls() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	if _rebind_menu:
+		_rebind_menu.visible = true
+		_rebind_menu.show_menu()
+
+# ── Phase 31: Auto-save toggle ──
+func _on_autosave_toggle() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	if SaveSystem and SaveSystem.has_method("toggle_autosave"):
+		SaveSystem.toggle_autosave()
+	_refresh_autosave_label()
+
+func _refresh_autosave_label() -> void:
+	if not _autosave_btn:
+		return
+	if SaveSystem and SaveSystem.autosave_enabled:
+		_autosave_btn.text = "ON  ✓"
+		_autosave_btn.modulate = Color(0.9, 1.0, 0.9)
+	else:
+		_autosave_btn.text = "OFF  ✗"
+		_autosave_btn.modulate = Color(1.0, 1.0, 1.0)
+
+# ── Phase 31: Tutorial replay ──
+func _on_tutorial_replay() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	if TutorialManager and TutorialManager.has_method("replay"):
+		TutorialManager.replay()
+		GameManager.add_message("🎓 Tutorial will replay as you play")
 
 ## Hover effect: buttons grow slightly (~6%) on hover and shrink back on exit.
 ## Mirrors the main/pause/crafting/death/victory menu hover juice so all

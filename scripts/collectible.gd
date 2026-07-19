@@ -506,6 +506,9 @@ func _collect() -> void:
 	# ── Phase 25: Statistics tracking — record item collection ──
 	if Statistics:
 		Statistics.record_item_collected(collectible_type)
+	# ── Phase 31: Tutorial — first pickup notification ──
+	if TutorialManager and TutorialManager.has_method("notify_first_pickup"):
+		TutorialManager.notify_first_pickup()
 	# Phase 20: Audio — pickup SFX (rare items get a different sound)
 	var is_rare: bool = collectible_type in [
 		GameConstants.CollectibleType.METEOR_SHARD,

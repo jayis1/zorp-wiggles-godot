@@ -192,6 +192,13 @@ func _ready() -> void:
 	# This must run AFTER the player material is created above so the color
 	# override takes effect on the existing material.
 	_apply_character_profile()
+	# ── Phase 31: Save/Load — restore saved position if a save was loaded ──
+	# SaveSystem.load_and_restart() stashes the saved position on itself before
+	# reloading the scene. After the new player node is ready, we pull that
+	# position and teleport the player there. This runs once on the first frame
+	# and the meta is cleared so subsequent restarts don't restore.
+	if SaveSystem and SaveSystem.has_method("try_restore_player_position"):
+		SaveSystem.try_restore_player_position(self)
 
 
 # ── Phase 27: Pet emote reaction callbacks ──
@@ -208,6 +215,106 @@ func _on_player_damaged_pet_emote(_source_pos: Vector3) -> void:
 func _on_player_levelup_pet_emote(_level: int) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
 		pet.trigger_emote(GameConstants.PetEmote.HAPPY)
+
+# ── Phase 31: Tooltip system — raycast from camera to find what the player
+#    is looking at and show a tooltip for collectibles/enemies near the
+#    crosshair. Runs in _process (not _physics_process) so it stays smooth
+#    even when the game is paused (tooltips on menu items still work).
+var _tooltip_check_timer: float = 0.0
+const TOOLTIP_CHECK_INTERVAL: float = 0.1  # Check every 100ms (not every frame)
+const TOOLTIP_HOVER_RANGE: float = 8.0  # Max distance for entity tooltips
+
+func _process(_delta: float) -> void:
+	if GameManager.is_paused or not GameManager.player_is_alive:
+		if TooltipManager and TooltipManager.has_method("hide_tooltip"):
+			TooltipManager.hide_tooltip()
+		return
+	# Throttle the raycast check (every 100ms is plenty for tooltips)
+	_tooltip_check_timer += _delta
+	if _tooltip_check_timer < TOOLTIP_CHECK_INTERVAL:
+		return
+	_tooltip_check_timer = 0.0
+	_update_entity_tooltip()
+
+func _update_entity_tooltip() -> void:
+	if not TooltipManager or not TooltipManager.has_method("show_tooltip"):
+		return
+	# Find the nearest collectible or enemy within hover range of the player's
+	# aim direction. We use a simple distance + forward-dot check rather than
+	# a physics raycast (cheaper and works for Area3D collectibles that may
+	# not have collision).
+	var aim_dir: Vector3 = get_shoot_direction()
+	if aim_dir.length_squared() < 0.01:
+		return
+	var my_pos: Vector3 = global_position
+	var best_entity: Node3D = null
+	var best_dist: float = TOOLTIP_HOVER_RANGE
+	# Check collectibles
+	for coll in GameManager.collectibles:
+		if not is_instance_valid(coll):
+			continue
+		var d: float = my_pos.distance_to(coll.global_position)
+		if d > best_dist:
+			continue
+		var to_ent: Vector3 = (coll.global_position - my_pos).normalized()
+		if to_ent.dot(aim_dir) > 0.85:  # Within ~30° of aim
+			best_dist = d
+			best_entity = coll
+	# Check enemies (only if no collectible found — collectibles take priority)
+	if not best_entity:
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			var ed: float = my_pos.distance_to(enemy.global_position)
+			if ed > best_dist:
+				continue
+			var to_ent: Vector3 = (enemy.global_position - my_pos).normalized()
+			if to_ent.dot(aim_dir) > 0.85:
+				best_dist = ed
+				best_entity = enemy
+	if best_entity:
+		_show_entity_tooltip(best_entity)
+	else:
+		TooltipManager.hide_tooltip()
+
+func _show_entity_tooltip(entity: Node3D) -> void:
+	var title: String = ""
+	var body: String = ""
+	if entity.is_in_group("collectibles") or entity.has_method("get_collectible_type"):
+		# Collectible tooltip
+		var ctype: int = entity.get("collectible_type") if entity.get("collectible_type") != null else 0
+		# Name from the COLLECTIBLE_NAMES array
+		if ctype >= 0 and ctype < GameConstants.COLLECTIBLE_NAMES.size():
+			title = GameConstants.COLLECTIBLE_NAMES[ctype]
+		else:
+			title = "Item"
+		# XP value from collectible.gd TYPE_CONFIG (accessed via the entity's config)
+		var xp_val: int = 0
+		if entity.has_method("get") and entity.get("collectible_type") != null:
+			# Use the value from the collectible's config if accessible
+			xp_val = int(entity.get("xp_value")) if entity.get("xp_value") != null else 0
+		var rarity: String = "Common"
+		if ctype in [GameConstants.CollectibleType.METEOR_SHARD, GameConstants.CollectibleType.QUANTUM_FUZZ, GameConstants.CollectibleType.NEBULA_DUST]:
+			rarity = "★ Rare"
+		elif ctype in [GameConstants.CollectibleType.EMBER_STONE, GameConstants.CollectibleType.FROST_STONE, GameConstants.CollectibleType.SPARK_STONE, GameConstants.CollectibleType.VOID_STONE, GameConstants.CollectibleType.LEAF_STONE]:
+			rarity = "★★ Very Rare"
+		body = "Rarity: %s" % rarity
+		if GameConstants.CRAFTING_MATERIALS.has(ctype):
+			body += "\nCrafting Material"
+		if ctype == GameConstants.CollectibleType.HEALTH_FRAGMENT:
+			body += "\nRestores HP on pickup"
+		elif ctype == GameConstants.CollectibleType.XP_ORB:
+			body += "\nGrants XP on pickup"
+	elif entity.is_in_group("enemies"):
+		# Enemy tooltip
+		var ename: String = String(entity.get("enemy_name") if entity.get("enemy_name") != null else "Enemy")
+		var hp: int = int(entity.get("hp") if entity.get("hp") != null else 0)
+		var max_hp: int = int(entity.get("max_hp") if entity.get("max_hp") != null else 0)
+		var dmg: int = int(entity.get("damage") if entity.get("damage") != null else 0)
+		title = ename
+		body = "HP: %d / %d\nDamage: %d" % [hp, max_hp, dmg]
+	if not title.is_empty():
+		TooltipManager.show_tooltip(title, body)
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused:
@@ -762,6 +869,9 @@ func _start_dash() -> void:
 	# ── Phase 25: Statistics tracking ──
 	if Statistics:
 		Statistics.record_dash()
+	# ── Phase 31: Tutorial — first dash notification ──
+	if TutorialManager and TutorialManager.has_method("notify_first_dash"):
+		TutorialManager.notify_first_dash()
 
 	# Camera shake on dash for punch
 	_trigger_camera_trauma(0.15)
@@ -1204,6 +1314,9 @@ func _try_shoot() -> void:
 	# ── Phase 25: Statistics tracking ──
 	if Statistics:
 		Statistics.record_shot()
+	# ── Phase 31: Tutorial — first shot notification ──
+	if TutorialManager and TutorialManager.has_method("notify_first_shot"):
+		TutorialManager.notify_first_shot()
 
 ## Try to shoot; if on cooldown, buffer the input so it fires as soon as ready.
 ## This prevents dropped clicks during rapid fire and makes shooting feel snappy.
@@ -1495,6 +1608,9 @@ func _toggle_pet() -> void:
 		GameManager.add_message("🐾 Companion pet summoned! Press F to dismiss, G to fetch.")
 		# Phase 20: Audio — pet summon SFX
 		AudioManager.play_sfx(AudioManager.SFX_PET)
+		# ── Phase 31: Tutorial — first pet summon notification ──
+		if TutorialManager and TutorialManager.has_method("notify_pet_summoned"):
+			TutorialManager.notify_pet_summoned()
 		print("[Player] Pet summoned at %s" % pet.global_position)
 
 

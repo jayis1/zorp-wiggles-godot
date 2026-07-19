@@ -93,6 +93,25 @@ func is_mod_discovered(mod_id: int) -> bool:
 func get_discovered_mods() -> Array[int]:
 	return _discovered_mods.duplicate()
 
+# ── Phase 31: Save/Load setters (called by SaveSystem) ──
+## Replace the entire material inventory from a save file.
+func set_inventory(inv: Dictionary) -> void:
+	_inventory = inv.duplicate()
+	inventory_changed.emit()
+
+## Replace the discovered mods list from a save file.
+func set_discovered_mods(mods: Array) -> void:
+	_discovered_mods.clear()
+	for m in mods:
+		_discovered_mods.append(int(m))
+	if not _discovered_mods.has(GameConstants.WeaponMod.NONE):
+		_discovered_mods.append(GameConstants.WeaponMod.NONE)
+
+## Force-set the equipped mod (used by save/load — bypasses the discovered check).
+func set_equipped_mod(mod_id: int) -> void:
+	_equipped_mod = mod_id
+	mod_equipped.emit(mod_id)
+
 ## Attempt to craft a weapon mod from a list of material types.
 ## Returns the crafted mod ID on success, or -1 if no recipe matched / not enough materials.
 func craft_mod(material_types: Array) -> int:

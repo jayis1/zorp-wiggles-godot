@@ -307,6 +307,27 @@ enum CollectibleType {
 	LEAF_STONE,      # Nature path
 }
 
+# ── Phase 31: Collectible display names (for tooltips) ──
+const COLLECTIBLE_NAMES: Array[String] = [
+	"Star Fruit",        # 0
+	"Meteor Shard",      # 1
+	"Quantum Fuzz",      # 2
+	"Nebula Dust",       # 3
+	"Space Gloop",       # 4
+	"XP Orb",            # 5
+	"Health Fragment",   # 6
+	"Shield Crystal",   # 7
+	"Fireball Scroll",  # 8
+	"Regen Crystal",    # 9
+	"Magnet Core",      # 10
+	"Toxic Extract",    # 11
+	"Ember Stone",      # 12
+	"Frost Stone",      # 13
+	"Spark Stone",      # 14
+	"Void Stone",       # 15
+	"Leaf Stone",       # 16
+]
+
 # Collectible types that are crafting materials (used by weapon mod system)
 const CRAFTING_MATERIALS: Array[int] = [
 	CollectibleType.METEOR_SHARD,

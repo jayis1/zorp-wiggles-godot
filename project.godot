@@ -196,6 +196,10 @@ GameModeManager="*res://scripts/game_mode_manager.gd"
 CosmeticManager="*res://scripts/cosmetic_manager.gd"
 CharacterSelectManager="*res://scripts/character_select_manager.gd"
 DeathReplay="*res://scripts/death_replay.gd"
+SaveSystem="*res://scripts/save_system.gd"
+ControlRebind="*res://scripts/control_rebind.gd"
+TutorialManager="*res://scripts/tutorial_manager.gd"
+TooltipManager="*res://scripts/tooltip_manager.gd"
 # HermesVerify autoload REMOVED — it was a temporary ad-hoc verification script
 # that calls get_tree().quit() in _ready(), which immediately exits the game on
 # every launch. This made the game unplayable. To run verification, temporarily

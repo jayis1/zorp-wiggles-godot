@@ -145,6 +145,27 @@ func get_skill_points() -> int:
 func get_total_sp_earned() -> int:
 	return _total_skill_points_earned
 
+# ── Phase 31: Save/Load setters (called by SaveSystem) ──
+## Get a copy of all skill ranks { skill_key: rank } for serialization.
+func get_all_skill_ranks() -> Dictionary:
+	return _skill_ranks.duplicate()
+
+## Replace all skill ranks from a save file (used by SaveSystem).
+func set_all_skill_ranks(ranks: Dictionary) -> void:
+	_skill_ranks = ranks.duplicate()
+	_save()
+
+## Set the unspent skill-point count from a save file.
+func set_skill_points(amount: int) -> void:
+	_skill_points = max(0, amount)
+	skill_points_changed.emit(_skill_points)
+	_save()
+
+## Set the prestige level from a save file.
+func set_prestige_level(level: int) -> void:
+	_prestige_level = max(0, level)
+	_save()
+
 func _on_level_up(level: int) -> void:
 	# 1 SP per level, +1 bonus every 5 levels
 	var sp_gain: int = 1

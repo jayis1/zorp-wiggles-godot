@@ -196,11 +196,38 @@ func get_piece_upgrade_level(piece_id: int) -> int:
 func get_owned_pieces() -> Array:
 	return _owned_pieces.keys()
 
+## Get the full owned-pieces dictionary { piece_id: upgrade_level }.
+## Used by SaveSystem to serialize both ownership and upgrade state.
+func get_owned_pieces_dict() -> Dictionary:
+	return _owned_pieces.duplicate()
+
 ## What's equipped in the given slot? Returns EquipPiece enum int or -1.
 func get_equipped_piece(slot: int) -> int:
 	if slot < 0 or slot >= GameConstants.EQUIP_SLOT_COUNT:
 		return -1
 	return _equipped[slot]
+
+# ── Phase 31: Save/Load setters (called by SaveSystem) ──
+## Replace the rare-material inventory from a save file.
+func set_rare_material_inventory(inv: Dictionary) -> void:
+	_rare_materials = inv.duplicate()
+	rare_material_changed.emit()
+
+## Replace the consumable inventory from a save file.
+func set_consumable_inventory(inv: Dictionary) -> void:
+	_consumables = inv.duplicate()
+	consumable_changed.emit()
+
+## Replace the owned-pieces dictionary { piece_id: upgrade_level } from a save.
+func set_owned_pieces(pieces: Dictionary) -> void:
+	_owned_pieces = pieces.duplicate()
+	equipment_changed.emit()
+
+## Force-set all three equipped slots from a save (bypasses ownership check).
+func set_equipped_pieces(eq: Array) -> void:
+	for i in range(min(3, eq.size())):
+		_equipped[i] = int(eq[i])
+	equipment_changed.emit()
 
 ## Equip a piece to its slot. Returns true on success.
 func equip_piece(piece_id: int) -> bool:

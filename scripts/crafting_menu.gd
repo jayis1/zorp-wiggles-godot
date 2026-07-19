@@ -261,6 +261,9 @@ func _on_menu_toggled(is_open: bool) -> void:
 		_update_equipped_label()
 		_clear_selection()
 		_result_label.text = ""
+		# ── Phase 31: Tutorial — first crafting menu open ──
+		if TutorialManager and TutorialManager.has_method("notify_crafting_opened"):
+			TutorialManager.notify_crafting_opened()
 		# Entrance animation: the background panel fades in + scales up from
 		# 0.92 with a gentle overshoot. Matches the pause menu's slide-in feel
 		# so all overlay menus share a cohesive "juice" language. The panel's

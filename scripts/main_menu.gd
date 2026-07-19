@@ -13,6 +13,7 @@ extends Control
 var _settings_menu: Control = null
 var _mode_selector: Control = null
 var _character_select: Control = null  # Phase 30: Character select screen
+var _continue_button: Button = null  # Phase 31: Continue from save
 
 # Track hover tweens so we can kill them before starting a new one (avoid jitter)
 var _hover_tweens: Dictionary = {}  # button -> Tween
@@ -25,6 +26,9 @@ func _ready() -> void:
 	for btn in [start_button, settings_button, quit_button]:
 		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+	# ── Phase 31: Add a "Continue" button if a save exists ──
+	# Sits above the Start button. Only shown when SaveSystem reports a save.
+	_add_continue_button()
 	# Phase 20: Create settings menu (reused from pause menu's settings)
 	var sm_script = load("res://scripts/settings_menu.gd")
 	_settings_menu = Control.new()
@@ -61,6 +65,44 @@ func _ready() -> void:
 	# Play entrance animation
 	_animate_entrance()
 
+# ── Phase 31: Add a "Continue" button above Start if a save exists ──
+# The button shows a short summary of the save (level, biome, time) so the
+# player knows what they're resuming. If no save exists, the button is hidden
+# and the Start button stays in its default position.
+func _add_continue_button() -> void:
+	if not SaveSystem or not SaveSystem.has_method("has_save"):
+		return
+	if not SaveSystem.has_save():
+		return
+	_continue_button = Button.new()
+	_continue_button.name = "ContinueButton"
+	_continue_button.offset_left = 490.0
+	_continue_button.offset_top = 260.0
+	_continue_button.offset_right = 790.0
+	_continue_button.offset_bottom = 310.0
+	_continue_button.add_theme_font_size_override("font_size", 18)
+	var summary: String = SaveSystem.get_save_summary()
+	_continue_button.text = "↺  CONTINUE\n" + summary
+	_continue_button.pressed.connect(_on_continue_pressed)
+	_continue_button.mouse_entered.connect(_on_button_hover.bind(_continue_button, true))
+	_continue_button.mouse_exited.connect(_on_button_hover.bind(_continue_button, false))
+	add_child(_continue_button)
+	# Move it to be the first child (above Start) in the tree order
+	move_child(_continue_button, start_button.get_index())
+	# Shift the Start button down to make room
+	start_button.offset_top = 340.0
+	start_button.offset_bottom = 400.0
+	# Shift Settings down too
+	settings_button.offset_top = 420.0
+	settings_button.offset_bottom = 480.0
+
+func _on_continue_pressed() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	if SaveSystem and SaveSystem.has_method("load_and_restart"):
+		if not SaveSystem.load_and_restart():
+			GameManager.add_message("⚠ Could not load save — starting fresh")
+			get_tree().change_scene_to_file("res://scenes/main.tscn")
+
 # ── Phase 25: Add a "Mode Select" button to the menu programmatically ──
 # We create it in code rather than editing the .tscn so the scene file stays
 # stable. The button sits between Settings and Quit, matching their style.
@@ -68,9 +110,9 @@ func _add_mode_select_button() -> void:
 	var mode_btn := Button.new()
 	mode_btn.name = "ModeSelectButton"
 	mode_btn.offset_left = 490.0
-	mode_btn.offset_top = 460.0
+	mode_btn.offset_top = 500.0
 	mode_btn.offset_right = 790.0
-	mode_btn.offset_bottom = 520.0
+	mode_btn.offset_bottom = 560.0
 	mode_btn.add_theme_font_size_override("font_size", 24)
 	# Label includes the current mode so the player sees what's selected
 	mode_btn.text = "🎮  MODE: %s" % (GameModeManager.get_mode_name() if GameModeManager else "Normal")
@@ -89,12 +131,12 @@ func _add_mode_select_button() -> void:
 	# Shift the Quit button down to make room (its offset_top is 480 → 600)
 	# Phase 30: extra room for the Character Select button at 540
 	if quit_button:
-		quit_button.offset_top = 600.0
-		quit_button.offset_bottom = 660.0
+		quit_button.offset_top = 640.0
+		quit_button.offset_bottom = 700.0
 	# Also shift the controls label down
 	if controls_label:
-		controls_label.offset_top = 710.0
-		controls_label.offset_bottom = 820.0
+		controls_label.offset_top = 750.0
+		controls_label.offset_bottom = 860.0
 	# Connect to mode-changed signal so the button label updates live
 	if GameModeManager:
 		GameModeManager.mode_changed.connect(_on_mode_changed)
@@ -105,9 +147,9 @@ func _add_character_select_button() -> void:
 	var char_btn := Button.new()
 	char_btn.name = "CharacterSelectButton"
 	char_btn.offset_left = 490.0
-	char_btn.offset_top = 540.0
+	char_btn.offset_top = 580.0
 	char_btn.offset_right = 790.0
-	char_btn.offset_bottom = 600.0
+	char_btn.offset_bottom = 640.0
 	char_btn.add_theme_font_size_override("font_size", 24)
 	char_btn.text = "🛸  CHARACTER: %s" % _get_character_label()
 	char_btn.pressed.connect(_on_character_select_pressed)
@@ -179,9 +221,14 @@ func _animate_entrance() -> void:
 	# Buttons: slide up from below with staggered delay
 	# ── Phase 25: Include the Mode Select button in the stagger animation ──
 	# ── Phase 30: Include the Character Select button too ──
+	# ── Phase 31: Include the Continue button too ──
 	var mode_btn_node: Button = get_node_or_null("ModeSelectButton")
 	var char_btn_node: Button = get_node_or_null("CharacterSelectButton")
-	var buttons: Array[Button] = [start_button, settings_button]
+	var buttons: Array[Button] = []
+	if _continue_button:
+		buttons.append(_continue_button)
+	buttons.append(start_button)
+	buttons.append(settings_button)
 	if mode_btn_node:
 		buttons.append(mode_btn_node)
 	if char_btn_node:

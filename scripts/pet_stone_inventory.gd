@@ -83,6 +83,13 @@ func get_inventory() -> Dictionary:
 	return _inventory.duplicate()
 
 
+# ── Phase 31: Save/Load setter (called by SaveSystem) ──
+## Replace the entire stone inventory from a save file.
+func set_inventory(inv: Dictionary) -> void:
+	_inventory = inv.duplicate()
+	stone_added.emit(-1, get_total_stones())  # Signal a refresh
+
+
 func has_any_stone() -> bool:
 	return get_total_stones() > 0
 

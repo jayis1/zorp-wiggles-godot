@@ -245,6 +245,15 @@ func _update_hp_regen(delta: float) -> void:
 	hp_changed.emit(player_hp, player_max_hp)
 
 func _start_game() -> void:
+	# ── Phase 31: Save/Load — check for a pending save restore ──
+	# If SaveSystem.load_and_restart() was called, it set a meta flag on
+	# SaveSystem requesting that we skip the fresh-state reset and instead
+	# let SaveSystem apply the saved state. The world_seed was already set
+	# by SaveSystem._apply_state() before the scene reload, so the world
+	# generator will use the saved seed.
+	var restoring_from_save: bool = false
+	if SaveSystem and SaveSystem.has_method("consume_pending_restore"):
+		restoring_from_save = SaveSystem.consume_pending_restore()
 	player_hp = GameConstants.PLAYER_START_HP
 	player_max_hp = GameConstants.PLAYER_START_HP
 	player_xp = 0
@@ -272,7 +281,9 @@ func _start_game() -> void:
 	player_is_downed = false
 	p1_downed_timer = 0.0
 	p1_revive_progress = 0.0
-	game_time = 0.0
+	# Only reset game_time if not restoring (SaveSystem sets it via _apply_state)
+	if not restoring_from_save:
+		game_time = 0.0
 	is_paused = false
 	_last_difficulty_tier = 0
 	active_buffs.clear()
