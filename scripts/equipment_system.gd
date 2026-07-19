@@ -123,6 +123,9 @@ func use_consumable(type: int) -> bool:
 		_consumables.erase(type)
 	consumable_changed.emit()
 	consumable_used.emit(type)
+	# ── Phase 29: Statistics tracking ──
+	if Statistics and Statistics.has_method("record_consumable_used"):
+		Statistics.record_consumable_used(type)
 	# Apply the effect
 	match type:
 		GameConstants.Consumable.HEALTH_POTION:
@@ -172,7 +175,7 @@ func _detonate_void_bomb() -> void:
 	# Visual: spawn a big explosion + camera shake
 	if GameManager.player and is_instance_valid(GameManager.player):
 		var parent: Node = GameManager.player.get_parent()
-		if parent and parent.has_node("/root/ParticleEffects"):
+		if parent:
 			ParticleEffects.spawn_mega_explosion(parent, center)
 	# Camera shake
 	var cam_rig: Node3D = GameManager.camera_rig
@@ -256,6 +259,9 @@ func craft_piece(piece_id: int) -> bool:
 	GameManager.add_message("✨ Crafted %s!" % GameConstants.EQUIP_PIECE_NAMES[piece_id])
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# ── Phase 29: Statistics tracking ──
+	if Statistics and Statistics.has_method("record_equipment_crafted"):
+		Statistics.record_equipment_crafted(piece_id)
 	return true
 
 ## Check if the player has enough common materials (in WeaponModSystem inventory).

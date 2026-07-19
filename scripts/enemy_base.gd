@@ -573,6 +573,11 @@ func _die() -> void:
 	# ── Phase 27: Drop pet evolution stones on death ──
 	_drop_pet_stone()
 
+	# ── Phase 29: Drop rare crafting materials on death ──
+	# Rare materials drop from bosses (always), during matching weather (+6%),
+	# and in matching biomes (+4%). Normal enemies have a 4% base chance.
+	_drop_rare_material()
+
 	# ── Phase 10: Clean up AI controller ──
 	if ai_controller:
 		ai_controller.cleanup()
@@ -924,4 +929,75 @@ func _pick_pet_stone_type(biome: int) -> int:
 	if biome_bias.has(biome):
 		var favored: int = biome_bias[biome]
 		base_weights[favored] = base_weights[favored] + 2.0  # +2 weight for the biome's stone
+	return _weighted_pick(base_weights)
+
+
+# ─── Phase 29: Rare Material Drops ────────────────────────────────────────────
+
+## Drop a rare crafting material when the enemy dies. Rare materials are used
+## for equipment crafting and refinement. They drop from:
+##   - Bosses (always — 100% chance, biased toward VOID_CORE/PRISM_HEART)
+##   - Normal enemies (4% base chance, +6% during matching weather, +4% in matching biome)
+## The rare material is added directly to the EquipmentSystem inventory (no
+## physical collectible drop — rare materials are abstracted as inventory entries
+## to avoid spawning yet another collectible type that the player has to chase).
+## This keeps the gameplay loop clean: kill enemies → check Equipment menu → craft.
+func _drop_rare_material() -> void:
+	if not EquipmentSystem:
+		return
+	var is_boss: bool = base_scale >= 2.0 or max_hp >= 200 or is_arena_boss or is_world_boss
+	var drop_chance: float = GameConstants.RARE_MATERIAL_DROP_CHANCE_BOSS if is_boss \
+		else GameConstants.RARE_MATERIAL_DROP_CHANCE
+	# Weather bonus — adds to drop chance during matching weather
+	var current_weather: int = -1
+	if WeatherSystem and WeatherSystem.has_method("get_current_weather"):
+		current_weather = WeatherSystem.get_current_weather()
+	if current_weather >= 0 and GameConstants.RARE_MATERIAL_WEATHER_DROPS.has(current_weather):
+		drop_chance += GameConstants.RARE_MATERIAL_WEATHER_BONUS
+	# Biome bonus — adds to drop chance in matching biome
+	var biome: int = GameManager.current_biome if "current_biome" in GameManager else -1
+	if biome >= 0 and GameConstants.RARE_MATERIAL_BIOME_DROPS.has(biome):
+		drop_chance += GameConstants.RARE_MATERIAL_BIOME_BONUS
+	# Clamp for normal enemies (bosses can exceed 1.0 — always drops)
+	if not is_boss:
+		drop_chance = minf(1.0, drop_chance)
+	# ── Phase 28: Blood Moon weather — 3x loot chance applies to rare mats too ──
+	drop_chance = minf(1.0, drop_chance * WeatherSystem.get_loot_multiplier())
+	if randf() > drop_chance:
+		return
+	# Pick the rare material type
+	var rm_type: int = _pick_rare_material_type(is_boss, current_weather, biome)
+	# Add directly to the EquipmentSystem inventory (no physical collectible)
+	EquipmentSystem.add_rare_material(rm_type, 1)
+	# Show a HUD message for the rare drop (so the player knows what they got)
+	var rm_name: String = GameConstants.RARE_MATERIAL_NAMES[rm_type]
+	var rarity_color: Color = GameConstants.RARE_MATERIAL_COLORS[rm_type]
+	if is_boss:
+		GameManager.add_message("💎 %s dropped %s!" % [enemy_name, rm_name])
+	else:
+		GameManager.add_message("💎 Rare drop: %s" % rm_name)
+	# Statistics tracking
+	if Statistics and Statistics.has_method("record_rare_material_drop"):
+		Statistics.record_rare_material_drop(rm_type)
+
+## Pick a rare material type via a weighted table. Bosses bias toward
+## VOID_CORE/PRISM_HEART. Weather and biome biases add weight to their
+## thematic materials. Falls back to a uniform random pick if no biases apply.
+func _pick_rare_material_type(is_boss: bool, current_weather: int, biome: int) -> int:
+	# Base equal-weight table for all 12 rare materials
+	var base_weights: Dictionary = {}
+	for i in range(GameConstants.RARE_MATERIAL_NAMES.size()):
+		base_weights[i] = 1.0
+	# Boss bias — heavily favor VOID_CORE and PRISM_HEART
+	if is_boss:
+		for rm_id in GameConstants.RARE_MATERIAL_BOSS_DROPS:
+			base_weights[rm_id] = base_weights[rm_id] + 4.0
+	# Weather bias — favor the weather's thematic material
+	if current_weather >= 0 and GameConstants.RARE_MATERIAL_WEATHER_DROPS.has(current_weather):
+		var favored: int = GameConstants.RARE_MATERIAL_WEATHER_DROPS[current_weather]
+		base_weights[favored] = base_weights[favored] + 3.0
+	# Biome bias — favor the biome's thematic material
+	if biome >= 0 and GameConstants.RARE_MATERIAL_BIOME_DROPS.has(biome):
+		var favored_b: int = GameConstants.RARE_MATERIAL_BIOME_DROPS[biome]
+		base_weights[favored_b] = base_weights[favored_b] + 2.0
 	return _weighted_pick(base_weights)

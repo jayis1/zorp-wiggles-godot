@@ -369,6 +369,31 @@ func record_fast_travel(waypoint_name: String = "Unknown") -> void:
 	_inc_dict_session("fast_travels_by_destination", waypoint_name)
 	stats_updated.emit()
 
+# ── Phase 29: Equipment & rare material tracking ──
+func record_rare_material_drop(rare_material_id: int) -> void:
+	_add_lifetime("rare_materials_dropped", 1.0)
+	_add_session("rare_materials_dropped", 1.0)
+	var rm_name: String = GameConstants.RARE_MATERIAL_NAMES[rare_material_id] if rare_material_id < GameConstants.RARE_MATERIAL_NAMES.size() else "Unknown"
+	_inc_dict_lifetime("rare_materials_by_type", rm_name)
+	_inc_dict_session("rare_materials_by_type", rm_name)
+	stats_updated.emit()
+
+func record_equipment_crafted(piece_id: int) -> void:
+	_add_lifetime("equipment_crafted", 1.0)
+	_add_session("equipment_crafted", 1.0)
+	var piece_name: String = GameConstants.EQUIP_PIECE_NAMES[piece_id] if piece_id < GameConstants.EQUIP_PIECE_NAMES.size() else "Unknown"
+	_inc_dict_lifetime("equipment_by_piece", piece_name)
+	_inc_dict_session("equipment_by_piece", piece_name)
+	stats_updated.emit()
+
+func record_consumable_used(consumable_id: int) -> void:
+	_add_lifetime("consumables_used", 1.0)
+	_add_session("consumables_used", 1.0)
+	var cons_name: String = GameConstants.CONSUMABLE_NAMES[consumable_id] if consumable_id < GameConstants.CONSUMABLE_NAMES.size() else "Unknown"
+	_inc_dict_lifetime("consumables_by_type", cons_name)
+	_inc_dict_session("consumables_by_type", cons_name)
+	stats_updated.emit()
+
 func add_biome_time(biome_id: int, seconds: float) -> void:
 	# Called periodically by BiomeEffects or GameManager for per-biome time tracking
 	var key: String = str(biome_id)

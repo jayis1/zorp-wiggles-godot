@@ -1,6 +1,6 @@
 ## Zorp Wiggles — Fast Travel Menu UI (Phase 26: World Life)
 ## A toggleable panel listing all activated waypoints. The player opens it with
-## the "fast_travel" input action (B key), clicks a destination, and teleports
+## the "fast_travel" input action (M key — "Map"), clicks a destination, and teleports
 ## there for a small Space Gloop cost. Undiscovered waypoints are not shown.
 ## Uses _draw() for custom rendering and handles click input directly.
 

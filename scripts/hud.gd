@@ -280,6 +280,14 @@ func _ready() -> void:
 	st_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(st_ctrl)
 
+	# ── Phase 29: Equipment Menu UI (X) ──
+	var eq_script := load("res://scripts/equipment_menu.gd")
+	var eq_ctrl := Control.new()
+	eq_ctrl.set_script(eq_script)
+	eq_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	eq_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(eq_ctrl)
+
 	# Initialize displays
 	_update_all_displays()
 
