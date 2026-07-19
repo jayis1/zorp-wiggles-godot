@@ -149,8 +149,8 @@ func _apply_darkness(delta: float) -> void:
 	if not env_node or not env_node.environment:
 		return
 	var env: Environment = env_node.environment
-	# Lerp the ambient light energy toward the target.
-	env.ambient_light_energy = lerpf(env.ambient_light_energy, target_energy, 2.0 * delta)
+	# Lerp the ambient light energy toward the target (frame-rate-independent).
+	env.ambient_light_energy = lerpf(env.ambient_light_energy, target_energy, 1.0 - exp(-2.0 * delta))
 
 # ─── Ancient Ruins: Hidden Traps ──────────────────────────────────────────────
 # When the player enters the Ancient Ruins biome, invisible trap zones

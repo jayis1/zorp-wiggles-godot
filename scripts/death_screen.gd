@@ -128,7 +128,8 @@ func _process(delta: float) -> void:
 	# Score roll-up animation
 	if _stats_alpha > 0.1:
 		var target_score: int = GameManager.player_score
-		_displayed_score = int(lerpf(_displayed_score, target_score, 5.0 * delta))
+		# Score roll-up (frame-rate-independent exponential approach)
+		_displayed_score = int(lerpf(_displayed_score, target_score, 1.0 - exp(-5.0 * delta)))
 		if abs(_displayed_score - target_score) < 5:
 			_displayed_score = target_score
 

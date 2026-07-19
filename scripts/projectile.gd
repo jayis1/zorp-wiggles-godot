@@ -271,8 +271,10 @@ func _apply_mod_flight_behavior(delta: float) -> void:
 			if mine_target:
 				var to_target: Vector3 = (mine_target.global_position - global_position).normalized()
 				var current_dir: Vector3 = direction.normalized()
-				# Strong homing — mines are designed to seek targets
-				var new_dir: Vector3 = current_dir.lerp(to_target, 12.0 * delta).normalized()
+				# Strong homing — mines are designed to seek targets.
+				# Frame-rate-independent exponential approach so the turn rate is
+				# consistent regardless of refresh rate.
+				var new_dir: Vector3 = current_dir.lerp(to_target, 1.0 - exp(-12.0 * delta)).normalized()
 				direction = new_dir
 		# Phase 24: Black Hole Launcher — extra-strong pull in flight + auto-collapse
 		GameConstants.WeaponMod.BLACK_HOLE_LAUNCHER:

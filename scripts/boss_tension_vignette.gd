@@ -33,9 +33,9 @@ func _process(delta: float) -> void:
 	_pulse_time += delta
 
 	if not _has_boss or not _boss_ref or not is_instance_valid(_boss_ref):
-		# Fade out
+		# Fade out (frame-rate-independent exponential decay)
 		if _vignette_color.a > 0.01:
-			_vignette_color.a = lerpf(_vignette_color.a, 0.0, 5.0 * delta)
+			_vignette_color.a = lerpf(_vignette_color.a, 0.0, 1.0 - exp(-5.0 * delta))
 			queue_redraw()
 		return
 
@@ -53,7 +53,8 @@ func _process(delta: float) -> void:
 		GameConstants.BOSS_VIGNETTE_MAX_ALPHA, proximity)
 	var target_alpha: float = base_alpha * (0.5 + pulse * 0.5 * proximity)
 
-	_vignette_color.a = lerpf(_vignette_color.a, target_alpha, 4.0 * delta)
+	# Frame-rate-independent exponential approach
+	_vignette_color.a = lerpf(_vignette_color.a, target_alpha, 1.0 - exp(-4.0 * delta))
 	queue_redraw()
 
 func _draw() -> void:

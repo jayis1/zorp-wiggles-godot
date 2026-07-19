@@ -49,7 +49,8 @@ func _process(delta: float) -> void:
 		if entry.timer < 1.0:
 			entry.alpha = clampf(entry.timer, 0.0, 1.0)
 		# Slide down to position
-		entry.y_offset = lerpf(entry.y_offset, 0.0, 8.0 * delta)
+		# Slide down to position (frame-rate-independent exponential decay)
+		entry.y_offset = lerpf(entry.y_offset, 0.0, 1.0 - exp(-8.0 * delta))
 		needs_redraw = true
 
 	# Remove expired entries

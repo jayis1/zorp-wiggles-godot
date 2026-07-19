@@ -22,7 +22,14 @@ func _on_damage_taken(_source_pos: Vector3) -> void:
 
 func _process(delta: float) -> void:
 	if _flash_alpha > 0.01:
-		_flash_alpha = lerpf(_flash_alpha, 0.0, 6.0 * delta)
+		# Frame-rate-independent exponential decay (matches the pattern used
+		# everywhere else in the codebase: weight = 1 - exp(-rate * delta)).
+		# The previous `lerpf(a, 0, 6*delta)` was frame-rate-dependent — at
+		# 30 FPS it decayed at 0.2/frame, at 144 FPS at 0.042/frame, so the
+		# flash lasted ~2.3× longer on a 30 FPS display than on a 144 FPS
+		# one. The exponential form gives identical perceived decay time
+		# regardless of refresh rate. Rate 6.0 ≈ ~95% gone in 0.5s.
+		_flash_alpha = lerpf(_flash_alpha, 0.0, 1.0 - exp(-6.0 * delta))
 		queue_redraw()
 	elif _flash_alpha != 0.0:
 		_flash_alpha = 0.0

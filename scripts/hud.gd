@@ -83,6 +83,19 @@ const BOSS_BAR_FLASH_DURATION: float = 0.18
 const BOSS_BAR_SHAKE_AMP: float = 6.0  # Max horizontal shake in pixels
 var _boss_bar_rest_left: float = 0.0   # Resting offset_left (for shake restore)
 
+# ── Player HP bar damage flash ── Mirrors the boss bar juice: when the player
+#    takes damage, the HP bar flashes white and shakes horizontally. This
+#    gives the player's own damage events a visceral UI read that matches the
+#    boss bar language, so damage feels consistent whether you're giving or
+#    receiving it. The flash is driven by polling the HP ratio in _process
+#    (same approach as the boss bar) so we don't need a per-hit signal — the
+#    hp_changed signal only fires on the actual change, but the visual decay
+#    needs to run every frame in _process anyway.
+var _hp_bar_prev_ratio: float = 1.0
+var _hp_bar_flash_timer: float = 0.0
+const HP_BAR_FLASH_DURATION: float = 0.15  # Slightly shorter than boss (player hits are more frequent)
+const HP_BAR_SHAKE_AMP: float = 4.0        # Slightly less violent than boss (player bar is smaller)
+
 # ── Phase 16: Weapon Mod indicator ──
 var _mod_indicator: Label = null
 
@@ -309,7 +322,24 @@ func _process(delta: float) -> void:
 	if message_timer > 0:
 		message_timer -= delta
 		if message_timer <= 0:
-			message_text.visible = false
+			# Smooth fade-out instead of a hard visibility cut. The message
+			# text used to vanish instantly when the timer hit zero, which
+			# felt abrupt for informational text the player might still be
+			# reading. Now it eases modulate.a to 0 over 0.25s (ease-in quad
+			# for a gentle "settling" feel) and hides itself after the fade.
+			# A tracked tween lets a new message kill the in-progress fade
+			# and restart cleanly without stacking.
+			if message_text:
+				if message_text.has_meta("_msg_tween") and is_instance_valid(message_text.get_meta("_msg_tween") as Tween):
+					(message_text.get_meta("_msg_tween") as Tween).kill()
+				var msg_fade := create_tween()
+				msg_fade.tween_property(message_text, "modulate:a", 0.0, 0.25) \
+					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+				msg_fade.tween_callback(func():
+					message_text.visible = false
+					message_text.modulate.a = 1.0
+				)
+				message_text.set_meta("_msg_tween", msg_fade)
 
 	if level_up_display_timer > 0:
 		level_up_display_timer -= delta
@@ -351,7 +381,21 @@ func _process(delta: float) -> void:
 	if _pickup_streak_timer > 0:
 		_pickup_streak_timer -= delta
 		if _pickup_streak_timer <= 0 and _pickup_streak_label:
-			_pickup_streak_label.visible = false
+			# Smooth fade-out instead of a hard hide. The streak label used
+			# to vanish instantly, which felt flat for a celebratory popup.
+			# Now it eases modulate.a to 0 over 0.3s (ease-in quad) and
+			# hides itself after the fade. A tracked tween lets a new
+			# streak milestone kill the in-progress fade and restart cleanly.
+			if _pickup_streak_label.has_meta("_ps_tween") and is_instance_valid(_pickup_streak_label.get_meta("_ps_tween") as Tween):
+				(_pickup_streak_label.get_meta("_ps_tween") as Tween).kill()
+			var ps_fade := create_tween()
+			ps_fade.tween_property(_pickup_streak_label, "modulate:a", 0.0, 0.3) \
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+			ps_fade.tween_callback(func():
+				_pickup_streak_label.visible = false
+				_pickup_streak_label.modulate.a = 1.0
+			)
+			_pickup_streak_label.set_meta("_ps_tween", ps_fade)
 
 	# Smoothly animate bars toward target ratios (frame-rate independent lerp)
 	var weight: float = 1.0 - exp(-_bar_smoothing * delta)
@@ -360,8 +404,38 @@ func _process(delta: float) -> void:
 	var hp_current_ratio: float = hp_bar.size.x / hp_bar_bg.size.x if hp_bar_bg.size.x > 0 else 0.0
 	hp_current_ratio = lerpf(hp_current_ratio, _hp_bar_target_ratio, weight)
 	hp_bar.size.x = hp_bar_bg.size.x * hp_current_ratio
-	# Smooth HP bar color toward target (eases green → yellow → red)
-	hp_bar.color = hp_bar.color.lerp(_hp_bar_target_color, 1.0 - exp(-_color_smoothing * delta))
+	# ── Player HP bar damage flash + shake ── Mirrors the boss bar juice.
+	# Detect a ratio drop (damage taken) by comparing to last frame's value,
+	# then drive a white flash blend + horizontal sine shake that decays over
+	# HP_BAR_FLASH_DURATION. The flash envelope uses ease-out cubic (sharp
+	# onset, gentle tail) and the shake amplitude scales with the envelope so
+	# the bar jitters hardest on the hit frame and settles smoothly. This
+	# gives the player's own damage events a visceral UI read that matches
+	# the boss bar language — damage feels consistent whether giving or
+	# receiving it. Heals (ratio increase) do NOT trigger the flash, so
+	# pickups/healing read as positive without a confusing white pop.
+	if _hp_bar_target_ratio < _hp_bar_prev_ratio - 0.001:
+		_hp_bar_flash_timer = HP_BAR_FLASH_DURATION
+	_hp_bar_prev_ratio = _hp_bar_target_ratio
+	# Build the target color: the ratio-based gradient, optionally blended
+	# toward white while the flash timer is active.
+	var hp_bar_color_target: Color = _hp_bar_target_color
+	if _hp_bar_flash_timer > 0.0:
+		_hp_bar_flash_timer = max(0.0, _hp_bar_flash_timer - delta)
+		var hp_flash_env: float = _hp_bar_flash_timer / HP_BAR_FLASH_DURATION
+		# Ease-out cubic for a sharp onset and gentle tail (matches boss bar)
+		hp_flash_env = 1.0 - pow(1.0 - hp_flash_env, 3.0)
+		hp_bar_color_target = hp_bar_color_target.lerp(Color.WHITE, hp_flash_env * 0.7)
+	hp_bar.color = hp_bar.color.lerp(hp_bar_color_target, 1.0 - exp(-_color_smoothing * delta))
+	# Horizontal shake on the bar fill — decaying sine wobble biased by the
+	# flash envelope. We shake the bar ColorRect's offset_left rather than the
+	# container so the border/HP text stay steady and only the fill jitters.
+	if _hp_bar_flash_timer > 0.0:
+		var hp_shake_env: float = _hp_bar_flash_timer / HP_BAR_FLASH_DURATION
+		var hp_shake: float = sin(_hp_bar_flash_timer * 70.0) * HP_BAR_SHAKE_AMP * hp_shake_env
+		hp_bar.offset_left = 2.0 + hp_shake
+	else:
+		hp_bar.offset_left = 2.0
 
 	# XP bar
 	var xp_bar_width: float = xp_bar_container.size.x - 4.0 if xp_bar_container.size.x > 0 else 396.0
@@ -523,6 +597,13 @@ func _on_game_restarted() -> void:
 	_update_all_displays()
 	combo_text.visible = false
 	level_up_text.visible = false
+	# Reset HP bar damage-flash state so a fresh game doesn't carry over a
+	# lingering flash/shake from the previous run's last hit. The boss bar
+	# state is reset in its own block above (when boss_ref clears).
+	_hp_bar_prev_ratio = 1.0
+	_hp_bar_flash_timer = 0.0
+	if hp_bar:
+		hp_bar.offset_left = 2.0
 
 func _update_all_displays() -> void:
 	_on_hp_changed(GameManager.player_hp, GameManager.player_max_hp)
@@ -531,6 +612,15 @@ func _update_all_displays() -> void:
 	level_text.text = "Lv %d" % GameManager.player_level
 
 func show_message(text: String, duration: float = 2.0) -> void:
+	# Kill any in-progress fade-out tween so a new message doesn't fight
+	# the dying one's modulate:a animation. Without this, a message arriving
+	# during the 0.25s fade window would snap to alpha 0 (the fade's current
+	# value) and be invisible. Resetting modulate.a to 1.0 here guarantees
+	# the new text is fully opaque on entry.
+	if message_text:
+		if message_text.has_meta("_msg_tween") and is_instance_valid(message_text.get_meta("_msg_tween") as Tween):
+			(message_text.get_meta("_msg_tween") as Tween).kill()
+		message_text.modulate.a = 1.0
 	message_text.text = text
 	message_text.visible = true
 	message_timer = duration
@@ -636,8 +726,22 @@ func _on_combo_milestone(combo: int, tier: int, flash_color: Color) -> void:
 # ─── Pickup Streak Milestone ──────────────────────────────────────────────────
 func _on_pickup_streak_milestone(streak: int, xp_bonus: int) -> void:
 	if _pickup_streak_label:
+		# Kill any in-progress fade-out so a new streak milestone doesn't
+		# fight the dying label's modulate:a animation and end up invisible.
+		if _pickup_streak_label.has_meta("_ps_tween") and is_instance_valid(_pickup_streak_label.get_meta("_ps_tween") as Tween):
+			(_pickup_streak_label.get_meta("_ps_tween") as Tween).kill()
+		_pickup_streak_label.modulate.a = 1.0
 		_pickup_streak_label.text = "✦ PICKUP STREAK x%d (+%d XP)" % [streak, xp_bonus]
 		_pickup_streak_label.visible = true
+		# Quick scale pop on each new milestone — mirrors the combo text
+		# punch-in. Grows to 1.25x in 60ms then settles with elastic wobble,
+		# giving each streak tick a celebratory "thwack" feel.
+		_pickup_streak_label.scale = Vector2.ONE
+		var ps_pop := create_tween()
+		ps_pop.tween_property(_pickup_streak_label, "scale", Vector2.ONE * 1.25, 0.06) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		ps_pop.tween_property(_pickup_streak_label, "scale", Vector2.ONE, 0.18) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 		_pickup_streak_timer = GameConstants.PICKUP_STREAK_DISPLAY_LIFETIME
 
 # ─── Bar Color Helper ─────────────────────────────────────────────────────────
