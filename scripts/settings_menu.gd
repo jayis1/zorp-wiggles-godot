@@ -29,6 +29,11 @@ var _scale_slider: HSlider
 var _entrance_tween: Tween = null
 # Track whether the menu is currently animating out (prevents re-show flicker)
 var _animating_out: bool = false
+# Track hover tweens so we can kill them before starting a new one (avoid jitter).
+# Matches the hover-juice pattern used in main_menu, pause_menu, crafting_menu,
+# death_screen, and victory_screen so all Button-based menus share a cohesive
+# feel: buttons grow ~6% on hover with a short ease, shrink back on exit.
+var _hover_tweens: Dictionary = {}  # button -> Tween
 
 
 func _ready() -> void:
@@ -172,6 +177,11 @@ func _build_ui() -> void:
 	_back_btn.add_theme_font_size_override("font_size", 18)
 	add_child(_back_btn)
 	_back_btn.pressed.connect(_on_back)
+	# Connect hover signals for all settings buttons so they share the
+	# cohesive hover-juice used across every other Button-based menu.
+	for btn in [_back_btn, _filter_btn, _cb_btn]:
+		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
+		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
 
 
 func _make_label(text: String, x: float, y: float, w: float, h: float) -> Label:
@@ -295,6 +305,33 @@ func _on_ui_scale_changed(value: float) -> void:
 	AccessibilityManager.set_ui_scale(value / 100.0)
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 
+## Hover effect: buttons grow slightly (~6%) on hover and shrink back on exit.
+## Mirrors the main/pause/crafting/death/victory menu hover juice so all
+## Button-based menus share a cohesive feel. Pivot is set to the button center
+## so the scale grows from the middle, not the top-left corner.
+func _on_button_hover(btn: Button, is_hovering: bool) -> void:
+	if not is_instance_valid(btn):
+		return
+	# Keep pivot centered so scale grows from the middle
+	btn.pivot_offset = btn.size * 0.5
+	# Kill any existing hover tween on this button
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+		_hover_tweens.erase(btn)
+	# Opportunistically clean up freed buttons from the dict
+	for key in _hover_tweens.keys():
+		if not is_instance_valid(key):
+			_hover_tweens.erase(key)
+	var target_scale := Vector2(1.06, 1.06) if is_hovering else Vector2.ONE
+	var tween: Tween = create_tween()
+	tween.tween_property(btn, "scale", target_scale, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+	# Play a subtle UI hover sound on enter only (avoids spam on exit)
+	if is_hovering:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 
 func _on_back() -> void:
 	if _animating_out:
@@ -334,6 +371,11 @@ func _on_back() -> void:
 		_title.modulate.a = 1.0
 		_controls_label.modulate.a = 1.0
 		_back_btn.modulate.a = 1.0
+		# Reset hover scale on all buttons so reopening doesn't show a
+		# leftover scaled-up button if the cursor was hovering on close.
+		for btn in [_back_btn, _filter_btn, _cb_btn]:
+			if btn:
+				btn.scale = Vector2.ONE
 		for ctrl in [_acc_label, _filter_label, _filter_btn, _cb_label, _cb_btn, _scale_label, _scale_slider]:
 			if ctrl:
 				ctrl.modulate.a = 1.0
