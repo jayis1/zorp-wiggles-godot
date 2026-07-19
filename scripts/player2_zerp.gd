@@ -26,6 +26,11 @@ var _dash_buffer_timer: float = 0.0
 const DASH_BUFFER_WINDOW: float = 0.15
 var _shoot_buffer_timer: float = 0.0
 const SHOOT_BUFFER_WINDOW: float = 0.12
+# ── Hold-to-auto-fire ── P2's shoot key (period/`.` by default) auto-fires
+#    when held, mirroring P1's hold-to-fire. There's no X-key pin toggle for
+#    P2 (co-op is a more active, shared-screen context where a pin would be
+#    confusing), but holding the shoot key gives the same finger-saving QoL.
+var _shoot_held: bool = false
 var _pulse_buffer_timer: float = 0.0
 const PULSE_BUFFER_WINDOW: float = 0.18
 
@@ -106,6 +111,13 @@ func _physics_process(delta: float) -> void:
 		_shoot_buffer_timer -= delta
 		if shoot_cooldown_timer <= 0 and _shoot_buffer_timer > 0:
 			_shoot_buffer_timer = 0.0
+			_try_shoot()
+	# ── Hold-to-auto-fire: while P2's shoot key is held, fire whenever the
+	#    cooldown is ready. Composes with the buffer above (a buffered press
+	#    fires first, then held-fire takes over). Skipped while paused or
+	#    downed so P2 doesn't fire into a paused game or while out of action.
+	if _shoot_held and not GameManager.is_paused and CoOpManager.p2_active and not CoOpManager.p2_is_downed:
+		if shoot_cooldown_timer <= 0:
 			_try_shoot()
 	if _pulse_buffer_timer > 0:
 		_pulse_buffer_timer -= delta
@@ -292,9 +304,16 @@ func _update_invuln_blink() -> void:
 		is_invuln = false
 
 func _unhandled_input(event: InputEvent) -> void:
-	# P2 shoot
+	# P2 shoot — track held state for hold-to-auto-fire. A press fires
+	# immediately (or buffers if on cooldown); a release clears the held
+	# flag so auto-fire stops. The held flag is only consulted in
+	# _physics_process when the cooldown is ready, so this never fires
+	# extra shots on its own.
 	if event.is_action_pressed("p2_shoot") and not GameManager.is_paused and CoOpManager.p2_active and not CoOpManager.p2_is_downed:
+		_shoot_held = true
 		_try_shoot_or_buffer()
+	elif event.is_action_released("p2_shoot"):
+		_shoot_held = false
 	# P2 pulse wave
 	if event.is_action_pressed("p2_pulse_wave") and not GameManager.is_paused and CoOpManager.p2_active and not CoOpManager.p2_is_downed:
 		_try_pulse_wave_or_buffer()

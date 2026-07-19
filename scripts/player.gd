@@ -48,6 +48,22 @@ const DASH_BUFFER_WINDOW: float = 0.15  # Seconds to remember dash press before 
 var _shoot_buffer_timer: float = 0.0
 const SHOOT_BUFFER_WINDOW: float = 0.12  # Seconds to remember a shoot press
 
+# ── Auto-fire (hold-to-fire & Z-key toggle) ──────────────────────────────────
+# The original Ursina game shipped an X-key toggle for continuous auto-fire as a
+# major QoL feature for a game where you shoot constantly. Here we go further:
+#   • Holding the left mouse button auto-fires at the cooldown rate — no need
+#     to mash the button for the entire run.
+#   • Pressing Z (toggle_auto_fire action) pins auto-fire ON so the player can
+#     fire continuously with no input at all — pure click-free combat.
+#     (The original Ursina used X, but X is already the equipment menu here,
+#     so we use Z — close to X on the keyboard, easy to remember as "zap".)
+#   • A small [AUTO] indicator on the HUD shows when pinned auto-fire is on.
+# Both modes compose cleanly with the existing shoot buffer: a click during
+# cooldown still buffers a single shot, and the held-fire tick only fires when
+# the cooldown is ready (so it never wastes shots or fights the buffer).
+var _auto_fire_pinned: bool = false  # Z-key toggle: true = fire continuously with no input
+var _shoot_held: bool = false       # True while the left mouse button is held down
+
 # ── Pulse wave input buffer: same concept as dash/shoot buffers. If the
 #    player presses Q during the pulse wave cooldown, the ability fires
 #    immediately when ready. Prevents dropped inputs during tense moments.
@@ -175,6 +191,14 @@ func _ready() -> void:
 	# invuln/dash checks in GameManager.take_damage), so this won't trigger
 	# on blocked hits.
 	GameManager.damage_taken_from.connect(_on_player_damaged)
+	# ── Reset auto-fire state on game restart ── The Z-key pinned auto-fire
+	# toggle would otherwise persist across runs (a player who toggled it on
+	# in run 1 would start run 2 already auto-firing, which is surprising).
+	# Reset both the pin and the held-mouse flag on restart so each run
+	# starts clean. The HUD indicator is cleared separately by the HUD's
+	# own game_restarted handler.
+	if not GameManager.game_restarted.is_connected(_on_game_restarted_player):
+		GameManager.game_restarted.connect(_on_game_restarted_player)
 	# ── Phase 27: Pet emote triggers — biome change → CURIOUS, damage → SCARED ──
 	if not GameManager.biome_changed.is_connected(_on_biome_changed_pet_emote):
 		GameManager.biome_changed.connect(_on_biome_changed_pet_emote)
@@ -211,6 +235,14 @@ func _on_biome_changed_pet_emote(_biome_id: int) -> void:
 func _on_player_damaged_pet_emote(_source_pos: Vector3) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
 		pet.trigger_emote(GameConstants.PetEmote.ANGRY)
+
+## Reset auto-fire state on game restart. The Z-key pinned auto-fire toggle
+## and the held-mouse flag both reset so a new run starts with no auto-fire
+## active — the player must opt in again. The HUD indicator is cleared by
+## the HUD's own game_restarted handler.
+func _on_game_restarted_player() -> void:
+	_auto_fire_pinned = false
+	_shoot_held = false
 
 func _on_player_levelup_pet_emote(_level: int) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
@@ -380,6 +412,15 @@ func _physics_process(delta: float) -> void:
 		# Consume buffered shot when cooldown is ready
 		if shoot_cooldown_timer <= 0 and _shoot_buffer_timer > 0:
 			_shoot_buffer_timer = 0.0
+			_try_shoot()
+	# ── Auto-fire: if the player is holding the shoot button or has pinned
+	#    auto-fire on (Z key), fire whenever the cooldown is ready. This
+	#    composes with the buffer above — a buffered click fires first, then
+	#    held-fire takes over for continuous shooting. We skip while paused
+	#    or dead so the player doesn't fire into a paused game, and skip
+	#    during fetch mode (left-click is targeting a collectible instead).
+	if not GameManager.is_paused and GameManager.player_is_alive and not _fetch_mode:
+		if (_shoot_held or _auto_fire_pinned) and shoot_cooldown_timer <= 0:
 			_try_shoot()
 	if _pulse_buffer_timer > 0:
 		_pulse_buffer_timer -= delta
@@ -1197,15 +1238,45 @@ func _unhandled_input(event: InputEvent) -> void:
 		camera_pitch = clampf(camera_pitch, -80.0, -10.0)
 		_apply_camera_rotation()
 	
-	# Shoot on left click
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		if not GameManager.is_paused and GameManager.player_is_alive:
-			# ── Phase 15: If in fetch mode, left-click targets a collectible ──
-			if _fetch_mode:
-				_try_fetch_click()
-				_fetch_mode = false
-				return
-			_try_shoot_or_buffer()
+	# Shoot on left click — and track held state for hold-to-auto-fire.
+	# A press fires immediately (or buffers if on cooldown); a release clears
+	# the held flag so auto-fire stops. The held flag is only consulted in
+	# _physics_process when the cooldown is ready, so this never fires extra
+	# shots on its own — it just keeps the "trigger held" state current.
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_shoot_held = true
+			if not GameManager.is_paused and GameManager.player_is_alive:
+				# ── Phase 15: If in fetch mode, left-click targets a collectible ──
+				if _fetch_mode:
+					_try_fetch_click()
+					_fetch_mode = false
+					# A fetch click shouldn't also start auto-fire — clear the held
+					# flag so the player doesn't immediately start shooting after
+					# targeting a collectible.
+					_shoot_held = false
+					return
+				_try_shoot_or_buffer()
+		else:
+			# Mouse released — stop hold-to-fire. The pinned X-key auto-fire
+			# (if enabled) keeps firing regardless.
+			_shoot_held = false
+
+	# ── Auto-fire toggle (Z key) ── Pins continuous fire on so the player can
+	# shoot with no input at all — a major QoL feature for a game where you
+	# shoot constantly. Toggling on shows a HUD message and lights the [AUTO]
+	# indicator; toggling off clears both. The held-mouse auto-fire works
+	# independently of this toggle.
+	if event.is_action_pressed("toggle_auto_fire") and not GameManager.is_paused:
+		_auto_fire_pinned = not _auto_fire_pinned
+		if _auto_fire_pinned:
+			GameManager.add_message("🔥 Auto-fire ON  (press Z to turn off)")
+		else:
+			GameManager.add_message("🔫 Auto-fire OFF")
+		# Update the HUD auto-fire indicator visibility
+		var hud := get_tree().get_first_node_in_group("hud")
+		if hud and hud.has_method("set_auto_fire_indicator"):
+			hud.set_auto_fire_indicator(_auto_fire_pinned)
 	
 	# Pulse wave
 	if event.is_action_pressed("pulse_wave") and GameManager.player_is_alive and not GameManager.is_paused:

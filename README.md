@@ -72,7 +72,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 |---|---|
 | WASD | Move (camera-relative) |
 | Right-click + drag | Orbit camera |
-| Left-click | Shoot tentacle laser |
+| Left-click | Shoot tentacle laser (hold to auto-fire) |
 | Space | Dash (with invulnerability frames) |
 | Q | Pulse Wave (AoE attack, 8s cooldown) |
 | E | Trade / Revive Zerp |
@@ -86,6 +86,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 | C | Open weapon mod crafting menu |
 | V | Deploy ability (activate equipped deployable mod: Shield Bubble, Turret, Gravity Flip, Void Rift) |
 | X | Open equipment menu (armor, consumables, refine, materials) |
+| Z | Toggle pinned auto-fire (continuous fire with no input — [AUTO] badge shows on HUD) |
 | K | Open skill tree |
 | H | Open fast travel menu (teleport to activated waypoints) |
 | T | Interact (talk to NPCs, activate switches) |
@@ -100,7 +101,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 | Middle Mouse | Drop a ping marker (Shift=danger, Alt=loot, Ctrl=nav) |
 | **Player 2 (Zerp)** | |
 | Arrow Keys | Move |
-| / | Shoot |
+| / | Shoot (hold to auto-fire) |
 | Enter | Dash / Drop-in / Hold to drop-out |
 | Right Shift | Pulse wave |
 | . | Revive Zorp |

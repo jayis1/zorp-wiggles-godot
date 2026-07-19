@@ -35,6 +35,7 @@ const REBINDABLE_ACTIONS: Array[String] = [
 	"shoot", "dash", "pulse_wave", "trade", "minimap", "missions", "pause",
 	"summon_pet", "pet_fetch", "use_stone", "crafting", "stats_page",
 	"skill_tree", "interact", "deploy_ability", "fast_travel", "equipment",
+	"toggle_auto_fire",
 	"fps_counter", "ping", "cycle_color_filter", "cycle_colorblind",
 	"photo_mode", "cycle_skin", "cycle_character",
 ]
@@ -62,6 +63,7 @@ const ACTION_DISPLAY_NAMES: Dictionary = {
 	"deploy_ability": "Deploy Ability",
 	"fast_travel": "Fast Travel",
 	"equipment": "Equipment Menu",
+	"toggle_auto_fire": "Toggle Auto-Fire",
 	"fps_counter": "FPS Counter",
 	"ping": "Ping",
 	"cycle_color_filter": "Color Filter",

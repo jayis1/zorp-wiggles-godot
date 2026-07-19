@@ -98,6 +98,8 @@ const HP_BAR_SHAKE_AMP: float = 4.0        # Slightly less violent than boss (pl
 
 # ── Phase 16: Weapon Mod indicator ──
 var _mod_indicator: Label = null
+var _auto_fire_indicator: Label = null
+var _auto_fire_pulse_phase: float = 0.0  # Phase accumulator for the [AUTO] badge alpha breathing
 
 func _ready() -> void:
 	# Add to "hud" group so other systems (PhotoMode) can find the HUD canvas layer
@@ -235,6 +237,23 @@ func _ready() -> void:
 	_mod_indicator.add_theme_font_size_override("font_size", 13)
 	_mod_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_mod_indicator)
+
+	# ── Auto-fire indicator (top-center, just under the level text) ──
+	# Shows a pulsing [AUTO] badge while the Z-key pinned auto-fire is on, so
+	# the player can tell at a glance that the game is firing for them. The
+	# pulse is a gentle alpha breathing so it reads as "active" without being
+	# distracting. Hidden by default; toggled by Player via set_auto_fire_indicator().
+	_auto_fire_indicator = Label.new()
+	_auto_fire_indicator.offset_left = 540.0
+	_auto_fire_indicator.offset_top = 72.0
+	_auto_fire_indicator.offset_right = 740.0
+	_auto_fire_indicator.offset_bottom = 96.0
+	_auto_fire_indicator.text = "🔥 [AUTO]"
+	_auto_fire_indicator.add_theme_color_override("font_color", Color(1.0, 0.7, 0.2))
+	_auto_fire_indicator.add_theme_font_size_override("font_size", 16)
+	_auto_fire_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_auto_fire_indicator.visible = false
+	add_child(_auto_fire_indicator)
 	
 	# Connect weapon mod signals for indicator updates
 	WeaponModSystem.mod_equipped.connect(_on_mod_equipped_hud)
@@ -561,6 +580,30 @@ func _process(delta: float) -> void:
 		_boss_bar_prev_ratio = 1.0
 		_boss_bar_flash_timer = 0.0
 
+	# ── Auto-fire indicator pulse ── A gentle alpha breathing so the [AUTO]
+	#    badge reads as "active" without being distracting. Uses a slow sine
+	#    (1.5 Hz) that swings modulate.a between 0.55 and 1.0 — clearly
+	#    visible, never fully dim. Only runs while the indicator is visible
+	#    (i.e. while the Z-key pinned auto-fire is on).
+	if _auto_fire_indicator and _auto_fire_indicator.visible:
+		_auto_fire_pulse_phase += delta * 1.5 * TAU
+		var pulse: float = 0.775 + 0.225 * sin(_auto_fire_pulse_phase)
+		_auto_fire_indicator.modulate.a = pulse
+
+## Toggle the [AUTO] fire indicator visibility. Called by Player when the
+## Z-key auto-fire toggle changes state. No-op if the HUD hasn't been built
+## yet (defensive — the player could theoretically toggle before _ready).
+func set_auto_fire_indicator(active: bool) -> void:
+	if not _auto_fire_indicator:
+		return
+	_auto_fire_indicator.visible = active
+	if not active:
+		# Reset alpha so a later show starts at full opacity, not the last
+		# pulse value (which could be near the dim trough and look like a
+		# faded-in badge).
+		_auto_fire_indicator.modulate.a = 1.0
+		_auto_fire_pulse_phase = 0.0
+
 func _on_hp_changed(new_hp: int, max_hp: int) -> void:
 	var ratio := float(new_hp) / float(max_hp) if max_hp > 0 else 0.0
 	_hp_bar_target_ratio = ratio
@@ -644,6 +687,12 @@ func _on_game_restarted() -> void:
 	_hp_bar_flash_timer = 0.0
 	if hp_bar:
 		hp_bar.offset_left = 2.0
+	# Reset the auto-fire indicator — the player's _auto_fire_pinned flag is
+	# reset on respawn (see Player._on_game_restarted_player), but the HUD
+	# indicator also needs to clear so a stale [AUTO] badge doesn't persist
+	# into the new run. Calling set_auto_fire_indicator(false) hides the
+	# label and resets the pulse phase.
+	set_auto_fire_indicator(false)
 
 func _update_all_displays() -> void:
 	_on_hp_changed(GameManager.player_hp, GameManager.player_max_hp)
