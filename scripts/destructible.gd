@@ -29,6 +29,16 @@ signal destroyed(pos: Vector3)
 var _is_broken: bool = false
 var _hit_flash_timer: float = 0.0
 var _mat: StandardMaterial3D = null
+# Track the active hit-flash tween so repeated hits don't spawn overlapping
+# tweens that fight over albedo_color. Each new hit kills the previous tween
+# and starts a fresh one — this prevents the "stuck on white" bug where a
+# second hit lands mid-flash and the old tween's setter fights the new one.
+var _flash_tween: Tween = null
+# Brief hit-stop on shatter so breaking a crate feels weighty rather than
+# instantaneous. The freeze is short (50ms) so it punctuates without
+# disrupting flow. Mirrors the projectile hit-stop technique.
+const SHATTER_HITSTOP_DURATION: float = 0.05
+const SHATTER_HITSTOP_TIME_SCALE: float = 0.1
 
 func _ready() -> void:
 	add_to_group("destructibles")
@@ -55,9 +65,17 @@ func take_damage_from(amount: int, _source_pos: Vector3 = Vector3.ZERO) -> void:
 	hp -= amount
 	_hit_flash_timer = 0.12
 	if _mat:
+		# Kill any active flash tween so the new flash starts from white
+		# cleanly instead of fighting a previous tween's setter.
+		if _flash_tween and _flash_tween.is_valid():
+			_flash_tween.kill()
 		_mat.albedo_color = Color.WHITE
-		var flash_tween := create_tween()
-		flash_tween.tween_property(_mat, "albedo_color", fragment_color, 0.12)
+		_flash_tween = create_tween()
+		# Ease-out cubic so the color returns quickly at first then settles
+		# — reads as a sharp snap-back rather than a slow bleed.
+		_flash_tween.tween_property(_mat, "albedo_color", fragment_color, 0.12) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_QUAD)
 	if hp <= 0:
 		_shatter()
 
@@ -89,6 +107,23 @@ func _shatter() -> void:
 	# Particle burst
 	ParticleEffects.spawn_explosion(get_parent(), global_position, fragment_color, 25, 0.6)
 
+	# ── Shatter light flash — a brief real-time light pop so the break
+	# reads in dark biomes even without looking directly at the crate.
+	# Matches the impact_burst light technique. Color is warm-tinted toward
+	# white so it reads as a "break" rather than a colored magic effect.
+	var shatter_light := OmniLight3D.new()
+	shatter_light.light_color = fragment_color.lerp(Color(1.0, 1.0, 0.9), 0.5)
+	shatter_light.light_energy = 3.0
+	shatter_light.omni_range = 5.0
+	shatter_light.omni_attenuation = 1.2
+	get_parent().add_child(shatter_light)
+	shatter_light.global_position = global_position + Vector3(0, 0.5, 0)
+	var light_tween := create_tween()
+	light_tween.tween_property(shatter_light, "light_energy", 0.0, 0.18) \
+		.set_ease(Tween.EASE_OUT) \
+		.set_trans(Tween.TRANS_QUAD)
+	light_tween.chain().tween_callback(shatter_light.queue_free)
+
 	# Spawn RigidBody3D fragments
 	for i in range(shatter_count):
 		_spawn_fragment(i)
@@ -98,9 +133,20 @@ func _shatter() -> void:
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.15)
 
+	# ── Hit-stop: brief global time-scale dip so the shatter lands with
+	# weight. Uses the same Engine.time_scale technique as projectile
+	# hit-stop. A scene-tree Timer restores the scale so the freeze is
+	# independent of this node's lifetime (we queue_free below).
+	Engine.time_scale = SHATTER_HITSTOP_TIME_SCALE
+	var restore_timer := get_tree().create_timer(SHATTER_HITSTOP_DURATION)
+	restore_timer.timeout.connect(_restore_time_scale)
+
 	# Hide self and free after a tiny delay (so signal completes)
 	mesh_instance.visible = false
 	queue_free()
+
+func _restore_time_scale() -> void:
+	Engine.time_scale = 1.0
 
 func _spawn_fragment(index: int) -> void:
 	var frag := RigidBody3D.new()
@@ -158,3 +204,16 @@ func _spawn_fragment(index: int) -> void:
 	# Auto-free fragment after lifetime
 	var timer := get_tree().create_timer(GameConstants.DESTRUCTIBLE_SHATTER_LIFETIME)
 	timer.timeout.connect(frag.queue_free)
+
+	# ── Scale-in pop: fragments start tiny and overshoot to full size
+	# with an ease-out back curve. This makes the shatter feel explosive
+	# — the shards "burst" outward rather than appearing at full size.
+	# Combined with the impulse, this reads as a real break rather than
+	# a spawn. The tween targets mesh_inst.scale (not frag.scale) so it
+	# doesn't conflict with any physics-driven scale changes.
+	mesh_inst.scale = Vector3.ONE * 0.1
+	var pop_tween := create_tween()
+	# TRANS_BACK gives a ~10% overshoot for a punchy "snap" exit
+	pop_tween.tween_property(mesh_inst, "scale", Vector3.ONE, 0.18) \
+		.set_ease(Tween.EASE_OUT) \
+		.set_trans(Tween.TRANS_BACK)
