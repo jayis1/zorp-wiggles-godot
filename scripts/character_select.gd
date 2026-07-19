@@ -147,7 +147,7 @@ func _gui_input(event: InputEvent) -> void:
 func _card_at_point(p: Vector2) -> int:
 	var count: int = CharacterSelectManager.Character.size()
 	var total_w: float = count * CARD_W + (count - 1) * CARD_GAP
-	var start_x: float = (1280.0 - total_w) / 2.0
+	var start_x: float = (size.x - total_w) / 2.0
 	for i in count:
 		var x: float = start_x + i * (CARD_W + CARD_GAP)
 		if p.x >= x and p.x <= x + CARD_W and p.y >= CARD_Y and p.y <= CARD_Y + CARD_H:

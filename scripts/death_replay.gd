@@ -124,6 +124,8 @@ func start_replay(player: CharacterBody3D) -> void:
 		return
 	if _samples.size() < 10:
 		return  # Not enough recorded data to bother
+	if not is_instance_valid(player):
+		return  # Defensive: no player to replay with
 	_playing = true
 	_play_idx = 0
 	_play_accum = 0.0

@@ -98,7 +98,10 @@ func _ready() -> void:
 	global_position = Vector3(0, 0, 0)
 	# Override camera pitch for the descend (looking down at the falling Zorp)
 	if _camera_rig and _camera_rig.has_method("set_camera_pitch"):
-		_saved_cam_pitch = _camera_rig.get("camera_pitch") if _camera_rig.get("camera_pitch") != null else -55.0
+		# Save the current pitch from the rig's actual rotation (the rig eases
+		# rotation_degrees.x toward _target_pitch, so rotation_degrees.x is
+		# the live value). Fall back to the default -55° if something is off.
+		_saved_cam_pitch = _camera_rig.rotation_degrees.x if _camera_rig else -55.0
 		_camera_rig.set_camera_pitch(-75.0)  # Steeper top-down view
 	# Hide HUD during cinematic — CanvasLayer has no modulate property, so we
 	# create a full-screen opaque ColorRect as a child of the HUD and fade it
@@ -120,10 +123,15 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(_player):
 		_finish()
 		return
+	# If the cinematic has already finished (Phase.DONE), don't run update logic
+	if _phase == Phase.DONE:
+		return
 	_phase_t += delta
 	# Position the light column + trail at the player's location
-	_light_column.global_position = _player.global_position + Vector3(0, 1, 0)
-	_trail_particles.global_position = _player.global_position
+	if is_instance_valid(_light_column):
+		_light_column.global_position = _player.global_position + Vector3(0, 1, 0)
+	if is_instance_valid(_trail_particles):
+		_trail_particles.global_position = _player.global_position
 	match _phase:
 		Phase.DESCEND:
 			_update_descend(delta)
@@ -144,7 +152,8 @@ func _update_descend(delta: float) -> void:
 	if pm and is_instance_valid(pm):
 		pm.rotation.y = t * TAU * 0.5
 	# Fade the light column intensity as we approach impact
-	_light_column.light_energy = lerpf(4.0, 8.0, t)
+	if is_instance_valid(_light_column):
+		_light_column.light_energy = lerpf(4.0, 8.0, t)
 	# Camera follows from above; the camera rig's existing follow logic
 	# handles XZ tracking. We just rely on the pitch override set in _ready.
 	if t >= 1.0:
@@ -182,9 +191,11 @@ func _enter_impact() -> void:
 		tw.tween_property(pm2, "scale", Vector3(1.5, 0.4, 1.5), 0.08).set_ease(Tween.EASE_OUT)
 		tw.tween_property(pm2, "scale", Vector3.ONE, 0.25).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	# Flash the light column
-	_light_column.light_energy = 15.0
+	if is_instance_valid(_light_column):
+		_light_column.light_energy = 15.0
 	# Stop the trail
-	_trail_particles.emitting = false
+	if is_instance_valid(_trail_particles):
+		_trail_particles.emitting = false
 
 
 func _update_impact(delta: float) -> void:
@@ -197,7 +208,8 @@ func _update_impact(delta: float) -> void:
 		if mat is StandardMaterial3D:
 			mat.albedo_color.a = lerpf(0.6, 0.0, t)
 	# Fade the light column
-	_light_column.light_energy = lerpf(15.0, 0.0, t)
+	if is_instance_valid(_light_column):
+		_light_column.light_energy = lerpf(15.0, 0.0, t)
 	if t >= 1.0:
 		_enter_settle()
 
@@ -214,15 +226,16 @@ func _enter_settle() -> void:
 		tw.tween_property(_hud_fade_rect, "color:a", 0.0, 0.5).set_ease(Tween.EASE_OUT)
 	# Unlock controls
 	_controls_unlocked = true
-	_player.remove_meta("cinematic_active")
+	if is_instance_valid(_player) and _player.has_meta("cinematic_active"):
+		_player.remove_meta("cinematic_active")
 	# Fade out the light column + dust ring
-	if _light_column:
+	if _light_column and is_instance_valid(_light_column):
 		var tw2 := create_tween()
 		tw2.tween_property(_light_column, "light_energy", 0.0, 0.5).set_ease(Tween.EASE_OUT)
 	if _dust_ring and is_instance_valid(_dust_ring):
 		var tw3 := create_tween()
 		tw3.tween_property(_dust_ring, "scale", _dust_ring.scale * 1.5, 0.5).set_ease(Tween.EASE_OUT)
-		tw3.parallel().tween_callback(_dust_ring.queue_free)
+		tw3.tween_callback(_dust_ring.queue_free)
 
 
 func _update_settle(delta: float) -> void:

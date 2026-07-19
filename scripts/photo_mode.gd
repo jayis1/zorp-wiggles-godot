@@ -54,9 +54,16 @@ func _ready() -> void:
 	_hud_panel.visible = false
 	_hud_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Add to the HUD canvas layer so it renders above the game world
-	var hud: CanvasLayer = get_tree().get_first_node_in_group("hud")
-	if hud:
-		hud.add_child(_hud_panel)
+	# Note: at autoload _ready time, current_scene may not be loaded yet.
+	# The HUD node is created later by the main scene, so we defer the panel
+	# parenting to enter_photo_mode() if the HUD isn't available yet.
+	var scene_root: Node = get_tree().current_scene
+	if scene_root:
+		var hud: CanvasLayer = scene_root.get_node_or_null("HUD")
+		if hud:
+			hud.add_child(_hud_panel)
+		else:
+			scene_root.add_child(_hud_panel)
 	else:
 		add_child(_hud_panel)
 	_hud_label = Label.new()
@@ -264,11 +271,15 @@ func _flash_capture() -> void:
 	flash.color = Color(1, 1, 1, 0.8)
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Add to the HUD layer so it renders above the game world
-	var hud: CanvasLayer = get_tree().get_first_node_in_group("hud")
-	if hud:
-		hud.add_child(flash)
+	var scene_root: Node = get_tree().current_scene
+	if scene_root:
+		var hud: CanvasLayer = scene_root.get_node_or_null("HUD")
+		if hud:
+			hud.add_child(flash)
+		else:
+			scene_root.add_child(flash)
 	else:
-		get_tree().current_scene.add_child(flash)
+		get_tree().root.add_child(flash)
 	var t: Tween = flash.create_tween()
 	t.tween_property(flash, "color:a", 0.0, 0.2).set_ease(Tween.EASE_OUT)
 	t.tween_callback(flash.queue_free)
