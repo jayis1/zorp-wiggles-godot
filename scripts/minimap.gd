@@ -2,6 +2,7 @@
 ## Top-down minimap with color-coded biome tiles, enemy dots, player dot,
 ## collectible dots, portal dots, and trader dots. Rendered via _draw().
 ## Toggle with the "minimap" input action (M key).
+## Scroll wheel zooms in/out (Phase 31: QoL — minimap zoom).
 ## Inspired by the minimap system in Ursina game.py.
 
 extends Control
@@ -18,6 +19,16 @@ var _grid_size: int = 0
 var _tile_scale: float = 4.0
 var _biome_colors: Dictionary = {}
 
+# ── Phase 31: Minimap zoom ──
+# View range is now a variable so the scroll wheel can adjust it. Clamped to
+# [MINIMAP_VIEW_RANGE_MIN, MINIMAP_VIEW_RANGE_MAX]. Zoom is in "world units
+# visible around the player" — smaller = zoomed in, larger = zoomed out.
+var _view_range: float = GameConstants.MINIMAP_VIEW_RANGE
+var _zoom_smoother: float = 8.0  # Exponential lerp speed for smooth zoom
+const MINIMAP_VIEW_RANGE_MIN: float = 40.0   # Zoomed in (tight)
+const MINIMAP_VIEW_RANGE_MAX: float = 400.0  # Zoomed out (wide)
+const MINIMAP_ZOOM_STEP: float = 1.25        # Each scroll step multiplies/divides by this
+
 # ─── Minimap geometry (pixels) ────────────────────────────────────────────────
 var _size: float = GameConstants.MINIMAP_SIZE
 var _margin: float = GameConstants.MINIMAP_MARGIN
@@ -26,8 +37,10 @@ var _half_size: float = GameConstants.MINIMAP_SIZE / 2.0
 func _ready() -> void:
 	# Anchor to bottom-right corner
 	set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Set the control size
+	# MOUSE_FILTER_PASS so scroll wheel events over the minimap are captured
+	# here first (via _gui_input) but clicks still fall through to the game
+	# (we only consume scroll, and only when the cursor is over the minimap).
+	mouse_filter = Control.MOUSE_FILTER_PASS
 	offset_left = -(_size + _margin)
 	offset_top = -(_size + _margin)
 	offset_right = -_margin
@@ -67,6 +80,27 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("minimap"):
 		_minimap_visible = not _minimap_visible
 		visible = _minimap_visible
+		get_viewport().set_input_as_handled()
+		return
+
+# ── Phase 31: Minimap zoom via scroll wheel ──
+# _gui_input fires only when the mouse is over this Control and the event
+# wasn't consumed by a higher-priority control. MOUSE_FILTER_PASS lets the
+# event propagate to the game after we handle the scroll, but we mark it as
+# handled so the camera (if it ever uses scroll) doesn't also respond.
+# Wheel up = zoom in (smaller range), wheel down = zoom out (larger range).
+func _gui_input(event: InputEvent) -> void:
+	if not _minimap_visible:
+		return
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_view_range = maxf(MINIMAP_VIEW_RANGE_MIN, _view_range / MINIMAP_ZOOM_STEP)
+			queue_redraw()
+			accept_event()
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_view_range = minf(MINIMAP_VIEW_RANGE_MAX, _view_range * MINIMAP_ZOOM_STEP)
+			queue_redraw()
+			accept_event()
 
 func _draw() -> void:
 	if not _minimap_visible:
@@ -118,8 +152,8 @@ func _draw_terrain(rect: Rect2) -> void:
 		player_world_pos = Vector2(player.global_position.x, player.global_position.z)
 
 	# World units per minimap pixel
-	var pixel_per_world: float = _size / GameConstants.MINIMAP_VIEW_RANGE
-	var half_world_extent: float = GameConstants.MINIMAP_VIEW_RANGE / 2.0
+	var pixel_per_world: float = _size / _view_range
+	var half_world_extent: float = _view_range / 2.0
 
 	# Player world position
 	var px_x: float = player_world_pos.x
@@ -175,7 +209,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 
 	var px: float = player.global_position.x
 	var pz: float = player.global_position.z
-	var pixel_per_world: float = _size / GameConstants.MINIMAP_VIEW_RANGE
+	var pixel_per_world: float = _size / _view_range
 
 	# ── Collectible dots (small cyan) ──
 	for collectible in GameManager.collectibles:
@@ -387,6 +421,18 @@ func _draw_entity_dots(rect: Rect2) -> void:
 				Vector2(ppos.x - s, ppos.y),
 			])
 			draw_colored_polygon(pts, pet_color)
+
+	# ── Phase 31: Zoom indicator (bottom-left of minimap) ──
+	# A tiny "×1.0" label showing the current zoom factor, so the player knows
+	# they're zoomed in/out. Uses the default font at small size.
+	var zoom_factor: float = GameConstants.MINIMAP_VIEW_RANGE / _view_range
+	var zoom_str: String = "×%.1f" % zoom_factor
+	var zfont := get_theme_default_font()
+	# Background pill for readability
+	var zbg_rect := Rect2(4.0, _size - 16.0, 36.0, 12.0)
+	draw_rect(zbg_rect, Color(0.0, 0.0, 0.0, 0.5), true)
+	draw_string(zfont, Vector2(6.0, _size - 6.0), zoom_str,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.8, 0.9, 1.0, 0.9))
 
 func _is_in_rect(pos: Vector2, rect: Rect2) -> bool:
 	return pos.x >= rect.position.x and pos.x <= rect.position.x + rect.size.x \

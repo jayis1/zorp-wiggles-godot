@@ -443,19 +443,19 @@ NOTE: Cron jobs should implement phases 1-20 and 22-35. Do NOT implement Phase 2
 - [x] Material refinement (combine 3 common materials into 1 rare material) — `refine_material()` in `equipment_system.gd` with two recipe types: single-input `REFINEMENT_RECIPES` (3× one material → 1 rare) and dual-input `REFINEMENT_RECIPES_DUAL` (3× each of two materials → 1 rare); consumes from `WeaponModSystem` inventory, adds to `EquipmentSystem` rare material inventory; `material_refined` signal; HUD message with material names
 - [x] Set bonuses (wearing matching armor pieces gives bonus effects) — `EquipSet` enum (NONE, PLASMA, CRYSTAL, VOID, ANCIENT) + `EQUIP_SET_NAMES` + `EQUIP_SET_PIECES` (maps set → piece IDs) + `EQUIP_SET_BONUSES` (2-piece and 3-piece bonuses per set); `_get_active_set_bonuses()` counts equipped pieces per set (min 2 for bonus); `_get_set_bonus_dict()` combines 2-piece + 3-piece bonuses; set bonuses added to `get_stat_bonus()` aggregation; `get_active_set_name()` for HUD display (e.g. "Plasma (2pc)"); Plasma set: +damage/speed, Crystal: +crit/loot, Void: +dmg_reduction/xp, Ancient: +max_hp/fire_rate
 
-### Phase 30: Visual & Audio Polish (TODO) 🆕
+### Phase 30: Visual & Audio Polish (IN PROGRESS) 🆕
 - [ ] Character selection screen (choose Zorp or Zerp with stat previews)
 - [ ] Skin system (unlock cosmetic skins for Zorp: golden, void, crystal, lava)
 - [ ] Trail customization (choose dash trail color and particle style)
 - [ ] Death replay (show last 5 seconds of gameplay before death, slow-mo)
 - [ ] Victory screen (for boss rush / endless modes with ranking)
-- [ ] Dynamic music intensity (music intensifies as combo counter rises)
+- [x] Dynamic music intensity (music intensifies as combo counter rises) — `audio_manager.gd` extended with `_update_music_intensity(delta)` called from a new `_process`; 5 intensity tiers (Calm/Engaged/Heated/Intense/Frenzied) mapped from `player_combo` (0-4/5-14/15-29/30-49/50+); intensity eases toward target via exponential lerp (`MUSIC_INTENSITY_FADE_SPEED=2.5`); maps to pitch_scale (1.00→1.08, +8% at max) and volume offset (0→+3.5 dB); combo timer expiring forces calm even if combo count is high (prevents music staying maxed after combat); boss music exempt (already intense); `get_music_intensity()`/`get_music_intensity_name()` public API for HUD; resets to 0 on game restart
 - [ ] Adaptive sound effects (weapon mods change shoot sound, biome changes ambient)
 - [ ] Color filter modes (sepia, noir, thermal, x-ray — unlockable cosmetics)
 - [ ] Photo mode (freeze game, free camera, capture screenshots with filters)
 - [ ] Intro cinematic (procedural animation showing Zorp landing on the planet)
 
-### Phase 31: Quality of Life (TODO) 🆕
+### Phase 31: Quality of Life (IN PROGRESS) 🆕
 - [ ] Auto-save system (saves game state every 30 seconds and on biome change)
 - [ ] Save/load system (save to file: player stats, inventory, world seed, explored biomes)
 - [ ] UI scaling option (adjust HUD size for different screen resolutions)
@@ -463,9 +463,9 @@ NOTE: Cron jobs should implement phases 1-20 and 22-35. Do NOT implement Phase 2
 - [ ] Control rebinding (customize all keys, save to settings)
 - [ ] Tutorial mode (first-time player gets guided intro with tooltips)
 - [ ] Tooltip system (hover over items/mods/enemies for info popups)
-- [ ] Minimap zoom (scroll to zoom minimap in/out)
+- [x] Minimap zoom (scroll to zoom minimap in/out) — `minimap.gd` extended with `_view_range` variable (replaces constant usage in `_draw_terrain` and `_draw_entity_dots`), `MINIMAP_VIEW_RANGE_MIN=40`/`MAX=400`/`ZOOM_STEP=1.25` constants; `_gui_input` handler captures `MOUSE_BUTTON_WHEEL_UP`/`DOWN` when cursor is over the minimap (mouse_filter=PASS), calls `accept_event()` to prevent camera scroll conflict; zoom indicator "×N.N" drawn at bottom-left of minimap with semi-transparent background pill; default range 120 (the original `MINIMAP_VIEW_RANGE` constant) sits within bounds
 - [ ] Ping system (press key to ping location, shows marker on minimap and world)
-- [ ] FPS counter and performance overlay (toggle with key, shows fps/draw calls/memory)
+- [x] FPS counter and performance overlay (toggle with key, shows fps/draw calls/memory) — `fps_counter.gd` (class_name FPSCounter) Control node added to HUD in `hud.gd`; `fps_counter` input action (F3 key) added to `project.godot`; toggles a `_draw()`-based overlay showing FPS (current/avg/min over 60-frame history), frame time (ms), process + physics time, draw calls, object count, node count, orphan count, VRAM; 60-point FPS sparkline graph with 30/60 FPS reference lines and per-point color coding (green ≥55, yellow 30-55, red <30); readout refreshes 4×/sec (avoids text flicker), graph animates every frame; fade-in/out via alpha lerp; uses Performance singleton integer indices (stable across Godot 4.x versions — some enum names like RENDER_OBJECTS_IN_FRAME differ between versions)
 
 ### Phase 32: Mutliplayer & Social (TODO) 🆕
 - [ ] Online leaderboards (submit scores to server, view global rankings)

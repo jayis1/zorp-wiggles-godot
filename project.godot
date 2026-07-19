@@ -140,6 +140,10 @@ equipment={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":88,"physical_keycode":0,"key_label":0,"unicode":120,"location":0,"echo":false,"script":null)]
 }
+fps_counter={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194334,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
 
 [autoload]
 
@@ -163,4 +167,4 @@ FastTravelNetwork="*res://scripts/fast_travel_network.gd"
 WanderingMerchantSpawner="*res://scripts/wandering_merchant_spawner.gd"
 PetStoneInventory="*res://scripts/pet_stone_inventory.gd"
 EquipmentSystem="*res://scripts/equipment_system.gd"
-HermesVerify="*res://scripts/hermes_verify_phase27.gd"
+HermesVerify="*res://scripts/hermes_verify_phase30_31.gd"

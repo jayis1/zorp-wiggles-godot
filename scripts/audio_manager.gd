@@ -93,6 +93,83 @@ func _ready() -> void:
 	_apply_volumes()
 
 
+# ─── Phase 30: Dynamic Music Intensity ────────────────────────────────────────
+# The music intensity rises with the player's kill combo, then decays back to
+# baseline when the combo timer expires. We modulate the biome music player's
+# pitch_scale (subtle, +0..+8%) and volume (+0..+3 dB) so combat feels more
+# urgent as the combo climbs, then settles when the action dies down.
+#
+# Intensity tiers (based on player_combo):
+#   0-4   : calm    — pitch 1.00, vol offset 0.0 dB
+#   5-14  : engaged — pitch 1.02, vol offset +0.5 dB
+#   15-29 : heated  — pitch 1.04, vol offset +1.5 dB
+#   30-49 : intense — pitch 1.06, vol offset +2.5 dB
+#   50+   : frenzied — pitch 1.08, vol offset +3.5 dB
+#
+# The intensity eases toward its target (exponential lerp) so the transition
+# is smooth, not a snap. Boss music is exempt (it's already intense).
+const MUSIC_INTENSITY_FADE_SPEED: float = 2.5  # How fast intensity eases
+var _music_intensity_current: float = 0.0  # 0..4 (tier index, fractional)
+
+func _process(delta: float) -> void:
+	_update_music_intensity(delta)
+
+func _update_music_intensity(delta: float) -> void:
+	if not _initialized:
+		return
+	# Boss music has its own fixed intensity — don't modulate it.
+	if _boss_music_playing:
+		return
+	if not _music_player or not _music_player.playing:
+		return
+	# Determine target intensity tier from combo
+	var target_tier: float = 0.0
+	if GameManager:
+		var combo: int = GameManager.player_combo
+		# Combo timer expiring → ease back to calm even if combo count is high.
+		# This prevents the music from staying maxed-out after combat ends.
+		if GameManager.player_combo_timer <= 0.0:
+			combo = 0
+		if combo >= 50:
+			target_tier = 4.0
+		elif combo >= 30:
+			target_tier = 3.0
+		elif combo >= 15:
+			target_tier = 2.0
+		elif combo >= 5:
+			target_tier = 1.0
+		else:
+			target_tier = 0.0
+	# Ease toward target (frame-rate independent)
+	_music_intensity_current = lerpf(_music_intensity_current, target_tier,
+		1.0 - exp(-MUSIC_INTENSITY_FADE_SPEED * delta))
+	# Map intensity (0..4) to pitch (1.00..1.08) and volume offset (0..+3.5 dB)
+	var pitch: float = 1.0 + (_music_intensity_current / 4.0) * 0.08
+	var vol_offset_db: float = (_music_intensity_current / 4.0) * 3.5
+	# Apply — but only if a fade isn't currently animating the volume (so we
+	# don't fight the fade tween). Pitch is safe to set any time.
+	_music_player.pitch_scale = pitch
+	var music_fading: bool = _music_fade_tween != null and is_instance_valid(_music_fade_tween) and _music_fade_tween.is_running()
+	if not music_fading:
+		var base_vol_db: float = linear_to_db(maxf(music_volume * master_volume, 0.0001))
+		_music_player.volume_db = base_vol_db + vol_offset_db
+
+## Get the current music intensity tier (0..4, fractional). For HUD display.
+func get_music_intensity() -> float:
+	return _music_intensity_current
+
+## Get the current music intensity tier name. For HUD/feedback.
+func get_music_intensity_name() -> String:
+	var t: int = int(round(_music_intensity_current))
+	match t:
+		0: return "Calm"
+		1: return "Engaged"
+		2: return "Heated"
+		3: return "Intense"
+		4: return "Frenzied"
+		_: return "Calm"
+
+
 # ─── SFX Pool ─────────────────────────────────────────────────────────────────
 
 func _create_sfx_pool() -> void:
@@ -365,6 +442,8 @@ func _on_game_restarted() -> void:
 	_boss_music_playing = false
 	_stop_boss_music()
 	_current_biome = -1
+	# Phase 30: Reset dynamic music intensity
+	_music_intensity_current = 0.0
 
 
 # ═════════════════════════════════════════════════════════════════════════════

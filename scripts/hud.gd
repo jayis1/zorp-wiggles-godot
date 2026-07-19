@@ -288,6 +288,13 @@ func _ready() -> void:
 	eq_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(eq_ctrl)
 
+	# ── Phase 31: FPS Counter & Performance Overlay (F3) ──
+	var fps_script := load("res://scripts/fps_counter.gd")
+	var fps_ctrl := Control.new()
+	fps_ctrl.set_script(fps_script)
+	fps_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(fps_ctrl)
+
 	# Initialize displays
 	_update_all_displays()
 
