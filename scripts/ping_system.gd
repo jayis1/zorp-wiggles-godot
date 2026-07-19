@@ -60,6 +60,9 @@ func _ready() -> void:
 	add_child(_raycast)
 	# Resolve camera and player references on next frame (after scene is built)
 	call_deferred("_resolve_refs")
+	# Clear pings on game restart so stale markers don't persist into a new run.
+	if GameManager and not GameManager.game_restarted.is_connected(_on_game_restarted):
+		GameManager.game_restarted.connect(_on_game_restarted)
 
 
 func _resolve_refs() -> void:
@@ -204,10 +207,14 @@ func _create_ping_marker(pos: Vector3, ptype: int) -> Node3D:
 	tween.tween_property(ring, "scale", Vector3.ONE, 0.6) \
 		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 
-	# Schedule fade-out and removal
+	# Schedule fade-out and removal.
+	# NOTE: `ping` is a Node3D, which has no `modulate` property (only
+	# CanvasItem / Label3D descendants do). Fading the parent's modulate is a
+	# no-op that would leave the beacon fully visible until it is freed. Fade
+	# the Label3D's modulate plus the beam/ring/light that we actually own.
 	var fade_tween := ping.create_tween()
 	fade_tween.tween_interval(PING_LIFETIME - PING_FADE_DURATION)
-	fade_tween.tween_property(ping, "modulate:a", 0.0, PING_FADE_DURATION) \
+	fade_tween.tween_property(label, "modulate:a", 0.0, PING_FADE_DURATION) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	fade_tween.parallel().tween_property(beam_mat, "albedo_color:a", 0.0, PING_FADE_DURATION)
 	fade_tween.parallel().tween_property(ring_mat, "albedo_color:a", 0.0, PING_FADE_DURATION)
