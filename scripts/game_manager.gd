@@ -349,6 +349,12 @@ func _start_game() -> void:
 	# ── Phase 32: Replay system — start recording a new replay ──
 	if ReplaySystem:
 		ReplaySystem.start_recording(world_seed)
+	# ── Phase 34: Endgame Manager — generate loot caves + ancient vault ──
+	# These world structures are seeded by world_seed for deterministic
+	# generation (shared challenge seeds produce the same caves/vault).
+	if EndgameManager:
+		EndgameManager.call_deferred("generate_loot_caves")
+		EndgameManager.call_deferred("generate_ancient_vault")
 	# ── Phase 32: Ghost mode — try to spawn a ghost for this run ──
 	if GhostMode:
 		GhostMode.try_start_ghost()
@@ -434,6 +440,14 @@ func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> 
 		cam_rig.add_trauma(amount, bias_dir)
 
 func heal(amount: int) -> void:
+	# ── Phase 34: Survival mode — no healing items, no shrines ──
+	# The mode only blocks pickup/shrine healing — level-up heals (the
+	# PLAYER_LEVEL_HEAL_PERCENT) are still allowed so leveling still feels good.
+	# This is gated by a meta flag set by the caller (e.g. HealthFragment,
+	# HealingShrine) via mark_heal_blocked_in_survival(). Direct heal() calls
+	# from level-up go through unconditionally.
+	if _survival_heal_blocked:
+		return
 	# Clamp to 0 so we never emit a heal signal for a no-op (e.g. full HP).
 	# This prevents the player mesh from flashing green when nothing actually
 	# changed, which would be confusing visual noise.
@@ -448,6 +462,19 @@ func heal(amount: int) -> void:
 	player_healed.emit(actual_heal)
 	# Phase 20: Audio — heal SFX
 	AudioManager.play_sfx(AudioManager.SFX_HEAL)
+
+# Phase 34: Survival mode heal-suppression toggle. Set to true by healing
+# items/shrines when Survival mode is active so they no-op, but reset to
+# false immediately so level-up heals still work.
+var _survival_heal_blocked: bool = false
+func block_heal_next_call() -> void:
+	if GameModeManager and GameModeManager.is_survival():
+		_survival_heal_blocked = true
+		# Auto-reset on the next frame so subsequent (legitimate) heals work.
+		call_deferred("_reset_heal_block")
+
+func _reset_heal_block() -> void:
+	_survival_heal_blocked = false
 
 func gain_xp(amount: int) -> void:
 	# Enhancement: Aurora weather boosts XP gain by 50%

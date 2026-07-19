@@ -395,6 +395,22 @@ const CRAFTING_LOOT_TABLE_BOSS_BIAS: Dictionary = {
 	CollectibleType.METEOR_SHARD: 8,
 	CollectibleType.HEALTH_FRAGMENT: 4,
 }
+# ── Phase 34: NG+ / NG++ rare-only loot table ──
+# When the active NG tier has NG_TIER_LOOT_RARE_ONLY = true, this table replaces
+# the standard crafting loot table. Only rare/epic/legendary materials drop —
+# the common items (Space Gloop, Star Fruit, Magnet Core) are removed. This
+# makes NG+ runs feel distinct — you're swimming in rare materials, but common
+# mats (needed for cheap recipes) must be farmed in lower tiers.
+const CRAFTING_LOOT_TABLE_RARE_ONLY: Dictionary = {
+	CollectibleType.NEBULA_DUST: 25,
+	CollectibleType.TOXIC_EXTRACT: 25,
+	CollectibleType.REGEN_CRYSTAL: 25,
+	CollectibleType.FIREBALL_SCROLL: 25,
+	CollectibleType.SHIELD_CRYSTAL: 25,
+	CollectibleType.QUANTUM_FUZZ: 15,
+	CollectibleType.METEOR_SHARD: 15,
+	CollectibleType.HEALTH_FRAGMENT: 5,
+}
 
 # ─── Sky & Stars ──────────────────────────────────────────────────────────────
 const STAR_COUNT: int = 80
@@ -3153,3 +3169,190 @@ const TRAIL_COLORS: Array[Color] = [
 const TRAIL_COLOR_NAMES: Array[String] = [
 	"Green", "Gold", "Cyan", "Pink", "Purple", "Orange", "Blue", "White",
 ]
+
+# ─── Phase 33: Procedural Dungeons & Procedural Content ────────────────────────
+# Underground dungeons are scattered across the world. Each has an entrance
+# (a glowing portal-like structure), a small procedurally generated layout of
+# rooms and corridors, enemies, traps, a mini-boss, and a reward chest at the
+# end. Dungeons are seeded by the world seed for deterministic generation.
+enum DungeonTheme {
+	STONE,      # Generic grey stone dungeon
+	CRYSTAL,    # Crystal caverns theme — purple crystals, prismatic light
+	VOLCANIC,   # Volcanic theme — lava pools, ember lighting
+	VOID,       # Void theme — dark, purple rim light, void enemies
+	DIGITAL,    # Digital theme — neon grid, glitch aesthetic
+}
+const DUNGEON_THEME_NAMES: Array[String] = [
+	"Stone Cavern", "Crystal Hollow", "Volcanic Forge", "Void Crypt", "Digital Substrate",
+]
+const DUNGEON_THEME_COLORS: Array[Color] = [
+	Color(0.45, 0.45, 0.50),  # STONE
+	Color(0.55, 0.30, 0.90),  # CRYSTAL
+	Color(0.90, 0.35, 0.15),  # VOLCANIC
+	Color(0.30, 0.10, 0.55),  # VOID
+	Color(0.20, 0.85, 0.95),  # DIGITAL
+]
+const DUNGEON_THEME_EMISSIVE: Array[Color] = [
+	Color(0.30, 0.30, 0.35),  # STONE
+	Color(0.70, 0.40, 1.00),  # CRYSTAL
+	Color(1.00, 0.50, 0.20),  # VOLCANIC
+	Color(0.50, 0.20, 0.90),  # VOID
+	Color(0.30, 0.95, 1.00),  # DIGITAL
+]
+const DUNGEON_COUNT: int = 4              # Number of dungeons per world
+const DUNGEON_MIN_ROOMS: int = 4          # Minimum rooms per dungeon
+const DUNGEON_MAX_ROOMS: int = 7          # Maximum rooms per dungeon
+const DUNGEON_ROOM_MIN_SIZE: float = 6.0  # Min room half-extent (meters)
+const DUNGEON_ROOM_MAX_SIZE: float = 10.0 # Max room half-extent (meters)
+const DUNGEON_CORRIDOR_WIDTH: float = 3.0
+const DUNGEON_WALL_HEIGHT: float = 5.0
+const DUNGEON_WALL_THICKNESS: float = 0.5
+const DUNGEON_FLOOR_Y: float = -8.0        # Below the surface
+const DUNGEON_ENEMY_DENSITY: float = 0.5   # Enemies per room (probability per slot)
+const DUNGEON_MIN_ENEMIES_PER_ROOM: int = 1
+const DUNGEON_MAX_ENEMIES_PER_ROOM: int = 4
+const DUNGEON_BOSS_ROOM_INDEX: int = -1    # Always last room
+const DUNGEON_REWARD_XP: int = 120
+const DUNGEON_REWARD_SCORE: int = 400
+const DUNGEON_ENTRANCE_RADIUS: float = 2.5  # Interaction radius for entrance portal
+const DUNGEON_ENTRANCE_GLOW_COLOR: Color = Color(0.7, 0.5, 1.0)
+const DUNGEON_ENTRANCE_HEIGHT: float = 3.5
+const DUNGEON_MIN_DISTANCE_FROM_SPAWN: float = 60.0
+const DUNGEON_MAX_DISTANCE_FROM_SPAWN: float = 140.0
+
+# ── Phase 33: Procedural biome generation ──
+enum ProcBiomeTrait {
+	GLOWING,
+	CRYSTAL_SHARD,
+	TOXIC_HAZE,
+	ECHO_CHAMBER,
+	GRAVITY_WELL,
+	RAIN_INDOOR,
+	MIRROR_SURFACE,
+	MAGMA_FISSURES,
+}
+const PROC_BIOME_TRAIT_NAMES: Array[String] = [
+	"Glowing", "Crystal Shard", "Toxic Haze", "Echo Chamber",
+	"Gravity Well", "Rain Indoor", "Mirror Surface", "Magma Fissures",
+]
+const PROC_BIOME_TRAIT_COLORS: Array[Color] = [
+	Color(0.95, 0.95, 0.40),
+	Color(0.60, 0.85, 0.95),
+	Color(0.40, 0.80, 0.30),
+	Color(0.70, 0.70, 0.90),
+	Color(0.60, 0.30, 0.90),
+	Color(0.40, 0.60, 1.00),
+	Color(0.85, 0.85, 0.95),
+	Color(1.00, 0.40, 0.10),
+]
+const PROC_BIOME_CHANCE: float = 0.02
+const PROC_BIOME_TRAIT_COUNT: int = 2
+const PROC_BIOME_RADIUS: float = 25.0
+
+# ── Phase 33: Procedural boss generation ──
+enum BossPattern {
+	CHARGE,
+	PROJECTILE_FAN,
+	SHOCKWAVE,
+	SUMMON,
+	TELEPORT,
+	BEAM,
+	GRAVITY_PULL,
+	ENRAGE,
+}
+const BOSS_PATTERN_NAMES: Array[String] = [
+	"Charge", "Projectile Fan", "Shockwave", "Summon",
+	"Teleport", "Beam", "Gravity Pull", "Enrage",
+]
+const PROC_BOSS_MIN_PATTERNS: int = 3
+const PROC_BOSS_MAX_PATTERNS: int = 5
+const PROC_BOSS_BASE_HP: int = 350
+const PROC_BOSS_HP_PER_PLAYER_LEVEL: float = 30.0
+const PROC_BOSS_BASE_DAMAGE: int = 22
+const PROC_BOSS_DAMAGE_PER_PLAYER_LEVEL: float = 2.0
+const PROC_BOSS_BASE_SPEED: float = 2.5
+const PROC_BOSS_NAME_PREFIXES: Array[String] = [
+	"Void", "Crystal", "Plasma", "Ancient", "Echo", "Primal", "Astral", "Shadow",
+]
+const PROC_BOSS_NAME_CORES: Array[String] = [
+	"Tyrant", "Devourer", "Colossus", "Warden", "Harbinger", "Maw", "Sovereign", "Watcher",
+]
+const PROC_BOSS_NAME_SUFFIXES: Array[String] = [
+	"of the Abyss", "the Eternal", "of Ruin", "the Unmaker", "of Stars", "the Hollow",
+]
+enum BossVisualPart {
+	ORBITING_CRYSTALS,
+	SPIKE_CROWN,
+	GLOWING_CORE,
+	ENERGY_RINGS,
+	SHADOW_TENDRILS,
+	PRISM_SHARDS,
+}
+const BOSS_VISUAL_PART_NAMES: Array[String] = [
+	"Orbiting Crystals", "Spike Crown", "Glowing Core",
+	"Energy Rings", "Shadow Tendrils", "Prism Shards",
+]
+
+# ── Phase 33: Procedural music ──
+const PROC_MUSIC_TEMPO: float = 0.6
+const PROC_MUSIC_BARS: int = 4
+const PROC_MUSIC_BEATS_PER_BAR: int = 4
+const PROC_MUSIC_NOTES_PER_BAR: int = 2
+const PROC_MUSIC_BASE_AMP: float = 0.18
+const PROC_MUSIC_ATTACK: float = 0.05
+const PROC_MUSIC_RELEASE: float = 1.4
+
+# ─── Phase 34: Endgame Content ────────────────────────────────────────────────
+enum NGTier {
+	NORMAL,
+	NG_PLUS,
+	NG_PLUS_PLUS,
+}
+const NG_TIER_NAMES: Array[String] = ["Normal", "NG+", "NG++"]
+const NG_TIER_ICONS: Array[String] = ["🌟", "🔥", "💀"]
+const NG_TIER_ENEMY_HP_MULT: Array[float] = [1.0, 2.0, 3.0]
+const NG_TIER_ENEMY_DAMAGE_MULT: Array[float] = [1.0, 1.6, 2.2]
+const NG_TIER_ENEMY_SPEED_MULT: Array[float] = [1.0, 1.15, 1.3]
+const NG_TIER_LOOT_RARE_ONLY: Array[bool] = [false, true, true]
+const NG_TIER_BOSSES_ROAM: Array[bool] = [false, false, true]
+const NG_TIER_NO_MINIMAP: Array[bool] = [false, false, true]
+const NG_TIER_PERMADEATH_OPTION: Array[bool] = [false, false, true]
+const NG_TIER_UNLOCK_LEVEL: int = 25
+const NG_PLUS_PLUS_UNLOCK_LEVEL: int = 40
+
+const SURVIVAL_MODE_NO_HEALING: bool = true
+const SURVIVAL_MODE_NO_SHOPS: bool = true
+const SURVIVAL_MODE_ONE_LIFE: bool = true
+const SURVIVAL_MODE_START_HP: int = 100
+const SURVIVAL_MODE_ENEMY_MULT: float = 1.3
+const SURVIVAL_MODE_SCORE_PER_SEC: int = 5
+const SURVIVAL_MODE_BOSS_INTERVAL: float = 180.0
+
+const GAUNTLET_BIOME_COUNT: int = 5
+const GAUNTLET_TIME_PER_BIOME: float = 90.0
+const GAUNTLET_KILLS_PER_BIOME: int = 15
+const GAUNTLET_ENEMY_MULT: float = 1.2
+
+const BOSS_GAUNTLET_QUEUE: Array[int] = [7, 1, 2, 14, 15, 16]
+const BOSS_GAUNTLET_HP_MULT_PER_INDEX: float = 0.15
+const BOSS_GAUNTLET_DAMAGE_MULT_PER_INDEX: float = 0.08
+const BOSS_GAUNTLET_SPEED_MULT_PER_INDEX: float = 0.03
+const BOSS_GAUNTLET_NO_HEAL: bool = true
+const BOSS_GAUNTLET_INTERMISSION: float = 3.0
+
+const LOOT_CAVE_MIN_DISTANCE: float = 80.0
+const LOOT_CAVE_MAX_DISTANCE: float = 150.0
+const LOOT_CAVE_RARE_ITEM_COUNT: int = 8
+const LOOT_CAVE_ELITE_COUNT: int = 4
+const LOOT_CAVE_ELITE_HP_MULT: float = 2.5
+const LOOT_CAVE_ELITE_DAMAGE_MULT: float = 1.8
+const LOOT_CAVE_RADIUS: float = 12.0
+const LOOT_CAVE_DEPTH: float = -6.0
+
+const ANCIENT_VAULT_LORE_STONES_REQUIRED: int = 10
+const ANCIENT_VAULT_DISTANCE: float = 120.0
+const ANCIENT_VAULT_LEGENDARY_ITEM_COUNT: int = 3
+const ANCIENT_VAULT_GUARDIAN_HP: int = 800
+const ANCIENT_VAULT_GUARDIAN_DAMAGE: int = 40
+const ANCIENT_VAULT_GUARDIAN_SPEED: float = 3.5
+const ANCIENT_VAULT_PUZZLE_STEPS: int = 4

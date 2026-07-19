@@ -184,6 +184,14 @@ toggle_ghost={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":true,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":71,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
 }
+cycle_ng_tier={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":true,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":78,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
+spawn_procedural_boss={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":true,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":80,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
 
 [autoload]
 
@@ -224,6 +232,11 @@ WorldModifierSystem="*res://scripts/world_modifier_system.gd"
 EnemyVariantSystem="*res://scripts/enemy_variant_system.gd"
 ProceduralQuestSystem="*res://scripts/procedural_quest_system.gd"
 WeaponModFusion="*res://scripts/weapon_mod_fusion.gd"
+DungeonGenerator="*res://scripts/dungeon_generator.gd"
+ProceduralBiomeGenerator="*res://scripts/procedural_biome_generator.gd"
+ProceduralMusicGenerator="*res://scripts/procedural_music.gd"
+ProceduralBossGenerator="*res://scripts/procedural_boss_generator.gd"
+EndgameManager="*res://scripts/endgame_manager.gd"
 # HermesVerify autoload REMOVED — it was a temporary ad-hoc verification script
 # that calls get_tree().quit() in _ready(), which immediately exits the game on
 # every launch. This made the game unplayable. To run verification, temporarily

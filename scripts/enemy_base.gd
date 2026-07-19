@@ -578,6 +578,9 @@ func _die() -> void:
 		CoOpManager.p2_add_score(score_reward)
 	else:
 		GameManager.add_score(score_reward)
+	# ── Phase 34: Gauntlet mode — notify EndgameManager of each kill ──
+	if EndgameManager:
+		EndgameManager.notify_gauntlet_kill()
 	enemy_died.emit(self)
 	# Phase 20: Audio — enemy death SFX
 	AudioManager.play_sfx(AudioManager.SFX_ENEMY_DEATH)
@@ -860,6 +863,11 @@ func _drop_crafting_material() -> void:
 	# Bosses use the rarity-biased table (shifts weight toward rare mats).
 	var table: Dictionary = GameConstants.CRAFTING_LOOT_TABLE_BOSS_BIAS if is_boss \
 		else GameConstants.CRAFTING_LOOT_TABLE
+	# ── Phase 34: NG+ / NG++ rare-only loot ──
+	# When the active NG tier has NG_TIER_LOOT_RARE_ONLY, replace the standard
+	# table with the rare-only table (no common mats drop).
+	if EndgameManager and EndgameManager.is_loot_rare_only():
+		table = GameConstants.CRAFTING_LOOT_TABLE_RARE_ONLY
 	var drop_type: int = _weighted_pick(table)
 	# Spawn a collectible at the enemy's position
 	var drop: Area3D = COLLECTIBLE_DROP_SCENE.instantiate()

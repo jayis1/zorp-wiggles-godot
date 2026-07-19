@@ -128,6 +128,14 @@ func _draw() -> void:
 		# Draw border frame
 		draw_rect(minimap_rect, Color(0.4, 0.6, 1.0), false, 2.0)
 		return
+	# ── Phase 34: NG++ no-minimap rule — the player must navigate by sight ──
+	if EndgameManager and EndgameManager.is_minimap_disabled():
+		var ng_rect := Rect2(Vector2.ZERO, Vector2(_size, _size))
+		draw_rect(ng_rect, Color(0.05, 0.05, 0.08), true)
+		var font2 := get_theme_default_font()
+		draw_string(font2, Vector2(_half_size, _half_size), "NG++\nNO MAP", HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color(0.5, 0.2, 0.2, 0.9))
+		draw_rect(ng_rect, Color(0.3, 0.1, 0.1), false, 2.0)
+		return
 
 	var draw_origin := Vector2.ZERO
 	var minimap_rect := Rect2(draw_origin, Vector2(_size, _size))

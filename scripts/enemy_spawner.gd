@@ -130,6 +130,9 @@ func _process(delta: float) -> void:
 	# ── Phase 32: PvP mode — no enemies, just the two players ──
 	if GameModeManager and GameModeManager.is_pvp():
 		return
+	# ── Phase 34: Boss Gauntlet — no normal enemies, only the boss queue ──
+	if GameModeManager and GameModeManager.is_boss_gauntlet():
+		return
 
 	# Update pending spawns (spawn warnings)
 	_update_pending_spawns(delta)
@@ -363,10 +366,21 @@ func _scale_enemy_to_player_level(enemy: Node3D) -> void:
 			if GameModeManager and GameModeManager.is_endless():
 				new_hp = int(new_hp * GameModeManager.get_endless_wave_hp_mult())
 				new_dmg = int(new_dmg * GameModeManager.get_endless_wave_damage_mult())
+			# ── Phase 34: NG+ / NG++ tier multipliers ──
+			if EndgameManager:
+				new_hp = int(new_hp * EndgameManager.get_enemy_hp_mult())
+				new_dmg = int(new_dmg * EndgameManager.get_enemy_damage_mult())
+			# ── Phase 34: Survival mode — tougher enemies ──
+			if GameModeManager and GameModeManager.is_survival():
+				new_hp = int(new_hp * GameConstants.SURVIVAL_MODE_ENEMY_MULT)
+				new_dmg = int(new_dmg * GameConstants.SURVIVAL_MODE_ENEMY_MULT)
+			# ── Phase 34: Gauntlet mode — tougher enemies ──
+			if GameModeManager and GameModeManager.is_gauntlet():
+				new_hp = int(new_hp * GameConstants.GAUNTLET_ENEMY_MULT)
+				new_dmg = int(new_dmg * GameConstants.GAUNTLET_ENEMY_MULT)
 			enemy.max_hp = new_hp
 			enemy.hp = new_hp
 			enemy.damage = new_dmg
-			# ── Phase 7: Time-based speed scaling ──
 			if "speed" in enemy:
 				enemy.speed *= GameManager.get_time_enemy_speed_mult()
 				# ── Phase 28: Blood Moon weather — enemies faster ──
@@ -375,6 +389,9 @@ func _scale_enemy_to_player_level(enemy: Node3D) -> void:
 				# ── Phase 25: Endless Mode — wave-based speed escalation ──
 				if GameModeManager and GameModeManager.is_endless():
 					enemy.speed *= GameModeManager.get_endless_wave_speed_mult()
+				# ── Phase 34: NG+ / NG++ speed multiplier ──
+				if EndgameManager:
+					enemy.speed *= EndgameManager.get_enemy_speed_mult()
 
 func _reset_spawn_timer() -> void:
 	# Base interval decreases with player level

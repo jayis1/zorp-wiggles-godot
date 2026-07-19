@@ -1420,6 +1420,24 @@ func _unhandled_input(event: InputEvent) -> void:
 				GhostMode.try_start_ghost()
 		get_viewport().set_input_as_handled()
 
+	# ── Phase 34: Cycle NG tier (Shift+N) ──
+	if event.is_action_pressed("cycle_ng_tier") and not GameManager.is_paused:
+		if EndgameManager:
+			EndgameManager.cycle_ng_tier()
+			GameManager.add_message("%s NG tier: %s" % [
+				GameConstants.NG_TIER_ICONS[EndgameManager.get_ng_tier()],
+				GameConstants.NG_TIER_NAMES[EndgameManager.get_ng_tier()]
+			])
+		get_viewport().set_input_as_handled()
+
+	# ── Phase 33: Spawn procedural boss for testing (Shift+P) ──
+	# This is a debug/test shortcut to summon a procedural boss at the player's
+	# location. Useful for testing the procedural boss generator in-game.
+	if event.is_action_pressed("spawn_procedural_boss") and not GameManager.is_paused:
+		if ProceduralBossGenerator:
+			ProceduralBossGenerator.generate_boss(GameManager.player_level)
+		get_viewport().set_input_as_handled()
+
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig:
@@ -1768,6 +1786,26 @@ func _try_interact() -> void:
 			best_switch = obj
 	if best_switch:
 		best_switch.interact()
+		return
+	# ── Phase 34: Ancient Vault — touch puzzle runes ──
+	# If the player is near a vault puzzle rune, touching it triggers the
+	# puzzle's order check. The runes are MeshInstance3D nodes in the
+	# "vault_puzzle_rune" group.
+	if EndgameManager and EndgameManager.is_ancient_vault_unlocked():
+		var best_rune: Node = null
+		var best_rune_dist: float = 4.0  # Rune touch range
+		for rune in get_tree().get_nodes_in_group("vault_puzzle_rune"):
+			if not is_instance_valid(rune):
+				continue
+			if rune.get_meta("puzzle_activated", false):
+				continue
+			var d3: float = global_position.distance_to(rune.global_position)
+			if d3 < best_rune_dist:
+				best_rune_dist = d3
+				best_rune = rune
+		if best_rune:
+			EndgameManager.notify_puzzle_rune_touched(best_rune)
+			return
 
 ## Toggle the pet on/off. Pressing F summons the pet if none exists, or
 ## dismisses it if one is already active.

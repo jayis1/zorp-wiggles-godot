@@ -441,6 +441,8 @@ func _collect() -> void:
 		if collected_by_p2:
 			CoOpManager.p2_heal(25)
 		else:
+			# ── Phase 34: Survival mode — no healing items ──
+			GameManager.block_heal_next_call()
 			GameManager.heal(25)
 		# Spawn heal popup (green "+25")
 		_spawn_heal_popup(25)

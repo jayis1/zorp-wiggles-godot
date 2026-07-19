@@ -94,18 +94,20 @@ func _draw() -> void:
 	# Title
 	_draw_centered_text(font, "🎮 SELECT GAME MODE", Vector2(screen.x / 2.0, 50.0), 30,
 		Color(0.4, 1.0, 0.6, a))
-	# Mode cards — 2x2 grid
-	var card_w: float = minf(420.0, (screen.x - 80.0) / 2.0)
-	var card_h: float = 200.0
-	var gap: float = 30.0
-	var grid_w: float = card_w * 2 + gap
-	var grid_h: float = card_h * 2 + gap
+	# Mode cards — 4x2 grid (8 modes)
+	var cols: int = 4
+	var rows: int = 2
+	var card_w: float = minf(280.0, (screen.x - 100.0) / float(cols))
+	var card_h: float = 170.0
+	var gap: float = 20.0
+	var grid_w: float = card_w * cols + gap * (cols - 1)
+	var grid_h: float = card_h * rows + gap * (rows - 1)
 	var start_x: float = (screen.x - grid_w) / 2.0
 	var start_y: float = 100.0
 	var current_mode: int = GameModeManager.get_current_mode() if GameModeManager else 0
 	for i in GameModeManager.MODE_NAMES.size():
-		var col: int = i % 2
-		var row: int = i / 2
+		var col: int = i % cols
+		var row: int = i / cols
 		var card_x: float = start_x + col * (card_w + gap)
 		var card_y: float = start_y + row * (card_h + gap)
 		var card_rect := Rect2(card_x, card_y, card_w, card_h)
@@ -155,36 +157,36 @@ func _draw_mode_card(font, mode_idx: int, rect: Rect2, a: float, current_mode: i
 	if is_hovered and not is_selected:
 		draw_rect(rect, Color(1.0, 1.0, 1.0, 0.05 * a), true)
 	# Icon (large, top-center of card)
-	var icon_size: Vector2 = font.get_string_size(mode_icon, HORIZONTAL_ALIGNMENT_LEFT, -1, 40)
+	var icon_size: Vector2 = font.get_string_size(mode_icon, HORIZONTAL_ALIGNMENT_LEFT, -1, 32)
 	font.draw_string(get_canvas_item(),
-		Vector2(rect.position.x + (rect.size.x - icon_size.x) / 2.0, rect.position.y + 50.0),
-		mode_icon, HORIZONTAL_ALIGNMENT_LEFT, -1, 40,
+		Vector2(rect.position.x + (rect.size.x - icon_size.x) / 2.0, rect.position.y + 42.0),
+		mode_icon, HORIZONTAL_ALIGNMENT_LEFT, -1, 32,
 		Color(mode_color.r, mode_color.g, mode_color.b, a))
 	# Mode name
-	var name_size: Vector2 = font.get_string_size(mode_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22)
+	var name_size: Vector2 = font.get_string_size(mode_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 18)
 	font.draw_string(get_canvas_item(),
-		Vector2(rect.position.x + (rect.size.x - name_size.x) / 2.0, rect.position.y + 80.0),
-		mode_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22,
+		Vector2(rect.position.x + (rect.size.x - name_size.x) / 2.0, rect.position.y + 70.0),
+		mode_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 18,
 		Color(1.0, 1.0, 1.0, a))
 	# "Selected" badge
 	if is_selected:
 		var badge_text: String = "✓ SELECTED"
-		var badge_size: Vector2 = font.get_string_size(badge_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+		var badge_size: Vector2 = font.get_string_size(badge_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
 		font.draw_string(get_canvas_item(),
-			Vector2(rect.position.x + (rect.size.x - badge_size.x) / 2.0, rect.position.y + 100.0),
-			badge_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
+			Vector2(rect.position.x + (rect.size.x - badge_size.x) / 2.0, rect.position.y + 88.0),
+			badge_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
 			Color(mode_color.r, mode_color.g, mode_color.b, a))
 	# Description (wrapped manually — just draw it; long descriptions may clip)
 	# We draw it line by line with a simple word-wrap.
-	var desc_y: float = rect.position.y + 125.0
-	var desc_max_w: float = rect.size.x - 30.0
-	var lines: Array[String] = _word_wrap(font, mode_desc, desc_max_w, 13)
+	var desc_y: float = rect.position.y + 110.0
+	var desc_max_w: float = rect.size.x - 20.0
+	var lines: Array[String] = _word_wrap(font, mode_desc, desc_max_w, 11)
 	for line in lines:
 		font.draw_string(get_canvas_item(),
-			Vector2(rect.position.x + 15.0, desc_y),
-			line, HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+			Vector2(rect.position.x + 10.0, desc_y),
+			line, HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
 			Color(0.7, 0.75, 0.85, 0.9 * a))
-		desc_y += 16.0
+		desc_y += 13.0
 
 func _word_wrap(font, text: String, max_w: float, font_size: int) -> Array[String]:
 	var words: Array[String] = text.split(" ")

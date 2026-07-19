@@ -130,8 +130,13 @@ func use_consumable(type: int) -> bool:
 	match type:
 		GameConstants.Consumable.HEALTH_POTION:
 			# Instant heal
+			# ── Phase 34: Survival mode — no healing ──
+			GameManager.block_heal_next_call()
 			GameManager.heal(int(value))
-			GameManager.add_message("🧪 Healed %d HP!" % int(value))
+			if GameModeManager and GameModeManager.is_survival():
+				GameManager.add_message("☠ Survival: Healing suppressed!")
+			else:
+				GameManager.add_message("🧪 Healed %d HP!" % int(value))
 		GameConstants.Consumable.SPEED_POTION:
 			_active_effects[type] = duration
 			consumable_effect_started.emit(type, duration)

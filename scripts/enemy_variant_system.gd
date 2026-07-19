@@ -420,7 +420,11 @@ func _spawn_death_explosion(eb: EnemyBase) -> void:
 
 func _spawn_bonus_loot(eb: EnemyBase, tier: int) -> void:
 	# Drop 1-2 extra collectibles (rare crafting materials as physical drops)
-	var drop_count: int = 1 if tier == Tier.CHAMPION else 2
+	# Drop 2 extra collectibles for champions, 1 for golden (the only other
+	# tier that qualifies — on_variant_death is only called for tier >= GOLDEN
+	# via the `tier >= Tier.CHAMPION` gate above, but this keeps the logic
+	# correct if the gate is ever loosened).
+	var drop_count: int = 2 if tier == Tier.CHAMPION else 1
 	var collectible_scene: PackedScene = load("res://scenes/entities/collectible.tscn")
 	if not collectible_scene:
 		return

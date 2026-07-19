@@ -42,16 +42,22 @@ enum Mode {
 	BOSS_RUSH,   # Fight all bosses back-to-back, timer
 	SPEEDRUN,    # Open-world with timer + biome splits
 	PVP,         # Phase 32: Local 1v1 PvP arena
+	SURVIVAL,    # Phase 34: No healing, no shops, one life
+	GAUNTLET,    # Phase 34: Sequential biome challenges, no breaks, timer
+	BOSS_GAUNTLET, # Phase 34: Every boss in sequence, escalating, no healing
 }
 
-const MODE_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun", "PvP"]
-const MODE_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱", "⚔"]
+const MODE_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun", "PvP", "Survival", "Gauntlet", "Boss Gauntlet"]
+const MODE_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱", "⚔", "☠", "⚔", "☠"]
 const MODE_DESCRIPTIONS: Array[String] = [
 	"Default open-world adventure. Explore 19 biomes, complete missions, find loot, fight bosses, raise a pet.",
 	"Wave-based survival escalation. No exploration goals — pure combat. Each wave amps difficulty. How long can you last?",
 	"Fight every boss type back-to-back with no healing between except a top-up after each kill. Timer runs. Beat them all!",
 	"Open-world run with a visible timer. Each new biome records a split time. Set a personal best for total run time.",
 	"Local 1v1 PvP arena. Zorp vs Zerp — first to win the majority of rounds wins the match. Best of 3 or 5.",
+	"Phase 34 — No healing, no shops, one life. Every 3 minutes a boss spawns. Survive as long as you can. Passive score per second.",
+	"Phase 34 — Sequential biome challenges with no breaks. Each biome: kill 15 enemies in 90 seconds. Timer runs across all 5.",
+	"Phase 34 — Every boss type in sequence with escalating HP/damage/speed. NO healing between bosses. How far can you get?",
 ]
 const MODE_COLORS: Array[Color] = [
 	Color(0.5, 0.9, 0.6),   # Normal — green
@@ -59,6 +65,9 @@ const MODE_COLORS: Array[Color] = [
 	Color(1.0, 0.25, 0.25), # Boss Rush — red
 	Color(0.4, 0.8, 1.0),   # Speedrun — cyan
 	Color(0.9, 0.4, 0.8),   # PvP — magenta
+	Color(0.8, 0.2, 0.2),   # Survival — blood red
+	Color(0.9, 0.6, 0.2),   # Gauntlet — amber
+	Color(0.3, 0.1, 0.2),   # Boss Gauntlet — dark crimson
 ]
 
 # ─── Endless Mode Tuning ──────────────────────────────────────────────────────
@@ -195,6 +204,15 @@ func is_speedrun() -> bool:
 func is_pvp() -> bool:
 	return _current_mode == Mode.PVP
 
+func is_survival() -> bool:
+	return _current_mode == Mode.SURVIVAL
+
+func is_gauntlet() -> bool:
+	return _current_mode == Mode.GAUNTLET
+
+func is_boss_gauntlet() -> bool:
+	return _current_mode == Mode.BOSS_GAUNTLET
+
 # Endless Mode: wave-based difficulty multipliers (on top of time-based tier)
 func get_endless_wave() -> int:
 	return _wave
@@ -304,6 +322,18 @@ func start_run() -> void:
 		if PvpArena:
 			PvpArena.start_pvp_match(3)  # Best of 3 by default
 		GameManager.add_message("⚔ PvP Arena! Zorp vs Zerp — first to 2 round wins!")
+	elif is_survival():
+		# Phase 34: Survival mode — EndgameManager drives the rules.
+		if EndgameManager:
+			EndgameManager.start_survival()
+	elif is_gauntlet():
+		# Phase 34: Gauntlet mode — sequential biome challenges.
+		if EndgameManager:
+			EndgameManager.start_gauntlet()
+	elif is_boss_gauntlet():
+		# Phase 34: Boss Gauntlet — every boss in sequence, escalating.
+		if EndgameManager:
+			EndgameManager.start_boss_gauntlet()
 
 # ─── Per-Frame Update ─────────────────────────────────────────────────────────
 # Called by GameManager._process() (so it pauses with the game).
@@ -317,6 +347,10 @@ func update(delta: float) -> void:
 		_update_boss_rush(delta)
 	elif is_speedrun():
 		_update_speedrun(delta)
+	# Phase 34: EndgameManager handles Survival / Gauntlet / Boss Gauntlet
+	# per-frame logic independently of the base mode dispatcher.
+	if EndgameManager:
+		EndgameManager.update(delta)
 
 func _update_endless(delta: float) -> void:
 	_wave_timer -= delta

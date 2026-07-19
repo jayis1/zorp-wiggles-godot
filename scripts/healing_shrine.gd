@@ -151,8 +151,13 @@ func _on_body_entered(body: Node3D) -> void:
 
 	# Heal the player
 	cooldown = GameConstants.SHRINE_COOLDOWN
+	# ── Phase 34: Survival mode — no shrine healing ──
+	GameManager.block_heal_next_call()
 	GameManager.heal(GameConstants.SHRINE_HEAL_AMOUNT)
-	GameManager.add_message("Healing Shrine! +%d HP" % GameConstants.SHRINE_HEAL_AMOUNT)
+	if GameModeManager and GameModeManager.is_survival():
+		GameManager.add_message("☠ Survival: Shrine healing suppressed!")
+	else:
+		GameManager.add_message("Healing Shrine! +%d HP" % GameConstants.SHRINE_HEAL_AMOUNT)
 	heal_activated.emit(GameConstants.SHRINE_HEAL_AMOUNT)
 
 	# Screen shake
