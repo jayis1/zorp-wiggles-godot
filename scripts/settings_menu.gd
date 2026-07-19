@@ -17,6 +17,14 @@ var _master_label: Label
 var _sfx_label: Label
 var _music_label: Label
 var _controls_label: Label
+# ── Phase 30/31: Accessibility controls ──
+var _acc_label: Label
+var _filter_label: Label
+var _filter_btn: Button
+var _cb_label: Label
+var _cb_btn: Button
+var _scale_label: Label
+var _scale_slider: HSlider
 # Track the entrance tween so we can kill it before starting a new one
 var _entrance_tween: Tween = null
 # Track whether the menu is currently animating out (prevents re-show flicker)
@@ -44,10 +52,10 @@ func _build_ui() -> void:
 	_panel.offset_left = 290.0
 	_panel.offset_top = 100.0
 	_panel.offset_right = 990.0
-	_panel.offset_bottom = 620.0
+	_panel.offset_bottom = 720.0
 	# Set pivot to center so scale animations scale from the middle
 	# (same pattern as pause_menu — gives a proper pop-in effect)
-	_panel.pivot_offset = Vector2(350.0, 260.0)  # (right-left)/2, (bottom-top)/2
+	_panel.pivot_offset = Vector2(350.0, 310.0)  # (right-left)/2, (bottom-top)/2
 	add_child(_panel)
 
 	# Title
@@ -97,6 +105,10 @@ func _build_ui() -> void:
 		"Space — Dash | Q — Pulse Wave | E — Trade\n" +
 		"F — Summon Pet | G — Pet Fetch | C — Crafting\n" +
 		"M — Minimap | Tab — Missions | P — Pause\n" +
+		"T — Interact | V — Deploy | H — Fast Travel\n" +
+		"X — Equipment | K — Skill Tree | F2 — Stats\n" +
+		"F3 — FPS | MClick — Ping | F6 — Color Filter\n" +
+		"F7 — Colorblind | F8 — UI Scale\n" +
 		"RClick+Drag — Camera Rotate\n" +
 		"\n" +
 		"CO-OP (Player 2):\n" +
@@ -107,12 +119,55 @@ func _build_ui() -> void:
 	_controls_label.add_theme_color_override("font_color", Color(0.6, 0.65, 0.8))
 	add_child(_controls_label)
 
+	# ── Phase 30/31: Accessibility section — color filter, colorblind, UI scale ──
+	var acc_y: float = section_y + 250.0
+	_acc_label = _make_label("── Accessibility ──", 320.0, acc_y, 360.0, 24.0)
+	_acc_label.add_theme_color_override("font_color", Color(0.85, 0.9, 1.0))
+	add_child(_acc_label)
+
+	# Color filter cycle button
+	_filter_label = _make_label("Color Filter", 320.0, acc_y + 30.0, 200.0, 30.0)
+	add_child(_filter_label)
+	_filter_btn = Button.new()
+	_filter_btn.offset_left = 540.0
+	_filter_btn.offset_top = acc_y + 28.0
+	_filter_btn.offset_right = 840.0
+	_filter_btn.offset_bottom = acc_y + 56.0
+	_filter_btn.add_theme_font_size_override("font_size", 14)
+	add_child(_filter_btn)
+	_filter_btn.pressed.connect(_on_filter_cycle)
+	_refresh_filter_label()
+
+	# Colorblind mode cycle button
+	_cb_label = _make_label("Colorblind Mode", 320.0, acc_y + 60.0, 200.0, 30.0)
+	add_child(_cb_label)
+	_cb_btn = Button.new()
+	_cb_btn.offset_left = 540.0
+	_cb_btn.offset_top = acc_y + 58.0
+	_cb_btn.offset_right = 840.0
+	_cb_btn.offset_bottom = acc_y + 86.0
+	_cb_btn.add_theme_font_size_override("font_size", 14)
+	add_child(_cb_btn)
+	_cb_btn.pressed.connect(_on_colorblind_cycle)
+	_refresh_colorblind_label()
+
+	# UI scale slider
+	_scale_label = _make_label("UI Scale", 320.0, acc_y + 90.0, 200.0, 30.0)
+	add_child(_scale_label)
+	_scale_slider = _make_slider(540.0, acc_y + 90.0, 300.0)
+	_scale_slider.min_value = AccessibilityManager.UI_SCALE_MIN * 100.0
+	_scale_slider.max_value = AccessibilityManager.UI_SCALE_MAX * 100.0
+	_scale_slider.step = AccessibilityManager.UI_SCALE_STEP * 100.0
+	_scale_slider.value = AccessibilityManager.get_ui_scale() * 100.0
+	_scale_slider.value_changed.connect(_on_ui_scale_changed)
+	add_child(_scale_slider)
+
 	# Back button
 	_back_btn = Button.new()
 	_back_btn.offset_left = 490.0
-	_back_btn.offset_top = 540.0
+	_back_btn.offset_top = 620.0
 	_back_btn.offset_right = 790.0
-	_back_btn.offset_bottom = 590.0
+	_back_btn.offset_bottom = 670.0
 	_back_btn.text = "← Back"
 	_back_btn.add_theme_font_size_override("font_size", 18)
 	add_child(_back_btn)
@@ -150,6 +205,11 @@ func show_menu() -> void:
 	_master_slider.value = AudioManager.master_volume * 100.0
 	_sfx_slider.value = AudioManager.sfx_volume * 100.0
 	_music_slider.value = AudioManager.music_volume * 100.0
+	# Refresh accessibility controls
+	_refresh_filter_label()
+	_refresh_colorblind_label()
+	if _scale_slider:
+		_scale_slider.value = AccessibilityManager.get_ui_scale() * 100.0
 	# ── Entrance animation: background fades in, panel scales up from 0.85
 	#    with overshoot, title and controls fade in slightly after. Mirrors the
 	#    pause menu's slide-in pattern so all menus share the same visual language.
@@ -163,6 +223,10 @@ func show_menu() -> void:
 	_title.modulate.a = 0.0
 	_controls_label.modulate.a = 0.0
 	_back_btn.modulate.a = 0.0
+	# Fade in accessibility controls too
+	for ctrl in [_acc_label, _filter_label, _filter_btn, _cb_label, _cb_btn, _scale_label, _scale_slider]:
+		if ctrl:
+			ctrl.modulate.a = 0.0
 	_entrance_tween = create_tween()
 	# Background fade
 	_entrance_tween.tween_property(_bg, "modulate:a", 1.0, 0.15) \
@@ -177,6 +241,11 @@ func show_menu() -> void:
 		.set_ease(Tween.EASE_OUT)
 	_entrance_tween.parallel().tween_property(_controls_label, "modulate:a", 1.0, 0.2) \
 		.set_ease(Tween.EASE_OUT)
+	# Accessibility controls fade in alongside controls
+	for ctrl in [_acc_label, _filter_label, _filter_btn, _cb_label, _cb_btn, _scale_label, _scale_slider]:
+		if ctrl:
+			_entrance_tween.parallel().tween_property(ctrl, "modulate:a", 1.0, 0.2) \
+				.set_ease(Tween.EASE_OUT)
 	# Back button fades in last
 	_entrance_tween.tween_property(_back_btn, "modulate:a", 1.0, 0.15) \
 		.set_ease(Tween.EASE_OUT)
@@ -194,6 +263,37 @@ func _on_sfx_changed(value: float) -> void:
 
 func _on_music_changed(value: float) -> void:
 	AudioManager.set_music_volume(value / 100.0)
+
+
+# ── Phase 30/31: Accessibility handlers ──
+
+func _on_filter_cycle() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	AccessibilityManager.cycle_filter()
+	_refresh_filter_label()
+
+func _refresh_filter_label() -> void:
+	if not _filter_btn:
+		return
+	var mode: int = AccessibilityManager.get_filter()
+	_filter_btn.text = AccessibilityManager.FILTER_NAMES[mode] + "  ▸"
+	_filter_btn.modulate = Color(1.0, 1.0, 1.0) if mode == 0 else Color(1.2, 1.1, 0.9)
+
+func _on_colorblind_cycle() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	AccessibilityManager.cycle_colorblind_mode()
+	_refresh_colorblind_label()
+
+func _refresh_colorblind_label() -> void:
+	if not _cb_btn:
+		return
+	var mode: int = AccessibilityManager.get_colorblind_mode()
+	_cb_btn.text = AccessibilityManager.COLORBLIND_NAMES[mode] + "  ▸"
+	_cb_btn.modulate = Color(1.0, 1.0, 1.0) if mode == 0 else Color(1.1, 1.2, 1.0)
+
+func _on_ui_scale_changed(value: float) -> void:
+	AccessibilityManager.set_ui_scale(value / 100.0)
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 
 
 func _on_back() -> void:
@@ -219,6 +319,11 @@ func _on_back() -> void:
 		.set_ease(Tween.EASE_IN)
 	_entrance_tween.parallel().tween_property(_back_btn, "modulate:a", 0.0, 0.12) \
 		.set_ease(Tween.EASE_IN)
+	# Fade out accessibility controls
+	for ctrl in [_acc_label, _filter_label, _filter_btn, _cb_label, _cb_btn, _scale_label, _scale_slider]:
+		if ctrl:
+			_entrance_tween.parallel().tween_property(ctrl, "modulate:a", 0.0, 0.12) \
+				.set_ease(Tween.EASE_IN)
 	_entrance_tween.tween_callback(func():
 		visible = false
 		_animating_out = false
@@ -229,6 +334,9 @@ func _on_back() -> void:
 		_title.modulate.a = 1.0
 		_controls_label.modulate.a = 1.0
 		_back_btn.modulate.a = 1.0
+		for ctrl in [_acc_label, _filter_label, _filter_btn, _cb_label, _cb_btn, _scale_label, _scale_slider]:
+			if ctrl:
+				ctrl.modulate.a = 1.0
 	)
 
 

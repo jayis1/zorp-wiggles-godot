@@ -80,6 +80,10 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 | 1-5 | Use consumable (health/speed/shield/power potion, void bomb) |
 | F2 | Open statistics page |
 | F3 | Toggle FPS counter & performance overlay |
+| F6 | Cycle color filter (sepia/noir/thermal/x-ray) |
+| F7 | Cycle colorblind correction mode |
+| F8 / Shift+F8 | Increase / decrease UI scale |
+| Middle Mouse | Drop a ping marker (Shift=danger, Alt=loot, Ctrl=nav) |
 | **Player 2 (Zerp)** | |
 | Arrow Keys | Move |
 | / | Shoot |
@@ -200,8 +204,8 @@ Phases 1-20 (core game + 12 new features) are **COMPLETE**. Ongoing development 
 - **Phase 27**: Pet evolution expansion (5 new paths, fusion, accessories, training, multi-pet) — **IN PROGRESS** (3/8 implemented: 5 elemental evolution paths [Fire/Ice/Electric/Void/Nature] with unique passive abilities + ranged attacks for Fire/Void, pet emote system with 8 emotes reacting to game events, pet evolution stones as rare biome-themed drops with dedicated inventory + B-key to use)
 - **Phase 28**: Weather expansion (meteor shower, aurora, sandstorm, blood moon, eclipse, pollen storm, magnetic storm, gravity anomaly, dimensional storm, weather combo system) — **COMPLETE** (10/10: 6 new weather types with unique gameplay effects + weather combo system allowing two weathers to overlap for +25% XP/loot bonuses; Blood Moon triples XP/loot but empowers enemies, Magnetic Storm disables minimap + EMP pulses disable dashing, Gravity Anomaly shifts gravity every 10s, Dimensional Storm opens rifts + forces dimension shifts, Pollen Storm heals everything, Eclipse darkens the world, all with biome affinities + spawn bonuses + unique particle effects)
 - **Phase 29**: Equipment (armor, consumables, accessories, upgrade system, set bonuses) — **COMPLETE** (8/8: 12 equipment pieces across 4 sets [Plasma/Crystal/Void/Ancient] with head/body/accessory slots, 5 consumables [potions + Void Bomb] with hotkeys 1-5, +1/+2/+3 upgrade system, 12 rare materials dropping from bosses/weather/biomes, equipment menu UI [X key] with 4 tabs, material refinement, 2-piece and 3-piece set bonuses)
-- **Phase 30**: Visual polish (dynamic music intensity, character select, skins, photo mode, intro cinematic) — **IN PROGRESS** (1/10: dynamic music intensity — 5 tiers [Calm/Engaged/Heated/Intense/Frenzied] rising with kill combo, modulates pitch +8% and volume +3.5 dB, eases smoothly, boss music exempt)
-- **Phase 31**: Quality of life (FPS counter, minimap zoom, auto-save, colorblind modes, tutorial, tooltips) — **IN PROGRESS** (2/10: FPS counter + performance overlay [F3] with 60-point sparkline graph and color-coded FPS, minimap scroll-wheel zoom 40-400 world units with zoom indicator)
+- **Phase 30**: Visual polish (dynamic music intensity, character select, skins, photo mode, intro cinematic, color filters) — **IN PROGRESS** (2/10: dynamic music intensity — 5 tiers [Calm/Engaged/Heated/Intense/Frenzied] rising with kill combo, modulates pitch +8% and volume +3.5 dB, eases smoothly, boss music exempt; cosmetic color filters [F6] — sepia/noir/thermal/x-ray screen-space shader with cycle button in settings)
+- **Phase 31**: Quality of life (FPS counter, minimap zoom, auto-save, colorblind modes, tutorial, tooltips, ping system, UI scaling, color filters) — **IN PROGRESS** (6/10: FPS counter + performance overlay [F3] with 60-point sparkline graph and color-coded FPS, minimap scroll-wheel zoom 40-400 world units with zoom indicator, ping system [middle mouse] with 4 ping types [default/danger/loot/nav] + 3D beacons + minimap diamonds + edge arrows, UI scaling [F8/Shift+F8] 75-150% with proportional HUD element + font scaling, colorblind correction modes [F7] for protanopia/deuteranopia/tritanopia/achromatopsia via 3×3 color transform shader, cosmetic color filters [F6] sepia/noir/thermal/x-ray via screen-space shader)
 - **Phase 32**: Multiplayer (online leaderboards, ghost mode, 3-4 player co-op, PvP, replays)
 - **Phase 33**: Procedural content (dungeons, quests, enemy variants, boss generation, world modifiers)
 - **Phase 34**: Endgame (New Game+, survival mode, gauntlet, loot caves, ancient vaults)

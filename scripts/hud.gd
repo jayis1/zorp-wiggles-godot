@@ -295,6 +295,12 @@ func _ready() -> void:
 	fps_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(fps_ctrl)
 
+	# ── Phase 30/31: Register HUD with AccessibilityManager for UI scaling ──
+	# AccessibilityManager scales the fixed-offset HUD children (HP bar, minimap,
+	# labels) based on the persisted ui_scale setting. Full-rect menus are skipped.
+	if AccessibilityManager:
+		AccessibilityManager.register_hud(self)
+
 	# Initialize displays
 	_update_all_displays()
 

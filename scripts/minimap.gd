@@ -377,6 +377,43 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			else:
 				draw_circle(pos, 2.0, GameConstants.MINIMAP_ENEMY_DOT_COLOR)
 
+	# ── Phase 31: Ping markers (flashing colored diamonds) ──
+	# Pings dropped by the player appear as flashing diamonds on the minimap
+	# so they can be found even when off-screen. Color matches the ping type.
+	for ping in get_tree().get_nodes_in_group("ping"):
+		if not is_instance_valid(ping):
+			continue
+		var pp_pos: Vector2 = _world_to_mini(ping.global_position.x, ping.global_position.z, px, pz, pixel_per_world)
+		# Clamp to minimap edge if off-screen (so pings outside the view are
+		# still indicated at the edge, pointing toward them).
+		var pp_rel: Vector2 = pp_pos - Vector2(_half_size, _half_size)
+		var pp_in_rect: bool = _is_in_rect(pp_pos, rect)
+		var pp_draw_pos: Vector2 = pp_pos
+		if not pp_in_rect:
+			if pp_rel.length() > _half_size - 4:
+				pp_draw_pos = Vector2(_half_size, _half_size) + pp_rel.normalized() * (_half_size - 4)
+		# Flashing alpha
+		var flash: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.008)
+		var pcolor: Color = ping.get_meta("ping_color", Color(0.3, 0.9, 1.0))
+		pcolor.a = flash
+		# Draw a diamond
+		var ps: float = 4.0
+		var ppts := PackedVector2Array([
+			Vector2(pp_draw_pos.x, pp_draw_pos.y - ps),
+			Vector2(pp_draw_pos.x + ps, pp_draw_pos.y),
+			Vector2(pp_draw_pos.x, pp_draw_pos.y + ps),
+			Vector2(pp_draw_pos.x - ps, pp_draw_pos.y),
+		])
+		draw_colored_polygon(ppts, pcolor)
+		# If off-screen, draw a small arrow at the edge pointing toward it
+		if not pp_in_rect:
+			var arrow_dir: Vector2 = pp_rel.normalized()
+			var arrow_pos: Vector2 = pp_draw_pos
+			var arrow_tip: Vector2 = arrow_pos + arrow_dir * 5.0
+			var arrow_l: Vector2 = arrow_pos + arrow_dir.rotated(2.5) * 3.0
+			var arrow_r: Vector2 = arrow_pos + arrow_dir.rotated(-2.5) * 3.0
+			draw_colored_polygon(PackedVector2Array([arrow_tip, arrow_l, arrow_r]), pcolor)
+
 	# ── Player dot (white, center) with facing direction line ──
 	var center := Vector2(_half_size, _half_size)
 	draw_circle(center, 3.0, GameConstants.MINIMAP_PLAYER_DOT_COLOR)
