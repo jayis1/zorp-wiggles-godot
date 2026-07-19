@@ -118,7 +118,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_selected_idx = max(0, _selected_idx - 1)
 				get_viewport().set_input_as_handled()
 			KEY_DOWN:
-				_selected_idx = min(_replays.size() - 1, _selected_idx + 1)
+				_selected_idx = min(max(0, _replays.size() - 1), _selected_idx + 1)
 				get_viewport().set_input_as_handled()
 			KEY_ENTER:
 				if _selected_idx >= 0 and _selected_idx < _replays.size() and ReplaySystem:

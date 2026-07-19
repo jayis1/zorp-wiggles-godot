@@ -198,9 +198,11 @@ func _end_match(p1_wins_match: bool) -> void:
 	if GameManager:
 		var winner: String = "Zorp" if p1_wins_match else "Zerp"
 		GameManager.add_message("🏆🏆 %s WINS THE MATCH! (%d-%d)" % [winner, _p1_wins, _p2_wins])
-		# Record to Statistics
+		# Record to Statistics — use add_lifetime (cumulative counter), not
+		# set_lifetime_max, so each match win increments the total rather than
+		# capping at 1.
 		if Statistics:
-			Statistics.set_lifetime_max("pvp_wins_p1" if p1_wins_match else "pvp_wins_p2", 1)
+			Statistics.add_lifetime("pvp_wins_p1" if p1_wins_match else "pvp_wins_p2", 1.0)
 
 
 func _reset_player_positions() -> void:
@@ -225,7 +227,14 @@ func _reset_player_positions() -> void:
 # ── Signal Handlers ───────────────────────────────────────────────────────────
 
 func _on_game_restarted() -> void:
-	# Reset PvP state on game restart
+	# If the current game mode is PvP, GameModeManager.start_run() (called from
+	# GameManager._start_game() just before this signal fires) has already
+	# (re)started the match via start_pvp_match(). Resetting here would
+	# immediately kill that match — so skip the reset and let the match
+	# continue. For non-PvP modes, fully reset so leftover PvP state from a
+	# previous PvP run doesn't leak into a normal run.
+	if GameModeManager and GameModeManager.is_pvp():
+		return
 	_pvp_active = false
 	_round_active = false
 	_intermission_timer = 0.0

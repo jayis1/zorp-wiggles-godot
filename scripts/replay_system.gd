@@ -110,19 +110,25 @@ func start_recording(world_seed: int) -> void:
 	_recording = true
 	_samples.clear()
 	_sample_accum = 0.0
+	_record_frame_toggle = false
 	_record_seed = world_seed
 	_record_start_time = Time.get_ticks_msec() / 1000.0
 	recording_started.emit(world_seed)
 
 
 ## Sample the player's state. Called from player.gd _physics_process every frame.
+## Throttles to RECORD_HZ (30 Hz) — half the physics tick — by recording every
+## other frame. The original approach added SAMPLE_DT to an accumulator each
+## frame and checked `< SAMPLE_DT`, but since the accumulator always reached
+## SAMPLE_DT in one frame, it recorded every frame (60 Hz) instead of 30 Hz.
+## A simple frame toggle correctly halves the rate.
+var _record_frame_toggle: bool = false
 func record_frame(player: CharacterBody3D) -> void:
 	if not _recording or not is_instance_valid(player):
 		return
-	_sample_accum += SAMPLE_DT
-	if _sample_accum < SAMPLE_DT:
-		return
-	_sample_accum = 0.0
+	_record_frame_toggle = not _record_frame_toggle
+	if not _record_frame_toggle:
+		return  # Skip every other frame → 60 Hz / 2 = 30 Hz
 	var mesh_rot_y: float = 0.0
 	var m: Variant = player.get("mesh")
 	if m and is_instance_valid(m):
@@ -383,8 +389,13 @@ func _prune_old_replays() -> void:
 # ── Signal Handlers ───────────────────────────────────────────────────────────
 
 func _on_game_restarted() -> void:
-	# Restart starts a fresh recording
-	if GameManager:
+	# Restart starts a fresh recording — but only if we aren't already
+	# recording. GameManager._start_game() (which runs just before this signal
+	# fires) already calls start_recording(), so re-calling here would clear
+	# the first few samples for no reason. Skipping when already recording
+	# preserves them. On the initial game load (_ready → _start_game with no
+	# game_restarted emission), the direct call in _start_game handles it.
+	if GameManager and not _recording:
 		start_recording(GameManager.world_seed)
 
 

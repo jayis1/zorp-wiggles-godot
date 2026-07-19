@@ -110,6 +110,7 @@ func try_start_ghost() -> void:
 	if ReplaySystem.play_replay(_best_replay_id):
 		_ghost_active = true
 		_player_time = 0.0
+		_last_delta_sign = 0  # Reset change detector for the new ghost
 		ghost_spawned.emit()
 		GameManager.add_message("👻 Ghost mode — race against your best run!")
 
@@ -180,6 +181,8 @@ func _find_best_replay() -> String:
 	return best_id
 
 
+var _last_delta_sign: int = 0  # -1 behind, 0 even, 1 ahead — for change detection
+
 func _update_ghost_delta() -> void:
 	if not ReplaySystem or not ReplaySystem.is_playing():
 		return
@@ -187,11 +190,16 @@ func _update_ghost_delta() -> void:
 	_ghost_time = ReplaySystem.get_playback_progress() * _get_replay_duration()
 	var delta: float = get_ghost_delta()
 	ghost_delta_changed.emit(delta)
-	# Color-code the HUD message
-	if delta > 0:
-		GameManager.add_message("👻 Ahead by %.1fs" % delta)
-	elif delta < -0.5:
-		GameManager.add_message("👻 Behind by %.1fs" % abs(delta))
+	# Only post a message when the delta CROSSES zero (ahead ↔ behind),
+	# not every 0.5s — otherwise the message log gets spammed with a
+	# stream of "Ahead by 3.2s / Ahead by 3.3s / ..." messages.
+	var sign: int = 1 if delta > 0 else (-1 if delta < -0.5 else 0)
+	if sign != _last_delta_sign:
+		_last_delta_sign = sign
+		if sign > 0:
+			GameManager.add_message("👻 Ahead of your ghost — keep it up!")
+		elif sign < 0:
+			GameManager.add_message("👻 Falling behind your ghost!")
 
 
 func _get_replay_duration() -> float:
@@ -210,8 +218,13 @@ func _get_replay_duration() -> float:
 
 func _on_game_restarted() -> void:
 	_player_time = 0.0
-	# Try to start the ghost after a short delay (let the world load first)
-	call_deferred("try_start_ghost")
+	# Try to start the ghost after a short delay (let the world load first).
+	# But skip if a ghost is already active — GameManager._start_game()
+	# (which runs just before this signal fires) already called
+	# try_start_ghost(), so a deferred re-call would stop and restart the
+	# ghost, causing a visual flicker.
+	if not _ghost_active:
+		call_deferred("try_start_ghost")
 
 
 func _on_player_died() -> void:

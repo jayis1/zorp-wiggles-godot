@@ -65,8 +65,11 @@ func submit_score(entry: Dictionary) -> bool:
 		entries = entries.slice(0, MAX_ENTRIES_PER_MODE)
 	data[mode] = entries
 	_save(data)
-	# Find the rank of the submitted entry
-	var rank: int = entries.find(entry) + 1
+	# Find the rank of the submitted entry. If the entry was trimmed (it
+	# ranked below the top N), find() returns -1; report -1 (not ranked)
+	# rather than 0, which would be a misleading "rank zero".
+	var found_idx: int = entries.find(entry)
+	var rank: int = found_idx + 1 if found_idx >= 0 else -1
 	# Check if it's a new top record
 	if rank == 1:
 		new_record.emit(mode, entry)

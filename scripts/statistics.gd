@@ -438,6 +438,11 @@ func set_lifetime_max(key: String, value: float) -> void:
 	# exceeds the existing one (used for "best" stats where higher is better).
 	_set_lifetime_max(key, value)
 
+func add_lifetime(key: String, amount: float) -> void:
+	# Public wrapper around _add_lifetime — increments a cumulative counter
+	# (used for "total" stats like pvp_wins_p1 where each event adds 1).
+	_add_lifetime(key, amount)
+
 func set_lifetime_stat(key: String, value: Variant) -> void:
 	# Direct write (overwrites). Used for split dictionaries and any stat
 	# where the caller has already computed the "best" externally.
