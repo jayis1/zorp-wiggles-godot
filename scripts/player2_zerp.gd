@@ -123,6 +123,12 @@ func _physics_process(delta: float) -> void:
 	_handle_dash(delta)
 	_update_idle_breathing(delta)
 	_update_invuln_blink()
+	# ── Phase 28: Gravity Anomaly weather — apply vertical force to P2 ──
+	var p2_grav_force: float = WeatherSystem.get_gravity_anomaly_force()
+	if p2_grav_force != 0.0 and not is_dashing and not is_sliding:
+		velocity.y = p2_grav_force
+	elif velocity.y != 0 and not DimensionSystem.gravity_reversed():
+		velocity.y = 0
 	move_and_slide()
 
 func _get_camera() -> Camera3D:
@@ -187,10 +193,12 @@ func _handle_dash(delta: float) -> void:
 	# P2 dash has no cooldown (design choice for co-op accessibility), so we
 	# only need to check the buffer timer. (P1 uses GameManager.player_dash_cooldown_timer
 	# here, but P2 doesn't track dash cooldown in GameManager.)
-	if _dash_buffer_timer > 0:
+	# ── Phase 28: Magnetic Storm EMP — dashing temporarily disabled for P2 too ──
+	var p2_can_dash: bool = WeatherSystem.get_emp_dash_disable_remaining() <= 0
+	if _dash_buffer_timer > 0 and p2_can_dash:
 		_dash_buffer_timer = 0.0
 		_start_dash()
-	elif Input.is_action_just_pressed("p2_dash"):
+	elif Input.is_action_just_pressed("p2_dash") and p2_can_dash:
 		_start_dash()
 
 func _start_dash() -> void:

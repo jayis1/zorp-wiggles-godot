@@ -25,7 +25,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 7. **Dimensional Rifts** — 4 alternate dimensions: Void (shadow clone boss), Mirror (enemies friendly, items hostile), Time-Slow (world at 0.3x speed), Reverse Gravity (walk on ceiling)
 8. **Alien Companion Pet** — Summonable pet with 3 evolution stages (baby → adolescent → adult), auto-collects items, fetch command, idle animations, adult stage shields Zorp; **Phase 27: 5 elemental evolution paths** (Fire/Ice/Electric/Void/Nature) each with unique passive abilities, ranged attacks for Fire/Void, pet emote system (8 emotes reacting to game events), and evolution stones as rare biome-themed drops
 9. **Weapon Mod Crafting** — 34 craftable weapon mods (homing laser, chain lightning, freeze ray, vampire beam, black hole, ricochet, spread shot, piercing, bouncing, black hole launcher, time freeze ray, shrink beam, meteor strike, lightning storm, poison nova, shield bubble, turret deploy, gravity flip field, void rift cutter, and more)
-10. **Dynamic Weather** — 6 weather types (clear, acid rain, solar flare, fog, thunderstorm, snow) with gameplay effects (damage, fire rate boost, stealth, lightning, slow)
+10. **Dynamic Weather** — 15 weather types (clear, acid rain, solar flare, fog, thunderstorm, snow, meteor shower, aurora, sandstorm, blood moon, eclipse, pollen storm, magnetic storm, gravity anomaly, dimensional storm) with gameplay effects (damage, fire rate boost, stealth, lightning, slow, XP/loot multipliers, minimap disable, EMP dash disable, gravity shifts, dimension rifts) + weather combo system (two weathers overlap for bonus XP/loot)
 11. **Boss Arenas** — 3 arena types (lava, crystal, void) with walls, cover, environmental hazards, shrinking floors, and auto-spawn system
 12. **Local Co-op** — Player 2 "Zerp" drops in anytime, shared camera with dynamic zoom, enemy scaling, shared combo, revive system, mega pulse wave sync, 7 co-op achievements
 
@@ -172,7 +172,7 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 - **20+ enemy types** with unique AI
 - **20+ weapon mods** craftable
 - **19 biomes** with procedural generation (12 original + 7 Phase 22 new)
-- **9 weather types** with gameplay effects
+- **15 weather types** with gameplay effects (6 original + 3 Enhancement + 6 Phase 28) + weather combo system
 - **13 biome mutations** (6 original + 7 Phase 22 new)
 - **4 dimensional rifts** with unique mechanics
 - **3 pet evolution stages** with abilities
@@ -192,7 +192,7 @@ Phases 1-20 (core game + 12 new features) are **COMPLETE**. Ongoing development 
 - **Phase 25**: Progression systems (skill tree, prestige, daily challenges, endless mode, boss rush)
 - **Phase 26**: World life (wandering merchants, villages, wildlife, treasure chests, lore stones, fast travel) — **COMPLETE** (10/10: wandering merchants with discounted rare goods, friendly alien villages via clustered dialogue NPCs, roaming wildlife with 8 biome-specific species, hidden treasure chests with traps, lore stones with 30 lore fragments, NPC dialogue system with 3 archetypes + typewriter-effect HUD panel, environmental hazards with 4 types cycling through telegraph/active/cooldown, interactive objects with switches/doors/breakable walls/hidden passages linked via linked_id, world bosses that roam the open world with loot showers, fast travel network with auto-activating waypoints)
 - **Phase 27**: Pet evolution expansion (5 new paths, fusion, accessories, training, multi-pet) — **IN PROGRESS** (3/8 implemented: 5 elemental evolution paths [Fire/Ice/Electric/Void/Nature] with unique passive abilities + ranged attacks for Fire/Void, pet emote system with 8 emotes reacting to game events, pet evolution stones as rare biome-themed drops with dedicated inventory + B-key to use)
-- **Phase 28**: Weather expansion (meteor shower, aurora, sandstorm, blood moon, eclipse, gravity anomaly)
+- **Phase 28**: Weather expansion (meteor shower, aurora, sandstorm, blood moon, eclipse, pollen storm, magnetic storm, gravity anomaly, dimensional storm, weather combo system) — **COMPLETE** (10/10: 6 new weather types with unique gameplay effects + weather combo system allowing two weathers to overlap for +25% XP/loot bonuses; Blood Moon triples XP/loot but empowers enemies, Magnetic Storm disables minimap + EMP pulses disable dashing, Gravity Anomaly shifts gravity every 10s, Dimensional Storm opens rifts + forces dimension shifts, Pollen Storm heals everything, Eclipse darkens the world, all with biome affinities + spawn bonuses + unique particle effects)
 - **Phase 29**: Equipment (armor, consumables, accessories, upgrade system, set bonuses)
 - **Phase 30**: Visual polish (character select, skins, photo mode, intro cinematic)
 - **Phase 31**: Quality of life (auto-save, colorblind modes, tutorial, tooltips, FPS counter)

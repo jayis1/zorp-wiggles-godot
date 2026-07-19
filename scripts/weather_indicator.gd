@@ -17,6 +17,8 @@ var _panel: Panel = null
 var _transition_label: Label = null
 var _transition_timer: float = 0.0
 var _current_color: Color = Color(1, 1, 0.5)
+# ── Phase 28: Weather combo indicator ──
+var _combo_label: Label = null
 
 func _ready() -> void:
 	# Position top-right corner (below where minimap usually sits)
@@ -84,6 +86,18 @@ func _ready() -> void:
 	_transition_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(_transition_label)
 
+	# ── Phase 28: Weather combo label — shows "+ ComboName" when a combo is active ──
+	_combo_label = Label.new()
+	_combo_label.offset_left = -170.0
+	_combo_label.offset_top = 56.0
+	_combo_label.offset_right = -10.0
+	_combo_label.offset_bottom = 74.0
+	_combo_label.text = ""
+	_combo_label.add_theme_font_size_override("font_size", 11)
+	_combo_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 0.9))
+	_combo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(_combo_label)
+
 	# Connect to WeatherSystem signals
 	# WeatherSystem is an autoload singleton — accessed directly by name,
 	# not via Engine.has_singleton() (which is for engine-registered singletons).
@@ -91,6 +105,9 @@ func _ready() -> void:
 	WeatherSystem.weather_transition_started.connect(_on_transition_started)
 	WeatherSystem.weather_transition_ended.connect(_on_transition_ended)
 	WeatherSystem.weather_timer_changed.connect(_on_timer_changed)
+	# ── Phase 28: Weather combo signals ──
+	WeatherSystem.weather_combo_started.connect(_on_combo_started)
+	WeatherSystem.weather_combo_ended.connect(_on_combo_ended)
 
 	# Initialize display with current weather
 	_update_display(WeatherSystem.get_current_weather())
@@ -152,3 +169,17 @@ func _update_display(weather: int) -> void:
 		var c: Color = col
 		c.a = 0.9
 		_timer_bar.color = c
+
+# ── Phase 28: Weather combo indicator handlers ──
+func _on_combo_started(combo_weather: int, primary_weather: int) -> void:
+	if not _combo_label:
+		return
+	var info: Dictionary = GameConstants.WEATHER_INFO.get(combo_weather, {"name": "?"})
+	var combo_name: String = info.get("name", "?")
+	_combo_label.text = "✦ + %s" % combo_name
+	# Use a golden color for the combo indicator
+	_combo_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 0.9))
+
+func _on_combo_ended(combo_weather: int) -> void:
+	if _combo_label:
+		_combo_label.text = ""

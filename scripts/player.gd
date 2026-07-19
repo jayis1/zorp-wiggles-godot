@@ -270,6 +270,20 @@ func _physics_process(delta: float) -> void:
 	_update_low_hp_heartbeat(delta)
 	_update_idle_aura(delta)
 
+	# ── Phase 28: Gravity Anomaly weather — apply vertical force ──
+	# The weather system polls a vertical force (negative = upward, positive =
+	# downward). We apply it to velocity.y so the player is lifted or pushed
+	# down during gravity shifts. Clamped to reasonable bounds for safety.
+	var grav_force: float = WeatherSystem.get_gravity_anomaly_force()
+	if grav_force != 0.0 and not is_dashing and not is_sliding:
+		velocity.y = grav_force
+		# Track airborne state for landing effect when gravity normalizes
+		if abs(global_position.y - 0.5) > 1.5:
+			_was_airborne = true
+	elif velocity.y != 0 and not DimensionSystem.gravity_reversed():
+		# No gravity anomaly — settle back to ground
+		velocity.y = 0
+
 	move_and_slide()
 
 # ── Idle breathing animation — a subtle vertical bob + emission pulse so Zorp
@@ -586,6 +600,9 @@ func _handle_dash(delta: float) -> void:
 
 	# Consume buffered dash if cooldown is ready (or coyote window is active)
 	var can_dash: bool = GameManager.player_dash_cooldown_timer <= 0 or _dash_coyote_timer > 0
+	# ── Phase 28: Magnetic Storm EMP — dashing temporarily disabled ──
+	if can_dash and WeatherSystem.get_emp_dash_disable_remaining() > 0:
+		can_dash = false
 	if _dash_buffer_timer > 0 and can_dash:
 		_dash_buffer_timer = 0.0
 		_dash_coyote_timer = 0.0  # Consume coyote window

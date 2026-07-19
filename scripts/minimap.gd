@@ -71,6 +71,29 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
 	if not _minimap_visible:
 		return
+	# ── Phase 28: Magnetic Storm — minimap disabled (EMP interference) ──
+	# During a magnetic storm, the minimap shows static instead of the terrain
+	# and entity dots. The player must navigate by sight alone.
+	if WeatherSystem.is_minimap_disabled():
+		var draw_origin := Vector2.ZERO
+		var minimap_rect := Rect2(draw_origin, Vector2(_size, _size))
+		# Draw static-noise background
+		draw_rect(minimap_rect, Color(0.1, 0.1, 0.15), true)
+		# Draw random static dots to simulate interference
+		var static_color: Color = Color(0.4, 0.5, 0.7, 0.5)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = Time.get_ticks_msec() / 80  # Changes ~12x/sec for flicker
+		for i in range(60):
+			var sx: float = rng.randf_range(0.0, _size)
+			var sy: float = rng.randf_range(0.0, _size)
+			draw_circle(Vector2(sx, sy), 1.5, static_color)
+		# Draw "NO SIGNAL" text
+		var font := get_theme_default_font()
+		var text_pos := Vector2(_half_size, _half_size)
+		draw_string(font, text_pos, "NO SIGNAL", HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color(0.6, 0.7, 1.0, 0.8))
+		# Draw border frame
+		draw_rect(minimap_rect, Color(0.4, 0.6, 1.0), false, 2.0)
+		return
 
 	var draw_origin := Vector2.ZERO
 	var minimap_rect := Rect2(draw_origin, Vector2(_size, _size))

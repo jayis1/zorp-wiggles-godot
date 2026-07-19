@@ -1652,6 +1652,13 @@ enum Weather {
 	METEOR_SHOWER, # Random meteor strikes (telegraphed AoE, larger than lightning)
 	AURORA,        # Colorful sky lights, boosts XP gain by 50%
 	SANDSTORM,     # Reduced visibility, damages player, boosts enemy speed
+	# ── Phase 28: Weather Expansion ──
+	BLOOD_MOON,    # All enemies stronger/faster, 3x loot & XP — high risk, high reward
+	ECLIPSE,       # Darkness falls, shadow enemies spawn, light sources critical
+	POLLEN_STORM,  # Heals everything slowly, peaceful period for exploration
+	MAGNETIC_STORM, # Disables minimap/radar, random EMP pulses disable dashing
+	GRAVITY_ANOMALY, # Random gravity shifts every 10s, affects vertical movement
+	DIMENSIONAL_STORM, # Rifts open randomly, dimension shifts every 15s
 }
 
 # Weather state duration ranges (seconds): [min, max]
@@ -1697,6 +1704,66 @@ const SANDSTORM_TICK_INTERVAL: float = 1.0           # How often damage ticks
 const SANDSTORM_FOG_DENSITY_MULT: float = 4.0        # Visibility reduction
 const SANDSTORM_SHELTER_REDUCTION: float = 0.80      # 80% damage reduction under shelter
 
+# ── Phase 28: Weather Expansion — new weather tuning constants ──
+# Blood Moon — all enemies empowered, but loot & XP are tripled. High risk, high reward.
+const BLOOD_MOON_ENEMY_HP_MULT: float = 1.4           # +40% enemy HP
+const BLOOD_MOON_ENEMY_DAMAGE_MULT: float = 1.3       # +30% enemy damage
+const BLOOD_MOON_ENEMY_SPEED_MULT: float = 1.2        # +20% enemy speed
+const BLOOD_MOON_LOOT_MULT: float = 3.0               # 3x crafting-material drop chance
+const BLOOD_MOON_XP_MULT: float = 3.0                 # 3x XP gain
+const BLOOD_MOON_LIGHT_ENERGY: float = 1.8            # Red ambient moonlight intensity
+const BLOOD_MOON_FOG_DENSITY_MULT: float = 1.6       # Slight red haze
+
+# Eclipse — darkness falls; shadow enemies spawn; light sources become critical.
+const ECLIPSE_AMBIENT_DARKEN: float = 0.18            # Ambient light energy during eclipse (very dark)
+const ECLIPSE_FOG_DENSITY_MULT: float = 2.5           # Heavy darkness fog
+const ECLIPSE_SPAWN_BONUS_WEIGHT: float = 2.0         # Extra spawn weight for shadow enemies
+const ECLIPSE_LIGHT_RADIUS_BOOST: float = 1.5         # Player light sources reach 1.5x farther
+const ECLIPSE_PLAYER_LIGHT_BONUS: float = 0.8         # Extra light energy the player's pet/tools emit
+
+# Pollen Storm — heals everything slowly; peaceful period good for exploration.
+const POLLEN_STORM_HEAL_PER_TICK: int = 1             # HP per tick (player & enemies)
+const POLLEN_STORM_TICK_INTERVAL: float = 1.5         # Heal every 1.5s
+const POLLEN_STORM_XP_MULT: float = 1.2               # Gentle 20% XP boost (exploration reward)
+const POLLEN_STORM_LIGHT_ENERGY: float = 1.2          # Soft warm light
+
+# Magnetic Storm — disables minimap/radar; random EMP pulses disable dashing.
+const MAGNETIC_STORM_EMP_INTERVAL_MIN: float = 8.0   # Min seconds between EMP pulses
+const MAGNETIC_STORM_EMP_INTERVAL_MAX: float = 16.0   # Max seconds between EMP pulses
+const MAGNETIC_STORM_EMP_DISABLE_DURATION: float = 2.5  # Dash disabled duration after EMP
+const MAGNETIC_STORM_FOG_DENSITY_MULT: float = 1.4    # Slight visual haze
+
+# Gravity Anomaly — random gravity shifts every 10s, affects vertical movement.
+const GRAVITY_ANOMALY_SHIFT_INTERVAL: float = 10.0   # Seconds between gravity shifts
+const GRAVITY_ANOMALY_SHIFT_DURATION: float = 3.0    # How long each shift lasts
+const GRAVITY_ANOMALY_UPWARD_FORCE: float = 14.0     # m/s upward force during upward shift
+const GRAVITY_ANOMALY_DOWNWARD_FORCE: float = 22.0   # m/s downward force during downward shift
+const GRAVITY_ANOMALY_LIGHT_ENERGY: float = 1.4     # Subtle violet ambient pulse
+
+# Dimensional Storm — rifts open randomly; dimension shifts every 15s.
+const DIMENSIONAL_STORM_RIFT_INTERVAL_MIN: float = 8.0   # Min seconds between rift spawns
+const DIMENSIONAL_STORM_RIFT_INTERVAL_MAX: float = 14.0  # Max seconds between rift spawns
+const DIMENSIONAL_STORM_SHIFT_INTERVAL: float = 15.0  # Seconds between forced dimension shifts
+const DIMENSIONAL_STORM_FOG_DENSITY_MULT: float = 2.0  # Reality-thinning haze
+
+# Weather combo system — when a second weather type can overlap with the primary.
+# Combo bonus multipliers apply when two compatible weathers are active simultaneously.
+const WEATHER_COMBO_CHANCE: float = 0.18              # 18% chance a weather also activates a combo layer
+const WEATHER_COMBO_MAX_OVERLAP: int = 1              # At most one combo weather at a time
+# Combo pairs — each entry lists weathers that can co-occur with the key weather.
+const WEATHER_COMBO_PAIRS: Dictionary = {
+	Weather.THUNDERSTORM: [Weather.AURORA],            # Thunderstorm + Aurora = stormy sky lights
+	Weather.SNOW_STORM: [Weather.AURORA],              # Snow + Aurora = polar lights
+	Weather.FOG: [Weather.POLLEN_STORM],               # Fog + Pollen = misty bloom
+	Weather.SANDSTORM: [Weather.MAGNETIC_STORM],       # Sandstorm + Magnetic = charged dust
+	Weather.BLOOD_MOON: [Weather.ECLIPSE],             # Blood Moon + Eclipse = total darkness
+	Weather.METEOR_SHOWER: [Weather.GRAVITY_ANOMALY],  # Meteors + Gravity = chaotic skies
+	Weather.DIMENSIONAL_STORM: [Weather.BLOOD_MOON],   # Dimensional + Blood Moon = nightmare rifts
+}
+# Combo XP/loot bonuses (compounding on top of each weather's own bonus).
+const WEATHER_COMBO_XP_BONUS: float = 0.25            # +25% XP when a combo is active
+const WEATHER_COMBO_LOOT_BONUS: float = 0.25          # +25% loot chance when a combo is active
+
 # Weather → biome affinity (weather more likely in thematic biomes)
 # Each weather type maps to a list of biomes where it has a higher chance of starting.
 const WEATHER_BIOME_AFFINITY: Dictionary = {
@@ -1709,6 +1776,13 @@ const WEATHER_BIOME_AFFINITY: Dictionary = {
 	Weather.METEOR_SHOWER: [GameConstants.Biome.LAVA, GameConstants.Biome.DESERT, GameConstants.Biome.ALIEN, GameConstants.Biome.VOLCANO_CORE],
 	Weather.AURORA: [GameConstants.Biome.SNOW, GameConstants.Biome.CRYSTAL, GameConstants.Biome.FLOATING_ISLANDS],
 	Weather.SANDSTORM: [GameConstants.Biome.DESERT, GameConstants.Biome.LAVA, GameConstants.Biome.ALIEN],
+	# ── Phase 28: Weather Expansion biome affinities ──
+	Weather.BLOOD_MOON: [GameConstants.Biome.ALIEN, GameConstants.Biome.VOLCANO_CORE, GameConstants.Biome.ANCIENT_RUINS],
+	Weather.ECLIPSE: [GameConstants.Biome.UNDERGROUND, GameConstants.Biome.ANCIENT_RUINS, GameConstants.Biome.ALIEN, GameConstants.Biome.DIGITAL_GRID],
+	Weather.POLLEN_STORM: [GameConstants.Biome.FOREST, GameConstants.Biome.MUSHROOM, GameConstants.Biome.SWAMP, GameConstants.Biome.GRASS],
+	Weather.MAGNETIC_STORM: [GameConstants.Biome.DIGITAL_GRID, GameConstants.Biome.ALIEN, GameConstants.Biome.CRYSTAL_CAVERNS],
+	Weather.GRAVITY_ANOMALY: [GameConstants.Biome.SKY_CITADEL, GameConstants.Biome.FLOATING_ISLANDS, GameConstants.Biome.VOLCANO_CORE],
+	Weather.DIMENSIONAL_STORM: [GameConstants.Biome.ALIEN, GameConstants.Biome.DIGITAL_GRID, GameConstants.Biome.ANCIENT_RUINS],
 }
 
 # Weather enemy spawn overrides — weather types that bias spawning toward specific enemies.
@@ -1723,6 +1797,13 @@ const WEATHER_SPAWN_BONUS: Dictionary = {
 	Weather.METEOR_SHOWER: [GameConstants.EnemyType.BOMBER, GameConstants.EnemyType.CRYSTAL_GUARDIAN],
 	Weather.AURORA: [GameConstants.EnemyType.SWARM_MITE, GameConstants.EnemyType.WISP],
 	Weather.SANDSTORM: [GameConstants.EnemyType.PHASE_SHIFTER, GameConstants.EnemyType.GRAVITON],
+	# ── Phase 28: Weather Expansion spawn bonuses ──
+	Weather.BLOOD_MOON: [GameConstants.EnemyType.DRAKE, GameConstants.EnemyType.ECHO_KNIGHT, GameConstants.EnemyType.GRAVITY_ELEMENTAL],
+	Weather.ECLIPSE: [GameConstants.EnemyType.WISP, GameConstants.EnemyType.PLASMA_STALKER, GameConstants.EnemyType.MIRROR_MIMIC],
+	Weather.POLLEN_STORM: [],  # Peaceful — no spawn bonus
+	Weather.MAGNETIC_STORM: [GameConstants.EnemyType.GRAVITON, GameConstants.EnemyType.TIME_WARDEN],
+	Weather.GRAVITY_ANOMALY: [GameConstants.EnemyType.GRAVITY_ELEMENTAL, GameConstants.EnemyType.GRAVITON],
+	Weather.DIMENSIONAL_STORM: [GameConstants.EnemyType.WISP, GameConstants.EnemyType.PHASE_SHIFTER, GameConstants.EnemyType.MIRROR_MIMIC],
 }
 
 # Weather display info (name, icon emoji, color for UI)
@@ -1737,6 +1818,13 @@ const WEATHER_INFO: Dictionary = {
 	Weather.METEOR_SHOWER: {"name": "Meteor Shower", "icon": "☄", "color": Color(1.0, 0.4, 0.2)},
 	Weather.AURORA: {"name": "Aurora", "icon": "🌌", "color": Color(0.3, 1.0, 0.6)},
 	Weather.SANDSTORM: {"name": "Sandstorm", "icon": "🌪", "color": Color(0.9, 0.75, 0.3)},
+	# ── Phase 28: Weather Expansion ──
+	Weather.BLOOD_MOON: {"name": "Blood Moon", "icon": "🌑", "color": Color(0.85, 0.1, 0.1)},
+	Weather.ECLIPSE: {"name": "Eclipse", "icon": "🌑", "color": Color(0.25, 0.2, 0.35)},
+	Weather.POLLEN_STORM: {"name": "Pollen Storm", "icon": "🌼", "color": Color(1.0, 0.9, 0.4)},
+	Weather.MAGNETIC_STORM: {"name": "Magnetic Storm", "icon": "🧲", "color": Color(0.4, 0.6, 1.0)},
+	Weather.GRAVITY_ANOMALY: {"name": "Gravity Anomaly", "icon": "🌀", "color": Color(0.7, 0.4, 1.0)},
+	Weather.DIMENSIONAL_STORM: {"name": "Dimensional Storm", "icon": "💫", "color": Color(0.8, 0.3, 1.0)},
 }
 
 # ─── Phase 18: Boss Arenas ───────────────────────────────────────────────────

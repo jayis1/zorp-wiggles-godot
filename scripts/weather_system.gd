@@ -26,6 +26,13 @@ signal weather_transition_started(new_weather: int)
 signal weather_transition_ended(weather: int)
 signal lightning_strike_requested(pos: Vector3, warn_time: float)
 signal weather_timer_changed(time_remaining: float)
+# ── Phase 28: Weather Expansion signals ──
+signal weather_combo_started(combo_weather: int, primary_weather: int)
+signal weather_combo_ended(combo_weather: int)
+signal emp_pulse_triggered()              # Magnetic Storm EMP fired
+signal gravity_shift_started(direction: int)  # -1 = upward, 1 = downward
+signal gravity_shift_ended()
+signal dimensional_shift_triggered()      # Dimensional Storm forced shift
 
 # ─── State ────────────────────────────────────────────────────────────────────
 var _current_weather: int = GameConstants.Weather.CLEAR
@@ -52,6 +59,33 @@ var _target_fog_density: float = 0.0
 var _cached_player: CharacterBody3D = null
 # Pending lightning strike warnings
 var _pending_strikes: Array[Dictionary] = []
+
+# ── Phase 28: Weather Expansion state ──
+# Blood Moon — red ambient light
+var _blood_moon_light: OmniLight3D = null
+# Eclipse — darkness ambient override
+var _eclipse_light: OmniLight3D = null
+var _eclipse_base_ambient_energy: float = 1.0
+# Pollen Storm — heal tick + soft light
+var _pollen_tick_timer: float = 0.0
+var _pollen_light: OmniLight3D = null
+# Magnetic Storm — EMP pulse scheduling + dash disable
+var _emp_timer: float = 10.0
+var _emp_disable_timer: float = 0.0
+var _magnetic_light: OmniLight3D = null
+# Gravity Anomaly — periodic gravity shifts
+var _gravity_shift_timer: float = 0.0
+var _gravity_shift_active: bool = false
+var _gravity_shift_remaining: float = 0.0
+var _gravity_anomaly_force: float = 0.0
+var _gravity_light: OmniLight3D = null
+# Dimensional Storm — rift spawn + forced dimension shifts
+var _dim_rift_timer: float = 8.0
+var _dim_shift_timer: float = 15.0
+var _dimensional_light: OmniLight3D = null
+# Weather combo — a second weather type overlapping the primary
+var _combo_weather: int = GameConstants.Weather.CLEAR
+var _combo_timer: float = 0.0  # Time remaining in combo overlap
 
 # ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -125,12 +159,82 @@ func get_detect_range_multiplier() -> float:
 
 ## Enhancement: XP gain multiplier for the current weather (1.0 = normal).
 ## Aurora weather boosts XP by 50%, encouraging aggressive play during auroras.
+## Phase 28: Blood Moon triples XP, Pollen Storm gives a gentle 20% boost,
+## and an active weather combo adds an extra 25% on top.
 func get_xp_multiplier() -> float:
+	var mult: float = 1.0
 	match _current_weather:
 		GameConstants.Weather.AURORA:
-			return GameConstants.AURORA_XP_MULT
+			mult = GameConstants.AURORA_XP_MULT
+		# ── Phase 28: Weather Expansion ──
+		GameConstants.Weather.BLOOD_MOON:
+			mult = GameConstants.BLOOD_MOON_XP_MULT
+		GameConstants.Weather.POLLEN_STORM:
+			mult = GameConstants.POLLEN_STORM_XP_MULT
+		_:
+			mult = 1.0
+	# ── Phase 28: Weather combo bonus XP ──
+	if _combo_weather != GameConstants.Weather.CLEAR:
+		mult += GameConstants.WEATHER_COMBO_XP_BONUS
+	return mult
+
+## Phase 28: Loot chance multiplier for the current weather (1.0 = normal).
+## Blood Moon triples loot, and an active weather combo adds +25%.
+func get_loot_multiplier() -> float:
+	var mult: float = 1.0
+	match _current_weather:
+		GameConstants.Weather.BLOOD_MOON:
+			mult = GameConstants.BLOOD_MOON_LOOT_MULT
+		_:
+			mult = 1.0
+	if _combo_weather != GameConstants.Weather.CLEAR:
+		mult += GameConstants.WEATHER_COMBO_LOOT_BONUS
+	return mult
+
+## Phase 28: Enemy HP multiplier for the current weather (1.0 = normal).
+## Blood Moon boosts enemy HP by 40%.
+func get_enemy_hp_multiplier() -> float:
+	match _current_weather:
+		GameConstants.Weather.BLOOD_MOON:
+			return GameConstants.BLOOD_MOON_ENEMY_HP_MULT
 		_:
 			return 1.0
+
+## Phase 28: Enemy damage multiplier for the current weather (1.0 = normal).
+## Blood Moon boosts enemy damage by 30%.
+func get_enemy_damage_multiplier() -> float:
+	match _current_weather:
+		GameConstants.Weather.BLOOD_MOON:
+			return GameConstants.BLOOD_MOON_ENEMY_DAMAGE_MULT
+		_:
+			return 1.0
+
+## Phase 28: Whether the minimap/radar should be disabled (Magnetic Storm).
+func is_minimap_disabled() -> bool:
+	return _current_weather == GameConstants.Weather.MAGNETIC_STORM \
+		or _combo_weather == GameConstants.Weather.MAGNETIC_STORM
+
+## Phase 28: Whether dashing is currently disabled by an EMP pulse (Magnetic Storm).
+## Returns the remaining disable time in seconds, or 0.0 if dashing is allowed.
+func get_emp_dash_disable_remaining() -> float:
+	return max(0.0, _emp_disable_timer)
+
+## Phase 28: The current gravity-anomaly vertical force (negative = upward,
+## positive = downward, 0.0 = normal gravity). Polled by the player to apply
+## vertical velocity during Gravity Anomaly weather.
+func get_gravity_anomaly_force() -> float:
+	if _current_weather != GameConstants.Weather.GRAVITY_ANOMALY \
+		and _combo_weather != GameConstants.Weather.GRAVITY_ANOMALY:
+		return 0.0
+	return _gravity_anomaly_force
+
+## Phase 28: The current combo (overlapping) weather, or CLEAR if no combo active.
+func get_combo_weather() -> int:
+	return _combo_weather
+
+## Phase 28: Whether a weather combo is currently active.
+func is_combo_active() -> bool:
+	return _combo_weather != GameConstants.Weather.CLEAR
 
 ## Force-set a weather state (used for testing/debug; skips transition).
 func force_weather(weather: int) -> void:
@@ -234,6 +338,13 @@ func _pick_next_weather() -> int:
 		GameConstants.Weather.METEOR_SHOWER,
 		GameConstants.Weather.AURORA,
 		GameConstants.Weather.SANDSTORM,
+		# ── Phase 28: Weather Expansion ──
+		GameConstants.Weather.BLOOD_MOON,
+		GameConstants.Weather.ECLIPSE,
+		GameConstants.Weather.POLLEN_STORM,
+		GameConstants.Weather.MAGNETIC_STORM,
+		GameConstants.Weather.GRAVITY_ANOMALY,
+		GameConstants.Weather.DIMENSIONAL_STORM,
 	]
 	# Weight: base 1.0, +2.0 if biome-affinity match
 	var biome: int = GameManager.current_biome
@@ -299,10 +410,23 @@ func _tick_weather_effects(delta: float) -> void:
 		# Enhancement: Sandstorm — periodic sand-scour damage to exposed entities
 		GameConstants.Weather.SANDSTORM:
 			_tick_sandstorm(delta)
-		# SOLAR_FLARE, FOG, SNOW_STORM, AURORA effects are passive (multipliers queried
-		# by other systems); only light + particles are managed here.
+		# ── Phase 28: Weather Expansion ──
+		GameConstants.Weather.POLLEN_STORM:
+			_tick_pollen_storm(delta)
+		GameConstants.Weather.MAGNETIC_STORM:
+			_tick_magnetic_storm(delta)
+		GameConstants.Weather.GRAVITY_ANOMALY:
+			_tick_gravity_anomaly(delta)
+		GameConstants.Weather.DIMENSIONAL_STORM:
+			_tick_dimensional_storm(delta)
+		# SOLAR_FLARE, FOG, SNOW_STORM, AURORA, BLOOD_MOON, ECLIPSE effects are
+		# passive (multipliers queried by other systems); only light + particles
+		# are managed here.
 		_:
 			pass
+	# ── Phase 28: Weather combo tick (independent of primary weather) ──
+	if _combo_weather != GameConstants.Weather.CLEAR:
+		_tick_combo_weather(delta)
 
 func _tick_acid_rain(delta: float) -> void:
 	_acid_rain_tick_timer -= delta
@@ -548,6 +672,267 @@ func _tick_sandstorm(delta: float) -> void:
 				enemy.take_damage_from(GameConstants.SANDSTORM_DAMAGE_PER_TICK,
 					player.global_position if player else Vector3.ZERO)
 
+# ─── Phase 28: Weather Expansion tick functions ──────────────────────────────
+
+# Pollen Storm — heals everything slowly; peaceful period for exploration.
+func _tick_pollen_storm(delta: float) -> void:
+	_pollen_tick_timer -= delta
+	if _pollen_tick_timer > 0:
+		return
+	_pollen_tick_timer = GameConstants.POLLEN_STORM_TICK_INTERVAL
+	# Heal the player a small amount
+	if GameManager.player_is_alive and GameManager.player_hp < GameManager.player_max_hp:
+		GameManager.heal(GameConstants.POLLEN_STORM_HEAL_PER_TICK)
+	# Heal enemies too (the pollen is indiscriminate — everything blooms)
+	for enemy in GameManager.enemies:
+		if is_instance_valid(enemy) and not enemy.is_dead and "hp" in enemy and "max_hp" in enemy:
+			if enemy.hp < enemy.max_hp:
+				enemy.hp = min(enemy.max_hp, enemy.hp + GameConstants.POLLEN_STORM_HEAL_PER_TICK)
+
+# Magnetic Storm — periodic EMP pulses that temporarily disable dashing.
+func _tick_magnetic_storm(delta: float) -> void:
+	# Tick down any active EMP disable timer
+	if _emp_disable_timer > 0:
+		_emp_disable_timer -= delta
+	_emp_timer -= delta
+	if _emp_timer <= 0:
+		_emp_timer = randf_range(
+			GameConstants.MAGNETIC_STORM_EMP_INTERVAL_MIN,
+			GameConstants.MAGNETIC_STORM_EMP_INTERVAL_MAX)
+		# Fire an EMP pulse — disables dashing for a short window
+		_emp_disable_timer = GameConstants.MAGNETIC_STORM_EMP_DISABLE_DURATION
+		emp_pulse_triggered.emit()
+		GameManager.add_message("⚡ Magnetic EMP! Dashing disabled for %.1fs!" % GameConstants.MAGNETIC_STORM_EMP_DISABLE_DURATION)
+		# Visual: brief blue-white light flash at the player's position
+		var player: CharacterBody3D = _get_player()
+		var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
+		if parent and player and is_instance_valid(player):
+			var flash: OmniLight3D = OmniLight3D.new()
+			flash.light_color = Color(0.6, 0.7, 1.0)
+			flash.light_energy = 6.0
+			flash.omni_range = 18.0
+			parent.add_child(flash)
+			flash.global_position = player.global_position + Vector3(0, 3, 0)
+			var tw: Tween = create_tween()
+			tw.tween_property(flash, "light_energy", 0.0, 0.5).set_trans(Tween.TRANS_QUAD)
+			tw.chain().tween_callback(flash.queue_free)
+			# Small camera shake for the pulse impact
+			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+				GameManager.camera_rig.add_trauma(0.25)
+
+# Gravity Anomaly — periodic gravity shifts that affect vertical movement.
+# Every GRAVITY_ANOMALY_SHIFT_INTERVAL seconds, gravity reverses for
+# GRAVITY_ANOMALY_SHIFT_DURATION seconds, then returns to normal.
+func _tick_gravity_anomaly(delta: float) -> void:
+	if _gravity_shift_active:
+		_gravity_shift_remaining -= delta
+		if _gravity_shift_remaining <= 0:
+			_gravity_shift_active = false
+			_gravity_anomaly_force = 0.0
+			gravity_shift_ended.emit()
+			GameManager.add_message("🌀 Gravity normalizes.")
+	else:
+		_gravity_shift_timer -= delta
+		if _gravity_shift_timer <= 0:
+			_gravity_shift_timer = GameConstants.GRAVITY_ANOMALY_SHIFT_INTERVAL
+			_gravity_shift_active = true
+			_gravity_shift_remaining = GameConstants.GRAVITY_ANOMALY_SHIFT_DURATION
+			# Randomly pick upward or downward shift
+			var direction: int = 1 if randf() < 0.5 else -1
+			_gravity_anomaly_force = direction * (GameConstants.GRAVITY_ANOMALY_UPWARD_FORCE if direction < 0 else GameConstants.GRAVITY_ANOMALY_DOWNWARD_FORCE)
+			gravity_shift_started.emit(direction)
+			var dir_name: String = "UPWARD" if direction < 0 else "DOWNWARD"
+			GameManager.add_message("🌀 Gravity anomaly! Shift %s for %.1fs!" % [dir_name, GameConstants.GRAVITY_ANOMALY_SHIFT_DURATION])
+			# Visual: violet light pulse
+			var player: CharacterBody3D = _get_player()
+			var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
+			if parent and player and is_instance_valid(player):
+				var flash: OmniLight3D = OmniLight3D.new()
+				flash.light_color = Color(0.7, 0.4, 1.0)
+				flash.light_energy = 5.0
+				flash.omni_range = 15.0
+				parent.add_child(flash)
+				flash.global_position = player.global_position + Vector3(0, 3, 0)
+				var tw: Tween = create_tween()
+				tw.tween_property(flash, "light_energy", 0.0, 0.6).set_trans(Tween.TRANS_QUAD)
+				tw.chain().tween_callback(flash.queue_free)
+				if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+					GameManager.camera_rig.add_trauma(0.2)
+
+# Dimensional Storm — rifts open randomly and dimensions shift every 15s.
+func _tick_dimensional_storm(delta: float) -> void:
+	# Spawn rifts periodically by asking DimensionSystem to spawn one
+	_dim_rift_timer -= delta
+	if _dim_rift_timer <= 0:
+		_dim_rift_timer = randf_range(
+			GameConstants.DIMENSIONAL_STORM_RIFT_INTERVAL_MIN,
+			GameConstants.DIMENSIONAL_STORM_RIFT_INTERVAL_MAX)
+		# DimensionSystem handles rift spawning internally; we just nudge it
+		# by calling its _try_spawn_rift if available.
+		if DimensionSystem and DimensionSystem.has_method("_try_spawn_rift"):
+			DimensionSystem._try_spawn_rift()
+	# Force a dimension shift every DIMENSIONAL_STORM_SHIFT_INTERVAL seconds
+	_dim_shift_timer -= delta
+	if _dim_shift_timer <= 0:
+		_dim_shift_timer = GameConstants.DIMENSIONAL_STORM_SHIFT_INTERVAL
+		# Only shift if we're currently in normal space (don't interrupt an
+		# active dimension — let it resolve naturally).
+		if DimensionSystem and DimensionSystem.get_current_dimension() == GameConstants.Dimension.NORMAL:
+			dimensional_shift_triggered.emit()
+			# Pick a random dimension and enter it directly
+			var dimensions: Array[int] = [
+				GameConstants.Dimension.VOID,
+				GameConstants.Dimension.MIRROR,
+				GameConstants.Dimension.TIME_SLOW,
+				GameConstants.Dimension.REVERSE_GRAVITY,
+			]
+			var target_dim: int = dimensions[randi() % dimensions.size()]
+			if DimensionSystem.has_method("enter_dimension"):
+				DimensionSystem.enter_dimension(target_dim)
+			GameManager.add_message("💫 Dimensional instability! Reality shifts!")
+
+# Weather combo tick — handles the overlapping combo weather's own passive
+# effects (EMP pulses for magnetic combo, gravity shifts for gravity combo,
+# rifts for dimensional combo). The combo weather's multipliers are already
+# queried via the getter functions (e.g. is_minimap_disabled checks both).
+func _tick_combo_weather(delta: float) -> void:
+	# Tick down the combo timer; when it expires, end the combo
+	_combo_timer -= delta
+	if _combo_timer <= 0:
+		_end_weather_combo()
+		return
+	# Apply the combo weather's active effects (if any)
+	match _combo_weather:
+		GameConstants.Weather.MAGNETIC_STORM:
+			# Combo magnetic storm still fires EMP pulses
+			_tick_magnetic_storm(delta)
+		GameConstants.Weather.GRAVITY_ANOMALY:
+			# Combo gravity anomaly still shifts gravity
+			_tick_gravity_anomaly(delta)
+		GameConstants.Weather.DIMENSIONAL_STORM:
+			# Combo dimensional storm still opens rifts
+			_tick_dimensional_storm(delta)
+		_:
+			pass
+
+## Phase 28: Start a weather combo — a second weather type overlapping the
+## primary. The combo lasts for a portion of the primary weather's duration.
+func _try_start_weather_combo(primary_weather: int) -> void:
+	if _combo_weather != GameConstants.Weather.CLEAR:
+		return  # Already have a combo
+	if randf() > GameConstants.WEATHER_COMBO_CHANCE:
+		return  # No combo this time
+	var combo_candidates: Array = GameConstants.WEATHER_COMBO_PAIRS.get(primary_weather, [])
+	if combo_candidates.is_empty():
+		return
+	_combo_weather = combo_candidates[randi() % combo_candidates.size()]
+	# Combo lasts for ~60% of the primary weather's duration
+	_combo_timer = _weather_timer * 0.6
+	weather_combo_started.emit(_combo_weather, primary_weather)
+	# Apply the combo weather's start effects (particles, lights, fog)
+	_start_combo_effects(_combo_weather)
+	var combo_info: Dictionary = GameConstants.WEATHER_INFO.get(_combo_weather, {})
+	var combo_name: String = combo_info.get("name", "Unknown")
+	var primary_info: Dictionary = GameConstants.WEATHER_INFO.get(primary_weather, {})
+	var primary_name: String = primary_info.get("name", "Unknown")
+	GameManager.add_message("🌟 Weather combo! %s + %s!" % [primary_name, combo_name])
+
+## Phase 28: End the active weather combo.
+func _end_weather_combo() -> void:
+	if _combo_weather == GameConstants.Weather.CLEAR:
+		return
+	var old_combo: int = _combo_weather
+	_end_combo_effects(_combo_weather)
+	_combo_weather = GameConstants.Weather.CLEAR
+	_combo_timer = 0.0
+	weather_combo_ended.emit(old_combo)
+
+## Phase 28: Apply the combo weather's visual effects (particles, lights, fog).
+## These run alongside the primary weather's effects.
+func _start_combo_effects(combo: int) -> void:
+	var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
+	if not parent:
+		return
+	match combo:
+		GameConstants.Weather.MAGNETIC_STORM:
+			_magnetic_light = OmniLight3D.new()
+			_magnetic_light.light_color = Color(0.4, 0.6, 1.0)
+			_magnetic_light.light_energy = 1.5
+			_magnetic_light.omni_range = 40.0
+			parent.add_child(_magnetic_light)
+			_target_fog_density = max(_target_fog_density, _base_fog_density * GameConstants.MAGNETIC_STORM_FOG_DENSITY_MULT)
+			_emp_timer = randf_range(GameConstants.MAGNETIC_STORM_EMP_INTERVAL_MIN, GameConstants.MAGNETIC_STORM_EMP_INTERVAL_MAX)
+		GameConstants.Weather.GRAVITY_ANOMALY:
+			_gravity_light = OmniLight3D.new()
+			_gravity_light.light_color = Color(0.7, 0.4, 1.0)
+			_gravity_light.light_energy = GameConstants.GRAVITY_ANOMALY_LIGHT_ENERGY
+			_gravity_light.omni_range = 50.0
+			parent.add_child(_gravity_light)
+			_gravity_shift_timer = GameConstants.GRAVITY_ANOMALY_SHIFT_INTERVAL
+		GameConstants.Weather.DIMENSIONAL_STORM:
+			_dimensional_light = OmniLight3D.new()
+			_dimensional_light.light_color = Color(0.8, 0.3, 1.0)
+			_dimensional_light.light_energy = 1.5
+			_dimensional_light.omni_range = 50.0
+			parent.add_child(_dimensional_light)
+			_target_fog_density = max(_target_fog_density, _base_fog_density * GameConstants.DIMENSIONAL_STORM_FOG_DENSITY_MULT)
+			_dim_rift_timer = randf_range(GameConstants.DIMENSIONAL_STORM_RIFT_INTERVAL_MIN, GameConstants.DIMENSIONAL_STORM_RIFT_INTERVAL_MAX)
+			_dim_shift_timer = GameConstants.DIMENSIONAL_STORM_SHIFT_INTERVAL
+		GameConstants.Weather.POLLEN_STORM:
+			_pollen_light = OmniLight3D.new()
+			_pollen_light.light_color = Color(1.0, 0.9, 0.4)
+			_pollen_light.light_energy = GameConstants.POLLEN_STORM_LIGHT_ENERGY
+			_pollen_light.omni_range = 40.0
+			parent.add_child(_pollen_light)
+			_pollen_tick_timer = GameConstants.POLLEN_STORM_TICK_INTERVAL
+		GameConstants.Weather.ECLIPSE:
+			_apply_eclipse_darkness()
+		_:
+			pass
+
+## Phase 28: Remove the combo weather's visual effects.
+func _end_combo_effects(combo: int) -> void:
+	match combo:
+		GameConstants.Weather.MAGNETIC_STORM:
+			if _magnetic_light and is_instance_valid(_magnetic_light):
+				_magnetic_light.queue_free()
+			_magnetic_light = null
+			_emp_disable_timer = 0.0
+		GameConstants.Weather.GRAVITY_ANOMALY:
+			if _gravity_light and is_instance_valid(_gravity_light):
+				_gravity_light.queue_free()
+			_gravity_light = null
+			_gravity_shift_active = false
+			_gravity_anomaly_force = 0.0
+		GameConstants.Weather.DIMENSIONAL_STORM:
+			if _dimensional_light and is_instance_valid(_dimensional_light):
+				_dimensional_light.queue_free()
+			_dimensional_light = null
+		GameConstants.Weather.POLLEN_STORM:
+			if _pollen_light and is_instance_valid(_pollen_light):
+				_pollen_light.queue_free()
+			_pollen_light = null
+		GameConstants.Weather.ECLIPSE:
+			_restore_eclipse_darkness()
+		_:
+			pass
+
+## Phase 28: Apply the Eclipse darkness effect to the WorldEnvironment.
+func _apply_eclipse_darkness() -> void:
+	if _world_env and _world_env.environment:
+		_eclipse_base_ambient_energy = _world_env.environment.ambient_light_energy
+		# Tween the ambient light energy down to the eclipse value
+		var tw: Tween = create_tween()
+		tw.tween_property(_world_env.environment, "ambient_light_energy",
+			GameConstants.ECLIPSE_AMBIENT_DARKEN, 2.0).set_trans(Tween.TRANS_QUAD)
+
+## Phase 28: Restore the WorldEnvironment after Eclipse ends.
+func _restore_eclipse_darkness() -> void:
+	if _world_env and _world_env.environment:
+		var tw: Tween = create_tween()
+		tw.tween_property(_world_env.environment, "ambient_light_energy",
+			_eclipse_base_ambient_energy, 2.0).set_trans(Tween.TRANS_QUAD)
+
 # ─── Weather effects start / end ──────────────────────────────────────────────
 
 func _start_weather_effects(weather: int) -> void:
@@ -606,8 +991,65 @@ func _start_weather_effects(weather: int) -> void:
 			_solar_light.light_energy = 1.5
 			_solar_light.omni_range = 50.0
 			parent.add_child(_solar_light)
+		# ── Phase 28: Weather Expansion ──
+		GameConstants.Weather.BLOOD_MOON:
+			_weather_particles = _create_weather_particles("blood_moon")
+			parent.add_child(_weather_particles)
+			_target_fog_density = _base_fog_density * GameConstants.BLOOD_MOON_FOG_DENSITY_MULT
+			# Red ambient moonlight
+			_blood_moon_light = OmniLight3D.new()
+			_blood_moon_light.light_color = Color(0.85, 0.1, 0.1)
+			_blood_moon_light.light_energy = GameConstants.BLOOD_MOON_LIGHT_ENERGY
+			_blood_moon_light.omni_range = 70.0
+			parent.add_child(_blood_moon_light)
+		GameConstants.Weather.ECLIPSE:
+			_weather_particles = _create_weather_particles("eclipse")
+			parent.add_child(_weather_particles)
+			_target_fog_density = _base_fog_density * GameConstants.ECLIPSE_FOG_DENSITY_MULT
+			_apply_eclipse_darkness()
+		GameConstants.Weather.POLLEN_STORM:
+			_weather_particles = _create_weather_particles("pollen")
+			parent.add_child(_weather_particles)
+			_pollen_light = OmniLight3D.new()
+			_pollen_light.light_color = Color(1.0, 0.9, 0.4)
+			_pollen_light.light_energy = GameConstants.POLLEN_STORM_LIGHT_ENERGY
+			_pollen_light.omni_range = 40.0
+			parent.add_child(_pollen_light)
+			_pollen_tick_timer = GameConstants.POLLEN_STORM_TICK_INTERVAL
+		GameConstants.Weather.MAGNETIC_STORM:
+			_weather_particles = _create_weather_particles("magnetic")
+			parent.add_child(_weather_particles)
+			_target_fog_density = _base_fog_density * GameConstants.MAGNETIC_STORM_FOG_DENSITY_MULT
+			_magnetic_light = OmniLight3D.new()
+			_magnetic_light.light_color = Color(0.4, 0.6, 1.0)
+			_magnetic_light.light_energy = 1.5
+			_magnetic_light.omni_range = 40.0
+			parent.add_child(_magnetic_light)
+			_emp_timer = randf_range(GameConstants.MAGNETIC_STORM_EMP_INTERVAL_MIN, GameConstants.MAGNETIC_STORM_EMP_INTERVAL_MAX)
+		GameConstants.Weather.GRAVITY_ANOMALY:
+			_weather_particles = _create_weather_particles("gravity_anomaly")
+			parent.add_child(_weather_particles)
+			_gravity_light = OmniLight3D.new()
+			_gravity_light.light_color = Color(0.7, 0.4, 1.0)
+			_gravity_light.light_energy = GameConstants.GRAVITY_ANOMALY_LIGHT_ENERGY
+			_gravity_light.omni_range = 50.0
+			parent.add_child(_gravity_light)
+			_gravity_shift_timer = GameConstants.GRAVITY_ANOMALY_SHIFT_INTERVAL
+		GameConstants.Weather.DIMENSIONAL_STORM:
+			_weather_particles = _create_weather_particles("dimensional")
+			parent.add_child(_weather_particles)
+			_target_fog_density = _base_fog_density * GameConstants.DIMENSIONAL_STORM_FOG_DENSITY_MULT
+			_dimensional_light = OmniLight3D.new()
+			_dimensional_light.light_color = Color(0.8, 0.3, 1.0)
+			_dimensional_light.light_energy = 1.5
+			_dimensional_light.omni_range = 50.0
+			parent.add_child(_dimensional_light)
+			_dim_rift_timer = randf_range(GameConstants.DIMENSIONAL_STORM_RIFT_INTERVAL_MIN, GameConstants.DIMENSIONAL_STORM_RIFT_INTERVAL_MAX)
+			_dim_shift_timer = GameConstants.DIMENSIONAL_STORM_SHIFT_INTERVAL
 		GameConstants.Weather.CLEAR:
 			pass  # No particles; baseline
+	# ── Phase 28: Weather combo — try to start a combo weather overlap ──
+	_try_start_weather_combo(weather)
 
 func _end_weather_effects(weather: int) -> void:
 	# Remove weather particles
@@ -628,6 +1070,33 @@ func _end_weather_effects(weather: int) -> void:
 		if is_instance_valid(mesh):
 			mesh.queue_free()
 	_active_meteors.clear()
+	# ── Phase 28: Weather Expansion — clean up new weather lights ──
+	if _blood_moon_light and is_instance_valid(_blood_moon_light):
+		_blood_moon_light.queue_free()
+	_blood_moon_light = null
+	if _eclipse_light and is_instance_valid(_eclipse_light):
+		_eclipse_light.queue_free()
+	_eclipse_light = null
+	# Eclipse darkness restoration (only if this was the eclipse weather)
+	if weather == GameConstants.Weather.ECLIPSE:
+		_restore_eclipse_darkness()
+	if _pollen_light and is_instance_valid(_pollen_light):
+		_pollen_light.queue_free()
+	_pollen_light = null
+	if _magnetic_light and is_instance_valid(_magnetic_light):
+		_magnetic_light.queue_free()
+	_magnetic_light = null
+	_emp_disable_timer = 0.0
+	if _gravity_light and is_instance_valid(_gravity_light):
+		_gravity_light.queue_free()
+	_gravity_light = null
+	_gravity_shift_active = false
+	_gravity_anomaly_force = 0.0
+	if _dimensional_light and is_instance_valid(_dimensional_light):
+		_dimensional_light.queue_free()
+	_dimensional_light = null
+	# ── Phase 28: End any active weather combo ──
+	_end_weather_combo()
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -654,6 +1123,17 @@ func _update_weather_particle_position() -> void:
 				_solar_light.global_position = player.global_position + Vector3(0, 15, 0)
 			else:
 				_solar_light.global_position = player.global_position + Vector3(0, 25, 0)
+	# ── Phase 28: Weather Expansion — new lights follow the player ──
+	if _blood_moon_light and is_instance_valid(_blood_moon_light) and player and is_instance_valid(player):
+		_blood_moon_light.global_position = player.global_position + Vector3(0, 30, 0)
+	if _pollen_light and is_instance_valid(_pollen_light) and player and is_instance_valid(player):
+		_pollen_light.global_position = player.global_position + Vector3(0, 18, 0)
+	if _magnetic_light and is_instance_valid(_magnetic_light) and player and is_instance_valid(player):
+		_magnetic_light.global_position = player.global_position + Vector3(0, 20, 0)
+	if _gravity_light and is_instance_valid(_gravity_light) and player and is_instance_valid(player):
+		_gravity_light.global_position = player.global_position + Vector3(0, 22, 0)
+	if _dimensional_light and is_instance_valid(_dimensional_light) and player and is_instance_valid(player):
+		_dimensional_light.global_position = player.global_position + Vector3(0, 25, 0)
 
 func _is_player_exposed_to_sky() -> bool:
 	# Simple heuristic: raycast upward 30m from the player. If it hits nothing,
@@ -775,6 +1255,91 @@ func _create_weather_particles(type: String) -> GPUParticles3D:
 			color = Color(0.9, 0.75, 0.35, 0.6)
 			mesh.radius = 0.04
 			mesh.height = 0.08
+		# ── Phase 28: Weather Expansion particle types ──
+		# Blood Moon — drifting red embers + dark haze motes
+		"blood_moon":
+			p.amount = 250
+			p.lifetime = 5.0
+			pmat.direction = Vector3(0.2, -0.3, 0.2)
+			pmat.spread = 30.0
+			pmat.gravity = Vector3(0, -1.5, 0)
+			pmat.initial_velocity_min = 1.0
+			pmat.initial_velocity_max = 4.0
+			pmat.turbulence_enabled = true
+			pmat.turbulence_noise_scale = 0.5
+			color = Color(0.8, 0.15, 0.15, 0.55)
+			mesh.radius = 0.08
+			mesh.height = 0.16
+		# Eclipse — dark ash-like motes drifting in the dimmed air
+		"eclipse":
+			p.amount = 180
+			p.lifetime = 6.0
+			pmat.direction = Vector3(0.4, -0.2, 0.4)
+			pmat.spread = 40.0
+			pmat.gravity = Vector3(0, -0.8, 0)
+			pmat.initial_velocity_min = 0.5
+			pmat.initial_velocity_max = 2.5
+			pmat.turbulence_enabled = true
+			pmat.turbulence_noise_scale = 0.4
+			color = Color(0.2, 0.18, 0.3, 0.45)
+			mesh.radius = 0.1
+			mesh.height = 0.2
+		# Pollen Storm — soft golden pollen grains drifting gently
+		"pollen":
+			p.amount = 300
+			p.lifetime = 6.0
+			pmat.direction = Vector3(0.3, 0.2, 0.3)  # Slight upward drift (blooming)
+			pmat.spread = 35.0
+			pmat.gravity = Vector3(0, 0.5, 0)  # Positive = floats up gently
+			pmat.initial_velocity_min = 0.5
+			pmat.initial_velocity_max = 2.0
+			pmat.turbulence_enabled = true
+			pmat.turbulence_noise_scale = 0.6
+			color = Color(1.0, 0.9, 0.4, 0.7)
+			mesh.radius = 0.07
+			mesh.height = 0.14
+		# Magnetic Storm — crackling blue sparks drifting in the air
+		"magnetic":
+			p.amount = 220
+			p.lifetime = 3.0
+			pmat.direction = Vector3(0, 1, 0)  # Rise upward (ionized air)
+			pmat.spread = 25.0
+			pmat.gravity = Vector3(0, 2.0, 0)
+			pmat.initial_velocity_min = 1.0
+			pmat.initial_velocity_max = 4.0
+			pmat.turbulence_enabled = true
+			pmat.turbulence_noise_scale = 0.7
+			color = Color(0.4, 0.6, 1.0, 0.55)
+			mesh.radius = 0.05
+			mesh.height = 0.1
+		# Gravity Anomaly — violet particles drifting in unstable patterns
+		"gravity_anomaly":
+			p.amount = 200
+			p.lifetime = 4.0
+			pmat.direction = Vector3(0, 1, 0)  # Default upward (shifts with gravity)
+			pmat.spread = 30.0
+			pmat.gravity = Vector3(0, 0, 0)  # No gravity — they float erratically
+			pmat.initial_velocity_min = 0.5
+			pmat.initial_velocity_max = 3.0
+			pmat.turbulence_enabled = true
+			pmat.turbulence_noise_scale = 1.0  # High turbulence = unstable motion
+			color = Color(0.7, 0.4, 1.0, 0.5)
+			mesh.radius = 0.06
+			mesh.height = 0.12
+		# Dimensional Storm — purple rift sparks spiraling chaotically
+		"dimensional":
+			p.amount = 280
+			p.lifetime = 4.0
+			pmat.direction = Vector3(0, 1, 0)
+			pmat.spread = 45.0
+			pmat.gravity = Vector3(0, 1.0, 0)
+			pmat.initial_velocity_min = 1.0
+			pmat.initial_velocity_max = 5.0
+			pmat.turbulence_enabled = true
+			pmat.turbulence_noise_scale = 0.9
+			color = Color(0.8, 0.3, 1.0, 0.6)
+			mesh.radius = 0.06
+			mesh.height = 0.12
 
 	pmat.color = color
 	pmat.scale_min = 0.5

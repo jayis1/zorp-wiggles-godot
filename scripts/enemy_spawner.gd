@@ -318,12 +318,18 @@ func _scale_enemy_to_player_level(enemy: Node3D) -> void:
 			# ── Phase 7: Time-based difficulty scaling — stronger enemies over time ──
 			new_hp = int(new_hp * GameManager.get_time_enemy_hp_mult())
 			new_dmg = int(new_dmg * GameManager.get_time_enemy_damage_mult())
+			# ── Phase 28: Blood Moon weather — enemies empowered ──
+			new_hp = int(new_hp * WeatherSystem.get_enemy_hp_multiplier())
+			new_dmg = int(new_dmg * WeatherSystem.get_enemy_damage_multiplier())
 			enemy.max_hp = new_hp
 			enemy.hp = new_hp
 			enemy.damage = new_dmg
 			# ── Phase 7: Time-based speed scaling ──
 			if "speed" in enemy:
 				enemy.speed *= GameManager.get_time_enemy_speed_mult()
+				# ── Phase 28: Blood Moon weather — enemies faster ──
+				if WeatherSystem.get_current_weather() == GameConstants.Weather.BLOOD_MOON:
+					enemy.speed *= GameConstants.BLOOD_MOON_ENEMY_SPEED_MULT
 
 func _reset_spawn_timer() -> void:
 	# Base interval decreases with player level

@@ -801,6 +801,9 @@ func _drop_crafting_material() -> void:
 	# ── Phase 25: Progression System loot chance bonus (Exploration branch) ──
 	if ProgressionSystem:
 		drop_chance = minf(1.0, drop_chance + ProgressionSystem.get_loot_chance_bonus())
+	# ── Phase 28: Blood Moon weather — 3x loot chance (high risk, high reward) ──
+	# Also applies the weather combo loot bonus if a combo is active.
+	drop_chance = minf(1.0, drop_chance * WeatherSystem.get_loot_multiplier())
 	if randf() > drop_chance:
 		return
 	# Pick a crafting material via the weighted loot table.
