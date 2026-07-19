@@ -88,6 +88,17 @@ func _test_character_select() -> void:
 	var active = csm.get_active_profile()
 	_assert(int(active.get("id", -1)) == prev, "get_active_profile matches selected character")
 
+# ─── 4. Death replay ──────────────────────────────────────────────────────────
+func _test_death_replay() -> void:
+	print("[4/5] DeathReplay autoload")
+	var dr = DeathReplay
+	_assert(dr != null, "DeathReplay autoload exists")
+	_assert(dr.has_method("record_frame"), "DeathReplay has record_frame method")
+	_assert(dr.has_method("start_replay"), "DeathReplay has start_replay method")
+	_assert(dr.has_method("is_playing"), "DeathReplay has is_playing method")
+	_assert(dr.has_method("stop_replay"), "DeathReplay has stop_replay method")
+	_assert(not dr.is_playing(), "DeathReplay is not playing at startup")
+
 # ─── 3. Adaptive SFX map ─────────────────────────────────────────────────────
 func _test_adaptive_sfx() -> void:
 	print("[3/5] AudioManager adaptive shoot SFX")
@@ -113,16 +124,6 @@ func _test_adaptive_sfx() -> void:
 		seen[n] = true
 	_assert(all_unique, "All 12 shoot SFX name constants are unique")
 	_assert(names.size() == 12, "Exactly 12 shoot SFX variants defined")
-
-func _ready() -> void:
-	print("=== Phase 30 Ad-Hoc Verification ===")
-	print("")
-	_test_autoloads()
-	_test_character_select()
-	_test_adaptive_sfx()
-	_test_death_replay()
-	# Defer the main scene test so autoloads + scene are fully ready
-	call_deferred("_test_main_scene")
 
 # ─── 5. Main scene loads with IntroCinematic node ────────────────────────────
 func _test_main_scene() -> void:
