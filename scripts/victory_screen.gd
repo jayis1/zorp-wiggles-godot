@@ -213,10 +213,10 @@ func _process(delta: float) -> void:
 	if _buttons_alpha > 0.05 and _play_again_btn:
 		_play_again_btn.visible = true
 		_play_again_btn.modulate.a = _buttons_alpha
-		_play_again_btn.scale = Vector2.ONE.lerp(Vector2.ONE, _buttons_alpha)
+		_play_again_btn.scale = Vector2(0.8, 0.8).lerp(Vector2.ONE, _buttons_alpha)
 		_quit_btn.visible = true
 		_quit_btn.modulate.a = _buttons_alpha
-		_quit_btn.scale = Vector2.ONE.lerp(Vector2.ONE, _buttons_alpha)
+		_quit_btn.scale = Vector2(0.8, 0.8).lerp(Vector2.ONE, _buttons_alpha)
 	queue_redraw()
 
 
