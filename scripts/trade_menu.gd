@@ -33,6 +33,11 @@ var _active_items: Array[Dictionary] = []
 # Click hitboxes for each item (updated each draw frame)
 var _item_rects: Array[Rect2] = []
 var _close_rect: Rect2 = Rect2()
+# Purchase flash: briefly highlights the bought item with a bright border so
+# the player gets immediate visual confirmation that the click registered.
+var _purchase_flash_index: int = -1
+var _purchase_flash_timer: float = 0.0
+const PURCHASE_FLASH_DURATION: float = 0.35
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -68,6 +73,9 @@ func close() -> void:
 func _process(delta: float) -> void:
 	var target: float = 1.0 if _is_open else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 8.0)
+	# Tick purchase flash timer so the highlight fades after buying
+	if _purchase_flash_timer > 0.0:
+		_purchase_flash_timer = maxf(0.0, _purchase_flash_timer - delta)
 	if _fade_alpha > 0.01 or _is_open:
 		queue_redraw()
 	# Close on escape or trade key
@@ -126,6 +134,9 @@ func _buy_item(index: int) -> void:
 	# Audio
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_PICKUP)
+	# Trigger purchase flash on the bought item for visual confirmation
+	_purchase_flash_index = index
+	_purchase_flash_timer = PURCHASE_FLASH_DURATION
 
 func _draw() -> void:
 	if _fade_alpha < 0.01:
@@ -222,7 +233,18 @@ func _draw() -> void:
 		var item_border := Color(1.0, 200.0 / 255.0, 100.0 / 255.0, 0.3 * a)
 		if can_afford:
 			item_border = Color(0.4, 1.0, 0.5, 0.4 * a)
-		draw_rect(rect, item_border, false, 1.0)
+		var border_width: float = 1.0
+		# Purchase flash: draw a bright pulsing border on the just-bought item
+		# that fades over PURCHASE_FLASH_DURATION. Gives instant click feedback.
+		if i == _purchase_flash_index and _purchase_flash_timer > 0.0:
+			var flash_t: float = _purchase_flash_timer / PURCHASE_FLASH_DURATION
+			var flash_col := Color(1.0, 1.0, 0.4, 0.9 * a * flash_t)
+			draw_rect(rect, flash_col, false, 3.0)
+			# Also brighten the item background while flashing
+			var flash_bg := Color(0.3, 0.35, 0.15, 0.7 * a * flash_t)
+			draw_rect(rect, flash_bg, true)
+			border_width = 2.0
+		draw_rect(rect, item_border, false, border_width)
 
 		# Item icon
 		font.draw_string(get_canvas_item(),
