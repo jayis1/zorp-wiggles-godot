@@ -78,6 +78,8 @@ var _shake_bias_dir: Vector3 = Vector3.ZERO  # Normalized horizontal direction
 var _shake_bias_strength: float = 0.0        # 0..1, how much bias to apply
 
 func _ready() -> void:
+	# Add to "camera_rig" group so PhotoMode can find and pause the rig
+	add_to_group("camera_rig")
 	if target:
 		_target_node = get_node_or_null(target)
 

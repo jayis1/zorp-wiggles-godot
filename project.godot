@@ -156,6 +156,14 @@ cycle_colorblind={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194336,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
 }
+photo_mode={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194338,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
+cycle_skin={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194339,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
 
 [autoload]
 
@@ -181,6 +189,7 @@ PetStoneInventory="*res://scripts/pet_stone_inventory.gd"
 EquipmentSystem="*res://scripts/equipment_system.gd"
 AccessibilityManager="*res://scripts/accessibility_manager.gd"
 GameModeManager="*res://scripts/game_mode_manager.gd"
+CosmeticManager="*res://scripts/cosmetic_manager.gd"
 # HermesVerify autoload REMOVED — it was a temporary ad-hoc verification script
 # that calls get_tree().quit() in _ready(), which immediately exits the game on
 # every launch. This made the game unplayable. To run verification, temporarily

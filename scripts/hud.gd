@@ -100,6 +100,8 @@ const HP_BAR_SHAKE_AMP: float = 4.0        # Slightly less violent than boss (pl
 var _mod_indicator: Label = null
 
 func _ready() -> void:
+	# Add to "hud" group so other systems (PhotoMode) can find the HUD canvas layer
+	add_to_group("hud")
 	# Connect game manager signals
 	GameManager.hp_changed.connect(_on_hp_changed)
 	GameManager.xp_changed.connect(_on_xp_changed)
@@ -187,6 +189,7 @@ func _ready() -> void:
 	var ap_script := load("res://scripts/achievement_popup.gd")
 	var ap_ctrl := Control.new()
 	ap_ctrl.set_script(ap_script)
+	ap_ctrl.add_to_group("achievement_popup")
 	add_child(ap_ctrl)
 	
 	# ── Phase 5: Power-up Timer Display ──
@@ -328,6 +331,22 @@ func _ready() -> void:
 	ewh_ctrl.set_script(ewh_script)
 	ewh_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ewh_ctrl)
+
+	# ── Phase 30: Victory Screen (boss rush / speedrun / endless completion) ──
+	var vs_script := load("res://scripts/victory_screen.gd")
+	var vs_ctrl := Control.new()
+	vs_ctrl.set_script(vs_script)
+	vs_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vs_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(vs_ctrl)
+
+	# ── Phase 30: Photo Mode (free-look camera + screenshots) ──
+	# PhotoMode is a Node (not a Control) — it manages its own Camera3D and HUD panel.
+	var pm_script := load("res://scripts/photo_mode.gd")
+	var pm_node := Node.new()
+	pm_node.set_script(pm_script)
+	pm_node.name = "PhotoMode"
+	add_child(pm_node)
 
 	# ── Phase 30/31: Register HUD with AccessibilityManager for UI scaling ──
 	# AccessibilityManager scales the fixed-offset HUD children (HP bar, minimap,

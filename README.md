@@ -32,9 +32,16 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 ### Audio & Polish
 - 24 procedurally generated sound effects (no external audio files needed)
 - 12 per-biome ambient music tracks + boss fight music
+- Dynamic music intensity — 5 tiers (Calm/Engaged/Heated/Intense/Frenzied) that scale with the combo counter (pitch + volume)
 - Trauma-based screen shake, input buffering, hit-stop freeze frames
 - Pause menu, settings menu, death screen with stats and "Try Again"
 - Smooth camera follow with deadzone, FOV kick on dash, look-ahead offset
+- **Color Filters** — 4 cosmetic modes (sepia, noir, thermal, x-ray) + 4 colorblind correction modes (protanopia, deuteranopia, tritanopia, achromatopsia), F6/F7 to cycle, persists to disk
+- **UI Scaling** — F8/Shift+F8 to scale HUD elements for different screen resolutions (75%-150%)
+- **Photo Mode** — F9 freezes the game and spawns a free-look camera; WASD/Space/Shift to fly, drag to orbit, scroll for FOV, F to capture a screenshot to `user://screenshots/`, C to cycle color filters in-frame
+- **Cosmetic Skins** — 9 unlockable skins for Zorp (Classic Green, Golden, Void, Crystal, Lava, Sky, Rainbow, Noir, Cosmic) that recolor the body + emission; RAINBOW cycles hue at runtime; unlock via prestige, kills, biome visits, achievements, level; F10 to cycle
+- **Trail Customization** — 5 dash-trail styles (Classic, Spark, Comet, Glitch, Aurora) with per-style mesh shape (sphere/cube/ellipsoid), alpha, lifetime, scale, and jitter; 8 trail colors independent of skin; persists to disk
+- **Victory Screen** — ranked letter grade (S/A/B/C/D) for Boss Rush, Speedrun, and Endless milestone waves (10/25/50/100); shows total time, biome splits, personal best comparison with "★ NEW PB ★" callout; Play Again + Quit buttons
 
 ### Missions & Progression
 - Mission system (collect, kill, explore, boss missions)
@@ -84,6 +91,8 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 | F6 | Cycle color filter (sepia/noir/thermal/x-ray) |
 | F7 | Cycle colorblind correction mode |
 | F8 / Shift+F8 | Increase / decrease UI scale |
+| F9 | Toggle photo mode (free-look camera + screenshots) |
+| F10 | Cycle cosmetic skin (golden/void/crystal/lava/sky/rainbow/noir/cosmic) |
 | Middle Mouse | Drop a ping marker (Shift=danger, Alt=loot, Ctrl=nav) |
 | **Player 2 (Zerp)** | |
 | Arrow Keys | Move |

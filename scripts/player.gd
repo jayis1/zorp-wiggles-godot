@@ -64,7 +64,7 @@ var _dash_coyote_timer: float = 0.0
 const DASH_COYOTE_WINDOW: float = 0.08  # Grace period after cooldown ends
 
 # ─── Visual ───────────────────────────────────────────────────────────────────
-var base_color: Color = Color(0.3, 0.85, 0.3)  # Alien green
+var base_color: Color = Color(0.3, 0.85, 0.3)  # Alien green (overridden by CosmeticManager)
 var is_invuln_blinking: bool = false
 var blink_visible: bool = true
 var _player_material: StandardMaterial3D = null
@@ -73,6 +73,11 @@ const _IDLE_BOB_AMPLITUDE: float = 0.04  # Subtle vertical bob (meters)
 const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
 const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
 const _IDLE_EMISSION_MAX: float = 1.3    # Idle emission pulse max
+# ── Phase 30: Active cosmetic skin — drives body color + emission multiplier.
+#    Cached at _ready and refreshed whenever CosmeticManager.skin_changed fires.
+#    The RAINBOW skin cycles hue at runtime via _update_cosmetic_color().
+var _active_skin_id: int = 0
+var _skin_emission_mult: float = 1.0
 
 # ── Phase 6: Idle regen sparkle aura ──
 # Ambient green sparkles that orbit Zorp when standing still and healthy.
@@ -144,6 +149,14 @@ func _ready() -> void:
 		_player_material.rim = 0.7
 		_player_material.rim_tint = 0.9
 		mesh.material_override = _player_material
+	# ── Phase 30: Apply cosmetic skin (color + emission multiplier) ──
+	# CosmeticManager is the source of truth for the active skin. We cache the
+	# skin id + emission mult and apply the body color here. The RAINBOW skin
+	# cycles hue at runtime via _update_cosmetic_color() in _process.
+	if CosmeticManager:
+		_apply_cosmetic_skin()
+		if not CosmeticManager.skin_changed.is_connected(_on_cosmetic_skin_changed):
+			CosmeticManager.skin_changed.connect(_on_cosmetic_skin_changed)
 	# ── Phase 25: Prestige cosmetic aura — a golden light for prestiged players ──
 	# Each prestige level adds a subtle golden OmniLight around Zorp, visible
 	# as a warm halo. The light intensity scales with prestige level.
@@ -272,6 +285,8 @@ func _physics_process(delta: float) -> void:
 	_update_movement_lean(delta)
 	_update_low_hp_heartbeat(delta)
 	_update_idle_aura(delta)
+	# ── Phase 30: Update cosmetic skin color (RAINBOW cycles hue at runtime) ──
+	_update_cosmetic_color(delta)
 
 	# ── Phase 28: Gravity Anomaly weather — apply vertical force ──
 	# The weather system polls a vertical force (negative = upward, positive =
@@ -763,41 +778,121 @@ func _start_dash() -> void:
 	# ── Phase 8: Destructibles smashed by dash
 	_dash_smash_destructibles()
 
+# ── Phase 30: Cosmetic skin application ──────────────────────────────────────
+# Applies the active skin's body color + emission multiplier to the player
+# material. Called at _ready and whenever CosmeticManager.skin_changed fires.
+# For the RAINBOW skin, the color cycles over time via _update_cosmetic_color().
+func _apply_cosmetic_skin() -> void:
+	if not CosmeticManager:
+		return
+	_active_skin_id = CosmeticManager.get_active_skin()
+	_skin_emission_mult = CosmeticManager.get_active_skin_emission_mult()
+	base_color = CosmeticManager.get_active_skin_color()
+	if _player_material:
+		_player_material.albedo_color = base_color
+		_player_material.emission = base_color * 0.4 * _skin_emission_mult
+		_player_material.rim_tint = 0.9
+
+func _on_cosmetic_skin_changed(_skin_id: int) -> void:
+	_apply_cosmetic_skin()
+
+# Per-frame color update for the RAINBOW skin. CosmeticManager advances the
+# rainbow phase; we just read the current color and apply it. For non-rainbow
+# skins this is a no-op (the color was set once in _apply_cosmetic_skin).
+func _update_cosmetic_color(_delta: float) -> void:
+	if not CosmeticManager:
+		return
+	if _active_skin_id != GameConstants.PlayerSkin.RAINBOW:
+		return
+	if not _player_material:
+		return
+	var new_color: Color = CosmeticManager.get_active_skin_color()
+	base_color = new_color
+	_player_material.albedo_color = new_color
+	_player_material.emission = new_color * 0.4 * _skin_emission_mult
+
 # ── Phase 9: Dash afterimage (ghost trail) ─────────────────────────────────────
 ## Spawns a semi-transparent mesh copy at the player's current position that
 ## fades out over AFTERIMAGE_LIFETIME seconds. The ghost uses the player's
 ## base color with decreasing alpha, creating a trailing afterimage effect
 ## during dash. Each ghost is a simple MeshInstance3D with an unlit material
 ## that tweens alpha to 0, then queue_free()s itself.
+## Phase 30: Trail customization — CosmeticManager provides the color, alpha,
+## lifetime, scale, mesh type, and jitter. Styles range from CLASSIC spheres
+## to GLITCH cubes to COMET ellipsoids. The color is independent of the skin
+## so the player can mix-and-match (e.g. green skin + pink trail).
 func _spawn_dash_afterimage() -> void:
 	var parent_node: Node = get_parent()
 	if not parent_node:
 		return
 
-	# Create the ghost mesh — a sphere matching the player's approximate shape
-	var ghost := MeshInstance3D.new()
-	var ghost_sphere := SphereMesh.new()
-	ghost_sphere.radius = 0.5
-	ghost_sphere.height = 1.0
-	ghost_sphere.radial_segments = 8
-	ghost_sphere.rings = 4
-	ghost.mesh = ghost_sphere
+	# ── Phase 30: Read trail customization params from CosmeticManager ──
+	# Defaults match the original CLASSIC style so behavior is preserved when
+	# CosmeticManager isn't available (e.g. headless test runs).
+	var trail_color: Color = base_color
+	var trail_alpha: float = AFTERIMAGE_MAX_ALPHA
+	var life_mult: float = 1.0
+	var scale_mult: float = 1.0
+	var mesh_type: int = 0  # 0=sphere, 1=cube, 2=ellipsoid
+	var jitter: float = 0.0
+	if CosmeticManager:
+		var p: Dictionary = CosmeticManager.get_trail_params()
+		trail_color = p.get("color", base_color)
+		trail_alpha = float(p.get("alpha", AFTERIMAGE_MAX_ALPHA))
+		life_mult = float(p.get("life_mult", 1.0))
+		scale_mult = float(p.get("scale_mult", 1.0))
+		mesh_type = int(p.get("mesh", 0))
+		jitter = float(p.get("jitter", 0.0))
+	var lifetime: float = AFTERIMAGE_LIFETIME * life_mult
 
-	# Unlit transparent material in the player's color
+	# Create the ghost mesh — shape depends on the active trail style
+	var ghost := MeshInstance3D.new()
+	var ghost_mesh: Mesh
+	match mesh_type:
+		1:  # CUBE (Glitch style)
+			var cube := BoxMesh.new()
+			cube.size = Vector3(0.8, 0.8, 0.8)
+			ghost_mesh = cube
+		2:  # ELLIPSOID (Comet — stretched sphere)
+			var ellipsoid := SphereMesh.new()
+			ellipsoid.radius = 0.5
+			ellipsoid.height = 1.6  # Stretched along Y for a comet-tail look
+			ellipsoid.radial_segments = 8
+			ellipsoid.rings = 4
+			ghost_mesh = ellipsoid
+		_:  # SPHERE (Classic / Spark / Aurora)
+			var ghost_sphere := SphereMesh.new()
+			ghost_sphere.radius = 0.5
+			ghost_sphere.height = 1.0
+			ghost_sphere.radial_segments = 8
+			ghost_sphere.rings = 4
+			ghost_mesh = ghost_sphere
+	ghost.mesh = ghost_mesh
+
+	# Unlit transparent material in the trail color
 	var ghost_mat := StandardMaterial3D.new()
-	ghost_mat.albedo_color = Color(base_color.r, base_color.g, base_color.b, AFTERIMAGE_MAX_ALPHA)
+	ghost_mat.albedo_color = Color(trail_color.r, trail_color.g, trail_color.b, trail_alpha)
 	ghost_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	ghost_mat.emission_enabled = true
-	ghost_mat.emission = base_color * 0.3
+	ghost_mat.emission = trail_color * 0.3
 	ghost_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	ghost_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	ghost.material_override = ghost_mat
 
-	# Position at player's current location, matching scale
+	# Position at player's current location, matching scale (× trail scale_mult)
 	parent_node.add_child(ghost)
 	ghost.global_position = global_position
 	ghost.global_rotation = global_rotation
-	ghost.scale = mesh.scale if mesh else Vector3.ONE
+	var base_scale: Vector3 = mesh.scale if mesh else Vector3.ONE
+	ghost.scale = base_scale * scale_mult
+
+	# GLITCH style: apply a random jitter offset for a digital-noise look
+	if jitter > 0.0:
+		ghost.global_position += Vector3(
+			randf_range(-jitter, jitter),
+			randf_range(-jitter, jitter),
+			randf_range(-jitter, jitter)
+		)
 
 	# Fade out + slight scale up for a "dissipating energy" look
 	# Tween the material alpha directly (tween_property on the Resource works
@@ -807,11 +902,11 @@ func _spawn_dash_afterimage() -> void:
 	var fade_tween := ghost.create_tween()
 	fade_tween.set_parallel(true)
 	# Tween alpha: Color.a is a sub-property of albedo_color on the material
-	fade_tween.tween_property(ghost_mat, "albedo_color:a", 0.0, AFTERIMAGE_LIFETIME) \
+	fade_tween.tween_property(ghost_mat, "albedo_color:a", 0.0, lifetime) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Slightly scale up as it fades (energy dispersing)
 	fade_tween.tween_property(ghost, "scale",
-		ghost.scale * 1.3, AFTERIMAGE_LIFETIME
+		ghost.scale * 1.3, lifetime
 	).set_ease(Tween.EASE_OUT)
 	# Free after fade completes
 	fade_tween.chain().tween_callback(ghost.queue_free)
@@ -973,6 +1068,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.keycode == GameConstants.CONSUMABLE_HOTKEYS[i]:
 				EquipmentSystem.use_consumable(i)
 				return
+
+	# ── Phase 30: Cycle cosmetic skin (F10 key) ──
+	# Cycles to the next unlocked skin. Trail customization is handled via the
+	# settings menu / cosmetics UI (future). The F10 key is a quick in-game shortcut.
+	if event.is_action_pressed("cycle_skin") and not GameManager.is_paused:
+		if CosmeticManager:
+			var new_skin: int = CosmeticManager.cycle_skin()
+			GameManager.add_message("🎨 Skin: %s" % GameConstants.SKIN_NAMES[new_skin])
+		get_viewport().set_input_as_handled()
 
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig

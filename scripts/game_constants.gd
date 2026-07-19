@@ -3037,4 +3037,98 @@ const EQUIP_UPGRADE_MULT_PER_LEVEL: float = 0.20  # +20% per level
 # Cost = {material_type: count} — the material type is the piece's "theme" material.
 const EQUIP_UPGRADE_BASE_COST: int = 2  # Base material count for +1
 const EQUIP_UPGRADE_COST_SCALE: float = 1.5  # Each level costs 1.5x the previous
-const FAST_TRAVEL_MENU_KEY: String = "fast_travel"   # Input action name
+
+# ─── Phase 30: Cosmetic Skins & Trail Customization ───────────────────────────
+# Cosmetic skins recolor Zorp's body + emission + rim tint. Pure cosmetics — no
+# gameplay effect. Skins unlock via milestones (kills, prestige, biomes, bosses,
+# level, achievements). Trail customization lets the player pick a dash-trail
+# color and particle style. All cosmetics persist to user://zorp_cosmetics.json.
+enum PlayerSkin {
+	DEFAULT,      # 0 — Classic alien green (free)
+	GOLDEN,       # 1 — Prestige golden (unlock at prestige 1)
+	VOID,         # 2 — Deep void purple (unlock at 10 Void Leviathan kills)
+	CRYSTAL,      # 3 — Prismatic cyan (unlock at 5 Crystal Caverns visits)
+	LAVA,         # 4 — Molten orange (unlock at 5 Volcano Core visits)
+	SKY,          # 5 — Sky citadel blue (unlock at 5 Sky Citadel visits)
+	RAINBOW,      # 6 — Cycling rainbow (unlock at prestige 3)
+	NOIR,         # 7 — Monochrome grayscale (unlock at 50 achievements)
+	COSMIC,       # 8 — Galaxy purple-pink (unlock at level 30)
+}
+const SKIN_NAMES: Array[String] = [
+	"Classic Green", "Golden", "Void", "Crystal", "Lava",
+	"Sky", "Rainbow", "Noir", "Cosmic",
+]
+const SKIN_ICONS: Array[String] = [
+	"🟢", "🟡", "🟣", "🔵", "🟠",
+	"🔷", "🌈", "⚫", "🌌",
+]
+# Body color + emission tint (0-1 Godot Color range). Emission is multiplied by 0.4
+# in the player material; rim_tint is 0.9 by default.
+const SKIN_COLORS: Array[Color] = [
+	Color(0.30, 0.85, 0.30),   # DEFAULT — alien green
+	Color(1.00, 0.85, 0.30),   # GOLDEN — warm gold
+	Color(0.25, 0.10, 0.55),   # VOID — deep purple
+	Color(0.30, 0.85, 0.95),   # CRYSTAL — prismatic cyan
+	Color(1.00, 0.45, 0.15),   # LAVA — molten orange
+	Color(0.40, 0.65, 1.00),   # SKY — sky citadel blue
+	Color(1.00, 0.30, 0.50),   # RAINBOW — base pink (cycles at runtime)
+	Color(0.55, 0.55, 0.55),   # NOIR — grayscale
+	Color(0.55, 0.20, 0.85),   # COSMIC — galaxy purple
+]
+# Emission multiplier per skin (controls glow intensity)
+const SKIN_EMISSION_MULT: Array[float] = [
+	1.0, 1.3, 1.2, 1.4, 1.5,
+	1.2, 1.6, 0.8, 1.5,
+]
+# Unlock criteria: each entry is {stat: String, value: int} — checked against
+# Statistics lifetime stats + ProgressionSystem prestige + AchievementPopup count.
+# Empty dict = unlocked by default.
+const SKIN_UNLOCK_CRITERIA: Array[Dictionary] = [
+	{},                                  # DEFAULT — free
+	{"stat": "prestige", "value": 1},    # GOLDEN — prestige 1
+	{"stat": "kills_void_leviathan", "value": 10},  # VOID — 10 VL kills
+	{"stat": "biome_visits_crystal_caverns", "value": 5},  # CRYSTAL
+	{"stat": "biome_visits_volcano_core", "value": 5},     # LAVA
+	{"stat": "biome_visits_sky_citadel", "value": 5},      # SKY
+	{"stat": "prestige", "value": 3},    # RAINBOW — prestige 3
+	{"stat": "achievements", "value": 50},  # NOIR — 50 achievements
+	{"stat": "level", "value": 30},      # COSMIC — reach level 30
+]
+
+# ── Dash trail customization ──
+# The dash afterimage color and style. Styles change the ghost mesh shape +
+# fade behavior. All are pure cosmetics.
+enum TrailStyle {
+	CLASSIC,    # 0 — Smooth sphere ghosts (default)
+	SPARK,      # 1 — Smaller, faster-fading sparks
+	COMET,      # 2 — Stretched ellipsoid trailing behind (longer lifetime)
+	GLITCH,     # 3 — Cube-shaped, jittery (Digital Grid vibe)
+	AURORA,     # 4 — Larger soft globes, slow fade (dreamy)
+}
+const TRAIL_STYLE_NAMES: Array[String] = [
+	"Classic", "Spark", "Comet", "Glitch", "Aurora",
+]
+const TRAIL_STYLE_ICONS: Array[String] = ["●", "✦", "☄", "▮", "◯"]
+# Per-style parameters: [base_alpha, lifetime_mult, scale_mult, mesh_type]
+# mesh_type: 0=sphere, 1=cube, 2=ellipsoid (stretched sphere)
+const TRAIL_STYLE_PARAMS: Array[Dictionary] = [
+	{"alpha": 0.50, "life": 1.0, "scale": 1.0, "mesh": 0, "jitter": 0.0},  # CLASSIC
+	{"alpha": 0.70, "life": 0.6, "scale": 0.6, "mesh": 0, "jitter": 0.0},  # SPARK
+	{"alpha": 0.45, "life": 1.6, "scale": 1.1, "mesh": 2, "jitter": 0.0},  # COMET
+	{"alpha": 0.55, "life": 0.8, "scale": 0.9, "mesh": 1, "jitter": 0.15}, # GLITCH
+	{"alpha": 0.40, "life": 1.8, "scale": 1.4, "mesh": 0, "jitter": 0.0},  # AURORA
+]
+# Default trail colors (player can cycle these independently of skin)
+const TRAIL_COLORS: Array[Color] = [
+	Color(0.30, 0.85, 0.30),  # Green (matches default skin)
+	Color(1.00, 0.85, 0.30),  # Gold
+	Color(0.30, 0.85, 0.95),  # Cyan
+	Color(1.00, 0.30, 0.50),  # Pink
+	Color(0.55, 0.20, 0.85),  # Purple
+	Color(1.00, 0.45, 0.15),  # Orange
+	Color(0.40, 0.65, 1.00),  # Blue
+	Color(1.00, 1.00, 1.00),  # White
+]
+const TRAIL_COLOR_NAMES: Array[String] = [
+	"Green", "Gold", "Cyan", "Pink", "Purple", "Orange", "Blue", "White",
+]
