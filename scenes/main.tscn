@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://bmain"]
+[gd_scene load_steps=18 format=3 uid="uid://bmain"]
 
 [ext_resource type="Script" path="res://scripts/world_generator.gd" id="2_wg"]
 [ext_resource type="Script" path="res://scripts/player.gd" id="3_pl"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://scripts/boss_arena.gd" id="10_ba"]
 [ext_resource type="Script" path="res://scripts/pause_menu.gd" id="11_pm"]
 [ext_resource type="Script" path="res://scripts/ping_system.gd" id="12_ps"]
+[ext_resource type="Script" path="res://scripts/intro_cinematic.gd" id="13_ic"]
 
 [sub_resource type="SphereShape3D" id="PlayerSphere"]
 radius = 0.5
@@ -207,3 +208,6 @@ script = ExtResource("11_pm")
 
 [node name="PingSystem" type="Node3D" parent="."]
 script = ExtResource("12_ps")
+
+[node name="IntroCinematic" type="Node3D" parent="."]
+script = ExtResource("13_ic")

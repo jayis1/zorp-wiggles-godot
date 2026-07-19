@@ -81,11 +81,32 @@ const SFX_CRAFT: String = "craft"
 const SFX_ARENA: String = "arena"
 const SFX_SHIELD: String = "shield"  # Phase 24: Shield Bubble deployable
 
+# ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
+# Per-weapon-mod shoot sound variants. Each mod gets a distinct SFX so the
+# player hears the weapon change — a standard laser zaps, a black hole
+# whooshes, a freeze ray chimes, etc. We generate one variant per mod at
+# startup and pick the right one in play_shoot_sfx(mod_id).
+const SFX_SHOOT_STANDARD: String = "shoot"        # Default cyan laser
+const SFX_SHOOT_HOMING: String = "shoot_homing"   # Tracking whistle
+const SFX_SHOOT_ENERGY: String = "shoot_energy"   # Generic energy bolt (chain/spread/ricochet/etc.)
+const SFX_SHOOT_PIERCE: String = "shoot_pierce"   # Piercing beam (high-pitched thin whine)
+const SFX_SHOOT_FREEZE: String = "shoot_freeze"   # Ice crystal chime
+const SFX_SHOOT_POISON: String = "shoot_poison"   # Acid hiss
+const SFX_SHOOT_FIRE: String = "shoot_fire"       # Fireball whoosh
+const SFX_SHOOT_VOID: String = "shoot_void"       # Deep void pulse
+const SFX_SHOOT_LIGHTNING: String = "shoot_lightning" # Electric zap
+const SFX_SHOOT_HEAVY: String = "shoot_heavy"     # Heavy cannon (mega blast, meteor strike, black hole launcher)
+const SFX_SHOOT_UTILITY: String = "shoot_utility" # Shrink/deployables — soft chime
+const SFX_SHOOT_VAMPIRE: String = "shoot_vampire" # Crimson drain hum
+# Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
+var _mod_shoot_sfx: Dictionary = {}
+
 
 func _ready() -> void:
 	_create_sfx_pool()
 	_generate_all_sfx()
 	_generate_all_music()
+	_build_mod_shoot_sfx_map()  # Phase 30: Adaptive shoot SFX
 	_initialized = true
 	# Connect to game signals for automatic SFX
 	_connect_signals()
@@ -227,6 +248,78 @@ func play_sfx(sfx_name: String) -> void:
 		player.pitch_scale = 1.0
 	player.play()
 
+# ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
+## Play the shoot SFX appropriate for the equipped weapon mod. If mod_id is
+## NONE (or the mod has no mapping), falls back to the standard laser SFX.
+## This gives each weapon mod a distinct auditory identity — the player hears
+## the weapon change without looking at the HUD.
+func play_shoot_sfx(mod_id: int = 0) -> void:
+	if not _initialized:
+		return
+	var sfx_name: String = _mod_shoot_sfx.get(mod_id, SFX_SHOOT_STANDARD)
+	if not _sfx_streams.has(sfx_name):
+		sfx_name = SFX_SHOOT_STANDARD
+	var player = _next_sfx_player()
+	player.stream = _sfx_streams[sfx_name]
+	player.volume_db = linear_to_db(maxf(sfx_volume * master_volume, 0.0001))
+	# Pitch variation for combat sounds — keeps rapid fire from sounding robotic
+	if sfx_name in _PITCH_VARIATION_SFX:
+		player.pitch_scale = 1.0 + randf_range(-_PITCH_VARIATION_AMOUNT, _PITCH_VARIATION_AMOUNT)
+	else:
+		player.pitch_scale = 1.0
+	player.play()
+
+## Build the WeaponMod → SFX name mapping. Called once at _ready.
+## Mods are grouped by thematic sound character:
+##   - Homing mods (HOMING_LASER, MAGNET_MINE) → tracking whistle
+##   - Energy bolt mods (CHAIN_LIGHTNING, SPREAD_SHOT, RICOCHET, etc.) → energy bolt
+##   - Piercing mods (PIERCING_BEAM, PHOTON_BEAM, SPECTRAL_BEAM) → thin whine
+##   - Freeze mods (FREEZE_RAY, TIME_FREEZE_RAY) → ice chime
+##   - Poison/acid mods (ACID_TRAIL, POISON_NOVA, SHRINK_BEAM) → acid hiss
+##   - Fire mods (BLAZE_TRAIL, METEOR_STRIKE, SHRAPNEL_BURST) → fire whoosh
+##   - Void/dark mods (VOID_RAY, BLACK_HOLE_*, VOID_RIFT_CUTTER) → void pulse
+##   - Lightning mods (TESLA_COIL, LIGHTNING_STORM) → electric zap
+##   - Heavy mods (MEGA_BLAST, METEOR_STRIKE, BLACK_HOLE_LAUNCHER) → heavy cannon
+##   - Utility/deployables (SHIELD_BUBBLE, TURRET_DEPLOY, etc.) → soft chime
+##   - Vampire → crimson drain hum
+func _build_mod_shoot_sfx_map() -> void:
+	var WM = GameConstants.WeaponMod
+	_mod_shoot_sfx[WM.NONE] = SFX_SHOOT_STANDARD
+	_mod_shoot_sfx[WM.HOMING_LASER] = SFX_SHOOT_HOMING
+	_mod_shoot_sfx[WM.MAGNET_MINE] = SFX_SHOOT_HOMING
+	_mod_shoot_sfx[WM.REFLECTIVE_SHIELD] = SFX_SHOOT_UTILITY
+	_mod_shoot_sfx[WM.CHAIN_LIGHTNING] = SFX_SHOOT_LIGHTNING
+	_mod_shoot_sfx[WM.SPREAD_SHOT] = SFX_SHOOT_ENERGY
+	_mod_shoot_sfx[WM.PIERCING_BEAM] = SFX_SHOOT_PIERCE
+	_mod_shoot_sfx[WM.PHOTON_BEAM] = SFX_SHOOT_PIERCE
+	_mod_shoot_sfx[WM.SPECTRAL_BEAM] = SFX_SHOOT_PIERCE
+	_mod_shoot_sfx[WM.BOUNCING_BOLT] = SFX_SHOOT_ENERGY
+	_mod_shoot_sfx[WM.FREEZE_RAY] = SFX_SHOOT_FREEZE
+	_mod_shoot_sfx[WM.TIME_FREEZE_RAY] = SFX_SHOOT_FREEZE
+	_mod_shoot_sfx[WM.ACID_TRAIL] = SFX_SHOOT_POISON
+	_mod_shoot_sfx[WM.POISON_NOVA] = SFX_SHOOT_POISON
+	_mod_shoot_sfx[WM.SHRINK_BEAM] = SFX_SHOOT_POISON
+	_mod_shoot_sfx[WM.MEGA_BLAST] = SFX_SHOOT_HEAVY
+	_mod_shoot_sfx[WM.SPLITTER_LASER] = SFX_SHOOT_ENERGY
+	_mod_shoot_sfx[WM.VAMPIRE_BEAM] = SFX_SHOOT_VAMPIRE
+	_mod_shoot_sfx[WM.GRAVITY_WELL_LASER] = SFX_SHOOT_VOID
+	_mod_shoot_sfx[WM.RICOCHET_PULSE] = SFX_SHOOT_ENERGY
+	_mod_shoot_sfx[WM.PLASMA_NOVA] = SFX_SHOOT_ENERGY
+	_mod_shoot_sfx[WM.SNIPER_BEAM] = SFX_SHOOT_PIERCE
+	_mod_shoot_sfx[WM.SHRAPNEL_BURST] = SFX_SHOOT_FIRE
+	_mod_shoot_sfx[WM.BLAZE_TRAIL] = SFX_SHOOT_FIRE
+	_mod_shoot_sfx[WM.TESLA_COIL] = SFX_SHOOT_LIGHTNING
+	_mod_shoot_sfx[WM.VOID_RAY] = SFX_SHOOT_VOID
+	_mod_shoot_sfx[WM.QUANTUM_OVERDRIVE] = SFX_SHOOT_ENERGY
+	_mod_shoot_sfx[WM.BLACK_HOLE_BEAM] = SFX_SHOOT_VOID
+	_mod_shoot_sfx[WM.BLACK_HOLE_LAUNCHER] = SFX_SHOOT_HEAVY
+	_mod_shoot_sfx[WM.METEOR_STRIKE] = SFX_SHOOT_HEAVY
+	_mod_shoot_sfx[WM.LIGHTNING_STORM] = SFX_SHOOT_LIGHTNING
+	_mod_shoot_sfx[WM.SHIELD_BUBBLE] = SFX_SHOOT_UTILITY
+	_mod_shoot_sfx[WM.TURRET_DEPLOY] = SFX_SHOOT_UTILITY
+	_mod_shoot_sfx[WM.GRAVITY_FLIP_FIELD] = SFX_SHOOT_UTILITY
+	_mod_shoot_sfx[WM.VOID_RIFT_CUTTER] = SFX_SHOOT_VOID
+
 # SFX that get subtle random pitch variation. These are short, percussive
 # combat sounds where micro-detuning reads as natural variation rather than
 # a tuning error. Melodic SFX (arpeggios, chimes) are excluded so their
@@ -234,6 +327,10 @@ func play_sfx(sfx_name: String) -> void:
 const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_SHOOT, SFX_ENEMY_HIT, SFX_DASH_BUMP, SFX_DASH, SFX_ENEMY_DEATH,
 	SFX_EXPLOSION, SFX_PULSE_WAVE, SFX_DAMAGE,
+	# Phase 30: Adaptive shoot variants — all get subtle pitch variation
+	SFX_SHOOT_STANDARD, SFX_SHOOT_HOMING, SFX_SHOOT_ENERGY, SFX_SHOOT_PIERCE,
+	SFX_SHOOT_FREEZE, SFX_SHOOT_POISON, SFX_SHOOT_FIRE, SFX_SHOOT_VOID,
+	SFX_SHOOT_LIGHTNING, SFX_SHOOT_HEAVY, SFX_SHOOT_UTILITY, SFX_SHOOT_VAMPIRE,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -477,6 +574,20 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_ARENA] = _gen_rumble(50.0, 1.2, 0.5)
 	# Phase 24: Shield Bubble — a warm protective chime
 	_sfx_streams[SFX_SHIELD] = _gen_chime([523.0, 784.0, 1047.0], 0.3, 0.35)
+	# ── Phase 30: Adaptive shoot SFX — per-mod shoot sound variants ──
+	# Each variant has a distinct timbre so the player hears the weapon change.
+	_sfx_streams[SFX_SHOOT_STANDARD] = _sfx_streams[SFX_SHOOT]  # Alias to default blip
+	_sfx_streams[SFX_SHOOT_HOMING] = _gen_blip(1200.0, 0.10, 0.28)        # High whistle
+	_sfx_streams[SFX_SHOOT_ENERGY] = _gen_blip(700.0, 0.07, 0.30)         # Mid energy bolt
+	_sfx_streams[SFX_SHOOT_PIERCE] = _gen_blip(1600.0, 0.05, 0.22)        # Thin high whine
+	_sfx_streams[SFX_SHOOT_FREEZE] = _gen_chime([1047.0, 1319.0], 0.18, 0.28)  # Ice chime
+	_sfx_streams[SFX_SHOOT_POISON] = _gen_noise_hit(0.10, 0.30)          # Acid hiss
+	_sfx_streams[SFX_SHOOT_FIRE] = _gen_noise_sweep(0.14, 0.32)          # Fire whoosh
+	_sfx_streams[SFX_SHOOT_VOID] = _gen_descending(220.0, 110.0, 0.18, 0.30)  # Void pulse
+	_sfx_streams[SFX_SHOOT_LIGHTNING] = _gen_noise_hit(0.06, 0.32)        # Electric zap
+	_sfx_streams[SFX_SHOOT_HEAVY] = _gen_rumble(80.0, 0.20, 0.45)         # Heavy cannon
+	_sfx_streams[SFX_SHOOT_UTILITY] = _gen_chime([784.0, 988.0], 0.15, 0.25)  # Soft deploy chime
+	_sfx_streams[SFX_SHOOT_VAMPIRE] = _gen_descending(330.0, 260.0, 0.12, 0.30)  # Crimson hum
 
 
 func _generate_all_music() -> void:

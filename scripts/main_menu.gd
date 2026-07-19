@@ -12,6 +12,7 @@ extends Control
 @onready var controls_label: Label = $Controls
 var _settings_menu: Control = null
 var _mode_selector: Control = null
+var _character_select: Control = null  # Phase 30: Character select screen
 
 # Track hover tweens so we can kill them before starting a new one (avoid jitter)
 var _hover_tweens: Dictionary = {}  # button -> Tween
@@ -42,8 +43,19 @@ func _ready() -> void:
 	_mode_selector.mouse_filter = Control.MOUSE_FILTER_STOP
 	_mode_selector.visible = false
 	add_child(_mode_selector)
+	# ── Phase 30: Create Character Select screen ──
+	# Full-screen overlay for picking Zorp vs Zerp for solo runs.
+	var cs_script = load("res://scripts/character_select.gd")
+	_character_select = Control.new()
+	_character_select.set_script(cs_script)
+	_character_select.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_character_select.mouse_filter = Control.MOUSE_FILTER_STOP
+	_character_select.visible = false
+	add_child(_character_select)
 	# Add a "Mode Select" button between Settings and Quit
 	_add_mode_select_button()
+	# ── Phase 30: Add a "Character" button between Mode and Quit ──
+	_add_character_select_button()
 	# Show the currently selected mode on the subtitle
 	_update_mode_subtitle()
 	# Play entrance animation
@@ -74,17 +86,57 @@ func _add_mode_select_button() -> void:
 		var quit_idx: int = quit_button.get_index()
 		if quit_idx >= 0:
 			move_child(mode_btn, quit_idx)
-	# Shift the Quit button down to make room (its offset_top is 480 → 540)
+	# Shift the Quit button down to make room (its offset_top is 480 → 600)
+	# Phase 30: extra room for the Character Select button at 540
 	if quit_button:
-		quit_button.offset_top = 540.0
-		quit_button.offset_bottom = 600.0
+		quit_button.offset_top = 600.0
+		quit_button.offset_bottom = 660.0
 	# Also shift the controls label down
 	if controls_label:
-		controls_label.offset_top = 650.0
-		controls_label.offset_bottom = 760.0
+		controls_label.offset_top = 710.0
+		controls_label.offset_bottom = 820.0
 	# Connect to mode-changed signal so the button label updates live
 	if GameModeManager:
 		GameModeManager.mode_changed.connect(_on_mode_changed)
+
+# ── Phase 30: Add a "Character" button between Mode and Quit ──
+# Opens the character select screen (Zorp vs Zerp for solo runs).
+func _add_character_select_button() -> void:
+	var char_btn := Button.new()
+	char_btn.name = "CharacterSelectButton"
+	char_btn.offset_left = 490.0
+	char_btn.offset_top = 540.0
+	char_btn.offset_right = 790.0
+	char_btn.offset_bottom = 600.0
+	char_btn.add_theme_font_size_override("font_size", 24)
+	char_btn.text = "🛸  CHARACTER: %s" % _get_character_label()
+	char_btn.pressed.connect(_on_character_select_pressed)
+	char_btn.mouse_entered.connect(_on_button_hover.bind(char_btn, true))
+	char_btn.mouse_exited.connect(_on_button_hover.bind(char_btn, false))
+	add_child(char_btn)
+	# Place before the Quit button
+	if quit_button:
+		var quit_idx: int = quit_button.get_index()
+		if quit_idx >= 0:
+			move_child(char_btn, quit_idx)
+	# Connect to character-changed signal so the button label updates live
+	if CharacterSelectManager:
+		CharacterSelectManager.character_changed.connect(_on_character_changed)
+
+func _get_character_label() -> String:
+	if not CharacterSelectManager:
+		return "Zorp"
+	return CharacterSelectManager.get_character_name(CharacterSelectManager.get_selected_character())
+
+func _on_character_select_pressed() -> void:
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	if _character_select:
+		_character_select.show_screen()
+
+func _on_character_changed(_id: int) -> void:
+	var char_btn: Button = get_node_or_null("CharacterSelectButton")
+	if char_btn:
+		char_btn.text = "🛸  CHARACTER: %s" % _get_character_label()
 
 func _update_mode_subtitle() -> void:
 	if not GameModeManager:
@@ -126,10 +178,14 @@ func _animate_entrance() -> void:
 		.set_ease(Tween.EASE_OUT)
 	# Buttons: slide up from below with staggered delay
 	# ── Phase 25: Include the Mode Select button in the stagger animation ──
+	# ── Phase 30: Include the Character Select button too ──
 	var mode_btn_node: Button = get_node_or_null("ModeSelectButton")
+	var char_btn_node: Button = get_node_or_null("CharacterSelectButton")
 	var buttons: Array[Button] = [start_button, settings_button]
 	if mode_btn_node:
 		buttons.append(mode_btn_node)
+	if char_btn_node:
+		buttons.append(char_btn_node)
 	buttons.append(quit_button)
 	for i in range(buttons.size()):
 		var btn: Button = buttons[i]

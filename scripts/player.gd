@@ -185,6 +185,13 @@ func _ready() -> void:
 	# ── Level-up celebration reaction (mesh pop + golden emission flash) ──
 	if not GameManager.level_up.is_connected(_on_player_levelup_visual):
 		GameManager.level_up.connect(_on_player_levelup_visual)
+	# ── Phase 30: Apply selected character profile (Zorp vs Zerp) ──
+	# In solo runs, the player's chosen character overrides base color, HP,
+	# damage, speed, and dash speed. In co-op, P1 is always Zorp (the CoOpManager
+	# flow handles P2 as Zerp), so we only apply the profile if P2 is NOT active.
+	# This must run AFTER the player material is created above so the color
+	# override takes effect on the existing material.
+	_apply_character_profile()
 
 
 # ── Phase 27: Pet emote reaction callbacks ──
@@ -205,6 +212,8 @@ func _on_player_levelup_pet_emote(_level: int) -> void:
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused:
 		return
+	# ── Phase 30: Death replay recording — sample every physics frame ──
+	_record_death_replay()
 	if not GameManager.player_is_alive:
 		# ── Phase 19: Co-op — if downed, still blink but don't move ──
 		if GameManager.player_is_downed and mesh:
@@ -586,6 +595,10 @@ func _on_player_levelup_visual(_level: int) -> void:
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 func _handle_movement(delta: float) -> void:
+	# ── Phase 30: Intro cinematic — freeze player movement ──
+	if _cinematic_active():
+		velocity = Vector3.ZERO
+		return
 	# Read input
 	var input_dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	
@@ -603,7 +616,7 @@ func _handle_movement(delta: float) -> void:
 		move_direction = Vector3(input_dir.x, 0, input_dir.y).normalized()
 	
 	if is_dashing:
-		velocity = dash_direction * GameConstants.PLAYER_DASH_SPEED
+		velocity = dash_direction * GameConstants.PLAYER_DASH_SPEED * _char_dash_speed_mult
 		return
 	
 	# ── Phase 8: Skip normal movement during slide (slide handles velocity)
@@ -630,6 +643,8 @@ func _handle_movement(delta: float) -> void:
 	# ── Phase 29: Equipment speed bonus (armor/accessory + set bonuses) ──
 	if EquipmentSystem:
 		speed_mult *= (1.0 + EquipmentSystem.get_speed_mult_bonus())
+	# ── Phase 30: Character profile speed multiplier (Zerp is faster) ──
+	speed_mult *= _char_speed_mult
 	# ── Phase 7: Tier-based speed bonus (+0.5 m/s per 5 levels) ──
 	var tier: int = (GameManager.player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
 	var base_speed: float = GameConstants.PLAYER_SPEED + tier * GameConstants.PLAYER_LEVEL_SPEED_TIER_BONUS
@@ -661,8 +676,8 @@ func _handle_dash(delta: float) -> void:
 			is_dashing = false
 			GameManager.player_is_dashing = false
 			dash_ended.emit()
-			# ── Phase 8: Transition into physics slide (carry dash momentum)
-			_start_slide(dash_direction * GameConstants.PLAYER_DASH_SPEED)
+			# ── Phase 8: Transition into physics slide (carry dash momentum) ──
+			_start_slide(dash_direction * GameConstants.PLAYER_DASH_SPEED * _char_dash_speed_mult)
 		return
 
 	# Consume buffered dash if cooldown is ready (or coyote window is active)
@@ -810,6 +825,72 @@ func _update_cosmetic_color(_delta: float) -> void:
 	base_color = new_color
 	_player_material.albedo_color = new_color
 	_player_material.emission = new_color * 0.4 * _skin_emission_mult
+
+# ── Phase 30: Character profile application ──────────────────────────────────
+# Applies the selected character's stat profile (Zorp vs Zerp) for solo runs.
+# In co-op, P1 is always Zorp so we skip the override. The profile adjusts:
+#   - base_color (visual identity)
+#   - max HP bonus (Zerp is frailer)
+#   - damage multiplier (Zerp hits slightly weaker)
+#   - speed multiplier (Zerp is faster)
+#   - dash speed multiplier (Zerp dashes farther)
+# The damage/speed/dash multipliers are read by the relevant gameplay systems
+# via the getters below. HP is applied directly to GameManager.
+var _char_damage_mult: float = 1.0
+var _char_speed_mult: float = 1.0
+var _char_dash_speed_mult: float = 1.0
+func _apply_character_profile() -> void:
+	if not CharacterSelectManager:
+		return
+	# In co-op, P1 is always Zorp — don't override with the solo selection.
+	if CoOpManager and CoOpManager.p2_active:
+		return
+	var profile: Dictionary = CharacterSelectManager.get_active_profile()
+	_char_damage_mult = float(profile.get("damage_mult", 1.0))
+	_char_speed_mult = float(profile.get("speed_mult", 1.0))
+	_char_dash_speed_mult = float(profile.get("dash_speed_mult", 1.0))
+	# Apply HP bonus — but only if the game hasn't already started (we don't
+	# want to override HP mid-run if the player changes character somehow).
+	# GameManager._start_game runs before the player scene loads (autoload
+	# order), so by the time _ready runs, player_max_hp is already set. We
+	# add the bonus on top.
+	var hp_bonus: int = int(profile.get("hp_bonus", 0))
+	if hp_bonus != 0 and GameManager:
+		GameManager.player_max_hp = maxi(1, GameManager.player_max_hp + hp_bonus)
+		GameManager.player_hp = clampi(GameManager.player_hp + hp_bonus, 1, GameManager.player_max_hp)
+		GameManager.hp_changed.emit(GameManager.player_hp, GameManager.player_max_hp)
+	# Override base color — but ONLY if the cosmetic skin is DEFAULT.
+	# Custom skins (Golden, Void, etc.) take priority over the character
+	# color so the player's cosmetic choice is respected. The default skin
+	# yields to the character color so Zerp visibly looks like Zerp.
+	if CosmeticManager and CosmeticManager.get_active_skin() == GameConstants.PlayerSkin.DEFAULT:
+		base_color = profile.get("color", base_color)
+		if _player_material:
+			_player_material.albedo_color = base_color
+			_player_material.emission = base_color * 0.4
+
+func get_character_damage_mult() -> float:
+	return _char_damage_mult
+
+func get_character_speed_mult() -> float:
+	return _char_speed_mult
+
+func get_character_dash_speed_mult() -> float:
+	return _char_dash_speed_mult
+
+# ── Phase 30: Death replay recording ──
+# Every physics frame, sample the player's transform into the DeathReplay
+# ring buffer. On death, DeathReplay plays back the last 5 seconds in slow-mo
+# before the death screen appears.
+func _record_death_replay() -> void:
+	if DeathReplay and not DeathReplay.is_playing():
+		DeathReplay.record_frame(self)
+
+# ── Phase 30: Intro cinematic control suppression ──
+# Returns true if the intro cinematic is active and player input should be
+# suppressed. The cinematic sets a meta flag on the player node.
+func _cinematic_active() -> bool:
+	return has_meta("cinematic_active") and bool(get_meta("cinematic_active", false))
 
 # ── Phase 9: Dash afterimage (ghost trail) ─────────────────────────────────────
 ## Spawns a semi-transparent mesh copy at the player's current position that
@@ -993,6 +1074,9 @@ func _handle_invuln_blink(delta: float) -> void:
 			_update_mutation_material()
 
 func _unhandled_input(event: InputEvent) -> void:
+	# ── Phase 30: Intro cinematic — suppress all gameplay input ──
+	if _cinematic_active():
+		return
 	# Right-click camera rotation
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		is_right_clicking = event.pressed
@@ -1162,6 +1246,8 @@ func _spawn_projectile() -> void:
 	# ── Phase 29: Equipment damage bonus (armor/accessory + set bonuses) ──
 	if EquipmentSystem:
 		base_dmg = int(base_dmg * (1.0 + EquipmentSystem.get_damage_mult_bonus()))
+	# ── Phase 30: Character profile damage multiplier (Zerp is slightly weaker) ──
+	base_dmg = int(base_dmg * _char_damage_mult)
 	var mod_dmg: int = int(base_dmg * mod_dmg_mult)
 	var mod_speed: float = GameConstants.PROJECTILE_SPEED * mod_speed_mult
 	
@@ -1204,7 +1290,8 @@ func _spawn_projectile() -> void:
 	# into a muddy, over-loud "chunk". Playing it here (after the match) means
 	# every shot — single, spread, or multishot — has identical perceived volume
 	# and timbre, so rapid fire stays crisp and distinct.
-	AudioManager.play_sfx(AudioManager.SFX_SHOOT)
+	# ── Phase 30: Adaptive SFX — each weapon mod has a distinct shoot sound ──
+	AudioManager.play_shoot_sfx(mod_id)
 
 ## Spawn a single projectile with the given parameters. The mod_id is passed to
 ## the projectile so it can apply behavior-specific logic (homing, bouncing, etc.).

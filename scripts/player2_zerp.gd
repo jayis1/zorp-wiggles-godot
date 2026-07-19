@@ -356,6 +356,9 @@ func _spawn_projectile() -> void:
 			_spawn_single_projectile(shoot_dir, mod_dmg, mod_speed, proj_color, mod_id)
 
 	p2_shoot_fired.emit(shoot_dir)
+	# ── Phase 30: Adaptive shoot SFX — P2 also gets per-mod shoot sounds ──
+	# P2 shares P1's equipped mod, so the same adaptive SFX mapping applies.
+	AudioManager.play_shoot_sfx(mod_id)
 	# Scale pulse on shoot
 	if mesh and not is_dashing:
 		var t := create_tween()

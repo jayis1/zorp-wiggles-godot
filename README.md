@@ -42,6 +42,10 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 - **Cosmetic Skins** — 9 unlockable skins for Zorp (Classic Green, Golden, Void, Crystal, Lava, Sky, Rainbow, Noir, Cosmic) that recolor the body + emission; RAINBOW cycles hue at runtime; unlock via prestige, kills, biome visits, achievements, level; F10 to cycle
 - **Trail Customization** — 5 dash-trail styles (Classic, Spark, Comet, Glitch, Aurora) with per-style mesh shape (sphere/cube/ellipsoid), alpha, lifetime, scale, and jitter; 8 trail colors independent of skin; persists to disk
 - **Victory Screen** — ranked letter grade (S/A/B/C/D) for Boss Rush, Speedrun, and Endless milestone waves (10/25/50/100); shows total time, biome splits, personal best comparison with "★ NEW PB ★" callout; Play Again + Quit buttons
+- **Character Select** — choose Zorp (tanky all-rounder, 120 HP) or Zerp (fast & fragile, 100 HP, +8% speed, +10% dash, -10% damage) for solo runs; full-screen card UI with stat preview bars, ← → navigation, click-to-select; persists to `user://zorp_character.json`; in co-op P1 is always Zorp
+- **Adaptive Shoot SFX** — 12 per-weapon-mod shoot sound variants (standard, homing whistle, energy bolt, piercing whine, freeze chime, poison hiss, fire whoosh, void pulse, lightning zap, heavy cannon, utility chime, vampire hum); each mod has a distinct auditory identity so the player hears the weapon change
+- **Death Replay** — last 5 seconds of gameplay recorded at 60Hz; on death, plays back in slow-motion (0.25× time scale) as a "death cam" before the death screen appears
+- **Intro Cinematic** — procedural landing animation at run start: Zorp descends from y=40 in a glowing light column with particle trail, impacts with dust ring + camera shake + mesh squash, then the camera eases to gameplay angle as the HUD fades in; player input suppressed during the 3-second cinematic
 
 ### Missions & Progression
 - Mission system (collect, kill, explore, boss missions)
