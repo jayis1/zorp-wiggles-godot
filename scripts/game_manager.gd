@@ -121,6 +121,15 @@ func _process(delta: float) -> void:
 	# ── Phase 25: Game Mode Manager — per-frame mode updates (waves, timers) ──
 	if GameModeManager:
 		GameModeManager.update(delta)
+	# ── Phase 33: World Modifier System — per-frame regen ticks ──
+	if WorldModifierSystem:
+		WorldModifierSystem.update(delta)
+	# ── Phase 33: Enemy Variant System — per-frame trait ticks ──
+	if EnemyVariantSystem:
+		EnemyVariantSystem.update(delta)
+	# ── Phase 33: Procedural Quest System — per-frame quest progress ──
+	if ProceduralQuestSystem:
+		ProceduralQuestSystem.update(delta)
 
 func _check_difficulty_tier_change() -> void:
 	var current_tier: int = get_time_difficulty_tier()
@@ -294,6 +303,21 @@ func _start_game() -> void:
 	_last_difficulty_tier = 0
 	active_buffs.clear()
 	current_boss = null
+	# ── Phase 33: World Modifier System — roll per-run modifiers ──
+	# Roll EARLY (before equipment/skill HP bonuses) so the max HP multiplier
+	# applies to the final HP value. Uses world_seed for deterministic rolls
+	# (shared challenge seeds produce the same modifiers for both players).
+	if WorldModifierSystem:
+		WorldModifierSystem.roll_modifiers(world_seed)
+		# Announce the rolled modifiers via HUD messages
+		if WorldModifierSystem.get_active_modifier_count() > 0:
+			add_message("🎲 World Modifiers active this run:")
+			for mod_id in WorldModifierSystem.get_active_modifiers():
+				add_message("  %s %s — %s" % [
+					WorldModifierSystem.get_modifier_icon(mod_id),
+					WorldModifierSystem.get_modifier_name(mod_id),
+					WorldModifierSystem.get_modifier_description(mod_id)
+				])
 	# ── Phase 25: Apply permanent upgrades from skill tree ──
 	if ProgressionSystem:
 		ProgressionSystem.apply_permanent_upgrades()
@@ -303,9 +327,25 @@ func _start_game() -> void:
 		if equip_hp > 0:
 			player_max_hp += equip_hp
 			player_hp = min(player_max_hp, player_hp + equip_hp)
+	# ── Phase 33: World Modifier System — per-run max HP multiplier ──
+	# GLASS_CANNON halves max HP. Applied after equipment bonuses so the
+	# multiplier scales the final value (more impactful on tanky builds).
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		var wm_hp_mult: float = WorldModifierSystem.get_player_max_hp_mult()
+		if wm_hp_mult != 1.0:
+			player_max_hp = maxi(1, int(player_max_hp * wm_hp_mult))
+			player_hp = min(player_max_hp, player_hp)
 	# ── Phase 25: Game Mode Manager — reset mode-specific run state ──
 	if GameModeManager:
 		GameModeManager.start_run()
+	# ── Phase 33: Procedural Quest System — generate initial quests ──
+	# (moved here from after roll_modifiers; quest generation doesn't depend
+	# on modifiers, so order doesn't matter.)
+	if ProceduralQuestSystem:
+		# Generate 1-2 starter quests
+		ProceduralQuestSystem.generate_quest()
+		if randf() < 0.5:
+			ProceduralQuestSystem.generate_quest()
 	# ── Phase 32: Replay system — start recording a new replay ──
 	if ReplaySystem:
 		ReplaySystem.start_recording(world_seed)
@@ -362,6 +402,13 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		var equip_dmg_reduce: float = EquipmentSystem.get_damage_reduction_bonus()
 		if equip_dmg_reduce > 0:
 			actual_amount = int(actual_amount * (1.0 - equip_dmg_reduce))
+	# ── Phase 33: World Modifier System — per-run damage taken multiplier ──
+	# THIN_SKIN increases damage taken by 1.5×; applied last so it scales the
+	# final post-reduction amount (more punishing — reductions don't fully offset).
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		var dmg_taken_mult: float = WorldModifierSystem.get_player_damage_taken_mult()
+		if dmg_taken_mult != 1.0:
+			actual_amount = int(actual_amount * dmg_taken_mult)
 	player_hp = max(0, player_hp - actual_amount)
 	player_invuln_timer = GameConstants.PLAYER_INVULN_DURATION
 	hp_changed.emit(player_hp, player_max_hp)

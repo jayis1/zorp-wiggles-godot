@@ -259,6 +259,10 @@ func _ready() -> void:
 	WeaponModSystem.mod_equipped.connect(_on_mod_equipped_hud)
 	WeaponModSystem.mod_unequipped.connect(_on_mod_unequipped_hud)
 	WeaponModSystem.inventory_changed.connect(_on_inventory_changed_hud)
+	# ── Phase 33: Weapon Mod Fusion — update HUD on fusion equip/unequip ──
+	if WeaponModFusion:
+		WeaponModFusion.fusion_equipped.connect(_on_fusion_equipped_hud)
+		WeaponModFusion.fusion_removed.connect(_on_mod_unequipped_hud)
 
 	# ── Phase 17: Weather Indicator ──
 	var wi_script := load("res://scripts/weather_indicator.gd")
@@ -880,6 +884,10 @@ func _on_mod_equipped_hud(mod_id: int) -> void:
 func _on_mod_unequipped_hud() -> void:
 	_update_mod_indicator()
 
+# ── Phase 33: Weapon Mod Fusion — HUD handler for fusion equip ──
+func _on_fusion_equipped_hud(_fused_id: int) -> void:
+	_update_mod_indicator()
+
 func _on_inventory_changed_hud() -> void:
 	_update_mod_indicator()
 
@@ -888,7 +896,11 @@ func _update_mod_indicator() -> void:
 		return
 	var mod_name: String = "Standard Laser"
 	var mod_color: Color = Color(0.7, 0.8, 1.0)
-	if WeaponModSystem:
+	# ── Phase 33: Weapon Mod Fusion — show fused mod when equipped ──
+	if WeaponModFusion and WeaponModFusion.is_fused_equipped():
+		mod_name = "⚗ " + WeaponModFusion.get_equipped_name()
+		mod_color = WeaponModFusion.get_equipped_color()
+	elif WeaponModSystem:
 		mod_name = WeaponModSystem.get_equipped_name()
 		mod_color = WeaponModSystem.get_equipped_color()
 	# Count total materials

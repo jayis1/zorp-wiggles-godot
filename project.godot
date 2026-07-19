@@ -220,6 +220,10 @@ ReplaySystem="*res://scripts/replay_system.gd"
 GhostMode="*res://scripts/ghost_mode.gd"
 Leaderboards="*res://scripts/leaderboards.gd"
 PvpArena="*res://scripts/pvp_arena.gd"
+WorldModifierSystem="*res://scripts/world_modifier_system.gd"
+EnemyVariantSystem="*res://scripts/enemy_variant_system.gd"
+ProceduralQuestSystem="*res://scripts/procedural_quest_system.gd"
+WeaponModFusion="*res://scripts/weapon_mod_fusion.gd"
 # HermesVerify autoload REMOVED — it was a temporary ad-hoc verification script
 # that calls get_tree().quit() in _ready(), which immediately exits the game on
 # every launch. This made the game unplayable. To run verification, temporarily

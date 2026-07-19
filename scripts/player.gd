@@ -849,6 +849,9 @@ func _handle_movement(delta: float) -> void:
 		speed_mult *= (1.0 + EquipmentSystem.get_speed_mult_bonus())
 	# ── Phase 30: Character profile speed multiplier (Zerp is faster) ──
 	speed_mult *= _char_speed_mult
+	# ── Phase 33: World Modifier System — per-run player speed multiplier ──
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		speed_mult *= WorldModifierSystem.get_player_speed_mult()
 	# ── Phase 7: Tier-based speed bonus (+0.5 m/s per 5 levels) ──
 	var tier: int = (GameManager.player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
 	var base_speed: float = GameConstants.PLAYER_SPEED + tier * GameConstants.PLAYER_LEVEL_SPEED_TIER_BONUS
@@ -888,6 +891,9 @@ func _handle_dash(delta: float) -> void:
 	var can_dash: bool = GameManager.player_dash_cooldown_timer <= 0 or _dash_coyote_timer > 0
 	# ── Phase 28: Magnetic Storm EMP — dashing temporarily disabled ──
 	if can_dash and WeatherSystem.get_emp_dash_disable_remaining() > 0:
+		can_dash = false
+	# ── Phase 33: World Modifier System — NO_DASH modifier disables dashing ──
+	if can_dash and WorldModifierSystem and WorldModifierSystem.is_initialized() and WorldModifierSystem.is_dash_disabled():
 		can_dash = false
 	if _dash_buffer_timer > 0 and can_dash:
 		_dash_buffer_timer = 0.0
@@ -969,6 +975,9 @@ func _start_dash() -> void:
 	# ── Phase 31: Tutorial — first dash notification ──
 	if TutorialManager and TutorialManager.has_method("notify_first_dash"):
 		TutorialManager.notify_first_dash()
+	# ── Phase 33: Procedural Quest System — dash tracking ──
+	if ProceduralQuestSystem:
+		ProceduralQuestSystem.notify_dash()
 
 	# Camera shake on dash for punch
 	_trigger_camera_trauma(0.15)
@@ -1430,8 +1439,12 @@ func _apply_camera_rotation() -> void:
 ## the buffer tick and cooldown expiry land on the same frame).
 func _compute_shoot_cooldown() -> float:
 	var cooldown: float = GameConstants.SHOOT_COOLDOWN
+	# ── Phase 33: Weapon Mod Fusion — fused mod fire rate multiplier ──
+	# Takes precedence over the base equipped mod when a fused mod is equipped.
+	if WeaponModFusion and WeaponModFusion.is_fused_equipped():
+		cooldown *= WeaponModFusion.get_equipped_fire_rate_mult()
 	# Phase 16: Apply weapon mod fire rate multiplier
-	if WeaponModSystem:
+	elif WeaponModSystem:
 		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
 	# Phase 17: Solar Flare weather boosts fire rate
 	cooldown *= WeatherSystem.get_fire_rate_multiplier()
@@ -1475,11 +1488,20 @@ func _spawn_projectile() -> void:
 	var shoot_dir := get_shoot_direction()
 	# ── Phase 16: Weapon Mod Crafting — apply mod to projectile spawning ──
 	# The equipped mod changes damage, fire rate, projectile speed, color, and behavior.
+	# ── Phase 33: Weapon Mod Fusion — fused mods take precedence over base mods ──
+	# When a fused mod is equipped, we use its combined stat multipliers and
+	# alternate between the two parents' behaviors on each shot.
 	var mod_id: int = GameConstants.WeaponMod.NONE
 	var mod_color: Color = Color(0.2, 1.0, 0.8)
 	var mod_dmg_mult: float = 1.0
 	var mod_speed_mult: float = 1.0
-	if WeaponModSystem:
+	if WeaponModFusion and WeaponModFusion.is_fused_equipped():
+		# Fused mod equipped — use combined stats + alternating parent behavior
+		mod_id = WeaponModFusion.get_shot_parent_mod()
+		mod_color = WeaponModFusion.get_equipped_color()
+		mod_dmg_mult = WeaponModFusion.get_equipped_damage_mult()
+		mod_speed_mult = WeaponModFusion.get_equipped_speed_mult()
+	elif WeaponModSystem:
 		mod_id = WeaponModSystem.get_equipped_mod()
 		mod_color = WeaponModSystem.get_equipped_color()
 		mod_dmg_mult = WeaponModSystem.get_equipped_damage_mult()
@@ -1500,6 +1522,11 @@ func _spawn_projectile() -> void:
 		base_dmg = int(base_dmg * (1.0 + EquipmentSystem.get_damage_mult_bonus()))
 	# ── Phase 30: Character profile damage multiplier (Zerp is slightly weaker) ──
 	base_dmg = int(base_dmg * _char_damage_mult)
+	# ── Phase 33: World Modifier System — per-run player damage multiplier ──
+	# GLASS_CANNON doubles damage, BERSERKER triples it below the HP threshold.
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		base_dmg = int(base_dmg * WorldModifierSystem.get_player_damage_mult())
+		base_dmg = int(base_dmg * WorldModifierSystem.get_berserker_damage_mult())
 	var mod_dmg: int = int(base_dmg * mod_dmg_mult)
 	var mod_speed: float = GameConstants.PROJECTILE_SPEED * mod_speed_mult
 	

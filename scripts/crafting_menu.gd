@@ -173,6 +173,17 @@ func _build_ui() -> void:
 	_clear_button.custom_minimum_size = Vector2(100, 36)
 	_clear_button.pressed.connect(_on_clear_pressed)
 	btn_hbox.add_child(_clear_button)
+
+	# ── Phase 33: Weapon Mod Fusion — button to open the fusion sub-menu ──
+	var fuse_btn := Button.new()
+	fuse_btn.text = "⚗ Fuse Mods"
+	fuse_btn.custom_minimum_size = Vector2(130, 36)
+	fuse_btn.add_theme_font_size_override("font_size", 14)
+	fuse_btn.add_theme_color_override("font_color", Color(0.9, 0.7, 1.0))
+	fuse_btn.pressed.connect(_on_open_fusion_menu)
+	btn_hbox.add_child(fuse_btn)
+	fuse_btn.mouse_entered.connect(_on_button_hover.bind(fuse_btn, true))
+	fuse_btn.mouse_exited.connect(_on_button_hover.bind(fuse_btn, false))
 	
 	# Result label (shows craft success/failure)
 	_result_label = Label.new()
@@ -468,6 +479,18 @@ func _on_clear_pressed() -> void:
 
 func _on_close_pressed() -> void:
 	WeaponModSystem.close_crafting_menu()
+
+# ── Phase 33: Weapon Mod Fusion — open the fusion sub-menu ──
+# Lazily instantiates the WeaponModFusionMenu Control and opens it. The
+# fusion menu is a separate overlay that sits on top of the crafting menu.
+var _fusion_menu: Control = null
+func _on_open_fusion_menu() -> void:
+	if not _fusion_menu:
+		_fusion_menu = preload("res://scripts/weapon_mod_fusion_menu.gd").new()
+		_fusion_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_fusion_menu.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(_fusion_menu)
+	_fusion_menu.show_menu()
 
 func _on_equip_mod_pressed(mod_id: int) -> void:
 	WeaponModSystem.equip_mod(mod_id)

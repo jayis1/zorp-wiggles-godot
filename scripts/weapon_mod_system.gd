@@ -73,6 +73,10 @@ func get_equipped_mod() -> int:
 func equip_mod(mod_id: int) -> bool:
 	if not _discovered_mods.has(mod_id):
 		return false
+	# ── Phase 33: Weapon Mod Fusion — unequip any fused mod first ──
+	# Equipping a base mod takes precedence over a fused mod.
+	if WeaponModFusion and WeaponModFusion.is_fused_equipped():
+		WeaponModFusion.unequip_fused()
 	var old_mod: int = _equipped_mod
 	_equipped_mod = mod_id
 	if old_mod != mod_id:

@@ -19,12 +19,25 @@ func _ready() -> void:
 	if MissionSystem:
 		MissionSystem.mission_completed.connect(_on_mission_completed)
 		MissionSystem.mission_progress_updated.connect(_on_mission_progress_updated)
+	# ── Phase 33: Procedural Quest System integration ──
+	# Procedural quests are duck-typed (same fields as Mission), so we can render
+	# them with the same drawing code. Connect to the quest system's signals to
+	# trigger redraws on generation, progress, and completion.
+	if ProceduralQuestSystem:
+		ProceduralQuestSystem.quest_generated.connect(_on_quest_changed)
+		ProceduralQuestSystem.quest_progress_updated.connect(_on_quest_changed)
+		ProceduralQuestSystem.quest_completed.connect(_on_quest_changed)
+		ProceduralQuestSystem.quest_expired.connect(_on_quest_changed)
 
 func _on_mission_completed(_mission) -> void:
 	_completed_count = MissionSystem.get_completed_count()
 	queue_redraw()
 
 func _on_mission_progress_updated(_mission) -> void:
+	queue_redraw()
+
+# ── Phase 33: Procedural quest signal handlers ──
+func _on_quest_changed(_quest) -> void:
 	queue_redraw()
 
 func _process(delta: float) -> void:
@@ -92,7 +105,7 @@ func _draw() -> void:
 	var missions: Array = MissionSystem.get_active_missions()
 	var y: float = title_y + 35
 
-	if missions.is_empty():
+	if missions.is_empty() and (not ProceduralQuestSystem or ProceduralQuestSystem.get_active_quests().is_empty()):
 		font.draw_string(get_canvas_item(),
 			Vector2(panel_x + 20, y + 20),
 			"No active missions — checking for new ones...", HORIZONTAL_ALIGNMENT_LEFT, -1, 14,
@@ -101,62 +114,103 @@ func _draw() -> void:
 		for mission in missions:
 			if y > panel_y + panel_h - 20:
 				break  # Don't overflow panel
-
-			# Mission type icon
 			var icon: String = _get_mission_icon(mission.type)
-			var type_name: String = _get_mission_type_name(mission.type)
+			y = _draw_quest_entry(font, panel_x, y, panel_w, a,
+				"%s %s" % [icon, mission.title],
+				mission.description,
+				mission.current_count, mission.target_count,
+				mission.reward_xp, mission.reward_score)
 
-			# Mission title
+	# ── Phase 33: Procedural Quests section ──
+	# ProceduralQuestSystem quests are duck-typed to share the Mission fields,
+	# but they use a separate objective_type enum and may carry a modifier
+	# (Time Limit, Bonus XP, etc.) we display as a suffix on the description.
+	if ProceduralQuestSystem:
+		var pquests: Array = ProceduralQuestSystem.get_active_quests()
+		if not pquests.is_empty() and y < panel_y + panel_h - 40:
+			# Section divider
+			y += 8
 			font.draw_string(get_canvas_item(),
 				Vector2(panel_x + 20, y),
-				"%s %s" % [icon, mission.title], HORIZONTAL_ALIGNMENT_LEFT, -1, 16,
-				Color(1.0, 1.0, 1.0, a))
-
-			# Description
-			font.draw_string(get_canvas_item(),
-				Vector2(panel_x + 20, y + 20),
-				mission.description, HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
-				Color(0.6, 0.7, 0.8, 0.8 * a))
-
-			# Progress bar
-			var bar_x: float = panel_x + 20
-			var bar_y: float = y + 32
-			var bar_w: float = panel_w - 120
-			var bar_h: float = 8.0
-			var progress: float = float(mission.current_count) / float(max(1, mission.target_count))
-			progress = clampf(progress, 0.0, 1.0)
-
-			# Bar background
-			draw_rect(Rect2(bar_x, bar_y, bar_w, bar_h), Color(0.15, 0.15, 0.2, 0.8 * a), true)
-			# Bar fill (green-teal)
-			var fill_col := Color(0.2, 0.9, 0.5, 0.85 * a)
-			if progress >= 1.0:
-				fill_col = Color(1.0, 0.85, 0.2, 0.9 * a)  # Gold when complete
-			draw_rect(Rect2(bar_x, bar_y, bar_w * progress, bar_h), fill_col, true)
-			# Bar border
-			draw_rect(Rect2(bar_x, bar_y, bar_w, bar_h), Color(0.3, 0.5, 0.5, 0.4 * a), false, 1.0)
-
-			# Progress text
-			font.draw_string(get_canvas_item(),
-				Vector2(panel_x + bar_w + 30, y + 30),
-				"%d / %d" % [mission.current_count, mission.target_count],
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
-				Color(0.8, 0.9, 1.0, 0.9 * a))
-
-			# Reward text
-			font.draw_string(get_canvas_item(),
-				Vector2(panel_x + 20, y + 55),
-				"Reward: +%d XP  +%d Score" % [mission.reward_xp, mission.reward_score],
-				HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
-				Color(1.0, 0.8, 0.3, 0.7 * a))
-
-			y += 80
+				"✦ PROCEDURAL QUESTS", HORIZONTAL_ALIGNMENT_LEFT, -1, 16,
+				Color(0.9, 0.7, 1.0, a))
+			draw_line(Vector2(panel_x + 15, y + 6),
+				Vector2(panel_x + panel_w - 15, y + 6),
+				Color(0.6, 0.4, 0.9, 0.3 * a), 1.0)
+			y += 20
+			for quest in pquests:
+				if y > panel_y + panel_h - 20:
+					break
+				# Use the quest's objective_type for the icon (mapped via the
+				# procedural system's own icon table). Fall back to "?".
+				var pq_icon: String = "?"
+				if ProceduralQuestSystem.OBJECTIVE_ICONS.size() > quest.objective_type:
+					pq_icon = ProceduralQuestSystem.OBJECTIVE_ICONS[quest.objective_type]
+				# Modifier badge text
+				var mod_badge: String = ""
+				if quest.modifier != 0 and ProceduralQuestSystem.MODIFIER_NAMES.size() > quest.modifier:
+					var mname: String = ProceduralQuestSystem.MODIFIER_NAMES[quest.modifier]
+					if mname != "":
+						mod_badge = "  [" + mname + "]"
+				y = _draw_quest_entry(font, panel_x, y, panel_w, a,
+					"%s %s" % [pq_icon, quest.title],
+					quest.description + mod_badge,
+					quest.current_count, quest.target_count,
+					quest.reward_xp, quest.reward_score)
 
 	# ── Footer hint ──
 	font.draw_string(get_canvas_item(),
 		Vector2(panel_x + 20, panel_y + panel_h - 15),
 		"[Tab] Close", HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
 		Color(0.4, 0.5, 0.6, 0.6 * a))
+
+# ── Phase 33: Shared quest/mission drawing helper ──
+# Draws a single quest entry (title, description, progress bar, reward) and
+# returns the y-position for the next entry. Used for both MissionSystem
+# missions and ProceduralQuestSystem quests (duck-typed).
+func _draw_quest_entry(font, panel_x: float, y: float, panel_w: float, a: float,
+		title_text: String, description: String,
+		current_count: int, target_count: int,
+		reward_xp: int, reward_score: int) -> float:
+	# Title
+	font.draw_string(get_canvas_item(),
+		Vector2(panel_x + 20, y),
+		title_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16,
+		Color(1.0, 1.0, 1.0, a))
+	# Description
+	font.draw_string(get_canvas_item(),
+		Vector2(panel_x + 20, y + 20),
+		description, HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+		Color(0.6, 0.7, 0.8, 0.8 * a))
+	# Progress bar
+	var bar_x: float = panel_x + 20
+	var bar_y: float = y + 32
+	var bar_w: float = panel_w - 120
+	var bar_h: float = 8.0
+	var progress: float = float(current_count) / float(max(1, target_count))
+	progress = clampf(progress, 0.0, 1.0)
+	# Bar background
+	draw_rect(Rect2(bar_x, bar_y, bar_w, bar_h), Color(0.15, 0.15, 0.2, 0.8 * a), true)
+	# Bar fill (green-teal, gold when complete)
+	var fill_col := Color(0.2, 0.9, 0.5, 0.85 * a)
+	if progress >= 1.0:
+		fill_col = Color(1.0, 0.85, 0.2, 0.9 * a)
+	draw_rect(Rect2(bar_x, bar_y, bar_w * progress, bar_h), fill_col, true)
+	# Bar border
+	draw_rect(Rect2(bar_x, bar_y, bar_w, bar_h), Color(0.3, 0.5, 0.5, 0.4 * a), false, 1.0)
+	# Progress text
+	font.draw_string(get_canvas_item(),
+		Vector2(panel_x + bar_w + 30, y + 30),
+		"%d / %d" % [current_count, target_count],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+		Color(0.8, 0.9, 1.0, 0.9 * a))
+	# Reward text
+	font.draw_string(get_canvas_item(),
+		Vector2(panel_x + 20, y + 55),
+		"Reward: +%d XP  +%d Score" % [reward_xp, reward_score],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
+		Color(1.0, 0.8, 0.3, 0.7 * a))
+	return y + 80
 
 func _get_mission_icon(type: int) -> String:
 	match type:

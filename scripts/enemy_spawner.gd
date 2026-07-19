@@ -277,6 +277,37 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	# Scale enemy to player level
 	_scale_enemy_to_player_level(enemy)
 
+	# ── Phase 33: World Modifier System — apply per-run enemy multipliers ──
+	# These stack on top of the level/time/weather scaling above.
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		if enemy is EnemyBase:
+			var eb: EnemyBase = enemy as EnemyBase
+			var wm_hp_mult: float = WorldModifierSystem.get_enemy_hp_mult()
+			var wm_dmg_mult: float = WorldModifierSystem.get_enemy_damage_mult()
+			var wm_speed_mult: float = WorldModifierSystem.get_enemy_speed_mult()
+			var wm_scale_mult: float = WorldModifierSystem.get_enemy_scale_mult()
+			if wm_hp_mult != 1.0:
+				eb.max_hp = int(eb.max_hp * wm_hp_mult)
+				eb.hp = eb.max_hp
+			if wm_dmg_mult != 1.0:
+				eb.damage = int(eb.damage * wm_dmg_mult)
+			if wm_speed_mult != 1.0:
+				eb.speed *= wm_speed_mult
+			if wm_scale_mult != 1.0:
+				eb.base_scale *= wm_scale_mult
+				# Re-apply the scale tween so the visual matches
+				if eb.body_mesh:
+					var scale_tween := eb.create_tween()
+					scale_tween.tween_property(eb, "scale",
+						Vector3.ONE * eb.base_scale, 0.3) \
+						.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+	# ── Phase 33: Enemy Variant System — promote to elite/golden/champion ──
+	# Roll after scaling so the variant multipliers stack on top of the
+	# already-scaled stats. Skips bosses (handled separately).
+	if EnemyVariantSystem:
+		EnemyVariantSystem.try_promote_enemy(enemy)
+
 func _pick_enemy_type(distance_from_center: float) -> int:
 	var tier: int = min(int(distance_from_center / GameConstants.DIFFICULTY_SCALE_DISTANCE), 2)
 	var pool: Array[int]
@@ -359,6 +390,12 @@ func _reset_spawn_timer() -> void:
 	# ── Phase 25: Endless Mode — wave-based spawn acceleration ──
 	if GameModeManager and GameModeManager.is_endless():
 		interval *= GameModeManager.get_endless_wave_spawn_interval_mult()
+	# ── Phase 33: World Modifier System — per-run spawn rate multiplier ──
+	# DOUBLE_TROUBLE modifier doubles the spawn rate (halves the interval).
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		var spawn_mult: float = WorldModifierSystem.get_enemy_spawn_mult()
+		if spawn_mult > 0.0:
+			interval /= spawn_mult
 
 	# Throttle if too many nearby enemies
 	var player: Node3D = get_tree().get_first_node_in_group("player")

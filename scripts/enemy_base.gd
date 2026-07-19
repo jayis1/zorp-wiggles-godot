@@ -420,6 +420,11 @@ func _execute_attack(player: Node3D) -> void:
 		# Deal damage to P1 (pass enemy position for damage direction indicator)
 		GameManager.take_damage(damage, global_position)
 
+	# ── Phase 33: Enemy Variant System — apply on-hit trait effects ──
+	# LIFESTEAL heals the enemy, VENOMOUS applies a slow to the player.
+	if EnemyVariantSystem:
+		EnemyVariantSystem.on_player_hit(self, player)
+
 	# Camera shake on player hit — biased toward the enemy's attack direction
 	# so the camera lurches away from the attacker, reinforcing the hit feel.
 	var attack_dir: Vector3 = (player.global_position - global_position).normalized()
@@ -477,6 +482,24 @@ func take_damage(amount: int) -> void:
 func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if is_dead:
 		return
+	# ── Phase 33: Enemy Variant System — evasive dodge + shielded reduction ──
+	# Variants can dodge incoming damage entirely (EVASIVE) or reduce it
+	# (SHIELDED). The system returns a dict with the modified damage and a
+	# "dodged" flag. If dodged, we skip the rest of the hit logic entirely.
+	if EnemyVariantSystem:
+		var result: Dictionary = EnemyVariantSystem.on_enemy_take_damage(self, amount)
+		if result.get("dodged", false):
+			# Show a "DODGE" message above the enemy for feedback
+			if has_node("AlertIndicator"):
+				var alert: Label3D = $AlertIndicator
+				alert.text = "DODGE"
+				alert.modulate = Color(0.9, 0.9, 0.9, 1.0)
+				alert.visible = true
+				var dodge_tween := create_tween()
+				dodge_tween.tween_property(alert, "modulate:a", 0.0, 0.4)
+				dodge_tween.tween_callback(func(): alert.visible = false)
+			return
+		amount = int(result.get("damage", amount))
 	# ── Phase 19: Co-op — mark if this is a P2 projectile hit ──
 	# The projectile sets a meta flag on itself; we check via get_meta on the
 	# caller. Since we can't access the caller here, P2 projectiles call
@@ -532,6 +555,10 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		_die()
 
 func apply_knockback(direction: Vector3, force: float) -> void:
+	# ── Phase 33: Enemy Variant System — KNOCKBACK_IMMUNE trait ──
+	# Variants with this trait ignore all knockback impulses.
+	if EnemyVariantSystem and EnemyVariantSystem.should_cancel_knockback(self):
+		return
 	knockback_vel = direction.normalized() * force
 
 # ── Phase 14: Dimension time scale (Time-Slow dimension) ──
@@ -577,6 +604,13 @@ func _die() -> void:
 	# Rare materials drop from bosses (always), during matching weather (+6%),
 	# and in matching biomes (+4%). Normal enemies have a 4% base chance.
 	_drop_rare_material()
+
+	# ── Phase 33: Enemy Variant System — variant death hook ──
+	# Triggers the Exploding trait AoE, bonus loot drop for Champions, and
+	# Statistics tracking. Must be called BEFORE the node is freed; we call it
+	# here while the enemy is still valid and positioned.
+	if EnemyVariantSystem:
+		EnemyVariantSystem.on_variant_death(self)
 
 	# ── Phase 10: Clean up AI controller ──
 	if ai_controller:
@@ -812,6 +846,14 @@ func _drop_crafting_material() -> void:
 	# ── Phase 28: Blood Moon weather — 3x loot chance (high risk, high reward) ──
 	# Also applies the weather combo loot bonus if a combo is active.
 	drop_chance = minf(1.0, drop_chance * WeatherSystem.get_loot_multiplier())
+	# ── Phase 33: World Modifier System — Extra Loot / Famine modifiers ──
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		drop_chance = minf(1.0, drop_chance * WorldModifierSystem.get_loot_chance_mult())
+	# ── Phase 33: Enemy Variant System — variant tier loot multiplier ──
+	# Golden variants get 3× loot, Champions 5×. Applied after weather/modifier
+	# multipliers so all bonuses compound.
+	if EnemyVariantSystem and EnemyVariantSystem.is_variant(self):
+		drop_chance = minf(1.0, drop_chance * EnemyVariantSystem.get_variant_loot_mult(self))
 	if randf() > drop_chance:
 		return
 	# Pick a crafting material via the weighted loot table.
