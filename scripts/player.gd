@@ -563,6 +563,9 @@ func _handle_movement(delta: float) -> void:
 	# ── Phase 25: Progression System speed bonus (skill tree) ──
 	if ProgressionSystem:
 		speed_mult *= ProgressionSystem.get_speed_mult()
+	# ── Phase 29: Equipment speed bonus (armor/accessory + set bonuses) ──
+	if EquipmentSystem:
+		speed_mult *= (1.0 + EquipmentSystem.get_speed_mult_bonus())
 	# ── Phase 7: Tier-based speed bonus (+0.5 m/s per 5 levels) ──
 	var tier: int = (GameManager.player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
 	var base_speed: float = GameConstants.PLAYER_SPEED + tier * GameConstants.PLAYER_LEVEL_SPEED_TIER_BONUS
@@ -911,6 +914,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("fast_travel") and GameManager.player_is_alive:
 		_toggle_fast_travel_menu()
 
+	# ── Phase 29: Consumable hotkeys (1-5) — use consumables in-game ──
+	# Each number key uses the corresponding consumable from the EquipmentSystem
+	# inventory. No effect if the menu is open (keys are for in-game use).
+	if event is InputEventKey and event.pressed and not GameManager.is_paused and GameManager.player_is_alive:
+		if not EquipmentSystem or EquipmentSystem.is_menu_open():
+			return
+		for i in range(GameConstants.CONSUMABLE_HOTKEYS.size()):
+			if event.keycode == GameConstants.CONSUMABLE_HOTKEYS[i]:
+				EquipmentSystem.use_consumable(i)
+				return
+
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig:
@@ -938,6 +952,9 @@ func _compute_shoot_cooldown() -> float:
 	# ── Phase 25: Progression System fire rate bonus (skill tree) ──
 	if ProgressionSystem:
 		cooldown *= ProgressionSystem.get_fire_rate_mult()
+	# ── Phase 29: Equipment fire rate bonus (armor + set bonuses) ──
+	if EquipmentSystem:
+		cooldown *= (1.0 - EquipmentSystem.get_fire_rate_mult_bonus())
 	return cooldown
 
 ## Fire a shot immediately, applying all fire-rate multipliers. Assumes the
@@ -989,6 +1006,9 @@ func _spawn_projectile() -> void:
 	# ── Phase 25: Progression System damage multiplier (skill tree) ──
 	if ProgressionSystem:
 		base_dmg = int(base_dmg * ProgressionSystem.get_damage_mult())
+	# ── Phase 29: Equipment damage bonus (armor/accessory + set bonuses) ──
+	if EquipmentSystem:
+		base_dmg = int(base_dmg * (1.0 + EquipmentSystem.get_damage_mult_bonus()))
 	var mod_dmg: int = int(base_dmg * mod_dmg_mult)
 	var mod_speed: float = GameConstants.PROJECTILE_SPEED * mod_speed_mult
 	

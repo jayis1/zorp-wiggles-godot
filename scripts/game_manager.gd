@@ -277,6 +277,12 @@ func _start_game() -> void:
 	# ── Phase 25: Apply permanent upgrades from skill tree ──
 	if ProgressionSystem:
 		ProgressionSystem.apply_permanent_upgrades()
+	# ── Phase 29: Equipment max HP bonus (armor + set bonuses) ──
+	if EquipmentSystem:
+		var equip_hp: int = EquipmentSystem.get_max_hp_bonus()
+		if equip_hp > 0:
+			player_max_hp += equip_hp
+			player_hp = min(player_max_hp, player_hp + equip_hp)
 	hp_changed.emit(player_hp, player_max_hp)
 	xp_changed.emit(player_xp, player_xp_to_next)
 
@@ -322,6 +328,11 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		var prog_dmg_reduce: float = ProgressionSystem.get_damage_reduction()
 		if prog_dmg_reduce > 0:
 			actual_amount = int(actual_amount * (1.0 - prog_dmg_reduce))
+	# ── Phase 29: Equipment damage reduction (armor + set bonuses + shield potion) ──
+	if EquipmentSystem:
+		var equip_dmg_reduce: float = EquipmentSystem.get_damage_reduction_bonus()
+		if equip_dmg_reduce > 0:
+			actual_amount = int(actual_amount * (1.0 - equip_dmg_reduce))
 	player_hp = max(0, player_hp - actual_amount)
 	player_invuln_timer = GameConstants.PLAYER_INVULN_DURATION
 	hp_changed.emit(player_hp, player_max_hp)
@@ -362,6 +373,9 @@ func gain_xp(amount: int) -> void:
 	# ── Phase 25: Progression System XP multiplier (skill tree + prestige) ──
 	if ProgressionSystem:
 		actual_amount = int(actual_amount * ProgressionSystem.get_xp_gain_mult())
+	# ── Phase 29: Equipment XP multiplier (armor/accessory + set bonuses) ──
+	if EquipmentSystem:
+		actual_amount = int(actual_amount * (1.0 + EquipmentSystem.get_xp_mult_bonus()))
 	# ── Phase 7: Monolith XP buff (Wisdom Aura) ──
 	actual_amount = int(actual_amount * get_xp_buff_mult())
 	player_xp += actual_amount

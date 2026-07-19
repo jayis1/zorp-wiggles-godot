@@ -2699,4 +2699,342 @@ const FAST_TRAVEL_INACTIVE_COLOR: Color = Color(0.4, 0.4, 0.45)  # Grey when not
 const FAST_TRAVEL_HEIGHT: float = 2.5                # Pillar height
 const FAST_TRAVEL_RADIUS: float = 1.8                # Activation ring radius
 const FAST_TRAVEL_MAX_WAYPOINTS: int = 12            # Cap on total waypoints in the world
+
+# ─── Phase 29: Equipment & Crafting Expansion ─────────────────────────────────
+# Equipment system: armor pieces (head/body), accessories (ring/amulet), and
+# consumables craftable from enemy drops + rare materials. Wearing matching
+# pieces of a set grants a set bonus. Rare materials drop from bosses, specific
+# weather types, and specific biomes (encouraging exploration & risk-taking).
+# Materials can be refined (3 common → 1 rare) at no cost other than the mats.
+
+# Equipment slot IDs
+const EQUIP_SLOT_HEAD: int = 0
+const EQUIP_SLOT_BODY: int = 1
+const EQUIP_SLOT_ACCESSORY: int = 2
+const EQUIP_SLOT_COUNT: int = 3
+
+# Equipment rarity tiers (matches the loot-table tiering language)
+enum EquipRarity {
+	COMMON,     # Grey
+	UNCOMMON,   # Green
+	RARE,       # Blue
+	EPIC,       # Purple
+	LEGENDARY,  # Gold
+}
+
+const EQUIP_RARITY_COLORS: Array[Color] = [
+	Color(0.6, 0.6, 0.6),       # COMMON — grey
+	Color(0.3, 0.85, 0.4),      # UNCOMMON — green
+	Color(0.35, 0.55, 1.0),     # RARE — blue
+	Color(0.7, 0.4, 1.0),       # EPIC — purple
+	Color(1.0, 0.85, 0.3),      # LEGENDARY — gold
+]
+const EQUIP_RARITY_NAMES: Array[String] = ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
+
+# ── New collectible types: rare crafting materials ──
+# These extend the CollectibleType enum. They drop from bosses, weather-specific
+# sources, and biome-specific sources. They're used in equipment crafting recipes
+# and refinement (3 common → 1 rare). They're stored in the same inventory as
+# the regular crafting materials (WeaponModSystem inventory) for simplicity —
+# one unified material pool the player manages.
+# NOTE: We can't extend an enum after declaration in GDScript, so we add a
+# separate enum for the rare materials and store them in a parallel inventory
+# in EquipmentSystem. This keeps the existing CollectibleType stable.
+enum RareMaterial {
+	VOID_CORE,        # Boss drop — from Void Leviathan / world bosses
+	PRISM_HEART,      # Boss drop — from Ancient Sentinel / Crystal Wraith
+	PLASMA_SHARD,     # Weather drop — Meteor Shower / Solar Flare
+	AURORA_DUST,      # Weather drop — Aurora
+	BLOOD_CRYSTAL,    # Weather drop — Blood Moon
+	ECLIPSE_ESSENCE,  # Weather drop — Eclipse
+	EMBER_HEART,      # Biome drop — Volcano Core / Lava
+	TIDE_PEARL,       # Biome drop — Deep Ocean
+	GALE_SHARD,       # Biome drop — Sky Citadel
+	DATA_FRAGMENT,    # Biome drop — Digital Grid
+	SPORE_SAC,        # Biome drop — Mushroom / Swamp
+	RELIC_DUST,       # Biome drop — Ancient Ruins
+}
+
+const RARE_MATERIAL_NAMES: Array[String] = [
+	"Void Core", "Prism Heart", "Plasma Shard", "Aurora Dust", "Blood Crystal",
+	"Eclipse Essence", "Ember Heart", "Tide Pearl", "Gale Shard", "Data Fragment",
+	"Spore Sac", "Relic Dust",
+]
+# Vivid colors for each rare material (used by collectible glow + UI)
+const RARE_MATERIAL_COLORS: Array[Color] = [
+	Color(0.4, 0.1, 0.7),    # VOID_CORE — deep void purple
+	Color(0.9, 0.5, 1.0),    # PRISM_HEART — prism pink
+	Color(1.0, 0.5, 0.2),    # PLASMA_SHARD — fiery orange
+	Color(0.3, 1.0, 0.7),    # AURORA_DUST — aurora teal
+	Color(0.9, 0.1, 0.2),    # BLOOD_CRYSTAL — blood red
+	Color(0.15, 0.1, 0.3),   # ECLIPSE_ESSENCE — dark eclipse
+	Color(1.0, 0.3, 0.1),    # EMBER_HEART — ember red-orange
+	Color(0.2, 0.6, 1.0),    # TIDE_PEARL — ocean blue
+	Color(0.7, 0.9, 1.0),    # GALE_SHARD — sky cyan
+	Color(0.2, 1.0, 0.9),    # DATA_FRAGMENT — digital cyan
+	Color(0.5, 0.9, 0.3),    # SPORE_SAC — spore green
+	Color(0.85, 0.75, 0.4),  # RELIC_DUST — ancient gold-brown
+]
+
+# Rare material drop sources
+# Bosses drop VOID_CORE or PRISM_HEART. Weather-specific drops happen during
+# the matching weather. Biome-specific drops happen while in the matching biome.
+const RARE_MATERIAL_BOSS_DROPS: Array[int] = [
+	RareMaterial.VOID_CORE,
+	RareMaterial.PRISM_HEART,
+]
+const RARE_MATERIAL_WEATHER_DROPS: Dictionary = {
+	Weather.METEOR_SHOWER: RareMaterial.PLASMA_SHARD,
+	Weather.SOLAR_FLARE: RareMaterial.PLASMA_SHARD,
+	Weather.AURORA: RareMaterial.AURORA_DUST,
+	Weather.BLOOD_MOON: RareMaterial.BLOOD_CRYSTAL,
+	Weather.ECLIPSE: RareMaterial.ECLIPSE_ESSENCE,
+}
+const RARE_MATERIAL_BIOME_DROPS: Dictionary = {
+	Biome.LAVA: RareMaterial.EMBER_HEART,
+	Biome.VOLCANO_CORE: RareMaterial.EMBER_HEART,
+	Biome.DEEP_OCEAN: RareMaterial.TIDE_PEARL,
+	Biome.SKY_CITADEL: RareMaterial.GALE_SHARD,
+	Biome.DIGITAL_GRID: RareMaterial.DATA_FRAGMENT,
+	Biome.MUSHROOM: RareMaterial.SPORE_SAC,
+	Biome.SWAMP: RareMaterial.SPORE_SAC,
+	Biome.ANCIENT_RUINS: RareMaterial.RELIC_DUST,
+}
+# Drop chance for rare materials from enemy kills (separate from common mats)
+const RARE_MATERIAL_DROP_CHANCE: float = 0.04        # 4% normal enemy
+const RARE_MATERIAL_DROP_CHANCE_BOSS: float = 1.0    # Bosses always drop a rare mat
+const RARE_MATERIAL_WEATHER_BONUS: float = 0.06      # +6% during matching weather
+const RARE_MATERIAL_BIOME_BONUS: float = 0.04       # +4% in matching biome
+
+# ── Refinement recipes: 3 common materials → 1 rare material ──
+# Key = RareMaterial enum int, Value = Array of CollectibleType (need 3 of each... no, 3 total)
+# Actually: 3 of the listed common material → 1 rare material. Single-input recipes.
+const REFINEMENT_RECIPES: Dictionary = {
+	# 3 Magnet Core → 1 Void Core (gravitic compression)
+	RareMaterial.VOID_CORE: {"mat": CollectibleType.MAGNET_CORE, "count": 3},
+	# 3 Shield Crystal → 1 Prism Heart (crystalline fusion)
+	RareMaterial.PRISM_HEART: {"mat": CollectibleType.SHIELD_CRYSTAL, "count": 3},
+	# 3 Fireball Scroll → 1 Plasma Shard (combustion concentration)
+	RareMaterial.PLASMA_SHARD: {"mat": CollectibleType.FIREBALL_SCROLL, "count": 3},
+	# 3 Star Fruit → 1 Aurora Dust (stellar distillation)
+	RareMaterial.AURORA_DUST: {"mat": CollectibleType.STAR_FRUIT, "count": 3},
+	# 3 Meteor Shard → 1 Blood Crystal (meteoric crystallization)
+	RareMaterial.BLOOD_CRYSTAL: {"mat": CollectibleType.METEOR_SHARD, "count": 3},
+	# 3 Nebula Dust → 1 Eclipse Essence (nebular convergence)
+	RareMaterial.ECLIPSE_ESSENCE: {"mat": CollectibleType.NEBULA_DUST, "count": 3},
+	# 3 Toxic Extract → 1 Spore Sac (toxic compression)
+	RareMaterial.SPORE_SAC: {"mat": CollectibleType.TOXIC_EXTRACT, "count": 3},
+	# 3 Regen Crystal → 1 Relic Dust (ancient crystallization)
+	RareMaterial.RELIC_DUST: {"mat": CollectibleType.REGEN_CRYSTAL, "count": 3},
+}
+# Refinement recipes that need 2 different common materials (the harder rares)
+const REFINEMENT_RECIPES_DUAL: Dictionary = {
+	# 2 Quantum Fuzz + 2 Space Gloop → 1 Ember Heart
+	RareMaterial.EMBER_HEART: {"mats": [CollectibleType.QUANTUM_FUZZ, CollectibleType.SPACE_GLOOP], "count": 2},
+	# 2 Quantum Fuzz + 2 Star Fruit → 1 Tide Pearl
+	RareMaterial.TIDE_PEARL: {"mats": [CollectibleType.QUANTUM_FUZZ, CollectibleType.STAR_FRUIT], "count": 2},
+	# 2 Quantum Fuzz + 2 Magnet Core → 1 Gale Shard
+	RareMaterial.GALE_SHARD: {"mats": [CollectibleType.QUANTUM_FUZZ, CollectibleType.MAGNET_CORE], "count": 2},
+	# 2 Quantum Fuzz + 2 Shield Crystal → 1 Data Fragment
+	RareMaterial.DATA_FRAGMENT: {"mats": [CollectibleType.QUANTUM_FUZZ, CollectibleType.SHIELD_CRYSTAL], "count": 2},
+}
+
+# ── Equipment piece definitions ──
+# Each piece: id, name, slot, rarity, stats (dict of bonus type → value),
+# craft recipe (dict of material type → count), set_id (or -1 if no set).
+# Stat keys: "max_hp", "damage_mult", "speed_mult", "crit_chance", "damage_reduction", "xp_mult", "loot_mult", "fire_rate_mult"
+enum EquipPiece {
+	# Head armor (slot 0)
+	LEATHER_CAP,        # Common — small HP bonus
+	PLASMA_HELM,        # Uncommon — damage + crit
+	CRYSTAL_CROWN,      # Rare — crit + damage
+	VOID_VISAGE,        # Epic — damage + damage reduction
+	ANCIENT_MASK,       # Legendary — all stats
+	# Body armor (slot 1)
+	LEATHER_VEST,       # Common — HP + damage reduction
+	PLASMA_PLATE,       # Uncommon — HP + damage
+	CRYSTAL_CARAPACE,   # Rare — HP + damage reduction
+	VOID_CLOAK,         # Epic — speed + damage reduction + crit
+	ANCIENT_REGALIA,    # Legendary — all stats
+	# Accessories (slot 2 — ring/amulet)
+	BONE_RING,          # Common — small damage
+	PRISM_AMULET,       # Uncommon — crit + xp
+	AURORA_PENDANT,     # Rare — xp + loot
+	BLOOD_SIGIL,        # Epic — damage + crit + loot
+	COSMIC_TALISMAN,    # Legendary — all stats
+}
+
+const EQUIP_PIECE_NAMES: Array[String] = [
+	# Head
+	"Leather Cap", "Plasma Helm", "Crystal Crown", "Void Visage", "Ancient Mask",
+	# Body
+	"Leather Vest", "Plasma Plate", "Crystal Carapace", "Void Cloak", "Ancient Regalia",
+	# Accessory
+	"Bone Ring", "Prism Amulet", "Aurora Pendant", "Blood Sigil", "Cosmic Talisman",
+]
+const EQUIP_PIECE_ICONS: Array[String] = [
+	# Head
+	"⛑", "⚡", "💎", "👁", "🎭",
+	# Body
+	"🦺", "🔥", "🔷", "🌌", "👑",
+	# Accessory
+	"💍", "🔮", "🌌", "🩸", "✨",
+]
+# Slot for each piece (head=0, body=1, accessory=2)
+const EQUIP_PIECE_SLOT: Array[int] = [
+	0, 0, 0, 0, 0,  # Head pieces
+	1, 1, 1, 1, 1,  # Body pieces
+	2, 2, 2, 2, 2,  # Accessories
+]
+# Rarity for each piece
+const EQUIP_PIECE_RARITY: Array[int] = [
+	0, 1, 2, 3, 4,  # Head: common → legendary
+	0, 1, 2, 3, 4,  # Body
+	0, 1, 2, 3, 4,  # Accessory
+]
+# Stats for each piece — dict of stat_key → bonus value
+# Design notes:
+#   - Head pieces emphasize crit/damage (precision/aim theme)
+#   - Body pieces emphasize HP/damage reduction (protection theme)
+#   - Accessories emphasize utility (XP, loot, speed)
+#   - Legendary pieces give small bonuses to ALL stats (jack-of-all-trades)
+const EQUIP_PIECE_STATS: Array[Dictionary] = [
+	# ── Head ──
+	{"max_hp": 10},                                           # Leather Cap
+	{"damage_mult": 0.08, "crit_chance": 0.03},             # Plasma Helm
+	{"crit_chance": 0.08, "damage_mult": 0.05},             # Crystal Crown
+	{"damage_mult": 0.12, "damage_reduction": 0.05},        # Void Visage
+	{"max_hp": 20, "damage_mult": 0.10, "crit_chance": 0.05, "damage_reduction": 0.05, "speed_mult": 0.05},  # Ancient Mask
+	# ── Body ──
+	{"max_hp": 20, "damage_reduction": 0.03},               # Leather Vest
+	{"max_hp": 30, "damage_mult": 0.06},                    # Plasma Plate
+	{"max_hp": 40, "damage_reduction": 0.08},               # Crystal Carapace
+	{"speed_mult": 0.10, "damage_reduction": 0.10, "crit_chance": 0.04},  # Void Cloak
+	{"max_hp": 50, "damage_mult": 0.08, "damage_reduction": 0.08, "speed_mult": 0.08, "xp_mult": 0.10},  # Ancient Regalia
+	# ── Accessories ──
+	{"damage_mult": 0.05},                                    # Bone Ring
+	{"crit_chance": 0.05, "xp_mult": 0.08},                 # Prism Amulet
+	{"xp_mult": 0.15, "loot_mult": 0.10},                  # Aurora Pendant
+	{"damage_mult": 0.10, "crit_chance": 0.06, "loot_mult": 0.08},  # Blood Sigil
+	{"max_hp": 15, "damage_mult": 0.06, "crit_chance": 0.04, "speed_mult": 0.06, "xp_mult": 0.10, "loot_mult": 0.10, "fire_rate_mult": 0.05},  # Cosmic Talisman
+]
+
+# ── Crafting recipes for equipment pieces ──
+# Key = EquipPiece enum int, Value = Dictionary of {material_type: count}
+# Material types can be CollectibleType (common) or RareMaterial (rare).
+# We use a tagged dict: {"common": {type: count}, "rare": {type: count}}
+const EQUIP_CRAFT_RECIPES: Dictionary = {
+	# ── Head ──
+	EquipPiece.LEATHER_CAP: {"common": {CollectibleType.SPACE_GLOOP: 3}},
+	EquipPiece.PLASMA_HELM: {"common": {CollectibleType.FIREBALL_SCROLL: 2, CollectibleType.MAGNET_CORE: 2}},
+	EquipPiece.CRYSTAL_CROWN: {"common": {CollectibleType.SHIELD_CRYSTAL: 3}, "rare": {RareMaterial.PRISM_HEART: 1}},
+	EquipPiece.VOID_VISAGE: {"common": {CollectibleType.NEBULA_DUST: 3, CollectibleType.QUANTUM_FUZZ: 2}, "rare": {RareMaterial.VOID_CORE: 1}},
+	EquipPiece.ANCIENT_MASK: {"common": {CollectibleType.METEOR_SHARD: 2, CollectibleType.REGEN_CRYSTAL: 2}, "rare": {RareMaterial.RELIC_DUST: 2, RareMaterial.ECLIPSE_ESSENCE: 1}},
+	# ── Body ──
+	EquipPiece.LEATHER_VEST: {"common": {CollectibleType.SPACE_GLOOP: 4}},
+	EquipPiece.PLASMA_PLATE: {"common": {CollectibleType.FIREBALL_SCROLL: 3, CollectibleType.STAR_FRUIT: 2}},
+	EquipPiece.CRYSTAL_CARAPACE: {"common": {CollectibleType.SHIELD_CRYSTAL: 4}, "rare": {RareMaterial.PRISM_HEART: 1}},
+	EquipPiece.VOID_CLOAK: {"common": {CollectibleType.NEBULA_DUST: 4, CollectibleType.QUANTUM_FUZZ: 3}, "rare": {RareMaterial.VOID_CORE: 1}},
+	EquipPiece.ANCIENT_REGALIA: {"common": {CollectibleType.METEOR_SHARD: 3, CollectibleType.HEALTH_FRAGMENT: 2}, "rare": {RareMaterial.RELIC_DUST: 2, RareMaterial.VOID_CORE: 1}},
+	# ── Accessories ──
+	EquipPiece.BONE_RING: {"common": {CollectibleType.SPACE_GLOOP: 2, CollectibleType.STAR_FRUIT: 1}},
+	EquipPiece.PRISM_AMULET: {"common": {CollectibleType.SHIELD_CRYSTAL: 2, CollectibleType.STAR_FRUIT: 2}, "rare": {RareMaterial.PRISM_HEART: 1}},
+	EquipPiece.AURORA_PENDANT: {"common": {CollectibleType.STAR_FRUIT: 3}, "rare": {RareMaterial.AURORA_DUST: 2}},
+	EquipPiece.BLOOD_SIGIL: {"common": {CollectibleType.METEOR_SHARD: 2, CollectibleType.TOXIC_EXTRACT: 2}, "rare": {RareMaterial.BLOOD_CRYSTAL: 2}},
+	EquipPiece.COSMIC_TALISMAN: {"common": {CollectibleType.QUANTUM_FUZZ: 3, CollectibleType.NEBULA_DUST: 3}, "rare": {RareMaterial.VOID_CORE: 1, RareMaterial.AURORA_DUST: 1, RareMaterial.RELIC_DUST: 1}},
+}
+
+# ── Equipment sets ──
+# Wearing matching pieces of a set grants a set bonus. A set is defined by a
+# group of pieces (any 2 of them = 1-piece bonus, all 3 = full set bonus).
+# Set bonuses are stronger than individual piece bonuses, encouraging collection.
+enum EquipSet {
+	NONE,           # No set
+	PLASMA_SET,     # Plasma Helm + Plasma Plate + Blood Sigil
+	CRYSTAL_SET,    # Crystal Crown + Crystal Carapace + Prism Amulet
+	VOID_SET,       # Void Visage + Void Cloak + Cosmic Talisman
+	ANCIENT_SET,    # Ancient Mask + Ancient Regalia + Cosmic Talisman
+}
+const EQUIP_SET_NAMES: Array[String] = ["None", "Plasma", "Crystal", "Void", "Ancient"]
+const EQUIP_SET_COLORS: Array[Color] = [
+	Color(0.5, 0.5, 0.5),     # NONE
+	Color(1.0, 0.5, 0.2),     # PLASMA — orange
+	Color(0.35, 0.55, 1.0),   # CRYSTAL — blue
+	Color(0.4, 0.1, 0.7),     # VOID — purple
+	Color(1.0, 0.85, 0.3),    # ANCIENT — gold
+]
+# Which pieces belong to which set (for set-bonus detection)
+const EQUIP_SET_PIECES: Dictionary = {
+	EquipSet.PLASMA_SET: [EquipPiece.PLASMA_HELM, EquipPiece.PLASMA_PLATE, EquipPiece.BLOOD_SIGIL],
+	EquipSet.CRYSTAL_SET: [EquipPiece.CRYSTAL_CROWN, EquipPiece.CRYSTAL_CARAPACE, EquipPiece.PRISM_AMULET],
+	EquipSet.VOID_SET: [EquipPiece.VOID_VISAGE, EquipPiece.VOID_CLOAK, EquipPiece.COSMIC_TALISMAN],
+	EquipSet.ANCIENT_SET: [EquipPiece.ANCIENT_MASK, EquipPiece.ANCIENT_REGALIA, EquipPiece.COSMIC_TALISMAN],
+}
+# Set bonuses: 2-piece bonus (wear any 2 of the set) and 3-piece bonus (full set)
+# Stat keys match EQUIP_PIECE_STATS. The 3-piece bonus is ADDED on top of the 2-piece.
+const EQUIP_SET_BONUSES: Dictionary = {
+	EquipSet.PLASMA_SET: {
+		2: {"damage_mult": 0.10, "fire_rate_mult": 0.05},
+		3: {"damage_mult": 0.10, "fire_rate_mult": 0.05, "crit_chance": 0.05},
+	},
+	EquipSet.CRYSTAL_SET: {
+		2: {"damage_reduction": 0.08, "max_hp": 20},
+		3: {"damage_reduction": 0.05, "max_hp": 30, "crit_chance": 0.05},
+	},
+	EquipSet.VOID_SET: {
+		2: {"speed_mult": 0.10, "crit_chance": 0.05},
+		3: {"speed_mult": 0.05, "crit_chance": 0.05, "damage_mult": 0.08},
+	},
+	EquipSet.ANCIENT_SET: {
+		2: {"max_hp": 30, "damage_reduction": 0.05, "xp_mult": 0.10},
+		3: {"max_hp": 30, "damage_reduction": 0.05, "xp_mult": 0.10, "damage_mult": 0.10, "loot_mult": 0.10},
+	},
+}
+
+# ── Consumable items ──
+# Craftable single-use items that grant temporary effects. Stored in a
+# separate consumable inventory (not the material inventory).
+enum Consumable {
+	HEALTH_POTION,     # Restore 50 HP instantly
+	SPEED_POTION,      # +30% speed for 10s
+	SHIELD_POTION,     # +20% damage reduction for 10s
+	POWER_POTION,      # +25% damage for 10s
+	VOID_BOMB,         # AoE explosion dealing 80 damage in 8m radius
+}
+const CONSUMABLE_NAMES: Array[String] = [
+	"Health Potion", "Speed Potion", "Shield Potion", "Power Potion", "Void Bomb",
+]
+const CONSUMABLE_ICONS: Array[String] = ["🧪", "💨", "🛡", "💪", "💥"]
+const CONSUMABLE_COLORS: Array[Color] = [
+	Color(0.9, 0.2, 0.3),   # HEALTH — red
+	Color(0.3, 0.9, 1.0),   # SPEED — cyan
+	Color(0.3, 0.5, 1.0),   # SHIELD — blue
+	Color(1.0, 0.5, 0.2),   # POWER — orange
+	Color(0.5, 0.1, 0.8),   # VOID — purple
+]
+const CONSUMABLE_EFFECT_DURATION: Array[float] = [0.0, 10.0, 10.0, 10.0, 0.0]  # 0 = instant
+const CONSUMABLE_EFFECT_VALUE: Array[float] = [50.0, 0.30, 0.20, 0.25, 80.0]   # magnitude
+const CONSUMABLE_AOE_RADIUS: float = 8.0  # For Void Bomb
+# Consumable crafting recipes (use common + rare materials)
+const CONSUMABLE_CRAFT_RECIPES: Dictionary = {
+	Consumable.HEALTH_POTION: {"common": {CollectibleType.REGEN_CRYSTAL: 1, CollectibleType.HEALTH_FRAGMENT: 1}},
+	Consumable.SPEED_POTION: {"common": {CollectibleType.STAR_FRUIT: 2, CollectibleType.SPACE_GLOOP: 1}},
+	Consumable.SHIELD_POTION: {"common": {CollectibleType.SHIELD_CRYSTAL: 2}},
+	Consumable.POWER_POTION: {"common": {CollectibleType.FIREBALL_SCROLL: 2, CollectibleType.METEOR_SHARD: 1}},
+	Consumable.VOID_BOMB: {"common": {CollectibleType.NEBULA_DUST: 2, CollectibleType.MAGNET_CORE: 1}, "rare": {RareMaterial.VOID_CORE: 1}},
+}
+# Consumable hotkeys: use consumables with number keys 1-5
+const CONSUMABLE_HOTKEYS: Array[int] = [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5]
+# Max stack size per consumable type
+const CONSUMABLE_MAX_STACK: int = 10
+
+# ── Equipment upgrade system ──
+# Spend materials to upgrade an equipped piece to +1, +2, +3 (max).
+# Each upgrade level adds +20% to all of the piece's stat bonuses.
+const EQUIP_MAX_UPGRADE_LEVEL: int = 3
+const EQUIP_UPGRADE_MULT_PER_LEVEL: float = 0.20  # +20% per level
+# Upgrade cost: base cost scales with upgrade level. Uses common materials.
+# Cost = {material_type: count} — the material type is the piece's "theme" material.
+const EQUIP_UPGRADE_BASE_COST: int = 2  # Base material count for +1
+const EQUIP_UPGRADE_COST_SCALE: float = 1.5  # Each level costs 1.5x the previous
 const FAST_TRAVEL_MENU_KEY: String = "fast_travel"   # Input action name

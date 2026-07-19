@@ -507,6 +507,9 @@ func _hit_enemy(enemy: Node3D) -> void:
 	# ── Phase 25: Progression System crit chance bonus (Combat branch) ──
 	if ProgressionSystem:
 		crit_chance += ProgressionSystem.get_crit_chance_bonus()
+	# ── Phase 29: Equipment crit chance bonus (armor/accessory + set bonuses) ──
+	if EquipmentSystem:
+		crit_chance += EquipmentSystem.get_crit_chance_bonus()
 	var is_crit := randf() < crit_chance
 	if is_crit:
 		# Crit chain bonus
