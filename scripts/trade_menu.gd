@@ -135,7 +135,15 @@ func _draw() -> void:
 	if not font:
 		return
 
-	var a: float = _fade_alpha
+	# Ease the fade alpha for a smoother feel — linear move_toward feels
+	# mechanical. ease_out_cubic on open, ease_in_cubic on close, matching
+	# the quest_log and the tween-based easing used by Button-based menus.
+	var eased: float
+	if _is_open:
+		eased = 1.0 - pow(1.0 - _fade_alpha, 3.0)  # ease_out_cubic
+	else:
+		eased = _fade_alpha * _fade_alpha * _fade_alpha  # ease_in_cubic
+	var a: float = eased
 	var panel_x: float = 340.0
 	var panel_y: float = 120.0
 	var panel_w: float = 600.0

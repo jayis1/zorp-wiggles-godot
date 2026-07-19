@@ -86,7 +86,15 @@ func _draw() -> void:
 	var font := get_theme_default_font()
 	if not font:
 		return
-	var a: float = _fade_alpha
+	# Ease the fade alpha for a smoother feel — linear move_toward feels
+	# mechanical. ease_out_cubic on open, ease_in_cubic on close, matching
+	# the quest_log/trade_menu and the tween-based easing used by Button menus.
+	var eased: float
+	if _is_open:
+		eased = 1.0 - pow(1.0 - _fade_alpha, 3.0)  # ease_out_cubic
+	else:
+		eased = _fade_alpha * _fade_alpha * _fade_alpha  # ease_in_cubic
+	var a: float = eased
 	var panel_x: float = 440.0
 	var panel_y: float = 120.0
 	var panel_w: float = 400.0
