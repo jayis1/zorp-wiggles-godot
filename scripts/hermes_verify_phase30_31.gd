@@ -1,6 +1,19 @@
 ## Hermes ad-hoc verification script for Phase 30/31 QoL features.
 ## Tests: FPS counter, minimap zoom, dynamic music intensity.
 ## TEMPORARY autoload — runs checks when the project loads, then quits.
+##
+## ⚠️  WARNING: This script calls get_tree().quit() in _ready(). If registered
+##    as an autoload in project.godot, it will immediately exit the game on
+##    every launch, making the game unplayable. Only register it as an autoload
+##    when running headless verification:
+##      1. Add `HermesVerify="*res://scripts/hermes_verify_phase30_31.gd"` to
+##         the [autoload] section of project.godot.
+##      2. Run: `godot --headless --quit-after 10`
+##      3. REMOVE the autoload line from project.godot before committing.
+##
+## Safety guard: if the game is NOT running in headless mode (i.e. a real
+## display is attached), this script does nothing and warns instead — so an
+## accidental autoload registration won't kill a real game session.
 
 extends Node
 
@@ -9,6 +22,12 @@ var _failed: int = 0
 var _failures: Array[String] = []
 
 func _ready() -> void:
+	# Safety guard: only run verification in headless mode. If a display is
+	# attached (normal game launch), bail out with a warning so an accidental
+	# autoload registration doesn't quit the player's game session.
+	if DisplayServer.get_name() != "headless":
+		push_warning("HermesVerify autoload is registered in project.godot but the game is not running headless — skipping verification to avoid quitting the game. Remove the HermesVerify autoload from project.godot for normal play.")
+		return
 	# Run checks immediately (no await — headless mode may not process frames
 	# without a running main scene, which would hang on await).
 	_run_checks()

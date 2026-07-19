@@ -167,4 +167,8 @@ FastTravelNetwork="*res://scripts/fast_travel_network.gd"
 WanderingMerchantSpawner="*res://scripts/wandering_merchant_spawner.gd"
 PetStoneInventory="*res://scripts/pet_stone_inventory.gd"
 EquipmentSystem="*res://scripts/equipment_system.gd"
-HermesVerify="*res://scripts/hermes_verify_phase30_31.gd"
+# HermesVerify autoload REMOVED — it was a temporary ad-hoc verification script
+# that calls get_tree().quit() in _ready(), which immediately exits the game on
+# every launch. This made the game unplayable. To run verification, temporarily
+# add it back as an autoload and run `godot --headless --quit-after 10`, then
+# remove it again before committing. The script file is kept for that purpose.
