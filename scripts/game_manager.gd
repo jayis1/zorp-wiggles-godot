@@ -300,6 +300,12 @@ func _start_game() -> void:
 	# ── Phase 25: Game Mode Manager — reset mode-specific run state ──
 	if GameModeManager:
 		GameModeManager.start_run()
+	# ── Phase 32: Replay system — start recording a new replay ──
+	if ReplaySystem:
+		ReplaySystem.start_recording(world_seed)
+	# ── Phase 32: Ghost mode — try to spawn a ghost for this run ──
+	if GhostMode:
+		GhostMode.try_start_ghost()
 	hp_changed.emit(player_hp, player_max_hp)
 	xp_changed.emit(player_xp, player_xp_to_next)
 
@@ -463,6 +469,16 @@ func _die() -> void:
 	if ProgressionSystem and not player_is_downed:
 		if ProgressionSystem.try_auto_revive():
 			return  # Auto-revived — don't proceed to death
+	# ── Phase 32: PvP — death triggers a round end, not the normal death flow ──
+	if PvpArena and PvpArena.is_pvp_active():
+		PvpArena.register_pvp_death(true)  # P1 died → P2 wins the round
+		# Don't emit player_died or show the death screen — the PvP system
+		# handles respawning for the next round. Restore HP so the player
+		# can continue (the PvP manager will reset positions for the next round).
+		player_hp = player_max_hp
+		hp_changed.emit(player_hp, player_max_hp)
+		player_invuln_timer = 2.0  # Brief invuln after round loss
+		return
 	# ── Phase 19: Co-op — P1 goes down instead of dying if P2 is active ──
 	if CoOpManager.p2_active and not player_is_downed:
 		player_is_downed = true

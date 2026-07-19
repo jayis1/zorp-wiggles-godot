@@ -38,6 +38,7 @@ const REBINDABLE_ACTIONS: Array[String] = [
 	"toggle_auto_fire",
 	"fps_counter", "ping", "cycle_color_filter", "cycle_colorblind",
 	"photo_mode", "cycle_skin", "cycle_character",
+	"leaderboards", "replay_browser", "toggle_ghost",
 ]
 
 # Friendly display names for each action (shown in the rebind UI).
@@ -71,6 +72,9 @@ const ACTION_DISPLAY_NAMES: Dictionary = {
 	"photo_mode": "Photo Mode",
 	"cycle_skin": "Cycle Skin",
 	"cycle_character": "Cycle Character",
+	"leaderboards": "Leaderboards",
+	"replay_browser": "Replay Browser",
+	"toggle_ghost": "Toggle Ghost Mode",
 }
 
 # Human-readable key name for display. Handles special keys nicely.

@@ -367,6 +367,30 @@ func _ready() -> void:
 	pm_node.name = "PhotoMode"
 	add_child(pm_node)
 
+	# ── Phase 32: Leaderboards Page (F12) ──
+	var lb_script := load("res://scripts/leaderboards_page.gd")
+	var lb_ctrl := Control.new()
+	lb_ctrl.set_script(lb_script)
+	lb_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lb_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(lb_ctrl)
+
+	# ── Phase 32: Replay Browser (F11) ──
+	var rb_script := load("res://scripts/replay_browser.gd")
+	var rb_ctrl := Control.new()
+	rb_ctrl.set_script(rb_script)
+	rb_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rb_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(rb_ctrl)
+
+	# ── Phase 32: PvP Arena HUD ──
+	var pvp_script := load("res://scripts/pvp_hud.gd")
+	var pvp_ctrl := Control.new()
+	pvp_ctrl.set_script(pvp_script)
+	pvp_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pvp_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(pvp_ctrl)
+
 	# ── Phase 30/31: Register HUD with AccessibilityManager for UI scaling ──
 	# AccessibilityManager scales the fixed-offset HUD children (HP bar, minimap,
 	# labels) based on the persisted ui_scale setting. Full-rect menus are skipped.

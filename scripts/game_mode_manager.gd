@@ -41,21 +41,24 @@ enum Mode {
 	ENDLESS,     # Wave-based escalation, pure combat
 	BOSS_RUSH,   # Fight all bosses back-to-back, timer
 	SPEEDRUN,    # Open-world with timer + biome splits
+	PVP,         # Phase 32: Local 1v1 PvP arena
 }
 
-const MODE_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun"]
-const MODE_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱"]
+const MODE_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun", "PvP"]
+const MODE_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱", "⚔"]
 const MODE_DESCRIPTIONS: Array[String] = [
 	"Default open-world adventure. Explore 19 biomes, complete missions, find loot, fight bosses, raise a pet.",
 	"Wave-based survival escalation. No exploration goals — pure combat. Each wave amps difficulty. How long can you last?",
 	"Fight every boss type back-to-back with no healing between except a top-up after each kill. Timer runs. Beat them all!",
 	"Open-world run with a visible timer. Each new biome records a split time. Set a personal best for total run time.",
+	"Local 1v1 PvP arena. Zorp vs Zerp — first to win the majority of rounds wins the match. Best of 3 or 5.",
 ]
 const MODE_COLORS: Array[Color] = [
 	Color(0.5, 0.9, 0.6),   # Normal — green
 	Color(1.0, 0.6, 0.2),   # Endless — orange
 	Color(1.0, 0.25, 0.25), # Boss Rush — red
 	Color(0.4, 0.8, 1.0),   # Speedrun — cyan
+	Color(0.9, 0.4, 0.8),   # PvP — magenta
 ]
 
 # ─── Endless Mode Tuning ──────────────────────────────────────────────────────
@@ -189,6 +192,9 @@ func is_boss_rush() -> bool:
 func is_speedrun() -> bool:
 	return _current_mode == Mode.SPEEDRUN
 
+func is_pvp() -> bool:
+	return _current_mode == Mode.PVP
+
 # Endless Mode: wave-based difficulty multipliers (on top of time-based tier)
 func get_endless_wave() -> int:
 	return _wave
@@ -291,6 +297,13 @@ func start_run() -> void:
 		boss_rush_boss_index.emit(_boss_rush_index, BOSS_RUSH_QUEUE.size())
 	elif is_speedrun():
 		GameManager.add_message("⏱ Speedrun! Visit %d unique biomes as fast as possible!" % SPEEDRUN_SPLIT_BIOME_COUNT)
+	elif is_pvp():
+		# Phase 32: Start a PvP match — force P2 to join and begin the match
+		if CoOpManager and not CoOpManager.p2_active:
+			CoOpManager.drop_in_p2()
+		if PvpArena:
+			PvpArena.start_pvp_match(3)  # Best of 3 by default
+		GameManager.add_message("⚔ PvP Arena! Zorp vs Zerp — first to 2 round wins!")
 
 # ─── Per-Frame Update ─────────────────────────────────────────────────────────
 # Called by GameManager._process() (so it pauses with the game).

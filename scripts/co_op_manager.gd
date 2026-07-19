@@ -333,6 +333,13 @@ func p2_take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.3)
 	if p2_hp <= 0:
+		# ── Phase 32: PvP — P2 death triggers a round end ──
+		if PvpArena and PvpArena.is_pvp_active():
+			PvpArena.register_pvp_death(false)  # P2 died → P1 wins the round
+			# Restore P2 HP for the next round instead of downing
+			p2_hp = p2_max_hp
+			p2_hp_changed.emit(p2_hp, p2_max_hp)
+			return
 		p2_enter_downed()
 
 func p2_heal(amount: int) -> void:

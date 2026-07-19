@@ -127,6 +127,9 @@ func _process(delta: float) -> void:
 	# GameModeManager drives sequential boss spawns instead. ──
 	if GameModeManager and GameModeManager.is_boss_rush():
 		return
+	# ── Phase 32: PvP mode — no enemies, just the two players ──
+	if GameModeManager and GameModeManager.is_pvp():
+		return
 
 	# Update pending spawns (spawn warnings)
 	_update_pending_spawns(delta)

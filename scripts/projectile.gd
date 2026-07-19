@@ -405,6 +405,24 @@ func _on_body_entered(body: Node3D) -> void:
 	# enemy, letting a single non-piercing bolt hit multiple targets.
 	if _is_consumed:
 		return
+	# ── Phase 32: PvP — projectiles can hit the other player ──
+	if PvpArena and PvpArena.is_pvp_active():
+		var hit_p1: bool = body.is_in_group("player") and has_meta("is_p2_projectile")
+		var hit_p2: bool = body == CoOpManager.p2_node if (CoOpManager and CoOpManager.p2_node) else false
+		if hit_p2 and not has_meta("is_p2_projectile"):
+			# P1's projectile hit P2
+			PvpArena.register_pvp_hit(false, damage)  # P1 attacked
+			_impact_effect()
+			_is_consumed = true
+			queue_free()
+			return
+		if hit_p1:
+			# P2's projectile hit P1
+			PvpArena.register_pvp_hit(true, damage)  # P2 attacked
+			_impact_effect()
+			_is_consumed = true
+			queue_free()
+			return
 	# Check if it's an enemy
 	if body.is_in_group("enemies"):
 		# Don't hit the same enemy twice (for piercing/chain)

@@ -1036,6 +1036,9 @@ func get_character_dash_speed_mult() -> float:
 func _record_death_replay() -> void:
 	if DeathReplay and not DeathReplay.is_playing():
 		DeathReplay.record_frame(self)
+	# ── Phase 32: Replay system — record full-run replay for ghost mode ──
+	if ReplaySystem and ReplaySystem.is_recording():
+		ReplaySystem.record_frame(self)
 
 # ── Phase 30: Intro cinematic control suppression ──
 # Returns true if the intro cinematic is active and player input should be
@@ -1341,6 +1344,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		if CosmeticManager:
 			var new_skin: int = CosmeticManager.cycle_skin()
 			GameManager.add_message("🎨 Skin: %s" % GameConstants.SKIN_NAMES[new_skin])
+		get_viewport().set_input_as_handled()
+
+	# ── Phase 32: Toggle ghost mode (Shift+G) ──
+	if event.is_action_pressed("toggle_ghost") and not GameManager.is_paused:
+		if GhostMode:
+			var enabled: bool = GhostMode.toggle_ghost()
+			GameManager.add_message("👻 Ghost mode: %s" % ("ON" if enabled else "OFF"))
+			if enabled:
+				GhostMode.try_start_ghost()
 		get_viewport().set_input_as_handled()
 
 func _apply_camera_rotation() -> void:
