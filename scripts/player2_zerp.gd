@@ -143,6 +143,18 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0
 	move_and_slide()
 
+	# ── Phase 35: World border clamp (same as P1) ──
+	var border: float = GameConstants.WORLD_EXTENT - 2.0
+	var pos: Vector3 = global_position
+	if abs(pos.x) > border or abs(pos.z) > border:
+		global_position = Vector3(
+			clampf(pos.x, -border, border),
+			pos.y,
+			clampf(pos.z, -border, border)
+		)
+		velocity.x = 0.0
+		velocity.z = 0.0
+
 func _get_camera() -> Camera3D:
 	if _cached_camera and is_instance_valid(_cached_camera):
 		return _cached_camera

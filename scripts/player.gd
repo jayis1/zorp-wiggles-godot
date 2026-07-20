@@ -468,6 +468,22 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	# ── Phase 35: World border clamp — prevent the player from walking off the
+	#    edge of the procedural terrain into the void. The world is WORLD_EXTENT
+	#    units across (centered at origin), so we clamp to ±(WORLD_EXTENT - 2)
+	#    to keep the player on solid ground with a small margin. ──
+	var border: float = GameConstants.WORLD_EXTENT - 2.0
+	var pos: Vector3 = global_position
+	if abs(pos.x) > border or abs(pos.z) > border:
+		global_position = Vector3(
+			clampf(pos.x, -border, border),
+			pos.y,
+			clampf(pos.z, -border, border)
+		)
+		# Zero out horizontal velocity so we don't ram the border every frame
+		velocity.x = 0.0
+		velocity.z = 0.0
+
 # ── Idle breathing animation — a subtle vertical bob + emission pulse so Zorp
 #    feels alive even when standing still. Skipped during dash (the dash tween
 #    controls mesh.scale during squash-and-stretch) and when invuln-blinking

@@ -252,8 +252,3 @@ EndgameManager="*res://scripts/endgame_manager.gd"
 PetAccessorySystem="*res://scripts/pet_accessory_system.gd"
 PetTrainingSystem="*res://scripts/pet_training_system.gd"
 PetFusionSystem="*res://scripts/pet_fusion_system.gd"
-# HermesVerify autoload REMOVED — it was a temporary ad-hoc verification script
-# that calls get_tree().quit() in _ready(), which immediately exits the game on
-# every launch. This made the game unplayable. To run verification, temporarily
-# add it back as an autoload and run `godot --headless --quit-after 10`, then
-# remove it again before committing. The script file is kept for that purpose.

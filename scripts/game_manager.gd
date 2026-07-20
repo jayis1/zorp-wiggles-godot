@@ -596,6 +596,11 @@ func _die() -> void:
 	print("[ZorpWiggles] Zorp died! Score: %d, Kills: %d, Best Combo: %d" % [player_score, player_kills, player_best_combo])
 
 func restart_game() -> void:
+	# ── Phase 35: Safety reset — ensure Engine.time_scale is always 1.0 ──
+	# If a hit-stop, death replay, or co-op mega-pulse was interrupted by this
+	# restart, Engine.time_scale could be stuck at a non-1.0 value, making the
+	# new run play in slow-motion or fast-forward. Force it back to normal.
+	Engine.time_scale = 1.0
 	# Clear enemies, collectibles, projectiles
 	for enemy in enemies:
 		if is_instance_valid(enemy):

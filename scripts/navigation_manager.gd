@@ -64,6 +64,12 @@ func build_nav_region(world: Node) -> void:
 	# will parse all of the world's children (terrain, decorations, destructibles,
 	# monoliths, portals, etc.) for static colliders to bake the nav mesh around.
 	_nav_region.bake_navigation_mesh(false)  # on_thread = false for immediate result
+	# ── Phase 35: Godot 4.5 compatibility note ──
+	# In Godot 4.5+, NavigationServer regions update asynchronously by default.
+	# Our explicit `on_thread = false` ensures synchronous baking here. Subsequent
+	# nav region updates (e.g. after arena construction/removal) may have a slight
+	# async delay in 4.5+, but this is acceptable — enemies pathfind around the
+	# delay using their existing velocity + separation steering.
 	_is_baked = true
 	print("[NavigationManager] Nav mesh baked for world: %s" % world.name)
 

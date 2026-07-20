@@ -718,7 +718,7 @@ func _on_score_changed(new_score: int) -> void:
 
 func _on_player_died() -> void:
 	show_message("Zorp has fallen!", 5.0)
-	# TODO: Show death screen with stats
+	# Death screen is handled by DeathScreen node (death_screen.gd)
 
 func _on_game_restarted() -> void:
 	_update_all_displays()
