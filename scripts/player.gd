@@ -1438,6 +1438,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			ProceduralBossGenerator.generate_boss(GameManager.player_level)
 		get_viewport().set_input_as_handled()
 
+	# ── Phase 27: Pet Fusion (Shift+F) — bank current pet or execute fusion ──
+	# Pressing Shift+F banks the current Adult pet as a donor. When two donors
+	# are banked and a PRISM_HEART is available, Shift+F executes the fusion.
+	if event.is_action_pressed("pet_fusion") and not GameManager.is_paused and GameManager.player_is_alive:
+		if PetFusionSystem:
+			if PetFusionSystem.get_donor_count() >= 2 and PetFusionSystem.can_fuse():
+				PetFusionSystem.try_fuse()
+			else:
+				PetFusionSystem.bank_current_pet()
+		get_viewport().set_input_as_handled()
+
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig:

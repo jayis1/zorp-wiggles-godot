@@ -87,6 +87,16 @@ func remove_rare_materials(types: Dictionary) -> bool:
 	rare_material_changed.emit()
 	return true
 
+## Consume a single rare material type (convenience wrapper). Returns true on success.
+func consume_rare_material(type: int, amount: int = 1) -> bool:
+	if _rare_materials.get(type, 0) < amount:
+		return false
+	_rare_materials[type] -= amount
+	if _rare_materials[type] <= 0:
+		_rare_materials.erase(type)
+	rare_material_changed.emit()
+	return true
+
 # ─── Public API: Consumables ──────────────────────────────────────────────────
 
 ## How many of a given consumable the player currently holds.

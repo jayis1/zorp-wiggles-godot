@@ -192,6 +192,18 @@ spawn_procedural_boss={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":true,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":80,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
 }
+pet_accessories={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":4194337,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
+pet_training={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":true,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":84,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
+pet_fusion={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":true,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":70,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
 
 [autoload]
 
@@ -237,6 +249,9 @@ ProceduralBiomeGenerator="*res://scripts/procedural_biome_generator.gd"
 ProceduralMusicGenerator="*res://scripts/procedural_music.gd"
 ProceduralBossGenerator="*res://scripts/procedural_boss_generator.gd"
 EndgameManager="*res://scripts/endgame_manager.gd"
+PetAccessorySystem="*res://scripts/pet_accessory_system.gd"
+PetTrainingSystem="*res://scripts/pet_training_system.gd"
+PetFusionSystem="*res://scripts/pet_fusion_system.gd"
 # HermesVerify autoload REMOVED — it was a temporary ad-hoc verification script
 # that calls get_tree().quit() in _ready(), which immediately exits the game on
 # every launch. This made the game unplayable. To run verification, temporarily

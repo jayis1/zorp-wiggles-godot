@@ -130,6 +130,9 @@ func _process(delta: float) -> void:
 	# ── Phase 33: Procedural Quest System — per-frame quest progress ──
 	if ProceduralQuestSystem:
 		ProceduralQuestSystem.update(delta)
+	# ── Phase 27: Pet Training System — per-frame mini-game updates ──
+	if PetTrainingSystem:
+		PetTrainingSystem.update(delta)
 
 func _check_difficulty_tier_change() -> void:
 	var current_tier: int = get_time_difficulty_tier()
@@ -491,6 +494,13 @@ func gain_xp(amount: int) -> void:
 		actual_amount = int(actual_amount * (1.0 + EquipmentSystem.get_xp_mult_bonus()))
 	# ── Phase 7: Monolith XP buff (Wisdom Aura) ──
 	actual_amount = int(actual_amount * get_xp_buff_mult())
+	# ── Phase 27: Pet Accessory Charm Bow XP bonus (only while pet is alive) ──
+	if PetAccessorySystem:
+		var pet_xp_mult: float = PetAccessorySystem.get_stat_bonus("player_xp_mult")
+		if pet_xp_mult > 0.0:
+			var pet: Node3D = get_tree().get_first_node_in_group("companion_pet")
+			if pet and is_instance_valid(pet) and not (pet.get("is_dead") if "is_dead" in pet else false):
+				actual_amount = int(actual_amount * (1.0 + pet_xp_mult))
 	player_xp += actual_amount
 	while player_xp >= player_xp_to_next:
 		player_xp -= player_xp_to_next

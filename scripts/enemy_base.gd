@@ -857,6 +857,13 @@ func _drop_crafting_material() -> void:
 	# multipliers so all bonuses compound.
 	if EnemyVariantSystem and EnemyVariantSystem.is_variant(self):
 		drop_chance = minf(1.0, drop_chance * EnemyVariantSystem.get_variant_loot_mult(self))
+	# ── Phase 27: Pet Accessory Lucky Bow loot bonus (only while pet is alive) ──
+	if PetAccessorySystem:
+		var pet_loot_mult: float = PetAccessorySystem.get_stat_bonus("player_loot_mult")
+		if pet_loot_mult > 0.0:
+			var pet: Node3D = get_tree().get_first_node_in_group("companion_pet")
+			if pet and is_instance_valid(pet) and not (pet.get("is_dead") if "is_dead" in pet else false):
+				drop_chance = minf(1.0, drop_chance * (1.0 + pet_loot_mult))
 	if randf() > drop_chance:
 		return
 	# Pick a crafting material via the weighted loot table.

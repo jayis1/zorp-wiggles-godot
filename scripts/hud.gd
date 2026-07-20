@@ -395,6 +395,22 @@ func _ready() -> void:
 	pvp_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(pvp_ctrl)
 
+	# ── Phase 27: Pet Accessory Menu UI (F6) ──
+	var pam_script := load("res://scripts/pet_accessory_menu.gd")
+	var pam_ctrl := Control.new()
+	pam_ctrl.set_script(pam_script)
+	pam_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pam_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(pam_ctrl)
+
+	# ── Phase 27: Pet Training Menu UI (Shift+T) ──
+	var ptm_script := load("res://scripts/pet_training_menu.gd")
+	var ptm_ctrl := Control.new()
+	ptm_ctrl.set_script(ptm_script)
+	ptm_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ptm_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(ptm_ctrl)
+
 	# ── Phase 30/31: Register HUD with AccessibilityManager for UI scaling ──
 	# AccessibilityManager scales the fixed-offset HUD children (HP bar, minimap,
 	# labels) based on the persisted ui_scale setting. Full-rect menus are skipped.

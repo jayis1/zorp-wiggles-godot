@@ -1320,6 +1320,189 @@ const PET_EMOTE_DURATION: float = 1.6          # How long an emote stays visible
 const PET_EMOTE_COOLDOWN: float = 3.0          # Min time between emotes
 const PET_EMOTE_SCALE_POP: float = 1.4        # Pop-in scale
 
+# ─── Phase 27: Pet Accessories ────────────────────────────────────────────────
+# Equippable cosmetic+stat accessories for the companion pet. Each accessory
+# grants a small passive bonus and a visible mesh addition on the pet model.
+# Accessories are crafted from common materials (no rare materials needed) so
+# they're accessible early — they're meant to deepen the pet bond, not gate
+# endgame power. Only one accessory per slot can be equipped at a time.
+enum PetAccessory {
+	NONE,               # 0 — no accessory
+	COLLAR_SPEED,       # 1 — +20% pet follow/attack speed
+	COLLAR_HP,          # 2 — +30% pet max HP
+	WINGS_GLIDER,       # 3 — pet floats higher, +2m collect radius
+	WINGS_HOVER,        # 4 — pet collects while dashing (doesn't stop)
+	ARMOR_PLATED,       # 5 — pet takes 25% less damage
+	ARMOR_SPIKED,       # 6 — melee attackers take 6 reflect damage
+	BOW_LUCK,           # 7 — +15% loot chance while pet is alive
+	BOW_CHARM,          # 8 — +10% XP gain while pet is alive
+	CROWN_REGAL,        # 9 — +1 pet attack damage, +0.5m attack range
+	CROWN_ADEPT,        # 10 — pet attacks 20% faster (cooldown ×0.8)
+}
+const PET_ACCESSORY_COUNT: int = 11  # 0..10 inclusive
+
+const PET_ACCESSORY_NAMES: Array[String] = [
+	"None", "Swift Collar", "Vital Collar", "Glider Wings", "Hover Wings",
+	"Plated Armor", "Spiked Armor", "Lucky Bow", "Charm Bow",
+	"Regal Crown", "Adept Crown",
+]
+const PET_ACCESSORY_ICONS: Array[String] = [
+	"", "⛓", "❤", "🪽", "🪽", "🛡", "🛡", "🎀", "🎀", "👑", "👑",
+]
+const PET_ACCESSORY_DESCS: Array[String] = [
+	"No accessory equipped.",
+	"+20% pet movement and attack speed.",
+	"+30% pet max HP.",
+	"Pet floats higher, +2m collect radius.",
+	"Pet continues collecting while Zorp dashes.",
+	"Pet takes 25% less damage.",
+	"Melee attackers take 6 reflect damage.",
+	"+15% loot chance while pet is alive.",
+	"+10% XP gain while pet is alive.",
+	"+1 pet attack damage, +0.5m attack range.",
+	"Pet attacks 20% faster (cooldown ×0.8).",
+]
+# Accessory slot: 0=collar, 1=wings, 2=armor, 3=bow, 4=crown
+const PET_ACCESSORY_SLOT: Array[int] = [
+	-1, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4,
+]
+const PET_ACCESSORY_SLOT_NAMES: Array[String] = ["Collar", "Wings", "Armor", "Bow", "Crown"]
+const PET_ACCESSORY_SLOT_COUNT: int = 5
+# Visual mesh kind for each accessory (used by companion_pet.gd to build visuals)
+# 0=none, 1=collar(torus), 2=wings(box pair), 3=armor(cylinder shell), 4=bow(box), 5=crown(cone)
+const PET_ACCESSORY_VISUAL: Array[int] = [
+	0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5,
+]
+# Craft cost in common crafting-material types (CollectibleType). Empty = not craftable.
+# These are intentionally cheap — 2 common materials each — so they're accessible early.
+const PET_ACCESSORY_CRAFT_COST: Array = [
+	[],  # NONE
+	[GameConstants.CollectibleType.SPACE_GLOOP, GameConstants.CollectibleType.SPACE_GLOOP],  # Swift Collar
+	[GameConstants.CollectibleType.STAR_FRUIT, GameConstants.CollectibleType.SPACE_GLOOP],  # Vital Collar
+	[GameConstants.CollectibleType.NEBULA_DUST, GameConstants.CollectibleType.SPACE_GLOOP],  # Glider Wings
+	[GameConstants.CollectibleType.QUANTUM_FUZZ, GameConstants.CollectibleType.SPACE_GLOOP],  # Hover Wings
+	[GameConstants.CollectibleType.SHIELD_CRYSTAL, GameConstants.CollectibleType.SPACE_GLOOP],  # Plated Armor
+	[GameConstants.CollectibleType.METEOR_SHARD, GameConstants.CollectibleType.SPACE_GLOOP],  # Spiked Armor
+	[GameConstants.CollectibleType.MAGNET_CORE, GameConstants.CollectibleType.SPACE_GLOOP],  # Lucky Bow
+	[GameConstants.CollectibleType.REGEN_CRYSTAL, GameConstants.CollectibleType.SPACE_GLOOP],  # Charm Bow
+	[GameConstants.CollectibleType.FIREBALL_SCROLL, GameConstants.CollectibleType.STAR_FRUIT],  # Regal Crown
+	[GameConstants.CollectibleType.TOXIC_EXTRACT, GameConstants.CollectibleType.QUANTUM_FUZZ],  # Adept Crown
+]
+const PET_ACCESSORY_SPIKE_REFLECT_DAMAGE: int = 6
+
+# ─── Phase 27: Pet Training Mini-Games ────────────────────────────────────────
+# Three short mini-games the player can initiate when the pet is summoned.
+# Each grants Training Points (TP) that permanently boost pet stats for the
+# current run. TP persists across pet death/respawn within the same run but
+# resets on game restart (single-run progression).
+#   DASH_COURSE  — Dash through 5 waypoints in order before time runs out.
+#   TARGET_DODGE — Survive 15s while 6 stationary "target dummies" shoot slow bolts.
+#   FETCH_FRENZY — Collect 8 dropped items within 20s (pet auto-collects, player guides).
+# Each game awards 1-3 TP based on performance. TP spent on stats via the
+# PetTrainingMenu (Shift+T). Max 15 TP per run.
+enum PetTrainingGame {
+	DASH_COURSE,    # 0
+	TARGET_DODGE,   # 1
+	FETCH_FRENZY,   # 2
+}
+const PET_TRAINING_GAME_NAMES: Array[String] = ["Dash Course", "Target Dodge", "Fetch Frenzy"]
+const PET_TRAINING_GAME_DESCS: Array[String] = [
+	"Dash through 5 glowing waypoints in order before the timer runs out.",
+	"Survive 15 seconds while target dummies fire slow bolts at Zorp.",
+	"Guide your pet to collect 8 dropped items within 20 seconds.",
+]
+const PET_TRAINING_TIME_LIMITS: Array[float] = [20.0, 15.0, 20.0]
+const PET_TRAINING_TP_PER_GAME: Array[int] = [3, 2, 3]  # Max TP awarded per game (full completion)
+const PET_TRAINING_MAX_TP_PER_RUN: int = 15
+# Stat boost costs (in TP). Each point bought gives the listed bonus.
+const PET_TRAINING_STAT_NAMES: Array[String] = ["Attack Power", "Max HP", "Move Speed", "Collect Radius"]
+const PET_TRAINING_STAT_COSTS: Array[int] = [2, 2, 1, 1]  # TP per point
+const PET_TRAINING_STAT_BONUSES: Array[float] = [
+	2.0,  # +2 attack damage per point
+	10.0, # +10 max HP per point
+	1.5,  # +1.5 move speed per point
+	1.0,  # +1.0m collect radius per point
+]
+const PET_TRAINING_MAX_POINTS_PER_STAT: int = 5
+const PET_TRAINING_WAYPOINT_COUNT: int = 5
+const PET_TRAINING_WAYPOINT_RADIUS: float = 3.0   # Touch radius for waypoints
+const PET_TRAINING_DUMMY_COUNT: int = 6
+const PET_TRAINING_DUMMY_BOLT_SPEED: float = 8.0
+const PET_TRAINING_DUMMY_BOLT_DAMAGE: int = 4
+const PET_TRAINING_DUMMY_FIRE_INTERVAL: float = 1.8
+const PET_TRAINING_FETCH_ITEM_COUNT: int = 8
+
+# ─── Phase 27: Pet Fusion ─────────────────────────────────────────────────────
+# Fuse two Adult-stage pets of DIFFERENT elemental paths to create a unique
+# Fusion Pet that combines both paths' abilities at a boosted level. The fusion
+# pet is permanent for the run and replaces both donors (donors are dismissed).
+# Only one fusion pet can exist per run. Requires 1 PRISM_HEART rare material.
+enum PetFusionType {
+	NONE,               # 0
+	FIRE_ICE,           # 1 — "Steam Avatar" — burns + slows, steam AoE
+	FIRE_ELECTRIC,      # 2 — "Plasma Storm" — fireball + chain zap
+	FIRE_VOID,          # 3 — "Eclipse Lord" — void bolt + ember aura
+	FIRE_NATURE,        # 4 — "Bloomflare" — regen + fireball
+	ICE_ELECTRIC,       # 5 — "Blizzard Coil" — frost aura + chain zap
+	ICE_VOID,           # 6 — "Frost Abyss" — ice slow + void absorb
+	ICE_NATURE,         # 7 — "Verdant Frost" — regen + frost aura
+	ELECTRIC_VOID,      # 8 — "Storm Rift" — chain zap + void absorb
+	ELECTRIC_NATURE,    # 9 — "Wild Surge" — regen + chain zap
+	VOID_NATURE,        # 10 — "Null Bloom" — regen + void absorb
+}
+const PET_FUSION_NAMES: Array[String] = [
+	"None", "Steam Avatar", "Plasma Storm", "Eclipse Lord", "Bloomflare",
+	"Blizzard Coil", "Frost Abyss", "Verdant Frost", "Storm Rift",
+	"Wild Surge", "Null Bloom",
+]
+const PET_FUSION_COLORS: Array[Color] = [
+	Color(0.5, 0.5, 0.5),
+	Color(0.9, 0.9, 1.0),    # Steam — white-blue
+	Color(1.0, 0.6, 0.9),    # Plasma — pink-orange
+	Color(0.4, 0.1, 0.3),    # Eclipse — dark purple
+	Color(0.5, 0.85, 0.3),   # Bloomflare — green-orange
+	Color(0.6, 0.9, 1.0),    # Blizzard — ice blue
+	Color(0.2, 0.1, 0.5),    # Frost Abyss — deep indigo
+	Color(0.4, 0.85, 0.6),   # Verdant Frost — mint
+	Color(0.5, 0.4, 1.0),    # Storm Rift — violet
+	Color(0.5, 0.9, 0.4),   # Wild Surge — yellow-green
+	Color(0.3, 0.5, 0.4),    # Null Bloom — dark teal
+]
+const PET_FUSION_EMISSIONS: Array[Color] = [
+	Color(0.3, 0.3, 0.3),
+	Color(0.7, 0.8, 1.0),
+	Color(1.0, 0.4, 0.8),
+	Color(0.25, 0.05, 0.2),
+	Color(0.3, 0.6, 0.15),
+	Color(0.3, 0.6, 0.9),
+	Color(0.15, 0.05, 0.35),
+	Color(0.2, 0.5, 0.3),
+	Color(0.3, 0.2, 0.8),
+	Color(0.3, 0.7, 0.2),
+	Color(0.15, 0.35, 0.25),
+]
+const PET_FUSION_HP: int = 150
+const PET_FUSION_ATTACK_DAMAGE: int = 22
+const PET_FUSION_ATTACK_RANGE: float = 9.0
+const PET_FUSION_ATTACK_COOLDOWN: float = 0.7
+const PET_FUSION_SPEED: float = 16.0
+const PET_FUSION_COLLECT_RADIUS: float = 20.0
+const PET_FUSION_SHIELD_REDUCTION: float = 0.30
+const PET_FUSION_SCALE: float = 0.85
+# Maps a sorted (path_a, path_b) pair to a PetFusionType. Keys are "min,max" strings.
+const PET_FUSION_PAIR_MAP: Dictionary = {
+	"1,2": 1,  # FIRE_ICE
+	"1,3": 2,  # FIRE_ELECTRIC
+	"1,4": 3,  # FIRE_VOID
+	"1,5": 4,  # FIRE_NATURE
+	"2,3": 5,  # ICE_ELECTRIC
+	"2,4": 6,  # ICE_VOID
+	"2,5": 7,  # ICE_NATURE
+	"3,4": 8,  # ELECTRIC_VOID
+	"3,5": 9,  # ELECTRIC_NATURE
+	"4,5": 10, # VOID_NATURE
+}
+
 # ─── Phase 16: Weapon Mod Crafting ────────────────────────────────────────────
 
 # Weapon mod IDs (0 = NONE / default laser)

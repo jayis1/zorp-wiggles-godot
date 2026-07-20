@@ -115,7 +115,17 @@ func _ready() -> void:
 	# Cache player
 	_refresh_player_cache()
 
+	# ── Phase 27: Rebuild accessory visuals when accessories change ──
+	if PetAccessorySystem:
+		PetAccessorySystem.accessories_changed.connect(_on_accessories_changed)
+		PetAccessorySystem.accessory_equipped.connect(_on_accessories_changed)
+		PetAccessorySystem.accessory_unequipped.connect(_on_accessories_changed)
+
 	print("[Pet] Companion pet summoned at stage %s" % GameConstants.PET_STAGE_NAMES[stage])
+
+
+func _on_accessories_changed(_a = null, _b = null) -> void:
+	_rebuild_accessory_visuals()
 
 
 func _build_visuals() -> void:
@@ -208,19 +218,57 @@ func _build_visuals() -> void:
 
 ## Returns the merged stage config: base config overridden by any path-specific
 ## overrides for the current stage. Missing keys fall back to the base config.
+## Also applies Phase 27 accessory + training + fusion stat bonuses on top.
 func _stage_config() -> Dictionary:
 	var base: Dictionary = GameConstants.PET_STAGE_CONFIG[stage]
 	if evolution_path == GameConstants.PetPath.PRISMATIC:
-		return base
+		var merged: Dictionary = base.duplicate(true)
+		_apply_bonus_overrides(merged)
+		return merged
 	# Path overrides only specify the keys they change — merge over the base.
 	var path_overrides: Dictionary = GameConstants.PET_PATH_CONFIG[evolution_path][stage]
-	if path_overrides.is_empty():
-		return base
 	# Duplicate the base so we don't mutate the shared constant.
-	var merged: Dictionary = base.duplicate(true)
+	var merged2: Dictionary = base.duplicate(true)
 	for key in path_overrides.keys():
-		merged[key] = path_overrides[key]
-	return merged
+		merged2[key] = path_overrides[key]
+	_apply_bonus_overrides(merged2)
+	return merged2
+
+
+## Apply Phase 27 accessory, training, and fusion stat bonuses on top of the
+## stage config dictionary (mutates it in place).
+func _apply_bonus_overrides(cfg: Dictionary) -> void:
+	# Accessory bonuses
+	if PetAccessorySystem:
+		var speed_mult: float = PetAccessorySystem.get_stat_bonus("pet_speed_mult")
+		if speed_mult != 1.0 and cfg.has("speed"):
+			cfg["speed"] = float(cfg["speed"]) * speed_mult
+		var collect_bonus: float = PetAccessorySystem.get_stat_bonus("pet_collect_radius")
+		if collect_bonus > 0.0 and cfg.has("collect_radius"):
+			cfg["collect_radius"] = float(cfg["collect_radius"]) + collect_bonus
+		var dmg_red: float = PetAccessorySystem.get_stat_bonus("pet_damage_reduction")
+		if dmg_red > 0.0 and cfg.has("shield_reduction"):
+			cfg["shield_reduction"] = float(cfg["shield_reduction"]) + dmg_red
+		var atk_dmg_bonus: float = PetAccessorySystem.get_stat_bonus("pet_attack_damage")
+		if atk_dmg_bonus > 0.0 and cfg.has("attack_damage"):
+			cfg["attack_damage"] = int(cfg["attack_damage"]) + int(atk_dmg_bonus)
+		var atk_range_bonus: float = PetAccessorySystem.get_stat_bonus("pet_attack_range")
+		if atk_range_bonus > 0.0 and cfg.has("attack_range"):
+			cfg["attack_range"] = float(cfg["attack_range"]) + atk_range_bonus
+		var atk_cd_mult: float = PetAccessorySystem.get_stat_bonus("pet_attack_cooldown_mult")
+		if atk_cd_mult != 1.0 and atk_cd_mult > 0 and cfg.has("attack_cooldown"):
+			cfg["attack_cooldown"] = float(cfg["attack_cooldown"]) * atk_cd_mult
+	# Training bonuses
+	if PetTrainingSystem:
+		var train_atk: float = PetTrainingSystem.get_stat_bonus("attack_damage")
+		if train_atk > 0.0 and cfg.has("attack_damage"):
+			cfg["attack_damage"] = int(cfg["attack_damage"]) + int(train_atk)
+		var train_speed: float = PetTrainingSystem.get_stat_bonus("move_speed")
+		if train_speed > 0.0 and cfg.has("speed"):
+			cfg["speed"] = float(cfg["speed"]) + train_speed
+		var train_collect: float = PetTrainingSystem.get_stat_bonus("collect_radius")
+		if train_collect > 0.0 and cfg.has("collect_radius"):
+			cfg["collect_radius"] = float(cfg["collect_radius"]) + train_collect
 
 func _stage_color() -> Color:
 	return _stage_config()["color"]
@@ -234,6 +282,14 @@ func _ability_name() -> String:
 
 func _apply_stage_config() -> void:
 	var cfg: Dictionary = _stage_config()
+	# ── Phase 27: Fusion pet override ──
+	var fusion_cfg: Dictionary = {}
+	if has_meta("is_fusion_pet") and PetFusionSystem:
+		fusion_cfg = PetFusionSystem.get_fusion_override(self)
+	# Merge fusion overrides into cfg
+	if not fusion_cfg.is_empty():
+		for key in fusion_cfg:
+			cfg[key] = fusion_cfg[key]
 	# Mesh scale
 	if _mesh:
 		_mesh.scale = Vector3.ONE * cfg["scale"]
@@ -254,10 +310,17 @@ func _apply_stage_config() -> void:
 		_aura.visible = count > 0
 		if _aura.process_material is ParticleProcessMaterial:
 			(_aura.process_material as ParticleProcessMaterial).color = Color(cfg["emission"].r, cfg["emission"].g, cfg["emission"].b, 0.6)
-	# HP
-	max_hp = cfg["hp"]
-	hp = max_hp
+	# HP — with accessory + training bonuses
+	var base_hp: int = cfg["hp"]
+	if PetAccessorySystem:
+		base_hp = int(round(float(base_hp) * PetAccessorySystem.get_stat_bonus("pet_hp_mult")))
+	if PetTrainingSystem:
+		base_hp += int(PetTrainingSystem.get_stat_bonus("max_hp"))
+	max_hp = base_hp
+	hp = min(hp, max_hp)  # Don't exceed new max
 	pet_hp_changed.emit(hp, max_hp)
+	# ── Phase 27: Rebuild accessory visuals on stage change ──
+	_rebuild_accessory_visuals()
 
 
 ## Feed the pet a collectible, granting evolution points. Triggers evolution
@@ -444,12 +507,16 @@ func _update_follow(delta: float) -> void:
 	var cfg: Dictionary = _stage_config()
 	var follow_dist: float = cfg["follow_distance"]
 	# Position to follow: behind-right of player, at PET_HEIGHT_OFFSET
-	var target_pos: Vector3 = player.global_position + Vector3(2.0, GameConstants.PET_HEIGHT_OFFSET, 0.0)
+	var height_off: float = GameConstants.PET_HEIGHT_OFFSET
+	# ── Phase 27: Glider Wings — pet floats higher ──
+	if PetAccessorySystem and PetAccessorySystem.get_equipped_in_slot(1) == GameConstants.PetAccessory.WINGS_GLIDER:
+		height_off += 2.0
+	var target_pos: Vector3 = player.global_position + Vector3(2.0, height_off, 0.0)
 	# If player is moving, offset toward the direction they came from (trailing)
 	if player.velocity.length_squared() > 1.0:
 		var trail_dir: Vector3 = -player.velocity.normalized()
 		trail_dir.y = 0
-		target_pos = player.global_position + trail_dir * follow_dist + Vector3(0, GameConstants.PET_HEIGHT_OFFSET, 0)
+		target_pos = player.global_position + trail_dir * follow_dist + Vector3(0, height_off, 0)
 	_move_toward(target_pos, cfg["speed"], delta)
 
 
@@ -545,6 +612,15 @@ func _update_attack(delta: float) -> void:
 			# ── Phase 27: Electric chain zap on melee hit ──
 			if evolution_path == GameConstants.PetPath.ELECTRIC:
 				_electric_chain_zap(enemy, dmg)
+			# ── Phase 27: Fusion pet — apply second path's on-hit effect too ──
+			if has_meta("is_fusion_pet") and has_meta("fusion_paths"):
+				var fpaths: Array = get_meta("fusion_paths", [])
+				if fpaths.size() >= 2 and fpaths[1] != evolution_path:
+					match fpaths[1]:
+						GameConstants.PetPath.ICE:
+							_apply_ice_shard_slow(enemy)
+						GameConstants.PetPath.ELECTRIC:
+							_electric_chain_zap(enemy, dmg)
 		# Visual pop on attack
 		if _mesh:
 			var pop := create_tween()
@@ -775,6 +851,56 @@ func _tick_path_abilities(delta: float) -> void:
 			pass  # Void projectile absorb is event-driven (see absorb_enemy_projectile)
 		"bloom":
 			_tick_nature_bloom(delta)
+	# ── Phase 27: Fusion pet — tick the second donor's ability too ──
+	if has_meta("is_fusion_pet") and has_meta("fusion_paths"):
+		var paths: Array = get_meta("fusion_paths", [])
+		if paths.size() >= 2 and paths[1] != evolution_path:
+			var second_path: int = paths[1]
+			match second_path:
+				GameConstants.PetPath.FIRE:
+					_tick_fire_aura(delta)
+				GameConstants.PetPath.ICE:
+					_tick_ice_aura(delta)
+				GameConstants.PetPath.NATURE:
+					_tick_nature_bloom(delta)
+				# Electric and Void are event-driven (attack/on-hit), not per-tick
+		_tick_fusion_special(delta)
+
+
+# ── Phase 27: Fusion pet special ability — periodic steam/plasma AoE ──
+# Fusion pets emit a small AoE pulse every ~5 seconds that damages nearby enemies.
+# This represents the combined elemental energy overflowing.
+func _tick_fusion_special(delta: float) -> void:
+	if not has_meta("is_fusion_pet"):
+		return
+	if not has_meta("fusion_type"):
+		return
+	var ft: int = get_meta("fusion_type", 0)
+	if ft == GameConstants.PetFusionType.NONE:
+		return
+	# Use a meta timer for the pulse cooldown
+	var pulse_timer: float = get_meta("fusion_pulse_timer", 5.0)
+	pulse_timer -= delta
+	if pulse_timer > 0.0:
+		set_meta("fusion_pulse_timer", pulse_timer)
+		return
+	set_meta("fusion_pulse_timer", 5.0)  # Reset to 5 second cooldown
+	# Emit a small AoE pulse damaging nearby enemies within 4m
+	var pulse_dmg: int = 8
+	var pulse_color: Color = GameConstants.PET_FUSION_EMISSIONS[ft]
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if not enemy.has_method("take_damage_from") and not enemy.has_method("take_damage"):
+			continue
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < 4.0:
+			if enemy.has_method("take_damage_from"):
+				enemy.take_damage_from(pulse_dmg, global_position)
+			elif enemy.has_method("take_damage"):
+				enemy.take_damage(pulse_dmg)
+	# Visual pulse
+	ParticleEffects.spawn_explosion(get_parent(), global_position, pulse_color, 15, 0.3)
 
 
 # Fire Aura: any enemy that touches the pet (within PET_FIRE_AURA_RANGE) takes
@@ -887,7 +1013,13 @@ func _tick_nature_bloom(delta: float) -> void:
 # damage is applied. Returns true if the projectile was absorbed.
 func try_absorb_projectile(projectile_pos: Vector3) -> bool:
 	if evolution_path != GameConstants.PetPath.VOID:
-		return false
+		# ── Phase 27: Fusion pet — second path might be Void ──
+		if has_meta("is_fusion_pet") and has_meta("fusion_paths"):
+			var fpaths: Array = get_meta("fusion_paths", [])
+			if not (fpaths.size() >= 2 and fpaths[1] == GameConstants.PetPath.VOID):
+				return false
+		else:
+			return false
 	if stage < GameConstants.PetStage.ADOLESCENT:
 		return false  # Void Veil only active at Adolescent+
 	# Only absorb if the projectile is near the pet
@@ -1104,7 +1236,13 @@ func _set_state(new_state: int) -> void:
 # ─── Damage / Death ───────────────────────────────────────────────────────────
 
 func take_damage(amount: int) -> void:
-	hp = max(0, hp - amount)
+	# ── Phase 27: Accessory damage reduction (Plated Armor) ──
+	var actual_amount: int = amount
+	if PetAccessorySystem:
+		var reduction: float = PetAccessorySystem.get_stat_bonus("pet_damage_reduction")
+		if reduction > 0.0:
+			actual_amount = int(round(float(amount) * (1.0 - reduction)))
+	hp = max(0, hp - actual_amount)
 	pet_hp_changed.emit(hp, max_hp)
 	# Flash on hit
 	if _mat:
@@ -1118,6 +1256,21 @@ func take_damage(amount: int) -> void:
 	var cam: Node3D = GameManager.camera_rig
 	if cam and cam.has_method("add_trauma"):
 		cam.add_trauma(0.15)
+	# ── Phase 27: Spiked Armor reflect damage ──
+	if PetAccessorySystem and PetAccessorySystem.has_spiked_armor():
+		# Find the nearest enemy and reflect damage
+		var nearest: Node3D = null
+		var nearest_dist: float = 5.0
+		for enemy in GameManager.enemies:
+			if not is_instance_valid(enemy):
+				continue
+			var d: float = global_position.distance_to(enemy.global_position)
+			if d < nearest_dist:
+				nearest_dist = d
+				nearest = enemy
+		if nearest and nearest.has_method("take_damage_from"):
+			nearest.take_damage_from(GameConstants.PET_ACCESSORY_SPIKE_REFLECT_DAMAGE, global_position)
+			ParticleEffects.spawn_pickup_sparkle(get_parent(), nearest.global_position + Vector3(0, 1, 0), Color(1.0, 0.3, 0.1))
 	# ── Phase 27: SCARED emote on taking damage ──
 	_trigger_emote(GameConstants.PetEmote.SCARED)
 	if hp <= 0:
@@ -1132,6 +1285,13 @@ func _die() -> void:
 	GameManager.add_message("🐾 Pet was defeated! It will respawn in 10s...")
 	# ── Phase 27: Clean up path ability effects on death ──
 	_cleanup_path_effects()
+	# ── Phase 27: Notify fusion system if this was a fusion pet ──
+	if has_meta("is_fusion_pet") and PetFusionSystem:
+		PetFusionSystem.on_fusion_pet_died()
+		GameManager.add_message("💀 The fusion pet is gone for this run!")
+		# Fusion pets don't respawn — actually die
+		queue_free()
+		return
 	# Respawn timer — re-summon at follow position after delay
 	var respawn_tween := create_tween()
 	respawn_tween.tween_interval(10.0)
@@ -1198,6 +1358,89 @@ func _on_player_died() -> void:
 	_cleanup_path_effects()
 	ParticleEffects.spawn_death_poof(get_parent(), global_position, _stage_color(), 1.0)
 	queue_free()
+
+
+# ─── Phase 27: Pet Accessory Visuals ──────────────────────────────────────────
+
+## Rebuild the accessory visual meshes on the pet. Called on stage change and
+## when accessories are equipped/unequipped. Removes old accessory children and
+## adds new ones for the currently equipped accessories.
+func _rebuild_accessory_visuals() -> void:
+	# Remove existing accessory visual children
+	for child in get_children():
+		if child is MeshInstance3D and child.get_meta("is_accessory_visual", false):
+			child.queue_free()
+	# If we have no mesh yet (early in _ready), skip
+	if not _mesh:
+		return
+	# Add visuals for each equipped accessory
+	if not PetAccessorySystem:
+		return
+	for slot_id in PetAccessorySystem.get_all_equipped():
+		if slot_id == GameConstants.PetAccessory.NONE:
+			continue
+		var visual_kind: int = GameConstants.PET_ACCESSORY_VISUAL[slot_id]
+		if visual_kind == 0:
+			continue
+		_add_accessory_mesh(visual_kind, slot_id)
+
+
+func _add_accessory_mesh(visual_kind: int, accessory_id: int) -> void:
+	var mesh_inst := MeshInstance3D.new()
+	mesh_inst.set_meta("is_accessory_visual", true)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.emission_enabled = true
+	# Color by accessory type
+	var acc_color: Color = Color(0.8, 0.7, 0.3)  # default gold-ish
+	if accessory_id < GameConstants.PET_STONE_COLORS.size():
+		# Use a distinct color per slot type
+		match GameConstants.PET_ACCESSORY_SLOT[accessory_id]:
+			0: acc_color = Color(0.7, 0.5, 0.2)  # Collar — brown/gold
+			1: acc_color = Color(0.9, 0.9, 1.0)  # Wings — white
+			2: acc_color = Color(0.6, 0.6, 0.7)  # Armor — steel grey
+			3: acc_color = Color(0.9, 0.4, 0.6)  # Bow — pink
+			4: acc_color = Color(1.0, 0.85, 0.2) # Crown — gold
+	mat.albedo_color = acc_color
+	mat.emission = acc_color * 0.5
+	mat.emission_energy_multiplier = 0.8
+	mesh_inst.material_override = mat
+	match visual_kind:
+		1:  # Collar — torus around neck
+			var torus := TorusMesh.new()
+			torus.major_radius = 0.55 * _stage_config().get("scale", 0.5)
+			torus.minor_radius = 0.06
+			mesh_inst.mesh = torus
+			mesh_inst.position.y = 0.5
+			mesh_inst.rotation.x = PI / 2
+		2:  # Wings — two box meshes on the sides
+			# We use a single mesh inst with a combined mesh; simpler: just two boxes
+			var box := BoxMesh.new()
+			box.size = Vector3(0.6, 0.3, 0.08)
+			mesh_inst.mesh = box
+			mesh_inst.position.y = 0.7
+			mesh_inst.position.x = 0.5 * _stage_config().get("scale", 0.5)
+			mesh_inst.rotation.z = deg_to_rad(20)
+		3:  # Armor — cylinder shell around body
+			var cyl := CylinderMesh.new()
+			cyl.top_radius = 0.6 * _stage_config().get("scale", 0.5)
+			cyl.bottom_radius = 0.6 * _stage_config().get("scale", 0.5)
+			cyl.height = 0.5
+			mesh_inst.mesh = cyl
+			mesh_inst.position.y = 0.5
+		4:  # Bow — small box on top
+			var bow := BoxMesh.new()
+			bow.size = Vector3(0.3, 0.2, 0.08)
+			mesh_inst.mesh = bow
+			mesh_inst.position.y = 1.0 * _stage_config().get("scale", 0.5)
+		5:  # Crown — cone on top of head (cylinder with top_radius=0)
+			var cone := CylinderMesh.new()
+			cone.top_radius = 0.0
+			cone.bottom_radius = 0.35 * _stage_config().get("scale", 0.5)
+			cone.height = 0.25
+			mesh_inst.mesh = cone
+			mesh_inst.position.y = 0.9 * _stage_config().get("scale", 0.5)
+	add_child(mesh_inst)
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
