@@ -715,6 +715,32 @@ func _on_combo_changed(count: int) -> void:
 func _on_score_changed(new_score: int) -> void:
 	score_text.text = "Score: %d" % new_score
 	kills_text.text = "Kills: %d" % GameManager.player_kills
+	# ── Score pop animation ── A quick scale punch on the score label so
+	# gaining score feels rewarding, mirroring the combo text "thwack".
+	# Skipped on the initial _update_all_displays() call (score 0 → 0 is
+	# not a gain). The tween is tracked so rapid score changes (kills,
+	# pickup streaks) kill the in-progress pop and restart cleanly without
+	# stacking. Tiny amplitude (1.18x) and short duration keep it from
+	# being distracting during fast combat.
+	if score_text and new_score > 0:
+		if score_text.has_meta("_score_tween") and is_instance_valid(score_text.get_meta("_score_tween") as Tween):
+			(score_text.get_meta("_score_tween") as Tween).kill()
+		score_text.scale = Vector2.ONE * 1.18
+		var score_tween := create_tween()
+		score_tween.tween_property(score_text, "scale", Vector2.ONE, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		score_text.set_meta("_score_tween", score_tween)
+	# ── Kills text pop ── Same treatment for the kills counter so kill
+	# events register visually. Slightly smaller amplitude (1.12x) since
+	# the kills label is secondary to the score.
+	if kills_text and GameManager.player_kills > 0:
+		if kills_text.has_meta("_kills_tween") and is_instance_valid(kills_text.get_meta("_kills_tween") as Tween):
+			(kills_text.get_meta("_kills_tween") as Tween).kill()
+		kills_text.scale = Vector2.ONE * 1.12
+		var kills_tween := create_tween()
+		kills_tween.tween_property(kills_text, "scale", Vector2.ONE, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		kills_text.set_meta("_kills_tween", kills_tween)
 
 func _on_player_died() -> void:
 	show_message("Zorp has fallen!", 5.0)

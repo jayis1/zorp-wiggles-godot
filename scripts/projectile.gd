@@ -644,13 +644,13 @@ func _hit_enemy(enemy: Node3D) -> void:
 	# Phase 16: Piercing Beam — pass through enemies without being destroyed
 	if _weapon_mod == GameConstants.WeaponMod.PIERCING_BEAM and _pierce_count < _max_pierces:
 		_pierce_count += 1
-		_impact_effect()
+		_impact_effect(_crit_impact_color(is_crit, will_kill))
 		return  # Don't free — continue flying
 
 	# Enhancement: Photon Beam — pierces through up to 5 enemies (more than Piercing Beam)
 	if _weapon_mod == GameConstants.WeaponMod.PHOTON_BEAM and _pierce_count < 5:
 		_pierce_count += 1
-		_impact_effect()
+		_impact_effect(_crit_impact_color(is_crit, will_kill))
 		return  # Don't free — continue flying
 
 	# Enhancement: Spectral Beam — pierces through up to 4 enemies and phases
@@ -660,7 +660,7 @@ func _hit_enemy(enemy: Node3D) -> void:
 	if _weapon_mod == GameConstants.WeaponMod.SPECTRAL_BEAM and _pierce_count < 4:
 		_pierce_count += 1
 		EnemyPhaseShifter.set_spectral_bypass(false)
-		_impact_effect()
+		_impact_effect(_crit_impact_color(is_crit, will_kill))
 		return  # Don't free — continue flying and phasing
 
 	# Reset spectral bypass flag if it was set (non-pierce spectral hit)
@@ -698,8 +698,21 @@ func _hit_enemy(enemy: Node3D) -> void:
 	elif _weapon_mod == GameConstants.WeaponMod.POISON_NOVA:
 		_spawn_poison_nova(total_damage)
 
-	# Impact effect
-	_impact_effect()
+	# Impact effect — crits and kills get a gold-tinted burst so they
+	# read as distinct from normal cyan hits. The gold matches the crit
+	# damage number color for a consistent color language. Kill blows
+	# get a slightly warmer gold (more orange) to distinguish from crits.
+	var impact_color: Color = Color(0.0, 0.0, 0.0, -1.0)  # Default: no override
+	if is_boss_kill:
+		# Boss kills get a magenta burst matching the "BOSS SLAIN!" popup
+		impact_color = Color(1.0, 0.2, 0.8, 1.0)
+	elif will_kill:
+		# Kill blows get a warm gold-orange to distinguish from crits
+		impact_color = Color(1.0, 0.7, 0.15, 1.0)
+	elif is_crit:
+		# Crits get bright gold matching the crit damage number
+		impact_color = Color(1.0, 0.85, 0.2, 1.0)
+	_impact_effect(impact_color)
 	_is_consumed = true
 	queue_free()
 
@@ -953,14 +966,35 @@ func _spawn_acid_pool(base_dmg: int) -> void:
 	tw.tween_property(pool_mat, "albedo_color:a", 0.0, 0.5)
 	tw.tween_callback(pool.queue_free)
 
-func _impact_effect() -> void:
+## Returns the impact burst color for a hit based on crit/kill status.
+## Crits → gold, kills → warm gold-orange, boss kills → magenta, normal → cyan.
+## Used by pierce-type mods that call _impact_effect() on each pierced enemy.
+func _crit_impact_color(is_crit: bool, is_kill: bool) -> Color:
+	if is_kill:
+		return Color(1.0, 0.7, 0.15, 1.0)
+	elif is_crit:
+		return Color(1.0, 0.85, 0.2, 1.0)
+	return Color(0.0, 0.0, 0.0, -1.0)  # Default: no override (cyan)
+
+func _impact_effect(override_color: Color = Color(0.0, 0.0, 0.0, -1.0)) -> void:
 	# Spawn impact burst effect
 	if IMPACT_SCENE:
 		var burst: Node3D = IMPACT_SCENE.instantiate()
 		get_parent().add_child(burst)
 		burst.global_position = global_position
-	# Phase 6: Small explosion particles on impact
-	ParticleEffects.spawn_explosion(get_parent(), global_position, Color(0.2, 1.0, 0.8), 12, 0.4)
+		# ── Crit / kill color override ── A crit or kill gets a gold-tinted
+		# impact burst instead of the default cyan, so critical hits are
+		# visually distinct at the impact point — the player sees a gold
+		# flash on crits and a cyan flash on normal hits. This reinforces
+		# the gold crit damage number and gives crits a consistent color
+		# language across UI + world effects.
+		if override_color.a >= 0.0 and burst.has_method("set") and "impact_color" in burst:
+			burst.set("impact_color", override_color)
+	# Phase 6: Small explosion particles on impact — tinted to match the
+	# override color (gold for crits, cyan for normal hits) so the particle
+	# burst and the impact sphere share the same color identity.
+	var particle_color: Color = override_color if override_color.a >= 0.0 else Color(0.2, 1.0, 0.8)
+	ParticleEffects.spawn_explosion(get_parent(), global_position, particle_color, 12, 0.4)
 	# Phase 20: Audio — explosion SFX on impact
 	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
 

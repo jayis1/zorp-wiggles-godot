@@ -784,6 +784,23 @@ func _update_spawn_visuals(delta: float) -> void:
 	progress = clampf(progress, 0.0, 1.0)
 	var eased: float = progress * progress  # quadratic ease-in
 	_material.albedo_color.a = _spawn_target_alpha * eased
+	# ── Spawn anticipation pulse ── In the final 25% of the grace period,
+	# the enemy does a quick scale pulse to telegraph "about to attack."
+	# This is classic anticipation — the enemy visibly "winds up" before
+	# becoming active, giving the player a brief window to react. The
+	# pulse ramps from base_scale to 1.15x and back, driven by a sine
+	# envelope over the last 25% of the grace period. Skipped during the
+	# initial spawn tween (which already animates scale from 0.3 → 1.0)
+	# to avoid conflicts — we only pulse after the spawn-in tween settles.
+	if progress > 0.75 and not is_dead:
+		var pulse_progress: float = (progress - 0.75) / 0.25  # 0→1 in last 25%
+		# Two quick pulses using a doubled sine frequency
+		var pulse_env: float = sin(pulse_progress * PI * 2.0) * 0.5 + 0.5
+		var pulse_scale: float = base_scale * (1.0 + 0.15 * pulse_env)
+		# Only apply if the spawn-in tween has settled (scale near base)
+		# to avoid fighting the initial scale-up animation.
+		if scale.length() > base_scale * 0.9:
+			scale = Vector3.ONE * pulse_scale
 
 func _update_visuals(delta: float) -> void:
 	# Update HP bar color based on HP ratio
