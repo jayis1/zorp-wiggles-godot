@@ -114,7 +114,6 @@ func _spawn_poison_cloud() -> void:
 	#    the tick/expire logic lives on the cloud itself, surviving the spore.
 	var cloud_script := preload("res://scripts/poison_cloud.gd")
 	cloud.set_script(cloud_script)
-	cloud.setup(cloud_mat, cloud_light, tick_timer, life_timer)
 
 	# Subtle pulsing animation while the cloud is alive
 	if cloud_mesh and cloud_mat:
@@ -124,12 +123,10 @@ func _spawn_poison_cloud() -> void:
 			.set_ease(Tween.EASE_IN_OUT)
 		pulse_tween.tween_property(cloud_mat, "emission_energy_multiplier", 1.2, 0.8) \
 			.set_ease(Tween.EASE_IN_OUT)
-		# Stop the pulse when the lifetime ends
-		life_timer.timeout.connect(_on_cloud_life_expired.bind(pulse_tween))
-
-## Called when the poison cloud's life timer expires — kills the pulse tween.
-## Kept as a named method (not an inline lambda) to avoid GDScript parser issues
-## with lambdas at the end of a file.
-func _on_cloud_life_expired(pulse_tween: Tween) -> void:
-	if is_instance_valid(pulse_tween):
-		pulse_tween.kill()
+		# Pass the tween to the cloud script so it can be killed when the cloud
+		# expires. We must NOT connect to a method on self (the spore) — the
+		# spore is freed ~0.1s after _die(), so the Callable would be invalid by
+		# the time the cloud's 5s life timer fires.
+		cloud.setup(cloud_mat, cloud_light, tick_timer, life_timer, pulse_tween)
+	else:
+		cloud.setup(cloud_mat, cloud_light, tick_timer, life_timer)

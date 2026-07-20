@@ -15,15 +15,19 @@ var _cloud_mat: StandardMaterial3D = null
 var _cloud_light: OmniLight3D = null
 var _tick_timer: Timer = null
 var _life_timer: Timer = null
+var _pulse_tween: Tween = null
 
 ## Called by EnemyToxicSpore._spawn_poison_cloud() right after set_script().
 ## Stores references to the visual/material/timer nodes (already children of
 ## this cloud node) and wires up the timer signals to local methods.
-func setup(mat: StandardMaterial3D, light: OmniLight3D, tick_timer: Timer, life_timer: Timer) -> void:
+## pulse_tween is the optional breathing animation tween; it is killed when
+## the cloud expires so its reference must live on the cloud (not the spore).
+func setup(mat: StandardMaterial3D, light: OmniLight3D, tick_timer: Timer, life_timer: Timer, pulse_tween: Tween = null) -> void:
 	_cloud_mat = mat
 	_cloud_light = light
 	_tick_timer = tick_timer
 	_life_timer = life_timer
+	_pulse_tween = pulse_tween
 	# Wire up the tick + expire signals to LOCAL methods (not the spore's).
 	if _tick_timer:
 		_tick_timer.timeout.connect(_on_tick)
@@ -58,6 +62,10 @@ func _on_tick() -> void:
 
 ## Lifetime expiry — fade out the cloud mesh + light, then free the node.
 func _on_expire() -> void:
+	# Stop the breathing pulse tween — the cloud owns it now (the spore that
+	# spawned the cloud is freed ~0.1s after death, so its Callables are gone).
+	if _pulse_tween and is_instance_valid(_pulse_tween):
+		_pulse_tween.kill()
 	if _tick_timer:
 		_tick_timer.stop()
 	if _cloud_mat and is_instance_valid(_cloud_mat):
