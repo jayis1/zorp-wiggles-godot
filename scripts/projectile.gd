@@ -57,6 +57,17 @@ const HITSTOP_COOLDOWN: float = 0.12    # Min seconds between freeze triggers
 const HITSTOP_BOSS_DURATION: float = 0.09   # Boss kill freeze (90ms — weighty)
 const HITSTOP_BOSS_TIME_SCALE: float = 0.04 # Boss kill freeze (near-stop)
 
+# ── Elite kill hit-stop ────────────────────────────────────────────────────────
+# Large-but-not-boss enemies (Sentinels, Bombers, Crystal Guardians — anything
+# with base_scale >= 1.5) get a lighter freeze than a boss kill but still more
+# punch than a normal mook death. This sits between the normal crit hit-stop
+# (45ms @ 0.08x) and the boss kill (90ms @ 0.04x): 65ms at 0.06x. The cooldown
+# is shared with the normal hit-stop cooldown so rapid elite clears don't
+# stack into a stutter — the first elite kill freezes, subsequent ones in
+# the cooldown window just use the existing crit/normal path.
+const HITSTOP_ELITE_DURATION: float = 0.065
+const HITSTOP_ELITE_TIME_SCALE: float = 0.06
+
 # ─── Shared Resources ──────────────────────────────────────────────────────────
 # Projectiles are spawned at ~9/sec during combat. Creating a new
 # StandardMaterial3D per shot causes unnecessary GPU resource allocation
@@ -225,6 +236,21 @@ func _trigger_hitstop(is_boss_kill: bool = false) -> void:
 	# ticks at the freeze speed, so the "brief" freeze would last many
 	# times longer than intended (e.g. 0.09s / 0.04 = 2.25s for a boss kill).
 	var timer := get_tree().create_timer(freeze_duration, true, false, true)
+	timer.timeout.connect(func():
+		Engine.time_scale = 1.0
+	)
+
+## Elite kill hit-stop: a lighter freeze for large-but-not-boss enemies. Shares
+## the normal hit-stop cooldown so rapid elite clears don't stack into a long
+## stutter. The freeze is scheduled the same way as _trigger_hitstop (scene-tree
+## timer with ignore_time_scale=true) so it survives the projectile's
+## queue_free() and restores Engine.time_scale to 1.0 exactly on time.
+func _trigger_elite_hitstop() -> void:
+	if _hitstop_cooldown > 0.0:
+		return
+	_hitstop_cooldown = HITSTOP_COOLDOWN
+	Engine.time_scale = HITSTOP_ELITE_TIME_SCALE
+	var timer := get_tree().create_timer(HITSTOP_ELITE_DURATION, true, false, true)
 	timer.timeout.connect(func():
 		Engine.time_scale = 1.0
 	)
@@ -545,6 +571,7 @@ func _hit_enemy(enemy: Node3D) -> void:
 	# Check if this will be a kill before applying damage
 	var will_kill: bool = false
 	var is_boss_kill: bool = false
+	var is_elite_kill: bool = false  # Large-but-not-boss enemies get a lighter freeze
 	if enemy.has_method("take_damage_from") or enemy.has_method("take_damage"):
 		if "hp" in enemy and "max_hp" in enemy:
 			will_kill = total_damage >= enemy.hp
@@ -555,7 +582,16 @@ func _hit_enemy(enemy: Node3D) -> void:
 			var enemy_max_hp: int = int(enemy.get("max_hp")) if "max_hp" in enemy else 0
 			var enemy_base_scale: float = float(enemy.get("base_scale")) if "base_scale" in enemy else 1.0
 			is_boss_kill = enemy_max_hp >= 200 or enemy_base_scale >= 2.0
-			_trigger_hitstop(is_boss_kill)
+			# Elite kills (Sentinels, Bombers, Crystal Guardians — big but not bosses)
+			# get a lighter freeze than bosses but still more than a normal mook,
+			# so downing a significant foe feels weighty without becoming a slog
+			# when clearing a room of them. The threshold matches the death
+			# shockwave threshold (base_scale >= 1.5) so visual + freeze agree.
+			is_elite_kill = not is_boss_kill and enemy_base_scale >= 1.5
+			if is_boss_kill:
+				_trigger_hitstop(true)
+			elif is_elite_kill:
+				_trigger_elite_hitstop()
 		# ── Phase 19: Co-op — mark enemy as hit by P2 if this is a P2 projectile ──
 		if has_meta("is_p2_projectile") and enemy.has_method("set_p2_hit"):
 			enemy.set_p2_hit()
@@ -572,6 +608,27 @@ func _hit_enemy(enemy: Node3D) -> void:
 
 	# Damage number popup — boss kills get a distinct "BOSS SLAIN!" variant
 	DamageNumber.spawn(get_parent(), global_position, total_damage, is_crit, will_kill, is_boss_kill)
+
+	# ── Subtle camera kick on every landed hit ── A tiny trauma pulse on each
+	# shot that connects, so the camera nudges with the impact. This is much
+	# smaller than the death/crit shakes (which already exist) — just enough
+	# to give a tactile "I hit something" read on normal hits. Scaled by
+	# enemy size so a Sentinel hit kicks harder than a Blob hit, and skipped
+	# for crits/kills (those already get the bigger hit-stop + death shake, so
+	# adding this on top would double-dip). The bias direction points from the
+	# enemy toward the player so the camera nudges "backward" as if recoiling
+	# from the impact — reinforcing the shot's direction.
+	if not is_crit and not will_kill:
+		var e_scale: float = float(enemy.get("base_scale")) if "base_scale" in enemy else 1.0
+		var hit_trauma: float = clampf(0.03 + e_scale * 0.02, 0.03, 0.10)
+		var bias: Vector3 = Vector3.ZERO
+		if GameManager.player and is_instance_valid(GameManager.player):
+			bias = (GameManager.player.global_position - enemy.global_position)
+			bias.y = 0
+			if bias.length_squared() > 0.01:
+				bias = bias.normalized()
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(hit_trauma, bias)
 
 	# ── Phase 16: Weapon mod on-hit effects ──
 	_apply_mod_on_hit(enemy, total_damage)

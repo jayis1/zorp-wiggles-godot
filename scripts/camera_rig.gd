@@ -48,6 +48,20 @@ var _look_ahead_offset: Vector3 = Vector3.ZERO
 @export var default_fov: float = GameConstants.CAMERA_DEFAULT_FOV
 @export var fov_return_speed: float = GameConstants.CAMERA_FOV_RETURN_SPEED
 
+## Dynamic speed FOV — the camera FOV subtly widens as the player moves faster,
+## giving a sense of momentum and acceleration (the Doom/Sunset Overdrive trick).
+## The effect is capped at speed_fov_max degrees above default and only engages
+## when the player is above the speed threshold, so standing still and slow
+## walking read as calm while sprinting feels expansive. The target is eased
+## frame-rate-independently so the FOV "breathes" with the player's speed
+## rather than snapping. Dash's FOV kick stacks on top (it writes directly to
+## camera.fov), and this system only nudges the eased return target so the
+## dash pop still punches and the speed FOV settles in underneath it.
+@export var speed_fov_max: float = 3.5          # Max degrees added at full speed
+@export var speed_fov_threshold: float = 8.0   # Speed (m/s) where FOV starts widening
+@export var speed_fov_smoothing: float = 3.0   # How fast the speed FOV eases
+var _speed_fov_current: float = 0.0            # Current speed-FOV offset (eased)
+
 ## Smooth rotation — yaw and pitch ease toward their targets instead of
 ## snapping instantly. This makes right-click camera dragging feel buttery
 ## rather than mechanical. Higher = snappier, lower = smoother.
@@ -177,10 +191,29 @@ func _process(delta: float) -> void:
 	rotation_degrees.y = lerpf(rotation_degrees.y, _target_yaw, rot_weight)
 
 	# Smoothly return FOV to default (the dash kick sets it above default, then
-	# this eases it back for a natural "settle" feel).
-	if abs(camera.fov - default_fov) > 0.01:
+	# this eases it back for a natural "settle" feel). The speed-FOV offset is
+	# added on top of default_fov so the eased target becomes
+	# default_fov + _speed_fov_current — the dash pop still punches because it
+	# writes directly to camera.fov, and this lerp chases the speed-adjusted
+	# baseline underneath it.
+	var speed_fov_target: float = 0.0
+	if _target_node and is_instance_valid(_target_node):
+		var spd: float = 0.0
+		if _target_node is CharacterBody3D:
+			var v := (_target_node as CharacterBody3D).velocity
+			spd = Vector2(v.x, v.z).length()
+		# Map speed → FOV offset with a smoothstep so the onset is gentle
+		if spd > speed_fov_threshold:
+			var t: float = clampf((spd - speed_fov_threshold) / (GameConstants.PLAYER_SPEED - speed_fov_threshold), 0.0, 1.0)
+			# Smoothstep for a soft S-curve (ease-in then ease-out)
+			t = t * t * (3.0 - 2.0 * t)
+			speed_fov_target = t * speed_fov_max
+	var sf_weight: float = 1.0 - exp(-speed_fov_smoothing * delta)
+	_speed_fov_current = lerpf(_speed_fov_current, speed_fov_target, sf_weight)
+	var fov_baseline: float = default_fov + _speed_fov_current
+	if abs(camera.fov - fov_baseline) > 0.01:
 		var fov_weight: float = 1.0 - exp(-fov_return_speed * delta)
-		camera.fov = lerpf(camera.fov, default_fov, fov_weight)
+		camera.fov = lerpf(camera.fov, fov_baseline, fov_weight)
 
 func _apply_screen_shake(delta: float) -> void:
 	# Decay trauma
