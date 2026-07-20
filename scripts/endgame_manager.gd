@@ -31,6 +31,7 @@ var _ng_unlocked: Array[bool] = [true, false, false]
 var _survival_active: bool = false
 var _survival_time: float = 0.0
 var _survival_next_boss_time: float = 0.0
+var _survival_score_accumulator: float = 0.0  # fractional score carry-over
 var _gauntlet_active: bool = false
 var _gauntlet_index: int = 0
 var _gauntlet_biome_timer: float = 0.0
@@ -140,6 +141,7 @@ func start_survival() -> void:
 	_survival_active = true
 	_survival_time = 0.0
 	_survival_next_boss_time = GameConstants.SURVIVAL_MODE_BOSS_INTERVAL
+	_survival_score_accumulator = 0.0
 	GameManager.add_message("☠ SURVIVAL MODE — No healing, no shops, one life. Survive!")
 	# Reduce starting HP to the survival baseline.
 	if GameConstants.SURVIVAL_MODE_NO_HEALING:
@@ -150,8 +152,13 @@ func start_survival() -> void:
 func _update_survival(delta: float) -> void:
 	_survival_time += delta
 	# Passive survival score (reward for staying alive).
-	var new_score: int = int(_survival_time * GameConstants.SURVIVAL_MODE_SCORE_PER_SEC)
-	GameManager.player_score += new_score
+	# Accumulate fractional score per frame so low rates (e.g. 5/sec)
+	# still produce smooth increments instead of truncating to 0.
+	_survival_score_accumulator += delta * GameConstants.SURVIVAL_MODE_SCORE_PER_SEC
+	if _survival_score_accumulator >= 1.0:
+		var to_add: int = int(_survival_score_accumulator)
+		_survival_score_accumulator -= float(to_add)
+		GameManager.player_score += to_add
 	survival_score_tick.emit(GameManager.player_score)
 	# Periodic boss spawn.
 	_survival_next_boss_time -= delta
