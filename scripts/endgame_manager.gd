@@ -45,6 +45,7 @@ var _boss_gauntlet_completed: bool = false
 var _loot_caves: Array[Dictionary] = []
 var _ancient_vault: Dictionary = {}
 var _ancient_vault_unlocked: bool = false
+var _vault_guardian_died_handled: bool = false
 var _rng := RandomNumberGenerator.new()
 
 # ─── Persistence ─────────────────────────────────────────────────────────────────
@@ -563,6 +564,7 @@ func generate_ancient_vault() -> void:
 		"opened": false,
 		"puzzle_steps_completed": 0,
 	}
+	_vault_guardian_died_handled = false
 	_build_vault_entrance()
 	print("[Endgame] Generated ancient vault at %s" % str(pos))
 
@@ -729,9 +731,19 @@ func _spawn_vault_guardian() -> void:
 		guardian.is_arena_boss = true
 		guardian.set_meta("vault_guardian", true)
 	GameManager.boss_spawned.emit(guardian)
-	guardian.connect("enemy_died", _on_vault_guardian_died)
+	# NOTE: Do NOT connect enemy_died here — _on_boss_defeated already routes
+	# vault guardian deaths via GameManager.boss_defeated (the guardian has
+	# is_arena_boss = true, so enemy_base.gd emits boss_defeated on death).
+	# Connecting enemy_died as well caused _on_vault_guardian_died to fire
+	# twice, doubling the legendary loot / XP / score rewards.
 
 func _on_vault_guardian_died(_enemy: Node) -> void:
+	# Guard against double execution — this is called via
+	# _on_boss_defeated (GameManager.boss_defeated signal). It was previously
+	# also connected to enemy_died, causing it to fire twice.
+	if _vault_guardian_died_handled:
+		return
+	_vault_guardian_died_handled = true
 	# Spawn legendary loot at the vault entrance.
 	var collectible_scene: PackedScene = load("res://scenes/entities/collectible.tscn")
 	if not collectible_scene:
