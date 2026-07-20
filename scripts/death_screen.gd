@@ -14,6 +14,7 @@ class_name DeathScreen
 var _bg_color: Color = GameConstants.DEATH_SCREEN_BG_COLOR
 var _fade_progress: float = 0.0  # 0..1, controls fade-in
 var _title_alpha: float = 0.0
+var _title_scale: float = 0.85  # Title scales in from 0.85 → 1.0 with overshoot
 var _stats_alpha: float = 0.0
 var _prompt_alpha: float = 0.0
 var _is_shown: bool = false
@@ -73,6 +74,7 @@ func _on_player_died() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP  # Accept clicks
 	_fade_progress = 0.0
 	_title_alpha = 0.0
+	_title_scale = 0.85  # Reset for the scale-in animation
 	_stats_alpha = 0.0
 	_prompt_alpha = 0.0
 	_stat_anim_timer = 0.0
@@ -122,6 +124,22 @@ func _process(delta: float) -> void:
 	# Staggered fade-in: title at 0.2s, stats at 0.5s, prompt at 1.0s
 	_stat_anim_timer += delta
 	_title_alpha = clampf((_stat_anim_timer - 0.2) / 0.4, 0.0, 1.0)
+	# ── Title scale-in with overshoot ── The title eases from 0.85 → 1.0 using
+	#    an ease-out-back curve (slight overshoot past 1.0 then settle). This
+	#    mirrors the main menu's title entrance and makes the death moment feel
+	#    dramatic and cinematic rather than a flat fade. The scale follows the
+	#    same timing window as _title_alpha (0.2s start, 0.4s ramp) so the
+	#    scale and fade are in sync. The ease-out-back formula
+	#    1 + c3*(t-1)^3 + c1*(t-1)^2 (with c1=1.70158, c3=c1+1) is the standard
+	#    CSS/godot ease-out-back curve — it overshoots ~7% past 1.0 then settles.
+	var title_t: float = clampf((_stat_anim_timer - 0.2) / 0.45, 0.0, 1.0)
+	if title_t > 0.0 and title_t < 1.0:
+		var c1: float = 1.70158
+		var c3: float = c1 + 1.0
+		var tm: float = title_t - 1.0
+		_title_scale = 1.0 + c3 * tm * tm * tm + c1 * tm * tm
+	elif title_t >= 1.0:
+		_title_scale = 1.0
 	_stats_alpha = clampf((_stat_anim_timer - 0.5) / 0.5, 0.0, 1.0)
 	_prompt_alpha = clampf((_stat_anim_timer - 1.0) / 0.4, 0.0, 1.0)
 
@@ -203,7 +221,11 @@ func _draw() -> void:
 			_title_alpha)
 		var title_text := "ZORP HAS FALLEN"
 		var title_pos := Vector2(center.x, center.y - 120)
-		_draw_centered_text(title_text, title_pos, 42, title_color)
+		# Scale the font size by _title_scale for the scale-in animation.
+		# This keeps the text centered while it grows, matching the main
+		# menu's title entrance. Clamped so the overshoot can't blow up.
+		var title_font_size: int = int(round(42 * clampf(_title_scale, 0.5, 1.2)))
+		_draw_centered_text(title_text, title_pos, title_font_size, title_color)
 
 	# Draw stats
 	if _stats_alpha > 0.01:

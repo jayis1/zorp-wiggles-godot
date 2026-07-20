@@ -524,6 +524,14 @@ func _collect() -> void:
 	]
 	if is_rare:
 		AudioManager.play_sfx(AudioManager.SFX_PICKUP_RARE)
+		# ── FOV micro-kick on rare pickup ── A tiny, quick FOV widen (3°) that
+		#    eases back over ~0.8s. Much smaller than the level-up kick (8°)
+		#    so it reads as a subtle "ooh, shiny" pulse rather than a power
+		#    surge. Gives rare pickups a touch more reward feel without
+		#    being distracting when farming materials. Only fires for rare
+		#    items so common XP orbs don't make the camera breathe constantly.
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("kick_fov"):
+			GameManager.camera_rig.kick_fov(3.0)
 	else:
 		AudioManager.play_sfx(AudioManager.SFX_PICKUP)
 

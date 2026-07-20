@@ -1124,6 +1124,14 @@ func _update_idle_anim(delta: float) -> void:
 # ─── Auto-Collect ─────────────────────────────────────────────────────────────
 
 func _auto_collect(delta: float) -> void:
+	# ── Phase 27: Hover Wings accessory — pet continues collecting while the
+	#    player dashes. Without Hover Wings, the pet pauses collection during
+	#    dash (the pet is zooming along and can't vacuum effectively). ──
+	if _cached_player and is_instance_valid(_cached_player):
+		var player_dashing: bool = bool(_cached_player.get("is_dashing")) if "is_dashing" in _cached_player else false
+		if player_dashing:
+			if not PetAccessorySystem or PetAccessorySystem.get_stat_bonus("hover_collect_while_dash") < 1.0:
+				return  # Pet can't collect during dash without Hover Wings
 	var cfg: Dictionary = _stage_config()
 	var radius: float = cfg["collect_radius"]
 	# Vacuum nearby collectibles toward the pet — they get collected when close

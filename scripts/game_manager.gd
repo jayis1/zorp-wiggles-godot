@@ -431,6 +431,20 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if source_pos != Vector3.ZERO and player and is_instance_valid(player):
 		shake_dir = (player.global_position - source_pos).normalized()
 	_trigger_camera_trauma(0.35, shake_dir)
+	# ── Player-damage hit-stop ── A brief, gentle world freeze (55ms at 0.35x
+	#    scale) when the player takes a hit. Lighter than the crit hit-stop
+	#    (45ms @ 0.08x) because the player is the victim, not the attacker —
+	#    the freeze should register as a "ouch" beat without disrupting flow
+	#    or making the player feel sluggish. The restore timer uses
+	#    ignore_time_scale=true so the freeze lasts exactly 55ms of real time
+	#    regardless of the current DimensionSystem time scale. Restores to 1.0
+	#    because per-node _time_scale multipliers handle dimension slow-down.
+	#    Skipped on the killing blow — _die() owns the death moment and a
+	#    freeze here would delay the death screen's fade-in.
+	if player_hp > 0:
+		Engine.time_scale = 0.35
+		var hs_timer := get_tree().create_timer(0.055, true, false, true)
+		hs_timer.timeout.connect(func(): Engine.time_scale = 1.0)
 	# Phase 5: Emit damage direction signal (if source_pos is non-zero)
 	if source_pos != Vector3.ZERO:
 		damage_taken_from.emit(source_pos)
