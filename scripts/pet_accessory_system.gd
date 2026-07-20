@@ -169,7 +169,9 @@ func get_stat_bonus(stat: String) -> float:
 					val += 0.5
 			"pet_attack_cooldown_mult":
 				if slot_id == GameConstants.PetAccessory.CROWN_ADEPT:
-					val *= 0.8  # Multiplicative — only one crown at a time
+					# Multiplicative — only one crown slot, so set directly.
+					# 0.8 means the pet attacks 20% faster (cooldown × 0.8).
+					val = 0.8
 			"player_loot_mult":
 				if slot_id == GameConstants.PetAccessory.BOW_LUCK:
 					val += 0.15

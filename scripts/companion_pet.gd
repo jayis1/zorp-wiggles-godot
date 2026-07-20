@@ -1393,7 +1393,7 @@ func _add_accessory_mesh(visual_kind: int, accessory_id: int) -> void:
 	mat.emission_enabled = true
 	# Color by accessory type
 	var acc_color: Color = Color(0.8, 0.7, 0.3)  # default gold-ish
-	if accessory_id < GameConstants.PET_STONE_COLORS.size():
+	if accessory_id > GameConstants.PetAccessory.NONE and accessory_id < GameConstants.PET_ACCESSORY_COUNT:
 		# Use a distinct color per slot type
 		match GameConstants.PET_ACCESSORY_SLOT[accessory_id]:
 			0: acc_color = Color(0.7, 0.5, 0.2)  # Collar — brown/gold

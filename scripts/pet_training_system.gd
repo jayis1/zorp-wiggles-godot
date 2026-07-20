@@ -319,8 +319,11 @@ func update(delta: float) -> void:
 		return
 	_game_timer -= delta
 	# Check time-out
+	# NOTE: TARGET_DODGE is a *survival* game — running out of time is a
+	# SUCCESS, not a failure. All other games treat time-out as failure.
 	if _game_timer <= 0.0:
-		_end_game(false)
+		var success: bool = _active_game == GameConstants.PetTrainingGame.TARGET_DODGE
+		_end_game(success)
 		return
 	match _active_game:
 		GameConstants.PetTrainingGame.DASH_COURSE:
@@ -407,9 +410,9 @@ func _update_target_dodge(delta: float) -> void:
 		if is_instance_valid(bolt):
 			bolt.queue_free()
 		_dummy_bolts.erase(bolt)
-	# Survival game — time runs out = success
-	if _game_timer <= 0.0:
-		_end_game(true)
+	# NOTE: Survival success is handled in update() — when the timer hits 0
+	# the outer code calls _end_game(true) for TARGET_DODGE. We never reach
+	# this function on the final tick because update() returns early.
 
 
 func _fire_dummy_bolt(dummy: Node3D, player: Node3D) -> void:

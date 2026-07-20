@@ -431,7 +431,14 @@ func _spawn_dungeon_boss(room: Dictionary, theme: int, dungeon_id: int) -> void:
 		var scale_factor: float = 0.7
 		boss.max_hp = int(boss.max_hp * scale_factor)
 		boss.hp = boss.max_hp
-		boss.is_arena_boss = true
+		# ── Don't set is_arena_boss for bosses that emit boss_defeated in their
+		#    own _die() — doing so would cause double-fire of boss_defeated.
+		#    Drake, Ancient Sentinel, and Void Leviathan handle boss_defeated
+		#    themselves. Other boss types rely on is_arena_boss. ──
+		if boss_type != GameConstants.EnemyType.DRAKE and \
+		   boss_type != GameConstants.EnemyType.VOID_LEVIATHAN and \
+		   boss_type != GameConstants.EnemyType.ANCIENT_SENTINEL:
+			boss.is_arena_boss = true
 		boss.set_meta("dungeon_id", dungeon_id)
 	# Emit boss_spawned so HUD tracks it.
 	GameManager.boss_spawned.emit(boss)

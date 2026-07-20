@@ -194,7 +194,15 @@ func _spawn_survival_boss() -> void:
 		var hp_mult: float = GameConstants.SURVIVAL_MODE_ENEMY_MULT
 		boss.max_hp = int(boss.max_hp * hp_mult)
 		boss.hp = boss.max_hp
-		boss.is_arena_boss = true
+		# ── Don't set is_arena_boss for bosses that emit boss_defeated in their
+		#    own _die() — doing so would cause double-fire of boss_defeated
+		#    (once from the boss's _die, once from EnemyBase._die).
+		#    Drake, Ancient Sentinel, and Void Leviathan handle boss_defeated
+		#    themselves. Serpent and Graviton rely on is_arena_boss. ──
+		if bt != GameConstants.EnemyType.DRAKE and \
+		   bt != GameConstants.EnemyType.VOID_LEVIATHAN and \
+		   bt != GameConstants.EnemyType.ANCIENT_SENTINEL:
+			boss.is_arena_boss = true
 	GameManager.boss_spawned.emit(boss)
 	GameManager.add_message("☠ Survival boss incoming!")
 
@@ -339,7 +347,13 @@ func _spawn_boss_gauntlet_next() -> void:
 		boss.damage = int(boss.damage * dmg_mult)
 		if "speed" in boss:
 			boss.speed *= spd_mult
-		boss.is_arena_boss = true
+		# ── Don't set is_arena_boss for bosses that emit boss_defeated in their
+		#    own _die() — doing so would cause double-fire of boss_defeated.
+		#    Same exclusion as survival mode and Boss Rush. ──
+		if bt != GameConstants.EnemyType.DRAKE and \
+		   bt != GameConstants.EnemyType.VOID_LEVIATHAN and \
+		   bt != GameConstants.EnemyType.ANCIENT_SENTINEL:
+			boss.is_arena_boss = true
 	GameManager.boss_spawned.emit(boss)
 	boss_gauntlet_progress.emit(_boss_gauntlet_index, GameConstants.BOSS_GAUNTLET_QUEUE.size())
 	GameManager.add_message("☠ Boss Gauntlet %d/%d" % [_boss_gauntlet_index + 1, GameConstants.BOSS_GAUNTLET_QUEUE.size()])
@@ -735,7 +749,10 @@ func _spawn_vault_guardian() -> void:
 		guardian.hp = guardian.max_hp
 		guardian.damage = GameConstants.ANCIENT_VAULT_GUARDIAN_DAMAGE
 		guardian.speed = GameConstants.ANCIENT_VAULT_GUARDIAN_SPEED
-		guardian.is_arena_boss = true
+		# NOTE: Do NOT set is_arena_boss = true here. The guardian is a Drake
+		# scene, and EnemyDrake._die() already emits boss_defeated and calls
+		# clear_current_boss(). Setting is_arena_boss would cause EnemyBase._die()
+		# to emit boss_defeated a SECOND time (double-fire).
 		guardian.set_meta("vault_guardian", true)
 	GameManager.boss_spawned.emit(guardian)
 	# NOTE: Do NOT connect enemy_died here — _on_boss_defeated already routes
