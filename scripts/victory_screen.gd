@@ -56,6 +56,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Phase 35: add to victory_screen group so other nodes can query our state
+	add_to_group("victory_screen")
 	# Connect to GameModeManager completion signals
 	if GameModeManager:
 		GameModeManager.boss_rush_completed.connect(_on_boss_rush_completed)
@@ -196,6 +198,13 @@ func _hide() -> void:
 		GameManager.is_paused = false
 
 
+# ── Phase 35: Public state query for input handling audit ──
+# Lets the pause menu (and other systems) check if the victory screen is
+# currently shown so they don't open on top of it.
+func is_shown() -> bool:
+	return _is_shown
+
+
 # ─── Per-Frame Animation ──────────────────────────────────────────────────────
 
 func _process(delta: float) -> void:
@@ -218,6 +227,30 @@ func _process(delta: float) -> void:
 		_quit_btn.modulate.a = _buttons_alpha
 		_quit_btn.scale = Vector2(0.8, 0.8).lerp(Vector2.ONE, _buttons_alpha)
 	queue_redraw()
+
+
+# ── Phase 35: Input handling audit — keyboard shortcuts for victory screen ──
+# The death screen lets you restart with R or Space; the victory screen had
+# no keyboard shortcut, which was an inconsistency. Now R/Space/Enter restarts
+# the current mode, and Esc/Q returns to the main menu. Only fires after the
+# buttons have appeared (so early presses during the fade-in don't accidentally
+# skip the screen). Milestone celebrations (auto-hide) ignore these keys.
+func _unhandled_input(event: InputEvent) -> void:
+	if not _is_shown:
+		return
+	# Milestone celebrations auto-hide — don't accept restart keys
+	if mouse_filter == Control.MOUSE_FILTER_IGNORE:
+		return
+	# Wait for buttons to be visible before accepting restart keys
+	if _buttons_alpha < 0.5:
+		return
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_R or event.keycode == KEY_SPACE or event.keycode == KEY_ENTER:
+			_on_play_again()
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_ESCAPE or event.keycode == KEY_Q:
+			_on_quit()
+			get_viewport().set_input_as_handled()
 
 
 # ─── Rendering ─────────────────────────────────────────────────────────────────
@@ -357,8 +390,8 @@ func _on_play_again() -> void:
 func _on_quit() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 	_hide()
-	# Return to main menu
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	# Return to main menu — Phase 35: fade transition
+	SceneTransition.change_scene("res://scenes/main_menu.tscn")
 
 func _on_button_hover(btn: Button, hovering: bool) -> void:
 	if not is_instance_valid(btn):

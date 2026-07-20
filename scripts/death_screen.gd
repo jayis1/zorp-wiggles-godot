@@ -112,7 +112,8 @@ func _on_try_again() -> void:
 func _on_quit() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 	AudioManager.stop_music()
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	# Phase 35: fade transition back to the main menu
+	SceneTransition.change_scene("res://scenes/main_menu.tscn")
 
 func _process(delta: float) -> void:
 	if not _is_shown:

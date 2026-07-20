@@ -77,8 +77,8 @@ func _gui_input(event: InputEvent) -> void:
 
 func _start_game() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
-	# Start biome music once the game scene loads
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	# Phase 35: fade transition into the game scene
+	SceneTransition.change_scene("res://scenes/main.tscn")
 
 func _draw() -> void:
 	if _fade_alpha < 0.01:

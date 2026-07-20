@@ -532,7 +532,13 @@ func _level_up() -> void:
 	var heal_amount: int = max(40, int(player_max_hp * GameConstants.PLAYER_LEVEL_HEAL_PERCENT))
 	player_hp = min(player_max_hp, player_hp + heal_amount)
 	# XP curve: exponential growth using the curve exponent
-	player_xp_to_next = int(GameConstants.PLAYER_LEVEL_XP_CURVE_BASE * pow(GameConstants.PLAYER_LEVEL_XP_CURVE_EXP, player_level - 1))
+	# ── Phase 35: Balance pass — apply BalanceManager's smoothed XP curve ──
+	# The base curve (80 * 1.35^level) is adjusted by a per-level multiplier
+	# so early levels are slightly faster and late levels slightly slower.
+	if BalanceManager and BalanceManager.is_initialized():
+		player_xp_to_next = BalanceManager.get_xp_to_next(player_level)
+	else:
+		player_xp_to_next = int(GameConstants.PLAYER_LEVEL_XP_CURVE_BASE * pow(GameConstants.PLAYER_LEVEL_XP_CURVE_EXP, player_level - 1))
 	level_up.emit(player_level)
 	# Inform player of stat increases
 	GameManager.add_message("⬆ Level %d! HP: %d (+%d) | DMG: +%d | Speed: +%.1f" % [
@@ -725,20 +731,33 @@ func get_time_difficulty_tier() -> int:
 	return int(min(GameConstants.DIFFICULTY_TIME_MAX_TIER, game_time / GameConstants.DIFFICULTY_TIME_INTERVAL))
 
 # Time-based enemy HP multiplier (1.0 + tier * HP_SCALE)
+# ── Phase 35: Balance pass — eased S-curve for smoother progression ──
 func get_time_enemy_hp_mult() -> float:
-	return 1.0 + get_time_difficulty_tier() * GameConstants.DIFFICULTY_TIME_HP_SCALE
+	var tier: int = get_time_difficulty_tier()
+	if BalanceManager and BalanceManager.is_initialized():
+		return BalanceManager.get_time_enemy_hp_mult(tier)
+	return 1.0 + tier * GameConstants.DIFFICULTY_TIME_HP_SCALE
 
 # Time-based enemy damage multiplier
 func get_time_enemy_damage_mult() -> float:
-	return 1.0 + get_time_difficulty_tier() * GameConstants.DIFFICULTY_TIME_DAMAGE_SCALE
+	var tier: int = get_time_difficulty_tier()
+	if BalanceManager and BalanceManager.is_initialized():
+		return BalanceManager.get_time_enemy_damage_mult(tier)
+	return 1.0 + tier * GameConstants.DIFFICULTY_TIME_DAMAGE_SCALE
 
 # Time-based enemy speed multiplier
 func get_time_enemy_speed_mult() -> float:
-	return 1.0 + get_time_difficulty_tier() * GameConstants.DIFFICULTY_TIME_SPEED_SCALE
+	var tier: int = get_time_difficulty_tier()
+	if BalanceManager and BalanceManager.is_initialized():
+		return BalanceManager.get_time_enemy_speed_mult(tier)
+	return 1.0 + tier * GameConstants.DIFFICULTY_TIME_SPEED_SCALE
 
 # Time-based spawn interval multiplier (< 1.0 = faster spawns)
 func get_time_spawn_interval_mult() -> float:
-	return max(0.3, 1.0 - get_time_difficulty_tier() * GameConstants.DIFFICULTY_TIME_SPAWN_ACCEL)
+	var tier: int = get_time_difficulty_tier()
+	if BalanceManager and BalanceManager.is_initialized():
+		return BalanceManager.get_time_spawn_interval_mult(tier)
+	return max(0.3, 1.0 - tier * GameConstants.DIFFICULTY_TIME_SPAWN_ACCEL)
 
 # Time-based max enemy count bonus
 func get_time_max_enemy_bonus() -> int:

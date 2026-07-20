@@ -532,6 +532,11 @@ func _bounce_off_wall(_body: Node3D) -> void:
 func _hit_enemy(enemy: Node3D) -> void:
 	# damage already includes level bonus and mod multiplier (set by player.gd on spawn)
 	var total_damage := damage
+	# ── Phase 35: Balance pass — weapon mod damage normalization ──
+	# Nudges outlier mods (Mega Blast, Sniper Beam, Shrink Beam) toward the
+	# mean so no single mod dominates. Returns 1.0 for unlisted mods.
+	if BalanceManager and BalanceManager.is_initialized():
+		total_damage = int(total_damage * BalanceManager.get_mod_damage_adjustment(_weapon_mod))
 	# Phase 24: Meteor Strike — the bolt is just a marker; the meteor is the
 	# main damage. Reduce the bolt's direct hit damage so the bulk comes from
 	# the meteor impact (called later in this function).

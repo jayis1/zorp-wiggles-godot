@@ -333,6 +333,9 @@ func feed(collectible_type: int) -> void:
 		if evolution_path != new_path:
 			_set_path(new_path)
 	var value: int = GameConstants.PET_FEED_VALUES.get(collectible_type, 5)
+	# ── Phase 35: Balance pass — slightly more generous pet evolution ──
+	if BalanceManager and BalanceManager.is_initialized():
+		value = BalanceManager.get_evolution_points(value)
 	evolution_points += value
 	# Heal the pet slightly per pickup
 	hp = min(max_hp, hp + int(GameConstants.PET_HEAL_PER_PICKUP))

@@ -101,7 +101,8 @@ func _on_continue_pressed() -> void:
 	if SaveSystem and SaveSystem.has_method("load_and_restart"):
 		if not SaveSystem.load_and_restart():
 			GameManager.add_message("⚠ Could not load save — starting fresh")
-			get_tree().change_scene_to_file("res://scenes/main.tscn")
+			# Phase 35: use fade transition instead of a hard cut
+			SceneTransition.change_scene("res://scenes/main.tscn")
 
 # ── Phase 25: Add a "Mode Select" button to the menu programmatically ──
 # We create it in code rather than editing the .tscn so the scene file stays
@@ -271,8 +272,8 @@ func _on_button_hover(btn: Button, is_hovering: bool) -> void:
 
 func _on_start_pressed() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
-	# Start biome music once the game scene loads
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	# Phase 35: fade transition into the game scene
+	SceneTransition.change_scene("res://scenes/main.tscn")
 
 func _on_settings_pressed() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)

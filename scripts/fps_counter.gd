@@ -134,17 +134,15 @@ func _build_readout() -> String:
 		fps_color_name = "red"
 	elif _cur_fps < 55.0:
 		fps_color_name = "yellow"
-	# Format with monospace alignment using tabs/padding
+	# Format with monospace alignment using tabs/padding.
+	# Phase 35: use explicit string concatenation instead of Python-style
+	# triple-quote multiline strings (per project GDScript rules).
 	var mem_str: String = "%d KB" % _static_mem_kb if _static_mem_kb < 1024 else "%.1f MB" % (_static_mem_kb / 1024.0)
-	return """[color=%s]FPS: %5.1f[/color]  avg: %5.1f  min: %5.1f
-Frame: %5.2f ms   Process: %5.2f ms   Physics: %5.2f ms
-Draw calls: %4d   Objects: %4d   Resources: %5d
-Nodes: %5d   Orphans: %3d   VRAM: %s""" % [
-		fps_color_name, _cur_fps, _avg_fps, _min_fps,
-		_frame_time_ms, _process_ms, _physics_ms,
-		_draw_calls, _object_count, _resource_count,
-		_node_count, _dynamic_mem_kb, mem_str
-	]
+	var line1: String = "[color=%s]FPS: %5.1f[/color]  avg: %5.1f  min: %5.1f" % [fps_color_name, _cur_fps, _avg_fps, _min_fps]
+	var line2: String = "Frame: %5.2f ms   Process: %5.2f ms   Physics: %5.2f ms" % [_frame_time_ms, _process_ms, _physics_ms]
+	var line3: String = "Draw calls: %4d   Objects: %4d   Resources: %5d" % [_draw_calls, _object_count, _resource_count]
+	var line4: String = "Nodes: %5d   Orphans: %3d   VRAM: %s" % [_node_count, _dynamic_mem_kb, mem_str]
+	return line1 + "\n" + line2 + "\n" + line3 + "\n" + line4
 
 # ─── Rendering ─────────────────────────────────────────────────────────────────
 

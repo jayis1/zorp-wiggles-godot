@@ -189,7 +189,8 @@ func load_and_restart() -> bool:
 	# We use a meta flag on the autoload itself (survives the scene change).
 	set_meta("_pending_restore", true)
 	# Reload the main scene to regenerate the world with the saved seed.
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	# Phase 35: use the fade transition for a smooth load.
+	SceneTransition.change_scene("res://scenes/main.tscn")
 	return true
 
 

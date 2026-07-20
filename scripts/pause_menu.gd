@@ -108,7 +108,29 @@ func _build_ui() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# ── Phase 35: Input handling audit ──
+	# Don't allow pausing when a death or victory screen is showing.
+	# Those screens own the pause state and have their own buttons.
+	# Without this guard, the pause menu would open on top of them
+	# and the player could get stuck in a nested pause state.
 	if event.is_action_pressed("pause"):
+		if GameManager and not GameManager.player_is_alive and not GameManager.player_is_downed:
+			# Player is dead (not downed) — death screen owns the state
+			get_viewport().set_input_as_handled()
+			return
+		# Check for active victory screen via its is_shown-like state
+		var victory: Node = get_tree().get_first_node_in_group("victory_screen")
+		if victory and victory.has_method("is_shown") and victory.is_shown():
+			get_viewport().set_input_as_handled()
+			return
+		# Check for active intro cinematic — pausing during the cinematic
+		# would freeze the cinematic tween (PROCESS_MODE_ALWAYS on the
+		# pause menu, but the cinematic isn't paused-aware) and leave the
+		# player stuck with no way to resume the cinematic.
+		if GameManager and GameManager.player and is_instance_valid(GameManager.player):
+			if GameManager.player.has_meta("cinematic_active") and bool(GameManager.player.get_meta("cinematic_active", false)):
+				get_viewport().set_input_as_handled()
+				return
 		if _is_paused and not (_settings_menu and _settings_menu.visible):
 			_on_resume()
 		elif not _is_paused:
@@ -235,4 +257,5 @@ func _on_quit() -> void:
 	GameManager.is_paused = false
 	get_tree().paused = false
 	AudioManager.stop_music()
-	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+	# Phase 35: fade transition back to the main menu
+	SceneTransition.change_scene("res://scenes/main_menu.tscn")

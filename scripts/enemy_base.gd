@@ -1003,8 +1003,14 @@ func _drop_rare_material() -> void:
 	if not EquipmentSystem:
 		return
 	var is_boss: bool = base_scale >= 2.0 or max_hp >= 200 or is_arena_boss or is_world_boss
-	var drop_chance: float = GameConstants.RARE_MATERIAL_DROP_CHANCE_BOSS if is_boss \
-		else GameConstants.RARE_MATERIAL_DROP_CHANCE
+	# ── Phase 35: Balance pass — level-scaled rare material drop chance ──
+	# Late-game players get a subtle bonus so they aren't starved of rare mats.
+	var drop_chance: float
+	if BalanceManager and BalanceManager.is_initialized():
+		drop_chance = BalanceManager.get_rare_material_drop_chance(GameManager.player_level, is_boss)
+	else:
+		drop_chance = GameConstants.RARE_MATERIAL_DROP_CHANCE_BOSS if is_boss \
+			else GameConstants.RARE_MATERIAL_DROP_CHANCE
 	# Weather bonus — adds to drop chance during matching weather
 	var current_weather: int = -1
 	if WeatherSystem and WeatherSystem.has_method("get_current_weather"):
