@@ -48,6 +48,21 @@ var _look_ahead_offset: Vector3 = Vector3.ZERO
 @export var default_fov: float = GameConstants.CAMERA_DEFAULT_FOV
 @export var fov_return_speed: float = GameConstants.CAMERA_FOV_RETURN_SPEED
 
+## ── Low-HP tension zoom ── When the player's HP drops below the threshold,
+## the camera subtly zooms in (reduces orbit distance) to frame Zorp tighter
+## and heighten the sense of danger. This pairs with the player's heartbeat
+## pulse and the red damage vignette — the camera itself communicates "you
+## are in trouble" by pulling closer, the way a horror film tightens on the
+## protagonist in peril. The zoom is SMALL (~2.5m closer at full danger) so
+## it doesn't hurt visibility — the player still sees incoming threats.
+## Priority: co-op dynamic zoom > boss zoom > low-HP zoom > normal orbit.
+## The low-HP zoom only affects the non-co-op, non-boss path so it never
+## fights the existing dynamic zoom systems.
+@export var low_hp_zoom_threshold: float = 0.25   # HP ratio below which tension zoom engages
+@export var low_hp_zoom_distance: float = 14.0    # Pulled-in distance during critical HP (vs ~20 default)
+@export var low_hp_zoom_smoothing: float = 2.0    # How fast the tension zoom eases in/out
+var _low_hp_zoom_active: bool = false
+
 ## Dynamic speed FOV — the camera FOV subtly widens as the player moves faster,
 ## giving a sense of momentum and acceleration (the Doom/Sunset Overdrive trick).
 ## The effect is capped at speed_fov_max degrees above default and only engages
@@ -144,6 +159,23 @@ func _process(delta: float) -> void:
 		# ── Boss zoom takes priority over normal (non-coop) distance ──
 		# (Co-op zoom is handled in the coop_active branch above, and boss
 		#  zoom doesn't override co-op since co-op needs to see both players)
+		# ── Low-HP tension zoom ── Below boss zoom priority but above the
+		# normal orbit distance, the camera pulls in slightly when the
+		# player is in critical HP. This only runs in the non-co-op, non-
+		# boss path — if a boss is active (_target_zoom_distance already
+		# set to boss_zoom_distance by _on_boss_spawned), the boss zoom
+		# wins so the player can still see the telegraphed attacks. We
+		# detect "boss active" by comparing _target_zoom_distance to
+		# boss_zoom_distance (set on spawn, restored on defeat). This
+		# avoids needing a separate boss-active flag.
+		var boss_zoom_active: bool = absf(_target_zoom_distance - boss_zoom_distance) < 0.01
+		if not boss_zoom_active:
+			var hp_ratio: float = float(GameManager.player_hp) / float(GameManager.player_max_hp) \
+				if GameManager.player_max_hp > 0 else 1.0
+			var should_be_active: bool = hp_ratio > 0.0 and hp_ratio <= low_hp_zoom_threshold
+			if should_be_active != _low_hp_zoom_active:
+				_low_hp_zoom_active = should_be_active
+				_target_zoom_distance = low_hp_zoom_distance if _low_hp_zoom_active else orbit_distance
 	# ── Look-ahead: shift the follow target in the player's velocity direction
 	# so the camera leads slightly, giving the player more forward visibility.
 	# Only uses horizontal velocity (no Y drift from gravity/reverse-gravity).
@@ -322,6 +354,20 @@ func get_right_direction() -> Vector3:
 
 func _on_boss_spawned(_boss: Node) -> void:
 	_target_zoom_distance = boss_zoom_distance
+	# Reset the low-HP zoom flag so the boss zoom takes full ownership of
+	# _target_zoom_distance. When the boss dies and _on_boss_defeated
+	# restores orbit_distance, the low-HP check in _process will re-
+	# evaluate and re-engage the tension zoom if the player is still
+	# critical. Without this reset, the flag would stay true and the
+	# "should_be_active != _low_hp_zoom_active" guard would skip the
+	# _target_zoom_distance update, leaving the camera at orbit_distance
+	# instead of low_hp_zoom_distance after the boss dies.
+	_low_hp_zoom_active = false
 
 func _on_boss_defeated(_boss: Node) -> void:
 	_target_zoom_distance = orbit_distance
+	# The _process low-HP check will re-engage the tension zoom next frame
+	# if the player is still at critical HP. No need to set it here —
+	# setting _low_hp_zoom_active = false would cause a one-frame flash
+	# at orbit_distance before the tension zoom eases back in, which
+	# reads worse than a smooth ease from boss_zoom → low_hp_zoom.

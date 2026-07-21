@@ -1460,7 +1460,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pet_fusion") and not GameManager.is_paused and GameManager.player_is_alive:
 		if PetFusionSystem:
 			if PetFusionSystem.get_donor_count() >= 2 and PetFusionSystem.can_fuse():
-				PetFusionSystem.try_fuse()
+				# try_fuse() returns the new fusion pet node — update our
+				# reference so stone/feed/fetch commands target the right pet.
+				var fused_pet: CharacterBody3D = PetFusionSystem.try_fuse()
+				if fused_pet and is_instance_valid(fused_pet):
+					pet = fused_pet
 			else:
 				PetFusionSystem.bank_current_pet()
 		get_viewport().set_input_as_handled()

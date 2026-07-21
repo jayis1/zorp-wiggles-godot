@@ -142,24 +142,25 @@ func can_fuse() -> bool:
 
 
 ## Execute the fusion. Consumes 1 PRISM_HEART, dismisses any active pet,
-## spawns a fusion pet with the combined type.
-func try_fuse() -> bool:
+## spawns a fusion pet with the combined type. Returns the new pet node on
+## success (so the caller can update its pet reference), or null on failure.
+func try_fuse() -> CharacterBody3D:
 	if _donors.size() < 2:
 		GameManager.add_message("Need 2 banked donors to fuse! Press Shift+F to bank your pet.")
-		return false
+		return null
 	if _fusion_pet_active:
 		GameManager.add_message("A fusion pet is already active!")
-		return false
+		return null
 	var ft: int = get_fusion_type()
 	if ft == GameConstants.PetFusionType.NONE:
 		GameManager.add_message("Donors have the same path — can't fuse. Bank a different path.")
 		fusion_failed.emit("Same path donors")
-		return false
+		return null
 	# Consume PRISM_HEART
 	if not EquipmentSystem or not EquipmentSystem.consume_rare_material(GameConstants.RareMaterial.PRISM_HEART, 1):
 		GameManager.add_message("Need 1 Prism Heart rare material to fuse! Boss drops provide these.")
 		fusion_failed.emit("No Prism Heart")
-		return false
+		return null
 	# Dismiss any currently active pet
 	var old_pet: Node3D = get_tree().get_first_node_in_group("companion_pet")
 	if old_pet and is_instance_valid(old_pet):
@@ -169,8 +170,11 @@ func try_fuse() -> bool:
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if not player or not is_instance_valid(player):
 		fusion_failed.emit("No player")
-		return false
+		return null
 	var fusion_pet := preload("res://scenes/entities/companion_pet.tscn").instantiate() as CharacterBody3D
+	if not fusion_pet:
+		fusion_failed.emit("Spawn failed")
+		return null
 	player.get_parent().add_child(fusion_pet)
 	fusion_pet.global_position = player.global_position + GameConstants.PET_SPAWN_OFFSET
 	# Configure the fusion pet: set to Adult stage with fusion stats
@@ -209,7 +213,7 @@ func try_fuse() -> bool:
 	if TutorialManager and TutorialManager.has_method("notify_pet_summoned"):
 		TutorialManager.notify_pet_summoned()
 	print("[PetFusion] Created fusion pet type %d (%s)" % [ft, GameConstants.PET_FUSION_NAMES[ft]])
-	return true
+	return fusion_pet
 
 
 ## Called by companion_pet.gd to check if it's a fusion pet and get override stats.

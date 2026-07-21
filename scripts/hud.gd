@@ -96,6 +96,18 @@ var _hp_bar_flash_timer: float = 0.0
 const HP_BAR_FLASH_DURATION: float = 0.15  # Slightly shorter than boss (player hits are more frequent)
 const HP_BAR_SHAKE_AMP: float = 4.0        # Slightly less violent than boss (player bar is smaller)
 
+# ── Heal flash ── When the player heals (HP ratio increases), the bar
+#    flashes a soft mint-green and does a tiny upward "lift" pop. This is
+#    the positive counterpart to the damage white-flash + shake: damage
+#    reads as a sharp white jolt, healing reads as a calm green swell.
+#    The two states are mutually exclusive (a frame can't both damage and
+#    heal), so the flash timers never fight. The heal flash uses a gentler
+#    ease (ease-out quad, no shake) so it reads as soothing rather than
+#    punchy — matching the emotional valence of gaining HP vs losing it.
+var _hp_bar_heal_flash_timer: float = 0.0
+const HP_BAR_HEAL_FLASH_DURATION: float = 0.30  # Longer than damage — a gentle swell, not a pop
+const HP_HEAL_FLASH_COLOR: Color = Color(0.3, 1.0, 0.55)  # Mint green — distinct from the bar's green-yellow-red gradient
+
 # ── Phase 16: Weapon Mod indicator ──
 var _mod_indicator: Label = null
 var _auto_fire_indicator: Label = null
@@ -519,9 +531,21 @@ func _process(delta: float) -> void:
 	# pickups/healing read as positive without a confusing white pop.
 	if _hp_bar_target_ratio < _hp_bar_prev_ratio - 0.001:
 		_hp_bar_flash_timer = HP_BAR_FLASH_DURATION
+	# ── Heal flash trigger ── A ratio *increase* means the player gained HP
+	# (health fragment, regen, level-up restore, etc.). We trigger the
+	# heal flash here (mirroring the damage flash trigger above) so the
+	# bar reads healing as a positive green swell. The damage and heal
+	# paths are mutually exclusive in a single frame — a ratio can't go
+	# both down and up at once — so the two timers never fight.
+	elif _hp_bar_target_ratio > _hp_bar_prev_ratio + 0.001:
+		_hp_bar_heal_flash_timer = HP_BAR_HEAL_FLASH_DURATION
 	_hp_bar_prev_ratio = _hp_bar_target_ratio
 	# Build the target color: the ratio-based gradient, optionally blended
-	# toward white while the flash timer is active.
+	# toward white while the damage flash is active, or toward mint-green
+	# while the heal flash is active. Damage takes precedence if both
+	# timers are somehow non-zero (defensive — shouldn't happen in
+	# practice since a frame can't both damage and heal, but keeps the
+	# blend deterministic).
 	var hp_bar_color_target: Color = _hp_bar_target_color
 	if _hp_bar_flash_timer > 0.0:
 		_hp_bar_flash_timer = max(0.0, _hp_bar_flash_timer - delta)
@@ -529,6 +553,16 @@ func _process(delta: float) -> void:
 		# Ease-out cubic for a sharp onset and gentle tail (matches boss bar)
 		hp_flash_env = 1.0 - pow(1.0 - hp_flash_env, 3.0)
 		hp_bar_color_target = hp_bar_color_target.lerp(Color.WHITE, hp_flash_env * 0.7)
+	elif _hp_bar_heal_flash_timer > 0.0:
+		_hp_bar_heal_flash_timer = max(0.0, _hp_bar_heal_flash_timer - delta)
+		# Ease-out quad — gentler than the damage flash's cubic. Healing is
+		# a positive, calmer event; the softer ease reflects that.
+		var heal_env: float = _hp_bar_heal_flash_timer / HP_BAR_HEAL_FLASH_DURATION
+		heal_env = 1.0 - (1.0 - heal_env) * (1.0 - heal_env)
+		# Blend toward mint-green, but less aggressively than the damage
+		# flash blends toward white (0.5 vs 0.7) — we want a soft tint,
+		# not a full color swap, so the underlying HP gradient still reads.
+		hp_bar_color_target = hp_bar_color_target.lerp(HP_HEAL_FLASH_COLOR, heal_env * 0.5)
 	hp_bar.color = hp_bar.color.lerp(hp_bar_color_target, 1.0 - exp(-_color_smoothing * delta))
 	# Horizontal shake on the bar fill — decaying sine wobble biased by the
 	# flash envelope. We shake the bar ColorRect's offset_left rather than the
@@ -755,6 +789,7 @@ func _on_game_restarted() -> void:
 	# state is reset in its own block above (when boss_ref clears).
 	_hp_bar_prev_ratio = 1.0
 	_hp_bar_flash_timer = 0.0
+	_hp_bar_heal_flash_timer = 0.0
 	if hp_bar:
 		hp_bar.offset_left = 2.0
 	# Reset the auto-fire indicator — the player's _auto_fire_pinned flag is

@@ -174,6 +174,23 @@ func _end_tumble() -> void:
 	if mesh_instance:
 		mesh_instance.visible = true
 
+## ── Rare-item helper ── Returns true for Meteor Shards, Quantum Fuzz, Nebula
+##    Dust, all crafting materials (Phase 16), and all Pet Evolution Stones
+##    (Phase 27). Used in four places: persistent glow light, rarity-based
+##    spin speed, pickup light flash intensity, and the rare SFX / FOV kick.
+##    Keeping the check in one place means new rare types only need to be added
+##    here once, and the spin / glow / flash / audio all pick it up together.
+func _is_rare() -> bool:
+	return collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
+		or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
+		or collectible_type == GameConstants.CollectibleType.NEBULA_DUST \
+		or GameConstants.CRAFTING_MATERIALS.has(collectible_type) \
+		or collectible_type == GameConstants.CollectibleType.EMBER_STONE \
+		or collectible_type == GameConstants.CollectibleType.FROST_STONE \
+		or collectible_type == GameConstants.CollectibleType.SPARK_STONE \
+		or collectible_type == GameConstants.CollectibleType.VOID_STONE \
+		or collectible_type == GameConstants.CollectibleType.LEAF_STONE
+
 func _apply_type_config() -> void:
 	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
 	xp_value = config["value"]
@@ -206,19 +223,7 @@ func _apply_type_config() -> void:
 		# Rare collectibles get a persistent point light so they glow in
 		# dark biomes and are visible from a distance.
 		# Phase 16: Crafting materials also get the glow (they're valuable).
-		if collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
-				or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
-				or collectible_type == GameConstants.CollectibleType.NEBULA_DUST \
-				or collectible_type == GameConstants.CollectibleType.SHIELD_CRYSTAL \
-				or collectible_type == GameConstants.CollectibleType.FIREBALL_SCROLL \
-				or collectible_type == GameConstants.CollectibleType.REGEN_CRYSTAL \
-				or collectible_type == GameConstants.CollectibleType.MAGNET_CORE \
-				or collectible_type == GameConstants.CollectibleType.TOXIC_EXTRACT \
-				or collectible_type == GameConstants.CollectibleType.EMBER_STONE \
-				or collectible_type == GameConstants.CollectibleType.FROST_STONE \
-				or collectible_type == GameConstants.CollectibleType.SPARK_STONE \
-				or collectible_type == GameConstants.CollectibleType.VOID_STONE \
-				or collectible_type == GameConstants.CollectibleType.LEAF_STONE:
+		if _is_rare():
 			var glow := OmniLight3D.new()
 			glow.light_color = config["color"]
 			glow.light_energy = 1.2
@@ -261,15 +266,7 @@ func _physics_process(delta: float) -> void:
 		# visual hierarchy where valuable pickups draw the eye. Crafting
 		# materials (rare) spin faster than common XP orbs.
 		var rarity_spin: float = 1.5  # Common default
-		if collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
-				or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
-				or collectible_type == GameConstants.CollectibleType.NEBULA_DUST \
-				or GameConstants.CRAFTING_MATERIALS.has(collectible_type) \
-				or collectible_type == GameConstants.CollectibleType.EMBER_STONE \
-				or collectible_type == GameConstants.CollectibleType.FROST_STONE \
-				or collectible_type == GameConstants.CollectibleType.SPARK_STONE \
-				or collectible_type == GameConstants.CollectibleType.VOID_STONE \
-				or collectible_type == GameConstants.CollectibleType.LEAF_STONE:
+		if _is_rare():
 			rarity_spin = 3.0
 		elif collectible_type == GameConstants.CollectibleType.STAR_FRUIT \
 				or collectible_type == GameConstants.CollectibleType.HEALTH_FRAGMENT:
@@ -466,15 +463,7 @@ func _collect() -> void:
 	pickup_light.light_color = config["color"]
 	var flash_intensity: float = 2.0
 	var flash_range: float = 3.0
-	if collectible_type == GameConstants.CollectibleType.METEOR_SHARD \
-			or collectible_type == GameConstants.CollectibleType.QUANTUM_FUZZ \
-			or collectible_type == GameConstants.CollectibleType.NEBULA_DUST \
-			or GameConstants.CRAFTING_MATERIALS.has(collectible_type) \
-			or collectible_type == GameConstants.CollectibleType.EMBER_STONE \
-			or collectible_type == GameConstants.CollectibleType.FROST_STONE \
-			or collectible_type == GameConstants.CollectibleType.SPARK_STONE \
-			or collectible_type == GameConstants.CollectibleType.VOID_STONE \
-			or collectible_type == GameConstants.CollectibleType.LEAF_STONE:
+	if _is_rare():
 		flash_intensity = 3.5
 		flash_range = 5.0
 	pickup_light.light_energy = flash_intensity
@@ -512,6 +501,13 @@ func _collect() -> void:
 	if TutorialManager and TutorialManager.has_method("notify_first_pickup"):
 		TutorialManager.notify_first_pickup()
 	# Phase 20: Audio — pickup SFX (rare items get a different sound)
+	# NOTE: This is a stricter subset of _is_rare() — only the "legendary"
+	# pickups (meteor shards, quantum fuzz, nebula dust, pet evolution
+	# stones) trigger the rare SFX + FOV micro-kick. Crafting materials
+	# (SHIELD_CRYSTAL, etc.) are "rare" visually (glow, spin, flash) but
+	# drop often enough (~12%) that giving them the FOV kick would make
+	# the camera breathe constantly during farming. So they use the
+	# common pickup SFX — still get the brighter flash and faster spin.
 	var is_rare: bool = collectible_type in [
 		GameConstants.CollectibleType.METEOR_SHARD,
 		GameConstants.CollectibleType.QUANTUM_FUZZ,
