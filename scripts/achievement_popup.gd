@@ -60,7 +60,10 @@ func _ready() -> void:
 	# ── Phase 27: Pet Questline achievements ──
 	if PetQuestline:
 		PetQuestline.quest_completed.connect(_on_pet_quest_completed)
-		PetQuestline.slot_unlocked.connect(_on_pet_slot_unlocked)
+	# ── Phase 27: Multi-pet slot unlock achievement ──
+	# slot_unlocked is a signal on MultiPetSystem, NOT PetQuestline.
+	if MultiPetSystem:
+		MultiPetSystem.slot_unlocked.connect(_on_pet_slot_unlocked)
 	# Define all achievements
 	_define_achievements()
 

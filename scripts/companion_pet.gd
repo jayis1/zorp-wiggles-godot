@@ -726,9 +726,12 @@ func _advance_pet_proj(_t: float, bolt: Area3D) -> void:
 func _on_pet_proj_body_entered(body: Node3D, bolt: Area3D) -> void:
 	if not is_instance_valid(bolt):
 		return
+	# Use the bolt's stored path, not the pet's current path — the pet may
+	# have changed paths (via stone use) while the bolt was still in flight.
+	var bolt_path: int = bolt.get_meta("pet_proj_path", evolution_path)
 	if not body.is_in_group("enemies"):
 		# Hit terrain — fireball explodes, void bolt just fizzles
-		if evolution_path == GameConstants.PetPath.FIRE:
+		if bolt_path == GameConstants.PetPath.FIRE:
 			_pet_proj_explode(bolt)
 		bolt.queue_free()
 		return
@@ -746,7 +749,7 @@ func _on_pet_proj_body_entered(body: Node3D, bolt: Area3D) -> void:
 		hit.append(body)
 		bolt.set_meta("pet_proj_hit_enemies", hit)
 	# Fire path: explode on impact. Void path: pierce if pierce_left > 0.
-	if evolution_path == GameConstants.PetPath.FIRE:
+	if bolt_path == GameConstants.PetPath.FIRE:
 		_pet_proj_explode(bolt)
 		bolt.queue_free()
 		return

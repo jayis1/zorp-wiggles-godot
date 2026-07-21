@@ -1888,17 +1888,23 @@ func _toggle_pet() -> void:
 			if slot >= 0 and MultiPetSystem.has_pet_in_slot(slot):
 				# Restore stored pet
 				pet = MultiPetSystem.restore_pet_to_slot(slot, PET_SCENE)
-				get_parent().add_child(pet)
-				pet.global_position = global_position + GameConstants.PET_SPAWN_OFFSET
-				GameManager.add_message("🐾 Pet restored from slot %d!" % (slot + 1))
-				AudioManager.play_sfx(AudioManager.SFX_PET)
-				if TutorialManager and TutorialManager.has_method("notify_pet_summoned"):
-					TutorialManager.notify_pet_summoned()
-				if PetQuestline:
-					PetQuestline.notify_pet_summoned()
-				return
+				if pet and is_instance_valid(pet):
+					get_parent().add_child(pet)
+					pet.global_position = global_position + GameConstants.PET_SPAWN_OFFSET
+					GameManager.add_message("🐾 Pet restored from slot %d!" % (slot + 1))
+					AudioManager.play_sfx(AudioManager.SFX_PET)
+					if TutorialManager and TutorialManager.has_method("notify_pet_summoned"):
+						TutorialManager.notify_pet_summoned()
+					if PetQuestline:
+						PetQuestline.notify_pet_summoned()
+					return
+				# Restoration failed — fall through to fresh pet creation below
+				pet = null
 		# Fresh pet (single-pet mode or empty slot)
 		pet = PET_SCENE.instantiate() as CharacterBody3D
+		if not pet:
+			GameManager.add_message("⚠️ Failed to summon pet — scene error!")
+			return
 		get_parent().add_child(pet)
 		pet.global_position = global_position + GameConstants.PET_SPAWN_OFFSET
 		if MultiPetSystem:
