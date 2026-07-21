@@ -142,7 +142,11 @@ func _build_readout() -> String:
 	var line2: String = "Frame: %5.2f ms   Process: %5.2f ms   Physics: %5.2f ms" % [_frame_time_ms, _process_ms, _physics_ms]
 	var line3: String = "Draw calls: %4d   Objects: %4d   Resources: %5d" % [_draw_calls, _object_count, _resource_count]
 	var line4: String = "Nodes: %5d   Orphans: %3d   VRAM: %s" % [_node_count, _dynamic_mem_kb, mem_str]
-	return line1 + "\n" + line2 + "\n" + line3 + "\n" + line4
+	# Phase 35: Show quality level from PerformanceOptimizer
+	var line5: String = ""
+	if PerformanceOptimizer:
+		line5 = "Quality: %s   LOD targets: %d" % [PerformanceOptimizer.get_quality_name(), PerformanceOptimizer._lod_targets.size()]
+	return line1 + "\n" + line2 + "\n" + line3 + "\n" + line4 + "\n" + line5
 
 # ─── Rendering ─────────────────────────────────────────────────────────────────
 

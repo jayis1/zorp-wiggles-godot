@@ -38,6 +38,14 @@ func spawn_all_decorations(grid: Array[int], grid_size: int, tile_scale: float) 
 			var wx: float = (x - half_grid) * tile_scale
 			var wz: float = (z - half_grid) * tile_scale
 			_spawn_tile_decorations(biome, wx, wz)
+	# ── Phase 35: Register decorations for visibility culling ──
+	# Decorations are static meshes — they don't need particles or lights
+	# adjusted, just visibility toggled based on distance to player.
+	# This reduces draw calls for far decorations significantly.
+	if PerformanceOptimizer:
+		for deco in _decorations:
+			if deco is Node3D:
+				PerformanceOptimizer.enable_visibility_culling(deco, 180.0)
 
 func get_decoration_count() -> int:
 	return _decorations.size()

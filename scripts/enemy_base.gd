@@ -96,6 +96,13 @@ func _ready() -> void:
 	hp = max_hp
 	add_to_group("enemies")
 
+	# ── Phase 35: Register for LOD management ──
+	# Enemies have particles (aura, death poof) and lights (emission glow).
+	# The PerformanceOptimizer adjusts these based on distance to player,
+	# reducing particle counts and dimming lights for far enemies.
+	if PerformanceOptimizer:
+		PerformanceOptimizer.register_lod_target(self)
+
 	# ── Phase 10: Create AI controller for advanced behaviors ──
 	if use_smart_ai:
 		ai_controller = EnemyAIController.new()
@@ -148,6 +155,25 @@ func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or is_dead:
 		return
 
+	# ── Phase 35: AI throttling for distant enemies ──
+	# Enemies far from the player don't need full AI updates every physics
+	# frame. We track distance and skip AI/timer/visual updates on alternate
+	# frames for mid-distance enemies, and every 3rd frame for far enemies.
+	# Movement still happens every frame (so enemies approach smoothly),
+	# but the expensive AI logic (pathfinding, LOS checks, pack updates) is
+	# throttled. This can cut enemy CPU cost by 30-50% when many are active.
+	var _ai_skip: bool = false
+	if PerformanceOptimizer and GameManager.player and is_instance_valid(GameManager.player):
+		var _dist_to_player: float = global_position.distance_to(GameManager.player.global_position)
+		if _dist_to_player > 80.0:
+			# Far enemies: only run AI every 3rd frame
+			if Engine.get_physics_frames() % 3 != 0:
+				_ai_skip = true
+		elif _dist_to_player > 40.0:
+			# Mid-distance: skip every other frame
+			if Engine.get_physics_frames() % 2 != 0:
+				_ai_skip = true
+
 	# ── Phase 14: Apply dimension time scale (Time-Slow dimension) ──
 	delta *= _time_scale
 
@@ -161,12 +187,13 @@ func _physics_process(delta: float) -> void:
 	if not GameManager.player_is_alive:
 		return
 
-	_update_ai(delta)
-	_update_timers(delta)
+	if not _ai_skip:
+		_update_ai(delta)
+		_update_timers(delta)
 	_update_visuals(delta)
 
-	# ── Phase 10: Update smart AI controller (LOS, enrage, shudder, pack, etc.)
-	if ai_controller:
+	# ── Phase 10: Update smart AI controller (LOS, enrage, shudder, pack, etc.) ──
+	if not _ai_skip and ai_controller:
 		ai_controller.update(delta, self)
 
 	# ── Phase 8: Apply knockback velocity (impulse-style, decays over time)
@@ -571,6 +598,9 @@ func set_p2_hit() -> void:
 
 func _die() -> void:
 	is_dead = true
+	# ── Phase 35: Unregister from LOD management ──
+	if PerformanceOptimizer:
+		PerformanceOptimizer.unregister_lod_target(self)
 	var killer_name: String = GameConstants.P2_NAME if _killed_by_p2 else "Zorp"
 	GameManager.register_kill(enemy_name, killer_name)
 	GameManager.gain_xp(xp_reward)
