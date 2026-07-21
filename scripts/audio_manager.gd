@@ -64,6 +64,13 @@ const SFX_DAMAGE: String = "damage"
 const SFX_DEATH: String = "death"
 const SFX_ENEMY_HIT: String = "enemy_hit"
 const SFX_ENEMY_DEATH: String = "enemy_death"
+# ── Crit hit SFX ── A distinct, punchy "ping" for critical hits. Crits are
+# major game-feel moments (gold flash, hit-stop, gold damage number) but
+# previously played the same enemy_hit blip as a normal hit, so crits were
+# only visually distinct — not audibly. This short, bright, rising-pitch
+# chime cuts through the combat mix so the player *hears* the crit land,
+# reinforcing the gold visual language with a matching sonic signature.
+const SFX_CRIT_HIT: String = "crit_hit"
 const SFX_BOSS_SPAWN: String = "boss_spawn"
 const SFX_BOSS_DEFEATED: String = "boss_defeated"
 const SFX_EXPLOSION: String = "explosion"
@@ -334,7 +341,7 @@ func _build_mod_shoot_sfx_map() -> void:
 # musical intervals stay clean.
 const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_SHOOT, SFX_ENEMY_HIT, SFX_DASH_BUMP, SFX_DASH, SFX_ENEMY_DEATH,
-	SFX_EXPLOSION, SFX_PULSE_WAVE, SFX_DAMAGE,
+	SFX_EXPLOSION, SFX_PULSE_WAVE, SFX_DAMAGE, SFX_CRIT_HIT,
 	# Phase 30: Adaptive shoot variants — all get subtle pitch variation
 	SFX_SHOOT_STANDARD, SFX_SHOOT_HOMING, SFX_SHOOT_ENERGY, SFX_SHOOT_PIERCE,
 	SFX_SHOOT_FREEZE, SFX_SHOOT_POISON, SFX_SHOOT_FIRE, SFX_SHOOT_VOID,
@@ -564,6 +571,13 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_DAMAGE] = _gen_noise_hit(0.15, 0.5)
 	_sfx_streams[SFX_DEATH] = _gen_descending(400.0, 80.0, 0.6, 0.4)
 	_sfx_streams[SFX_ENEMY_HIT] = _gen_blip(300.0, 0.04, 0.2)
+	# ── Crit hit SFX ── A bright, rising-pitch "ping" with a quick attack
+	# and fast decay. Higher fundamental (880Hz) than the normal enemy_hit
+	# blip (300Hz) so it cuts through the mix as a distinct, rewarding
+	# "ka-ching" — the sonic equivalent of the gold crit damage number.
+	# A short second harmonic (1320Hz) gives it a bell-like ring that
+	# reads as "special" against the flat normal-hit blip.
+	_sfx_streams[SFX_CRIT_HIT] = _gen_crit_ping()
 	_sfx_streams[SFX_ENEMY_DEATH] = _gen_pop(0.12, 0.35)
 	_sfx_streams[SFX_BOSS_SPAWN] = _gen_rumble(60.0, 1.0, 0.6)
 	_sfx_streams[SFX_BOSS_DEFEATED] = _gen_arpeggio([784.0, 988.0, 1175.0, 1568.0], 0.1, 0.4)
@@ -770,6 +784,39 @@ func _gen_pop(duration: float, vol: float) -> AudioStreamWAV:
 		var freq = lerpf(200.0, 600.0, progress)
 		var sample = sin(t * freq * TAU)
 		var env = sin(progress * PI)  # Rise and fall
+		sample *= vol * env
+		_pack_sample(data, i, sample)
+	return _make_wav(data)
+
+
+## Generate a bright "crit ping" — a short bell-like rising chime that
+## signals a critical hit. Two stacked harmonics (880Hz + 1320Hz) with a
+## quick exponential decay give it a metallic "ka-ching" ring that cuts
+## through the combat mix and reads as a reward cue. The pitch rises
+## slightly over the note (880→1100Hz) for an ascending "shiny" feel,
+## mirroring the gold crit visual language. Duration is short (~90ms) so
+## it doesn't clutter rapid-fire combat.
+func _gen_crit_ping() -> AudioStreamWAV:
+	var duration: float = 0.09
+	var vol: float = 0.32
+	var n = int(duration * SAMPLE_RATE)
+	var data = PackedByteArray()
+	data.resize(n * 2)
+	for i in n:
+		var t = float(i) / SAMPLE_RATE
+		var progress = t / duration
+		# Rising fundamental (880 → 1100 Hz) for an ascending "shiny" feel
+		var freq = lerpf(880.0, 1100.0, progress)
+		var fundamental = sin(t * freq * TAU)
+		# Perfect-fifth harmonic (1.5x) for a bell-like timbre
+		var harmonic = sin(t * freq * 1.5 * TAU) * 0.4
+		var sample = (fundamental * 0.6 + harmonic * 0.4)
+		# Quick attack, fast exponential decay so the ping is crisp, not lingering
+		var env: float
+		if t < 0.004:
+			env = t / 0.004
+		else:
+			env = exp(-(t - 0.004) * 28.0)
 		sample *= vol * env
 		_pack_sample(data, i, sample)
 	return _make_wav(data)

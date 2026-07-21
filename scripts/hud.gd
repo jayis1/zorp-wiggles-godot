@@ -751,7 +751,31 @@ func _on_combo_changed(count: int) -> void:
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 			combo_text.set_meta("_combo_tween", combo_tween)
 	else:
-		combo_text.visible = false
+		# ── Combo break feedback ── When the combo timer expires (count
+		# drops to 0/1), the combo text used to just vanish (visible=false).
+		# A combo break is a negative beat — the player lost their streak —
+		# so it deserves a visible "deflate" instead of a hard cut. The
+		# text scales down to 0.7x while fading out, then hides. This
+		# gives the player a clear visual cue that their streak ended,
+		# mirroring the punch-in's energy in reverse. Only plays if the
+		# combo text was actually visible (count was >1 before) so the
+		# initial game state (combo 0) doesn't trigger a phantom deflate.
+		if combo_text and combo_text.visible:
+			if combo_text.has_meta("_combo_tween") and is_instance_valid(combo_text.get_meta("_combo_tween") as Tween):
+				(combo_text.get_meta("_combo_tween") as Tween).kill()
+			var break_tween := create_tween()
+			break_tween.tween_property(combo_text, "scale", Vector2.ONE * 0.7, 0.18) \
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+			break_tween.parallel().tween_property(combo_text, "modulate:a", 0.0, 0.18) \
+				.set_ease(Tween.EASE_IN)
+			break_tween.tween_callback(func():
+				combo_text.visible = false
+				combo_text.scale = Vector2.ONE
+				combo_text.modulate.a = 1.0
+			)
+			combo_text.set_meta("_combo_tween", break_tween)
+		else:
+			combo_text.visible = false
 
 func _on_score_changed(new_score: int) -> void:
 	score_text.text = "Score: %d" % new_score
@@ -790,6 +814,12 @@ func _on_player_died() -> void:
 func _on_game_restarted() -> void:
 	_update_all_displays()
 	combo_text.visible = false
+	# Reset combo text transform/alpha so a mid-deflate break tween doesn't
+	# leave the label scaled/faded into the next run. The break tween sets
+	# scale and modulate.a; if the restart fires during the deflate, those
+	# would persist on the hidden label and resurface next combo.
+	combo_text.scale = Vector2.ONE
+	combo_text.modulate.a = 1.0
 	level_up_text.visible = false
 	# Reset HP bar damage-flash state so a fresh game doesn't carry over a
 	# lingering flash/shake from the previous run's last hit. The boss bar

@@ -614,6 +614,16 @@ func _hit_enemy(enemy: Node3D) -> void:
 	# Damage number popup — boss kills get a distinct "BOSS SLAIN!" variant
 	DamageNumber.spawn(get_parent(), global_position, total_damage, is_crit, will_kill, is_boss_kill)
 
+	# ── Crit SFX ── A distinct bright "ping" so the player *hears* the crit
+	# land, not just sees the gold flash + hit-stop. The enemy's own
+	# take_damage_from still plays the normal enemy_hit blip, so this layers
+	# on top as a reward cue — the sonic equivalent of the gold damage
+	# number. Skipped for boss kills (the boss_defeated arpeggio takes over
+	# the soundscape for the death moment, so we don't clutter it).
+	if is_crit and not is_boss_kill:
+		if AudioManager and AudioManager._sfx_streams.has(AudioManager.SFX_CRIT_HIT):
+			AudioManager.play_sfx(AudioManager.SFX_CRIT_HIT)
+
 	# ── Subtle camera kick on every landed hit ── A tiny trauma pulse on each
 	# shot that connects, so the camera nudges with the impact. This is much
 	# smaller than the death/crit shakes (which already exist) — just enough
