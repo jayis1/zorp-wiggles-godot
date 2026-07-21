@@ -306,12 +306,32 @@ func _start_game() -> void:
 	_last_difficulty_tier = 0
 	active_buffs.clear()
 	current_boss = null
+	# ── Phase 25: Daily Challenge — set the deterministic daily seed BEFORE ──
+	# rolling modifiers and generating the world. Without this, roll_modifiers()
+	# below uses the random world_seed from _ready(), so the daily challenge's
+	# modifiers would be non-deterministic — two players on the same day would
+	# get the same world but DIFFERENT modifiers, defeating the comparability
+	# that the Daily Challenge is designed for. We set the seed here (before
+	# roll_modifiers and before the scene's WorldGenerator._ready()) so both
+	# the modifiers AND the world use the daily seed. start_daily_attempt()
+	# later in start_run() is now a no-op for the seed (already set) and only
+	# marks the attempt as active + records the attempt date.
+	if GameModeManager and GameModeManager.is_daily_challenge() and DailyChallengeSystem:
+		world_seed = DailyChallengeSystem.get_today_seed()
 	# ── Phase 33: World Modifier System — roll per-run modifiers ──
 	# Roll EARLY (before equipment/skill HP bonuses) so the max HP multiplier
 	# applies to the final HP value. Uses world_seed for deterministic rolls
 	# (shared challenge seeds produce the same modifiers for both players).
 	if WorldModifierSystem:
 		WorldModifierSystem.roll_modifiers(world_seed)
+		# ── Phase 25: Daily Challenge — sync the actual rolled modifiers ──
+		# back to DailyChallengeSystem so the HUD shows the SAME modifiers that
+		# are actually applied. Without this, _today_modifiers (computed
+		# independently in _refresh_today_seed via a different RNG path) would
+		# diverge from WorldModifierSystem._active_modifiers, making the daily
+		# HUD display modifiers that don't match the gameplay.
+		if GameModeManager and GameModeManager.is_daily_challenge() and DailyChallengeSystem:
+			DailyChallengeSystem.sync_modifiers_from_world_system()
 		# Announce the rolled modifiers via HUD messages
 		if WorldModifierSystem.get_active_modifier_count() > 0:
 			add_message("🎲 World Modifiers active this run:")

@@ -98,6 +98,15 @@ func can_attempt_today() -> bool:
 func get_today_modifiers() -> Array[int]:
 	return _today_modifiers.duplicate()
 
+## Syncs _today_modifiers from the WorldModifierSystem's actual active
+## modifiers. Called by GameManager._start_game() after roll_modifiers() so
+## the daily HUD displays the SAME modifiers that are actually applied to
+## gameplay. Without this, the pre-computed _today_modifiers (from a different
+## RNG path in _refresh_today_seed) would diverge from the real modifiers.
+func sync_modifiers_from_world_system() -> void:
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		_today_modifiers = WorldModifierSystem.get_active_modifiers()
+
 ## True while a daily challenge run is in progress.
 func is_daily_active() -> bool:
 	return _daily_active

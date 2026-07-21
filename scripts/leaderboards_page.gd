@@ -1,7 +1,7 @@
 ## Zorp Wiggles — Leaderboards UI (Phase 32: Multiplayer & Social)
 ## Full-screen overlay showing the local high-score leaderboards.
 ## Press F12 (the "leaderboards" input action) to toggle.
-## Shows top entries per game mode, with tab switching (1-4 keys).
+## Shows top entries per game mode, with tab switching (1-5 keys).
 ## Also includes a "Challenge Seed" panel for sharing/entering seeds.
 ##
 ## Uses _draw() for custom rendering — no scene file needed.
@@ -89,7 +89,7 @@ func _draw() -> void:
 	# Challenge seed panel at the bottom
 	_draw_seed_panel(font, panel_x, panel_y + panel_h - 80, panel_w, a)
 	# Footer
-	_draw_centered_text(font, "[1-4] Switch Tabs  |  [F12] Close  |  [S] Share Current Seed", Vector2(screen.x / 2, panel_y + panel_h - 15), 13, Color(0.5, 0.6, 0.7, a))
+	_draw_centered_text(font, "[1-5] Switch Tabs  |  [F12] Close  |  [S] Share Current Seed", Vector2(screen.x / 2, panel_y + panel_h - 15), 13, Color(0.5, 0.6, 0.7, a))
 
 
 func _draw_entries(font, x: float, y: float, w: float, entries: Array[Dictionary], a: float) -> void:

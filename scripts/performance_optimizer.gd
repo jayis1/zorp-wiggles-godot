@@ -266,7 +266,10 @@ func _update_lod() -> void:
 	if GameManager == null or GameManager.player == null or not is_instance_valid(GameManager.player):
 		return
 	var player_pos: Vector3 = GameManager.player.global_position
-	for instance_id in _lod_targets:
+	# Iterate over a duplicate of the keys because we may erase stale entries
+	# mid-loop (node freed without unregister). Mutating a Dictionary while
+	# iterating its live keys skips entries in GDScript.
+	for instance_id in _lod_targets.keys().duplicate():
 		var entry: Dictionary = _lod_targets[instance_id]
 		var node: Node3D = entry["node"]
 		if node == null or not is_instance_valid(node):
@@ -544,7 +547,10 @@ func _on_tree_changed() -> void:
 
 func _on_game_restarted() -> void:
 	# Release all active instances back to pools
-	for instance_id in _active_instances.keys():
+	# NOTE: iterate over a duplicate of the keys because release() calls
+	# _active_instances.erase(), which mutates the dictionary mid-iteration.
+	# Iterating the live keys would skip entries or error in GDScript.
+	for instance_id in _active_instances.keys().duplicate():
 		var node: Node = instance_from_id(instance_id)
 		if node and is_instance_valid(node):
 			release(node)
