@@ -206,9 +206,14 @@ func _connect_pet_signals() -> void:
 func _update_display() -> void:
 	if not _pet or not is_instance_valid(_pet):
 		return
-	# Name + stage
+	# Name + stage + slot indicator (Phase 27 multi-pet)
 	var stage_name: String = _pet.get_stage_name()
-	_name_label.text = "🐾 Pet — %s" % stage_name
+	var slot_text: String = ""
+	if MultiPetSystem and MultiPetSystem.get_slot_count() > 1:
+		var active: int = MultiPetSystem.get_active_slot()
+		if active >= 0:
+			slot_text = " [Slot %d]" % (active + 1)
+	_name_label.text = "🐾 Pet%s — %s" % [slot_text, stage_name]
 	# State
 	var state_name: String = "Follow"
 	if "current_state" in _pet:

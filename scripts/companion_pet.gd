@@ -347,6 +347,9 @@ func feed(collectible_type: int) -> void:
 		Statistics.record_pet_feeding()
 	# ── Phase 27: Happy emote on feed ──
 	_trigger_emote(GameConstants.PetEmote.HAPPY)
+	# ── Phase 27: Pet Questline — track feeding ──
+	if PetQuestline:
+		PetQuestline.notify_pet_fed()
 
 
 ## Lock in (or change) the pet's elemental evolution path. Re-applies the
@@ -400,6 +403,9 @@ func _evolve_to(new_stage: int) -> void:
 	])
 	# ── Phase 27: LOVE emote on evolution ──
 	_trigger_emote(GameConstants.PetEmote.LOVE)
+	# ── Phase 27: Pet Questline — notify stage change ──
+	if PetQuestline:
+		PetQuestline.notify_pet_stage_changed(stage, evolution_path)
 	print("[Pet] Evolved to %s (points=%d, path=%s)" % [
 		GameConstants.PET_STAGE_NAMES[stage], evolution_points,
 		GameConstants.PET_PATH_NAMES[evolution_path]

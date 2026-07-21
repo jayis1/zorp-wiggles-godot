@@ -205,6 +205,16 @@ pet_fusion={
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":true,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":70,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
 }
 
+cycle_pet={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":true,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":80,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
+
+pet_questline={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":true,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":81,"physical_keycode":0,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
+
 [autoload]
 
 GameManager="*res://scripts/game_manager.gd"
@@ -252,5 +262,7 @@ EndgameManager="*res://scripts/endgame_manager.gd"
 PetAccessorySystem="*res://scripts/pet_accessory_system.gd"
 PetTrainingSystem="*res://scripts/pet_training_system.gd"
 PetFusionSystem="*res://scripts/pet_fusion_system.gd"
+MultiPetSystem="*res://scripts/multi_pet_system.gd"
+PetQuestline="*res://scripts/pet_questline.gd"
 SceneTransition="*res://scripts/scene_transition.gd"
 BalanceManager="*res://scripts/balance_manager.gd"

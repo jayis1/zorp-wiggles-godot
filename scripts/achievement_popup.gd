@@ -57,6 +57,10 @@ func _ready() -> void:
 		ProgressionSystem.prestige_changed.connect(_on_prestige_changed)
 	if Statistics:
 		Statistics.stats_updated.connect(_on_stats_updated)
+	# ── Phase 27: Pet Questline achievements ──
+	if PetQuestline:
+		PetQuestline.quest_completed.connect(_on_pet_quest_completed)
+		PetQuestline.slot_unlocked.connect(_on_pet_slot_unlocked)
 	# Define all achievements
 	_define_achievements()
 
@@ -157,6 +161,11 @@ func _define_achievements() -> void:
 		{"id": "fast_travel_1", "title": "Pathfinder", "desc": "Activate your first fast travel waypoint", "icon": "🧭", "category": "Exploration", "target": 1, "progress_key": "waypoints_activated"},
 		{"id": "fast_travel_6", "title": "Navigator", "desc": "Activate 6 fast travel waypoints", "icon": "🧭🧭", "category": "Exploration", "target": 6, "progress_key": "waypoints_activated"},
 		{"id": "fast_travel_12", "title": "Cartographer Supreme", "desc": "Activate all 12 fast travel waypoints", "icon": "🗺", "category": "Exploration", "target": 12, "progress_key": "waypoints_activated"},
+		# ── Phase 27: Pet Questline ──
+		{"id": "pet_quest_1", "title": "First Bond", "desc": "Complete the first pet questline quest", "icon": "🐾", "category": "Special", "target": 0, "progress_key": ""},
+		{"id": "pet_quest_all", "title": "Companion Master", "desc": "Complete all pet questline quests", "icon": "🏆", "category": "Special", "target": 0, "progress_key": ""},
+		{"id": "multi_pet_2", "title": "Twin Companions", "desc": "Unlock a second pet slot", "icon": "🐾🐾", "category": "Special", "target": 0, "progress_key": ""},
+		{"id": "multi_pet_3", "title": "Triple Threat", "desc": "Unlock a third pet slot", "icon": "🐾🐾🐾", "category": "Special", "target": 0, "progress_key": ""},
 	]
 	for def in defs:
 		var ach := Achievement.new()
@@ -236,6 +245,20 @@ func _on_prestige_changed(level: int) -> void:
 func _on_stats_updated() -> void:
 	# Periodically check progress-based achievements against lifetime stats
 	_check_progress_achievements()
+
+
+# ── Phase 27: Pet Questline achievements ──
+func _on_pet_quest_completed(idx: int, _title: String) -> void:
+	if idx == 0:
+		_unlock("pet_quest_1")
+	if PetQuestline and PetQuestline.is_all_completed():
+		_unlock("pet_quest_all")
+
+func _on_pet_slot_unlocked(slot: int) -> void:
+	if slot == 1:
+		_unlock("multi_pet_2")
+	elif slot == 2:
+		_unlock("multi_pet_3")
 
 # ─── Progress-based Achievement Checking ───────────────────────────────────────
 # For achievements with a progress_key, we query the Statistics autoload for the

@@ -1465,6 +1465,23 @@ func _unhandled_input(event: InputEvent) -> void:
 				PetFusionSystem.bank_current_pet()
 		get_viewport().set_input_as_handled()
 
+	# ── Phase 27: Multi-Pet cycling (Shift+P) — swap between pet slots ──
+	if event.is_action_pressed("cycle_pet") and not GameManager.is_paused and GameManager.player_is_alive:
+		if MultiPetSystem and MultiPetSystem.get_slot_count() > 1:
+			pet = MultiPetSystem.cycle_to_next_slot(pet, PET_SCENE)
+			if pet and is_instance_valid(pet):
+				# Reconnect the pet's death/respawn to player state
+				pass
+		else:
+			GameManager.add_message("🐾 Unlock more pet slots via the Pet Questline! (Shift+Q)")
+		get_viewport().set_input_as_handled()
+
+	# ── Phase 27: Pet Questline UI (Shift+Q) — show quest progress ──
+	if event.is_action_pressed("pet_questline") and not GameManager.is_paused and GameManager.player_is_alive:
+		if PetQuestline:
+			_show_pet_questline_summary()
+		get_viewport().set_input_as_handled()
+
 func _apply_camera_rotation() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig:
@@ -1835,26 +1852,65 @@ func _try_interact() -> void:
 			return
 
 ## Toggle the pet on/off. Pressing F summons the pet if none exists, or
-## dismisses it if one is already active.
+## dismisses it if one is already active. With the Multi-Pet System (Phase 27),
+## the active pet is stored back into its slot when dismissed, and can be
+## restored later. If only one slot is unlocked and has no stored pet, the
+## behavior is the same as the original single-pet system.
 func _toggle_pet() -> void:
 	if pet and is_instance_valid(pet):
-		# Dismiss existing pet
-		ParticleEffects.spawn_death_poof(get_parent(), pet.global_position, Color(0.5, 0.7, 1.0), 0.8)
-		pet.queue_free()
-		pet = null
-		_fetch_mode = false
-		GameManager.add_message("🐾 Pet dismissed")
+		# Dismiss existing pet — store it in the MultiPetSystem slot
+		if MultiPetSystem and MultiPetSystem.get_slot_count() > 1:
+			MultiPetSystem.store_active_pet(pet)
+			pet._cleanup_path_effects()
+			ParticleEffects.spawn_death_poof(get_parent(), pet.global_position, Color(0.5, 0.7, 1.0), 0.8)
+			pet.queue_free()
+			pet = null
+			_fetch_mode = false
+			GameManager.add_message("🐾 Pet stored in slot %d. Press F to recall, Shift+P to swap." % (MultiPetSystem.get_active_slot() + 1))
+		else:
+			# Single-pet mode — just dismiss
+			ParticleEffects.spawn_death_poof(get_parent(), pet.global_position, Color(0.5, 0.7, 1.0), 0.8)
+			pet.queue_free()
+			pet = null
+			_fetch_mode = false
+			GameManager.add_message("🐾 Pet dismissed")
 	else:
-		# Summon a new pet
+		# Summon a new pet — check if MultiPetSystem has a stored pet to restore
+		if MultiPetSystem and MultiPetSystem.get_slot_count() > 1:
+			# Multi-pet mode: restore from the next available slot
+			var slot: int = MultiPetSystem.get_active_slot()
+			if slot < 0:
+				# No active slot — find the first unlocked slot with a pet, or use slot 0
+				for i in range(3):
+					if MultiPetSystem.is_slot_unlocked(i):
+						slot = i
+						break
+			if slot >= 0 and MultiPetSystem.has_pet_in_slot(slot):
+				# Restore stored pet
+				pet = MultiPetSystem.restore_pet_to_slot(slot, PET_SCENE)
+				get_parent().add_child(pet)
+				pet.global_position = global_position + GameConstants.PET_SPAWN_OFFSET
+				GameManager.add_message("🐾 Pet restored from slot %d!" % (slot + 1))
+				AudioManager.play_sfx(AudioManager.SFX_PET)
+				if TutorialManager and TutorialManager.has_method("notify_pet_summoned"):
+					TutorialManager.notify_pet_summoned()
+				if PetQuestline:
+					PetQuestline.notify_pet_summoned()
+				return
+		# Fresh pet (single-pet mode or empty slot)
 		pet = PET_SCENE.instantiate() as CharacterBody3D
 		get_parent().add_child(pet)
 		pet.global_position = global_position + GameConstants.PET_SPAWN_OFFSET
+		if MultiPetSystem:
+			# Track the active slot — default to 0 for a fresh pet
+			# (the slot tracking is handled internally by MultiPetSystem)
+			pass
 		GameManager.add_message("🐾 Companion pet summoned! Press F to dismiss, G to fetch.")
-		# Phase 20: Audio — pet summon SFX
 		AudioManager.play_sfx(AudioManager.SFX_PET)
-		# ── Phase 31: Tutorial — first pet summon notification ──
 		if TutorialManager and TutorialManager.has_method("notify_pet_summoned"):
 			TutorialManager.notify_pet_summoned()
+		if PetQuestline:
+			PetQuestline.notify_pet_summoned()
 		print("[Player] Pet summoned at %s" % pet.global_position)
 
 
@@ -1885,6 +1941,27 @@ func _use_pet_stone() -> void:
 	var path_idx: int = GameConstants.PET_STONE_TO_PATH[stone_type]
 	var stone_name: String = GameConstants.PET_STONE_NAMES[path_idx]
 	print("[Player] Used %s on pet (path=%s)" % [stone_name, GameConstants.PET_PATH_NAMES[path_idx]])
+	# ── Phase 27: Pet Questline — track stone usage ──
+	if PetQuestline:
+		PetQuestline.notify_stone_used()
+
+
+# ── Phase 27: Pet Questline summary display ──
+func _show_pet_questline_summary() -> void:
+	if not PetQuestline:
+		return
+	var quests: Array[Dictionary] = PetQuestline.get_all_quests()
+	GameManager.add_message("═══ PET QUESTLINE ═══")
+	var active_idx: int = PetQuestline.get_active_quest()
+	for i in quests.size():
+		var q: Dictionary = quests[i]
+		var status: String = "✓" if q["completed"] else ("▶" if i == active_idx else "○")
+		var progress_text: String = ""
+		if not q["completed"]:
+			progress_text = " (%d/%d)" % [q["progress"], q["target"]]
+		GameManager.add_message("%s %s: %s%s" % [status, q["title"], q["description"], progress_text])
+	if PetQuestline.is_all_completed():
+		GameManager.add_message("🏆 All pet quests complete! You are a true Companion Master!")
 
 
 ## When in fetch mode, left-click raycasts to find a collectible under the

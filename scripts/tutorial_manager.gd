@@ -72,7 +72,7 @@ const STEP_DEFS: Dictionary = {
 	},
 	Step.PET: {
 		"title": "🐾 Summon Pet (F)",
-		"desc": "Press F to summon your alien companion pet.\nIt auto-collects items and evolves as you feed it.",
+		"desc": "Press F to summon your alien companion pet.\nIt auto-collects items and evolves as you feed it.\nPress Shift+Q to view the Pet Questline!",
 	},
 	Step.BIOME: {
 		"title": "🌍 New Biome",

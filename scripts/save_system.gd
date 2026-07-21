@@ -262,6 +262,12 @@ func _collect_state() -> Dictionary:
 		data["prog_skill_ranks"] = ProgressionSystem.get_all_skill_ranks()
 		data["prog_skill_points"] = ProgressionSystem.get_skill_points()
 		data["prog_prestige"] = ProgressionSystem.get_prestige_level()
+	# ── Phase 27: Multi-pet system ──
+	if MultiPetSystem:
+		data["multi_pet"] = MultiPetSystem.get_save_data()
+	# ── Phase 27: Pet questline ──
+	if PetQuestline:
+		data["pet_questline"] = PetQuestline.get_save_data()
 	return data
 
 
@@ -307,6 +313,12 @@ func _apply_state(data: Dictionary) -> void:
 		ProgressionSystem.set_all_skill_ranks(data["prog_skill_ranks"])
 		ProgressionSystem.set_skill_points(int(data.get("prog_skill_points", 0)))
 		ProgressionSystem.set_prestige_level(int(data.get("prog_prestige", 0)))
+	# ── Phase 27: Multi-pet system ──
+	if MultiPetSystem and data.has("multi_pet"):
+		MultiPetSystem.load_save_data(data["multi_pet"])
+	# ── Phase 27: Pet questline ──
+	if PetQuestline and data.has("pet_questline"):
+		PetQuestline.load_save_data(data["pet_questline"])
 	# Stash position for the new scene to read after it loads
 	if data.has("player_pos_x"):
 		set_meta("_restore_pos", Vector3(
