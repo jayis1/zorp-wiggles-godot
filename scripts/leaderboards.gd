@@ -31,7 +31,7 @@ extends Node
 
 const SAVE_PATH: String = "user://zorp_leaderboards.json"
 const MAX_ENTRIES_PER_MODE: int = 20
-const LEADERBOARD_MODES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun"]
+const LEADERBOARD_MODES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun", "Daily"]
 
 signal score_submitted(mode: String, rank: int, entry: Dictionary)
 signal new_record(mode: String, entry: Dictionary)

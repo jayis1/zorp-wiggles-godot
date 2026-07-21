@@ -212,11 +212,14 @@ func roll_modifiers(world_seed: int) -> void:
 	# Seed the RNG for deterministic rolls
 	var rng := RandomNumberGenerator.new()
 	rng.seed = world_seed
-	# 15% of runs are "vanilla" (no modifiers) for a baseline experience
-	if rng.randf() > MODIFIER_CHANCE:
-		modifiers_rolled.emit(_active_modifiers)
-		_is_initialized = true
-		return
+	# Daily Challenge: always 3-4 modifiers, no vanilla chance (Phase 25)
+	var is_daily: bool = GameModeManager and GameModeManager.is_daily_challenge()
+	if not is_daily:
+		# 15% of runs are "vanilla" (no modifiers) for a baseline experience
+		if rng.randf() > MODIFIER_CHANCE:
+			modifiers_rolled.emit(_active_modifiers)
+			_is_initialized = true
+			return
 	# Build weighted pool (all modifiers except NONE)
 	var pool: Array[int] = []
 	var weights: Array[float] = []
@@ -226,8 +229,10 @@ func roll_modifiers(world_seed: int) -> void:
 			weights.append(RARE_WEIGHT)
 		else:
 			weights.append(1.0)
-	# Roll 2-4 unique modifiers
+	# Roll 2-4 unique modifiers (3-4 for daily challenge)
 	var count: int = rng.randi_range(MIN_MODIFIERS, MAX_MODIFIERS)
+	if is_daily:
+		count = rng.randi_range(3, 4)
 	for _i in range(count):
 		if pool.is_empty():
 			break

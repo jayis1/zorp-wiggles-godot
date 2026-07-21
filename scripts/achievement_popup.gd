@@ -169,6 +169,10 @@ func _define_achievements() -> void:
 		{"id": "pet_quest_all", "title": "Companion Master", "desc": "Complete all pet questline quests", "icon": "🏆", "category": "Special", "target": 0, "progress_key": ""},
 		{"id": "multi_pet_2", "title": "Twin Companions", "desc": "Unlock a second pet slot", "icon": "🐾🐾", "category": "Special", "target": 0, "progress_key": ""},
 		{"id": "multi_pet_3", "title": "Triple Threat", "desc": "Unlock a third pet slot", "icon": "🐾🐾🐾", "category": "Special", "target": 0, "progress_key": ""},
+		# ── Phase 25: Daily Challenge ──
+		{"id": "daily_1", "title": "Daily Grind", "desc": "Complete your first Daily Challenge", "icon": "📅", "category": "Special", "target": 1, "progress_key": "daily_challenges_completed"},
+		{"id": "daily_7", "title": "Week Warrior", "desc": "Complete 7 Daily Challenges", "icon": "📅📅", "category": "Special", "target": 7, "progress_key": "daily_challenges_completed"},
+		{"id": "daily_30", "title": "Monthly Devotee", "desc": "Complete 30 Daily Challenges", "icon": "📆", "category": "Special", "target": 30, "progress_key": "daily_challenges_completed"},
 	]
 	for def in defs:
 		var ach := Achievement.new()

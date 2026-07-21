@@ -94,16 +94,16 @@ func _draw() -> void:
 	# Title
 	_draw_centered_text(font, "🎮 SELECT GAME MODE", Vector2(screen.x / 2.0, 50.0), 30,
 		Color(0.4, 1.0, 0.6, a))
-	# Mode cards — 4x2 grid (8 modes)
-	var cols: int = 4
-	var rows: int = 2
-	var card_w: float = minf(280.0, (screen.x - 100.0) / float(cols))
-	var card_h: float = 170.0
-	var gap: float = 20.0
+	# Mode cards — 3x3 grid (9 modes)
+	var cols: int = 3
+	var rows: int = 3
+	var card_w: float = minf(320.0, (screen.x - 100.0) / float(cols))
+	var card_h: float = 140.0
+	var gap: float = 16.0
 	var grid_w: float = card_w * cols + gap * (cols - 1)
 	var grid_h: float = card_h * rows + gap * (rows - 1)
 	var start_x: float = (screen.x - grid_w) / 2.0
-	var start_y: float = 100.0
+	var start_y: float = 90.0
 	var current_mode: int = GameModeManager.get_current_mode() if GameModeManager else 0
 	for i in GameModeManager.MODE_NAMES.size():
 		var col: int = i % cols
@@ -178,15 +178,15 @@ func _draw_mode_card(font, mode_idx: int, rect: Rect2, a: float, current_mode: i
 			Color(mode_color.r, mode_color.g, mode_color.b, a))
 	# Description (wrapped manually — just draw it; long descriptions may clip)
 	# We draw it line by line with a simple word-wrap.
-	var desc_y: float = rect.position.y + 110.0
+	var desc_y: float = rect.position.y + 90.0
 	var desc_max_w: float = rect.size.x - 20.0
-	var lines: Array[String] = _word_wrap(font, mode_desc, desc_max_w, 11)
+	var lines: Array[String] = _word_wrap(font, mode_desc, desc_max_w, 10)
 	for line in lines:
 		font.draw_string(get_canvas_item(),
 			Vector2(rect.position.x + 10.0, desc_y),
-			line, HORIZONTAL_ALIGNMENT_LEFT, -1, 11,
+			line, HORIZONTAL_ALIGNMENT_LEFT, -1, 10,
 			Color(0.7, 0.75, 0.85, 0.9 * a))
-		desc_y += 13.0
+		desc_y += 12.0
 
 func _word_wrap(font, text: String, max_w: float, font_size: int) -> Array[String]:
 	var words: Array[String] = text.split(" ")

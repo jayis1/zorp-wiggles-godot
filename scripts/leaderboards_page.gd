@@ -13,8 +13,8 @@ class_name LeaderboardsPage
 var _visible_flag: bool = false
 var _fade_alpha: float = 0.0
 var _current_tab: int = 0
-const TAB_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun"]
-const TAB_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱"]
+const TAB_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun", "Daily"]
+const TAB_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱", "📅"]
 const MAX_ROWS: int = 12
 
 # Challenge seed input state
@@ -34,12 +34,13 @@ func _process(delta: float) -> void:
 			AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 			_seed_input = ""
 			_seed_input_active = false
-	# Tab switching with 1-4 keys when visible
+	# Tab switching with 1-5 keys when visible
 	if _visible_flag:
 		if Input.is_key_pressed(KEY_1): _current_tab = 0
 		elif Input.is_key_pressed(KEY_2): _current_tab = 1
 		elif Input.is_key_pressed(KEY_3): _current_tab = 2
 		elif Input.is_key_pressed(KEY_4): _current_tab = 3
+		elif Input.is_key_pressed(KEY_5): _current_tab = 4
 	# Smooth fade
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
@@ -194,7 +195,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					_seed_input = _seed_input.substr(0, _seed_input.length() - 1)
 			elif ke.unicode != 0 and ke.unicode >= 32:
 				# Accept printable characters
-				_seed_input += String(chr(ke.unicode))
+				_seed_input += String.chr(ke.unicode)
 			get_viewport().set_input_as_handled()
 		else:
 			if ke.keycode == KEY_E:

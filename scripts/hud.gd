@@ -367,6 +367,13 @@ func _ready() -> void:
 	ewh_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ewh_ctrl)
 
+	# ── Phase 25: Daily Challenge HUD (top-center overlay during daily runs) ──
+	var dch_script := load("res://scripts/daily_challenge_hud.gd")
+	var dch_ctrl := Control.new()
+	dch_ctrl.set_script(dch_script)
+	dch_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dch_ctrl)
+
 	# ── Phase 30: Victory Screen (boss rush / speedrun / endless completion) ──
 	var vs_script := load("res://scripts/victory_screen.gd")
 	var vs_ctrl := Control.new()
