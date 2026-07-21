@@ -185,7 +185,10 @@ func release(node: Node) -> void:
 	if node is Node3D:
 		(node as Node3D).visible = false
 	elif node is CanvasItem:
-		(node as CanvasItem).visible = true
+		# BUG FIX: this was `visible = true`, which kept released UI nodes
+		# visible after release() — defeating the purpose of deactivation
+		# and leaving orphaned UI elements on screen. Now correctly hidden.
+		(node as CanvasItem).visible = false
 	# Remove from tree (keep in memory for reuse)
 	if node.get_parent():
 		node.get_parent().remove_child(node)

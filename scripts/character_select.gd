@@ -176,7 +176,7 @@ func _on_button_hover(btn: Button, is_hovering: bool) -> void:
 	tw.tween_property(btn, "scale", target_scale, 0.12).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_hover_tweens[btn] = tw
 	if is_hovering:
-		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 
 
 func _draw() -> void:

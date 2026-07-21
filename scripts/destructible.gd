@@ -138,7 +138,12 @@ func _shatter() -> void:
 	# hit-stop. A scene-tree Timer restores the scale so the freeze is
 	# independent of this node's lifetime (we queue_free below).
 	Engine.time_scale = SHATTER_HITSTOP_TIME_SCALE
-	var restore_timer := get_tree().create_timer(SHATTER_HITSTOP_DURATION)
+	# IMPORTANT: ignore_time_scale=true (4th arg) so the restore fires in
+	# real-time seconds. Without it, the timer respects Engine.time_scale
+	# (0.1 here), making the 0.05s freeze actually last ~0.5s — 10x too long
+	# and a noticeable stutter instead of a snappy hit-stop beat. This
+	# matches the pattern used by projectile.gd, player.gd, and co_op_manager.gd.
+	var restore_timer := get_tree().create_timer(SHATTER_HITSTOP_DURATION, true, false, true)
 	restore_timer.timeout.connect(_restore_time_scale)
 
 	# Hide self and free after a tiny delay (so signal completes)

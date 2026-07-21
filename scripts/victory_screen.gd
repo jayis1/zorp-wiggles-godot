@@ -403,6 +403,8 @@ func _on_button_hover(btn: Button, hovering: bool) -> void:
 	if hovering:
 		t.tween_property(btn, "scale", Vector2(1.06, 1.06), 0.12) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		# Subtle hover tick — matches the rest of the UI's hover audio language
+		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 	else:
 		t.tween_property(btn, "scale", Vector2.ONE, 0.15) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)

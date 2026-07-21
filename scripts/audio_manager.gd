@@ -72,6 +72,14 @@ const SFX_HEAL: String = "heal"
 const SFX_DASH_BUMP: String = "dash_bump"
 const SFX_COMBO_MILESTONE: String = "combo_milestone"
 const SFX_UI_CLICK: String = "ui_click"
+# A softer, shorter, higher-pitched tick for mouse-hover over buttons.
+# Distinct from SFX_UI_CLICK so hover and click events don't sound identical
+# (previously all hover handlers played SFX_UI_CLICK, making hover and click
+# indistinguishable). The hover blip is ~half the duration and ~40% the volume
+# of the click, with a higher frequency (900Hz vs 600Hz) so it reads as a
+# feather-light "tick" rather than a firm "tock" — the classic UI sound design
+# pattern (hover = soft tick, click = firm tock).
+const SFX_UI_HOVER: String = "ui_hover"
 const SFX_MUTATION: String = "mutation"
 const SFX_RIFT: String = "rift"
 const SFX_THUNDER: String = "thunder"
@@ -565,6 +573,12 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_DASH_BUMP] = _gen_blip(200.0, 0.06, 0.3)
 	_sfx_streams[SFX_COMBO_MILESTONE] = _gen_arpeggio([523.0, 659.0, 784.0], 0.06, 0.35)
 	_sfx_streams[SFX_UI_CLICK] = _gen_blip(600.0, 0.03, 0.2)
+	# UI hover — softer, shorter, higher-pitched than the click. The lower
+	# volume (0.08 vs 0.2) and shorter duration (0.018s vs 0.03s) make it
+	# read as a subtle tick that doesn't draw attention to itself on every
+	# button pass, while the higher pitch (900Hz vs 600Hz) keeps it distinct
+	# from the click so the two events are audibly different.
+	_sfx_streams[SFX_UI_HOVER] = _gen_blip(900.0, 0.018, 0.08)
 	_sfx_streams[SFX_MUTATION] = _gen_chime([440.0, 554.0, 659.0], 0.25, 0.3)
 	_sfx_streams[SFX_RIFT] = _gen_whoosh(0.5, 0.35)
 	_sfx_streams[SFX_THUNDER] = _gen_noise_hit(0.3, 0.7)

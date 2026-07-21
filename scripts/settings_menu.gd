@@ -417,7 +417,7 @@ func _on_button_hover(btn: Button, is_hovering: bool) -> void:
 	_hover_tweens[btn] = tween
 	# Play a subtle UI hover sound on enter only (avoids spam on exit)
 	if is_hovering:
-		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 
 func _on_back() -> void:
 	if _animating_out:

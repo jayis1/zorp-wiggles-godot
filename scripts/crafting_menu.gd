@@ -431,7 +431,7 @@ func _on_button_hover(btn: Button, is_hovering: bool) -> void:
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_hover_tweens[btn] = tween
 	if is_hovering and not btn.disabled:
-		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 
 func _on_material_button_pressed(mat_type: int) -> void:
 	if _selected_materials.has(mat_type):

@@ -206,7 +206,7 @@ func _on_button_hover(btn: Button, is_hovering: bool) -> void:
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_hover_tweens[btn] = tween
 	if is_hovering:
-		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 
 
 func _on_resume() -> void:
