@@ -36,6 +36,7 @@ const SPEC_HUD_LAYER: int = 55  # Above ShaderManager (50) but below HUD (100)
 # Spectator camera
 var _spec_camera: Camera3D = null
 var _spec_hud: Control = null
+var _spec_hud_canvas: CanvasLayer = null
 var _spectating: bool = false
 var _chase_cam: bool = true  # True = camera follows ghost, False = free-look
 var _replay_id: String = ""
@@ -188,6 +189,9 @@ func stop_spectating() -> void:
 	if _spec_hud and is_instance_valid(_spec_hud):
 		_spec_hud.queue_free()
 	_spec_hud = null
+	if _spec_hud_canvas and is_instance_valid(_spec_hud_canvas):
+		_spec_hud_canvas.queue_free()
+	_spec_hud_canvas = null
 	# Restore mouse
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Unpause the game tree
@@ -279,6 +283,8 @@ func _apply_free_cam_transform() -> void:
 func _create_hud() -> void:
 	if _spec_hud and is_instance_valid(_spec_hud):
 		_spec_hud.queue_free()
+	if _spec_hud_canvas and is_instance_valid(_spec_hud_canvas):
+		_spec_hud_canvas.queue_free()
 	_spec_hud = Control.new()
 	_spec_hud.name = "SpectatorHUD"
 	_spec_hud.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -286,11 +292,11 @@ func _create_hud() -> void:
 	_spec_hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_spec_hud.visible = true
 	# Add to a high canvas layer so it renders above the game
-	var canvas: CanvasLayer = CanvasLayer.new()
-	canvas.layer = SPEC_HUD_LAYER
-	canvas.set_process_mode(Node.PROCESS_MODE_ALWAYS)
-	canvas.add_child(_spec_hud)
-	get_tree().root.add_child(canvas)
+	_spec_hud_canvas = CanvasLayer.new()
+	_spec_hud_canvas.layer = SPEC_HUD_LAYER
+	_spec_hud_canvas.set_process_mode(Node.PROCESS_MODE_ALWAYS)
+	_spec_hud_canvas.add_child(_spec_hud)
+	get_tree().root.add_child(_spec_hud_canvas)
 
 func _update_hud() -> void:
 	if not _spec_hud or not is_instance_valid(_spec_hud):
@@ -354,7 +360,7 @@ class SpectatorHudControl:
 		# Bottom help bar
 		var bottom_rect := Rect2(0, screen.y - 30, screen.x, 30)
 		draw_rect(bottom_rect, Color(0.03, 0.03, 0.06, 0.75), true)
-		var help_text: String = "[Space] Chase/Free  |  [WASD] Move  |  [Click] Look  |  [Wheel] FOV  |  [←→] Switch Replay  |  [Esc] Exit"
+		var help_text: String = "[Space] Chase/Free  |  [WASD] Move  |  [R/C] Up/Down  |  [Shift] Fast  |  [Click] Look  |  [Wheel] FOV  |  [←→] Switch Replay  |  [Esc] Exit"
 		_draw_text(font, help_text, 16, screen.y - 18, 12, Color(0.5, 0.55, 0.7))
 
 	func _draw_text(font, text: String, x: float, y: float, size: int, color: Color) -> void:

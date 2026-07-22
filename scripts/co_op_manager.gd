@@ -397,6 +397,8 @@ func get_camera_target_midpoint() -> Vector3:
 func get_player_spacing() -> float:
 	if not is_coop_active():
 		return 0.0
+	if not GameManager.player or not is_instance_valid(GameManager.player):
+		return 0.0
 	return GameManager.player.global_position.distance_to(p2_node.global_position)
 
 # ─── Co-op Achievements ──────────────────────────────────────────────────────
