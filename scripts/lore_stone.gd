@@ -121,6 +121,8 @@ func _read_lore() -> void:
 	var text: String = GameConstants.LORE_FRAGMENTS[fragment_index % GameConstants.LORE_FRAGMENTS.size()]
 	# Display the lore fragment as a HUD message.
 	GameManager.add_message("📜 LORE: %s" % text)
+	# Audio feedback — deep mystical chime.
+	AudioManager.play_sfx(AudioManager.SFX_LORE)
 	# XP reward.
 	GameManager.gain_xp(GameConstants.LORE_STONE_XP_REWARD)
 	# Camera shake for feedback.

@@ -88,9 +88,9 @@ func teleport_to(waypoint: Node) -> bool:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.2)
-	# Audio.
+	# Audio — dedicated fast travel teleport sound.
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_RIFT)
+		AudioManager.play_sfx(AudioManager.SFX_FAST_TRAVEL)
 	# Stats.
 	var wp_name: String = "Unknown"
 	if "waypoint_name" in waypoint:

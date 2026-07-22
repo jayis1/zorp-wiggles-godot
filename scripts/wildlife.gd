@@ -169,6 +169,8 @@ func _catch() -> void:
 	GameManager.gain_xp(GameConstants.WILDLIFE_XP_REWARD)
 	GameManager.add_score(GameConstants.WILDLIFE_SCORE_REWARD)
 	GameManager.add_message("🦌 Caught a %s! +%d XP" % [species_name, GameConstants.WILDLIFE_XP_REWARD])
+	# Audio feedback — a quick pleasant pop.
+	AudioManager.play_sfx(AudioManager.SFX_WILDLIFE)
 	# Camera shake (small).
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):

@@ -173,6 +173,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_auto_timer = 0.0
 		else:
 			_advance()
+		# Audio feedback on dialogue advance — soft warm chime.
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_DIALOGUE)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_cancel"):
 		# Skip the entire dialogue.

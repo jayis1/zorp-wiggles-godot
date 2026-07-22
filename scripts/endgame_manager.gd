@@ -456,6 +456,7 @@ func enter_loot_cave(cave_id: int) -> void:
 		cave.discovered = true
 		loot_cave_discovered.emit(cave_id)
 		GameManager.add_message("💎 Discovered a Loot Cave!")
+		AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
 	_spawn_loot_cave_interior(cave)
 
 func _spawn_loot_cave_interior(cave: Dictionary) -> void:
@@ -711,7 +712,7 @@ func notify_puzzle_rune_touched(rune: Node) -> void:
 			rune.material_override.emission_energy_multiplier = 4.0
 		progress += 1
 		_ancient_vault["puzzle_progress"] = progress
-		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+		AudioManager.play_sfx(AudioManager.SFX_DIALOGUE)
 		if progress >= order.size():
 			_complete_vault_puzzle()
 		else:
@@ -732,6 +733,7 @@ func _complete_vault_puzzle() -> void:
 	_spawn_vault_guardian()
 	# Spawn legendary loot (only after the guardian is defeated — see _on_boss_defeated).
 	GameManager.add_message("🏆 Puzzle solved! The Vault Guardian awakens...")
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
 
 func _spawn_vault_guardian() -> void:
 	var scene: PackedScene = load("res://scenes/entities/enemy_drake.tscn")
@@ -790,6 +792,8 @@ func _on_vault_guardian_died(_enemy: Node) -> void:
 		if "collectibles" in GameManager:
 			GameManager.collectibles.append(item)
 	GameManager.add_message("🏆 Ancient Vault Guardian defeated! Legendary loot claimed!")
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_DEFEATED)
+	AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
 	GameManager.gain_xp(500)
 	GameManager.player_score += 2000
 	if Statistics:

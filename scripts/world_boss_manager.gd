@@ -107,6 +107,8 @@ func _try_spawn_world_boss() -> void:
 	delay_tw.tween_callback(_materialize_world_boss.bind(boss_type, spawn_pos, display_name))
 	# Broadcast the imminent spawn so the HUD can warn the player.
 	GameManager.add_message("⚠ A %s has appeared nearby! (World Boss)" % display_name)
+	# Audio — deep rumble to telegraph the world boss arrival.
+	AudioManager.play_sfx(AudioManager.SFX_WORLD_BOSS)
 	world_boss_spawned.emit(null, display_name)
 
 func _materialize_world_boss(boss_type: int, spawn_pos: Vector3, display_name: String) -> void:

@@ -158,6 +158,8 @@ func _on_body_entered(body: Node3D) -> void:
 		GameManager.add_message("☠ Survival: Shrine healing suppressed!")
 	else:
 		GameManager.add_message("Healing Shrine! +%d HP" % GameConstants.SHRINE_HEAL_AMOUNT)
+		# Audio feedback — healing chime (only when not suppressed).
+		AudioManager.play_sfx(AudioManager.SFX_HEAL)
 	heal_activated.emit(GameConstants.SHRINE_HEAL_AMOUNT)
 
 	# Screen shake

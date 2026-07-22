@@ -126,6 +126,8 @@ func _on_body_entered(body: Node3D) -> void:
 		player.global_position = partner_position + Vector3(0, 0.5, 0)
 		teleport_used.emit(self, partner_position)
 		GameManager.add_message("Portal teleport!")
+		# Audio feedback — rift whoosh on teleport.
+		AudioManager.play_sfx(AudioManager.SFX_RIFT)
 
 	# Screen shake on teleport
 	var cam_rig: Node3D = GameManager.camera_rig

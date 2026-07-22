@@ -95,6 +95,16 @@ const SFX_PET: String = "pet"
 const SFX_CRAFT: String = "craft"
 const SFX_ARENA: String = "arena"
 const SFX_SHIELD: String = "shield"  # Phase 24: Shield Bubble deployable
+const SFX_CHEST_OPEN: String = "chest_open"      # Phase 26: Treasure chest opened
+const SFX_CHEST_TRAP: String = "chest_trap"      # Phase 26: Trapped chest ambush
+const SFX_LORE: String = "lore"                  # Phase 26: Lore stone read
+const SFX_WILDLIFE: String = "wildlife"          # Phase 26: Wildlife caught
+const SFX_SWITCH: String = "switch_click"        # Phase 26: Interactive switch toggled
+const SFX_BREAKABLE: String = "breakable"        # Phase 26: Breakable wall shattered
+const SFX_PING: String = "ping"                 # Phase 31: Ping placed
+const SFX_DIALOGUE: String = "dialogue"           # Phase 26: NPC dialogue advance
+const SFX_FAST_TRAVEL: String = "fast_travel"    # Phase 26: Fast travel teleport
+const SFX_WORLD_BOSS: String = "world_boss"      # Phase 26: World boss spawned
 
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 # Per-weapon-mod shoot sound variants. Each mod gets a distinct SFX so the
@@ -602,6 +612,27 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_ARENA] = _gen_rumble(50.0, 1.2, 0.5)
 	# Phase 24: Shield Bubble — a warm protective chime
 	_sfx_streams[SFX_SHIELD] = _gen_chime([523.0, 784.0, 1047.0], 0.3, 0.35)
+	# ── Phase 26: World interaction SFX ──
+	# Treasure chest open — a triumphant ascending arpeggio with shimmer
+	_sfx_streams[SFX_CHEST_OPEN] = _gen_arpeggio([523.0, 659.0, 784.0, 1047.0, 1319.0], 0.06, 0.38)
+	# Trapped chest — a discordant surprise buzz (low + detuned high)
+	_sfx_streams[SFX_CHEST_TRAP] = _gen_descending(200.0, 120.0, 0.25, 0.45)
+	# Lore stone — a deep mystical chime (two low notes + shimmer)
+	_sfx_streams[SFX_LORE] = _gen_chime([330.0, 440.0, 554.0], 0.4, 0.35)
+	# Wildlife caught — a quick pleasant pop (shorter than enemy death)
+	_sfx_streams[SFX_WILDLIFE] = _gen_pop(0.06, 0.22)
+	# Interactive switch — a mechanical click (short blip with low pitch)
+	_sfx_streams[SFX_SWITCH] = _gen_blip(440.0, 0.04, 0.20)
+	# Breakable wall — a crumbling noise hit (longer than switch, rougher than explosion)
+	_sfx_streams[SFX_BREAKABLE] = _gen_noise_hit(0.25, 0.45)
+	# Ping — a quick sonar-style high blip
+	_sfx_streams[SFX_PING] = _gen_blip(1400.0, 0.05, 0.20)
+	# Dialogue — a soft warm chime (two notes, gentle)
+	_sfx_streams[SFX_DIALOGUE] = _gen_chime([523.0, 659.0], 0.08, 0.18)
+	# Fast travel — a teleport whoosh + shimmer (upward sweep)
+	_sfx_streams[SFX_FAST_TRAVEL] = _gen_whoosh(0.5, 0.40)
+	# World boss — a deeper, longer version of boss_spawn rumble
+	_sfx_streams[SFX_WORLD_BOSS] = _gen_rumble(45.0, 1.4, 0.65)
 	# ── Phase 30: Adaptive shoot SFX — per-mod shoot sound variants ──
 	# Each variant has a distinct timbre so the player hears the weapon change.
 	_sfx_streams[SFX_SHOOT_STANDARD] = _sfx_streams[SFX_SHOOT]  # Alias to default blip

@@ -166,7 +166,7 @@ func _activate() -> void:
 		Statistics.record_waypoint_activated(waypoint_name)
 	GameManager.add_message("🧭 Waypoint activated: %s" % waypoint_name)
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+		AudioManager.play_sfx(AudioManager.SFX_HEAL)
 	waypoint_activated.emit(self)
 
 func _process(_delta: float) -> void:

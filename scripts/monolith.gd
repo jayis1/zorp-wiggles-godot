@@ -193,6 +193,9 @@ func _on_body_entered(body: Node3D) -> void:
 	var buff_color: Color = BUFF_COLORS[buff]
 	GameManager.add_message("🔮 Monolith activated: %s! (+%ds)" % [buff_name, int(GameConstants.MONOLITH_BUFF_DURATION)])
 
+	# Audio feedback — warm chime for buff activation.
+	AudioManager.play_sfx(AudioManager.SFX_HEAL)
+
 	# Apply buff to GameManager
 	GameManager.active_buffs[buff_key] = GameConstants.MONOLITH_BUFF_DURATION
 

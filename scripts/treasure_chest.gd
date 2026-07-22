@@ -132,6 +132,11 @@ func _open_chest() -> void:
 	_spawn_loot()
 	GameManager.gain_xp(GameConstants.TREASURE_CHEST_XP_REWARD)
 	GameManager.add_message("✨ Treasure! +%d XP" % GameConstants.TREASURE_CHEST_XP_REWARD)
+	# Audio feedback — different sound for trapped vs normal chests.
+	if _trapped:
+		AudioManager.play_sfx(AudioManager.SFX_CHEST_TRAP)
+	else:
+		AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
 	# Camera shake.
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):

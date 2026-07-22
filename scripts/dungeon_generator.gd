@@ -201,7 +201,7 @@ func enter_dungeon(dungeon_id: int) -> void:
 	_build_interior(dungeon)
 	dungeon_entered.emit(dungeon_id, dungeon.theme)
 	GameManager.add_message("▼ Descending into %s..." % GameConstants.DUNGEON_THEME_NAMES[dungeon.theme])
-	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	AudioManager.play_sfx(AudioManager.SFX_FAST_TRAVEL)
 	# Move player into the first room.
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if player and is_instance_valid(player):
@@ -452,7 +452,7 @@ func _on_dungeon_boss_died(enemy: Node, _dungeon_id: int) -> void:
 	var dungeon_id: int = _dungeon_id
 	dungeon_boss_defeated.emit(dungeon_id)
 	GameManager.add_message("✦ Dungeon boss defeated! Claim your reward.")
-	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_DEFEATED)
 
 # ─── Reward Chest ──────────────────────────────────────────────────────────────
 

@@ -236,6 +236,8 @@ func interact() -> void:
 	# Toggle all linked doors and hidden passages.
 	_toggle_linked()
 	toggled.emit(self, _is_active)
+	# Audio feedback — mechanical click.
+	AudioManager.play_sfx(AudioManager.SFX_SWITCH)
 	# Feedback: small camera shake + message.
 	var cam: Node3D = GameManager.camera_rig
 	if cam and cam.has_method("add_trauma"):
@@ -295,6 +297,8 @@ func _destroy() -> void:
 	if cam and cam.has_method("add_trauma"):
 		cam.add_trauma(0.15)
 	GameManager.add_message("💥 Wall shattered!")
+	# Audio feedback — crumbling wall shatter.
+	AudioManager.play_sfx(AudioManager.SFX_BREAKABLE)
 	destroyed.emit(self)
 	tween.tween_callback(queue_free)
 

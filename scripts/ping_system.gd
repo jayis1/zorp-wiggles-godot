@@ -121,9 +121,9 @@ func _drop_ping(ptype: int) -> void:
 	add_child(ping)
 	_pings.append(ping)
 
-	# Play a subtle UI sound
+	# Play the dedicated ping sonar sound
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+		AudioManager.play_sfx(AudioManager.SFX_PING)
 
 	# Notify the player via HUD message (brief)
 	var label_text: String = PING_LABELS[ptype] + " Ping dropped"
