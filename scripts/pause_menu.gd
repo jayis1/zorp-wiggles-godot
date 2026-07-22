@@ -96,6 +96,12 @@ func _build_ui() -> void:
 	for btn in [_resume_btn, _settings_btn, _quit_btn]:
 		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+		# ── Press feedback: quick scale-down to 0.92x on button down, then
+		#    bounce back on button up. This gives tactile "click" feedback
+		#    that the hover scale alone doesn't provide — the player feels
+		#    the press physically rather than just hearing the UI click SFX.
+		btn.button_down.connect(_on_button_press.bind(btn))
+		btn.button_up.connect(_on_button_release.bind(btn))
 
 	# Settings menu (hidden by default)
 	var sm_script = load("res://scripts/settings_menu.gd")
@@ -207,6 +213,32 @@ func _on_button_hover(btn: Button, is_hovering: bool) -> void:
 	_hover_tweens[btn] = tween
 	if is_hovering:
 		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+
+## Press feedback: scale the button down to 0.92x on mouse down for a tactile
+## "push" feel. The hover tween is killed so the press scale isn't fighting
+## the hover scale. On release, a quick elastic bounce back gives the button a
+## springy "released" feel that complements the click SFX.
+func _on_button_press(btn: Button) -> void:
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", Vector2(0.92, 0.92), 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+
+func _on_button_release(btn: Button) -> void:
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	# Bounce back slightly past 1.0 (hover scale) then settle — elastic gives
+	# a springy "release" that reads as the button popping back up.
+	tween.tween_property(btn, "scale", Vector2(1.06, 1.06), 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	_hover_tweens[btn] = tween
 
 
 func _on_resume() -> void:

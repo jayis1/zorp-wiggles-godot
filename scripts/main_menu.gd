@@ -26,6 +26,11 @@ func _ready() -> void:
 	for btn in [start_button, settings_button, quit_button]:
 		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+		# ── Press feedback: quick scale-down on button down, bounce back
+		#    on button up. Gives tactile "click" feedback matching the
+		#    pause menu so both menus feel cohesive.
+		btn.button_down.connect(_on_button_press.bind(btn))
+		btn.button_up.connect(_on_button_release.bind(btn))
 	# ── Phase 31: Add a "Continue" button if a save exists ──
 	# Sits above the Start button. Only shown when SaveSystem reports a save.
 	_add_continue_button()
@@ -86,6 +91,8 @@ func _add_continue_button() -> void:
 	_continue_button.pressed.connect(_on_continue_pressed)
 	_continue_button.mouse_entered.connect(_on_button_hover.bind(_continue_button, true))
 	_continue_button.mouse_exited.connect(_on_button_hover.bind(_continue_button, false))
+	_continue_button.button_down.connect(_on_button_press.bind(_continue_button))
+	_continue_button.button_up.connect(_on_button_release.bind(_continue_button))
 	add_child(_continue_button)
 	# Move it to be the first child (above Start) in the tree order
 	move_child(_continue_button, start_button.get_index())
@@ -120,6 +127,8 @@ func _add_mode_select_button() -> void:
 	mode_btn.pressed.connect(_on_mode_select_pressed)
 	mode_btn.mouse_entered.connect(_on_button_hover.bind(mode_btn, true))
 	mode_btn.mouse_exited.connect(_on_button_hover.bind(mode_btn, false))
+	mode_btn.button_down.connect(_on_button_press.bind(mode_btn))
+	mode_btn.button_up.connect(_on_button_release.bind(mode_btn))
 	# Insert before the Quit button so the order is Start → Settings → Mode → Quit
 	# We use move_child to reposition if needed; add_child appends by default.
 	add_child(mode_btn)
@@ -156,6 +165,8 @@ func _add_character_select_button() -> void:
 	char_btn.pressed.connect(_on_character_select_pressed)
 	char_btn.mouse_entered.connect(_on_button_hover.bind(char_btn, true))
 	char_btn.mouse_exited.connect(_on_button_hover.bind(char_btn, false))
+	char_btn.button_down.connect(_on_button_press.bind(char_btn))
+	char_btn.button_up.connect(_on_button_release.bind(char_btn))
 	add_child(char_btn)
 	# Place before the Quit button
 	if quit_button:
@@ -269,6 +280,31 @@ func _on_button_hover(btn: Button, is_hovering: bool) -> void:
 	# Play a subtle UI hover sound (only on enter, not exit, to avoid spam)
 	if is_hovering:
 		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+
+## Press feedback: scale the button down to 0.92x on mouse down for a tactile
+## "push" feel. The hover tween is killed so the press scale isn't fighting
+## the hover scale. On release, a quick elastic bounce back gives the button
+## a springy "released" feel that complements the click SFX. Matches the pause
+## menu's press feedback so both menus feel cohesive.
+func _on_button_press(btn: Button) -> void:
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", Vector2(0.92, 0.92), 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+
+func _on_button_release(btn: Button) -> void:
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", Vector2(1.06, 1.06), 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	_hover_tweens[btn] = tween
 
 func _on_start_pressed() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)

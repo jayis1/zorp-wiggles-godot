@@ -11,6 +11,13 @@ var collectible_type: int = GameConstants.CollectibleType.XP_ORB
 var xp_value: int = 10
 var is_magnetic: bool = false
 var is_popping: bool = false  # Pickup lift animation
+# ── Magnet activation flash ── When the collectible first enters the
+#    magnetic pull radius, the emission briefly spikes. This gives the
+#    player a visual "the item noticed me" signal — the collectible
+#    "lights up" as it starts moving toward them. The flag tracks whether
+#    we've already flashed for the current magnetic engagement so we only
+#    fire once per pull sequence (not every frame while being pulled).
+var _magnet_flash_triggered: bool = false
 
 # ── Phase 8: Collectible bounce and tumble ──
 # When true, the collectible is in physics bounce mode (just spawned/dropped).
@@ -191,6 +198,35 @@ func _is_rare() -> bool:
 		or collectible_type == GameConstants.CollectibleType.VOID_STONE \
 		or collectible_type == GameConstants.CollectibleType.LEAF_STONE
 
+## Trigger a one-shot emission energy spike when the collectible first enters
+## the magnetic pull radius. The emission jumps to 3x its current pulse value
+## then eases back over 0.3s via a tween. This gives the player a visual
+## "the item noticed me" signal — the collectible "lights up" as it begins
+## moving toward them. Only fires once per pull engagement (guarded by
+## _magnet_flash_triggered, which is reset when the pull ends). Skipped
+## while popping (pickup animation owns scale/emission at that point).
+## Uses a tracked tween so rapid re-engagements don't stack.
+var _magnet_flash_tween: Tween = null
+func _trigger_magnet_flash() -> void:
+	if _magnet_flash_triggered or is_popping or not _mat:
+		return
+	_magnet_flash_triggered = true
+	# Kill any in-progress magnet flash tween so re-engagements restart clean
+	if _magnet_flash_tween and _magnet_flash_tween.is_valid():
+		_magnet_flash_tween.kill()
+	# Spike the emission energy, then ease back to the breathing pulse baseline.
+	# We tween from the current value (which may be mid-pulse) to a fixed spike
+	# then back to 1.0 — the _physics_process pulse loop will resume ownership
+	# of emission_energy_multiplier after the tween completes.
+	var current_emission: float = _mat.emission_energy_multiplier
+	_magnet_flash_tween = create_tween()
+	_magnet_flash_tween.tween_property(_mat, "emission_energy_multiplier",
+		current_emission + 2.0, 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_magnet_flash_tween.tween_property(_mat, "emission_energy_multiplier",
+		1.0, 0.25) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+
 func _apply_type_config() -> void:
 	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
 	xp_value = config["value"]
@@ -284,6 +320,9 @@ func _physics_process(delta: float) -> void:
 	# current position rather than snapping back to the spawn location.
 	# Reset magnetic flag each frame; it's set true only while actively pulling.
 	is_magnetic = false
+	# Reset the magnet flash flag when not being pulled so the next pull
+	# engagement triggers a fresh emission flash.
+	_magnet_flash_triggered = false
 	if not _cached_player or not is_instance_valid(_cached_player):
 		_cached_player = get_tree().get_first_node_in_group("player")
 	var player: Node3D = _cached_player
@@ -320,6 +359,8 @@ func _physics_process(delta: float) -> void:
 			if dist < GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS and not is_popping:
 				is_emergency_magnet = true
 				is_magnetic = true
+				# Trigger the magnet activation flash on first engagement
+				_trigger_magnet_flash()
 				var pull_speed := GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_SPEED * (1.0 - dist / GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS)
 				var dir := (player.global_position - global_position).normalized()
 				global_position += dir * pull_speed * delta
@@ -327,6 +368,8 @@ func _physics_process(delta: float) -> void:
 	# Normal pull radius (skip if emergency magnet already handled)
 	if not is_emergency_magnet and dist < GameConstants.COLLECT_PULL_RADIUS and not is_popping:
 		is_magnetic = true
+		# Trigger the magnet activation flash on first engagement
+		_trigger_magnet_flash()
 		# Exponential acceleration: pull starts gentle when far, then ramps up
 		# sharply as the item closes in. The ease-in curve (t²) makes items
 		# feel "sticky" — they hesitate, then snap toward the player for a

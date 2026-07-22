@@ -6,12 +6,15 @@
 ## - Scale expands with an ease-out curve (decelerating) instead of linear,
 ##   so the ring "unfurls" quickly then settles — reads as an energy bloom
 ##   rather than a mechanical growing circle.
-## - Multi-octave pulse (two sines at incommensurate frequencies) gives an
+## - Multi-octave pulse (two sines at incommensurate frequencies) give an
 ##   organic, non-rhythmic flicker instead of a metronomic blink.
 ## - Anticipation flash: in the final 15% of the warning, the ring snaps to
 ##   full white and peaks in scale — a classic "tell" that telegraphs the
 ##   exact spawn moment so the player can pre-aim. This is the same trick
 ##   used in bullet-hell telegraphs (Touhou, Enter the Gungeon).
+##   A subtle "warp" SFX fires once when the anticipation flash begins, so
+##   off-screen spawns the player can't see still register audibly — they
+##   hear something materializing nearby and can react.
 ## - Final pop tween on free so the ring doesn't just vanish — it flashes
 ##   out with a quick scale-up + fade, masking the spawn frame.
 
@@ -22,6 +25,8 @@ class_name SpawnWarningRing
 var age: float = 0.0
 var duration: float = 1.2
 var _material: StandardMaterial3D = null
+# Tracks whether the anticipation flash SFX has fired so we only play it once.
+var _flash_sfx_played: bool = false
 
 # Base colors — stored so the anticipation flash can swap to white and back.
 const _BASE_COLOR := Color(1.0, 0.3, 0.3)
@@ -67,6 +72,13 @@ func _process(delta: float) -> void:
 			_material.albedo_color = _BASE_COLOR.lerp(_FLASH_COLOR, flash_intensity)
 			_material.albedo_color.a = 0.5 + 0.5 * flash_intensity
 			_material.emission = _BASE_EMISSION.lerp(_FLASH_EMISSION, flash_intensity) * (0.5 + flash_intensity)
+			# ── Play the warp SFX once at the start of the anticipation flash
+			#    so the player hears the spawn coming. This fires a single
+			#    time when the flash begins (progress == _FLASH_FRAC) and
+			#    is guarded by _flash_sfx_played so it doesn't repeat.
+			if not _flash_sfx_played:
+				_flash_sfx_played = true
+				AudioManager.play_sfx(AudioManager.SFX_RIFT)
 		else:
 			# ── Multi-octave pulse: two sines at incommensurate frequencies
 			# (15 Hz and 23 Hz) give an organic, non-rhythmic flicker instead
