@@ -333,6 +333,52 @@ func _pick_enemy_type(distance_from_center: float) -> int:
 			pool.append(bt)
 		else:
 			pool.append(bt)
+	# ── Phase 22: Biome-specific enemy variants for new biomes ──
+	# New biomes bias the spawn pool toward thematic enemy types, making
+	# each new biome feel distinct in its enemy population.
+	var current_biome: int = GameManager.current_biome
+	match current_biome:
+		GameConstants.Biome.DEEP_OCEAN:
+			# Aquatic-themed: gravitons (gravity wells in water), wisps (ghostly),
+			# toxic spores (drifting spores in water)
+			pool.append(GameConstants.EnemyType.GRAVITON)
+			pool.append(GameConstants.EnemyType.WISP)
+			pool.append(GameConstants.EnemyType.TOXIC_SPORE)
+		GameConstants.Biome.VOLCANO_CORE:
+			# Fire-themed: bombers (explosive), plasma stalkers (heat shimmer),
+			# swarm mites (heat-agitated insects)
+			pool.append(GameConstants.EnemyType.BOMBER)
+			pool.append(GameConstants.EnemyType.PLASMA_STALKER)
+			pool.append(GameConstants.EnemyType.SWARM_MITE)
+		GameConstants.Biome.SKY_CITADEL:
+			# Aerial-themed: wisps (floating), crystal guardians (defending the citadel),
+			# echo knights (phantom guardians)
+			pool.append(GameConstants.EnemyType.WISP)
+			pool.append(GameConstants.EnemyType.CRYSTAL_GUARDIAN)
+			pool.append(GameConstants.EnemyType.ECHO_KNIGHT)
+		GameConstants.Biome.DIGITAL_GRID:
+			# Cyber-themed: mirror mimics (copying data), phase shifters (glitching),
+			# time wardens (temporal anomalies)
+			pool.append(GameConstants.EnemyType.MIRROR_MIMIC)
+			pool.append(GameConstants.EnemyType.PHASE_SHIFTER)
+			pool.append(GameConstants.EnemyType.TIME_WARDEN)
+		GameConstants.Biome.UNDERGROUND:
+			# Subterranean: sentinels (stationary guards), crystal wraiths (cave crystals),
+			# swarm queens (nest mothers)
+			pool.append(GameConstants.EnemyType.SENTINEL)
+			pool.append(GameConstants.EnemyType.CRYSTAL_WRAITH)
+			pool.append(GameConstants.EnemyType.SWARM_QUEEN)
+		GameConstants.Biome.CRYSTAL_CAVERNS:
+			# Crystal-themed: crystal wraiths, crystal guardians, echo knights
+			pool.append(GameConstants.EnemyType.CRYSTAL_WRAITH)
+			pool.append(GameConstants.EnemyType.CRYSTAL_GUARDIAN)
+			pool.append(GameConstants.EnemyType.ECHO_KNIGHT)
+		GameConstants.Biome.ANCIENT_RUINS:
+			# Ancient-themed: sentinels (ancient guardians), time wardens (temporal locks),
+			# gravity elementals (ruin magic)
+			pool.append(GameConstants.EnemyType.SENTINEL)
+			pool.append(GameConstants.EnemyType.TIME_WARDEN)
+			pool.append(GameConstants.EnemyType.GRAVITY_ELEMENTAL)
 	return pool[randi() % pool.size()]
 
 func _scale_enemy_to_player_level(enemy: Node3D) -> void:

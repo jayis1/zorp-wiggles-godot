@@ -1545,6 +1545,7 @@ enum WeaponMod {
 	TURRET_DEPLOY,       # 32 — Magnet Core + Shield Crystal + Fireball Scroll — stationary turret that auto-fires at nearest enemy
 	GRAVITY_FLIP_FIELD,  # 33 — Magnet Core + Nebula Dust + Quantum Fuzz — area where gravity reverses, enemies fall up
 	VOID_RIFT_CUTTER,    # 34 — Nebula Dust + Meteor Shard + Toxic Extract — opens a dimensional rift that damages enemies passing through
+	MIND_CONTROL_DART,   # 35 — Health Fragment + Toxic Extract + Magnet Core — enemy fights for you for 8 seconds
 }
 
 const WEAPON_MOD_NAMES: Array[String] = [
@@ -1586,6 +1587,8 @@ const WEAPON_MOD_NAMES: Array[String] = [
 	"Turret Deploy",
 	"Gravity Flip Field",
 	"Void Rift Cutter",
+	# Phase 24: Mind Control Dart
+	"Mind Control Dart",
 ]
 
 const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
@@ -1627,6 +1630,8 @@ const WEAPON_MOD_DESCRIPTIONS: Array[String] = [
 	"Deploys a stationary turret at your location that auto-fires at the nearest enemy for 15 seconds.",
 	"Creates a gravity-flip field where enemies fall upward, then take fall damage when the field ends.",
 	"Opens a dimensional rift that damages all enemies passing through it, persisting for several seconds.",
+	# Phase 24: Mind Control Dart
+	"Mind controls the target enemy — it fights alongside Zorp against other enemies for 8 seconds.",
 ]
 
 # Colors for each weapon mod (laser color)
@@ -1669,6 +1674,8 @@ const WEAPON_MOD_COLORS: Array[Color] = [
 	Color(0.7, 0.85, 0.3),   # Turret Deploy: military green
 	Color(0.6, 0.4, 1.0),    # Gravity Flip Field: anti-gravity purple
 	Color(0.3, 0.1, 0.5),    # Void Rift Cutter: dark void purple
+	# Phase 24: Mind Control Dart
+	Color(0.9, 0.2, 0.6),    # Mind Control: magenta-pink (hypnosis color)
 ]
 
 # Damage multiplier per weapon mod
@@ -1711,6 +1718,8 @@ const WEAPON_MOD_DAMAGE_MULT: Array[float] = [
 	0.4,   # Turret Deploy (the turret does the damage, not the trigger bolt)
 	0.3,   # Gravity Flip Field (utility — the fall damage is the threat)
 	0.5,   # Void Rift Cutter (the rift does the damage, not the bolt)
+	# Phase 24: Mind Control Dart
+	0.3,   # Mind Control Dart (utility — the conversion is the value, not damage)
 ]
 
 # Fire rate multiplier (lower = faster)
@@ -1753,6 +1762,8 @@ const WEAPON_MOD_FIRE_RATE_MULT: Array[float] = [
 	3.5,   # Turret Deploy (very slow — one turret at a time)
 	3.2,   # Gravity Flip Field (slow — field duration is long)
 	3.0,   # Void Rift Cutter (slow — rift persists)
+	# Phase 24: Mind Control Dart
+	2.0,   # Mind Control Dart (slow — deliberate shot)
 ]
 
 # Projectile speed multiplier
@@ -1795,6 +1806,8 @@ const WEAPON_MOD_SPEED_MULT: Array[float] = [
 	1.0,   # Turret Deploy (no projectile — turret appears at player location)
 	1.0,   # Gravity Flip Field (no projectile — field appears at player location)
 	1.0,   # Void Rift Cutter (no projectile — rift appears at player location)
+	# Phase 24: Mind Control Dart
+	1.2,   # Mind Control Dart (moderate-fast — needs to reach the target)
 ]
 
 # Crafting recipes: maps a sorted key string "typeA,typeB[,typeC]" → WeaponMod enum value
@@ -1840,6 +1853,8 @@ const CRAFTING_RECIPES: Dictionary = {
 	"FIREBALL_SCROLL,MAGNET_CORE,SHIELD_CRYSTAL": WeaponMod.TURRET_DEPLOY,
 	"MAGNET_CORE,NEBULA_DUST,QUANTUM_FUZZ": WeaponMod.GRAVITY_FLIP_FIELD,
 	"METEOR_SHARD,NEBULA_DUST,TOXIC_EXTRACT": WeaponMod.VOID_RIFT_CUTTER,
+	# Phase 24: Mind Control Dart
+	"HEALTH_FRAGMENT,MAGNET_CORE,TOXIC_EXTRACT": WeaponMod.MIND_CONTROL_DART,
 }
 
 # Crafting material type names for recipe key lookup
@@ -2672,6 +2687,17 @@ const VOID_RIFT_CUTTER_WIDTH: float = 0.8
 const VOID_RIFT_CUTTER_DAMAGE: int = 25
 const VOID_RIFT_CUTTER_TICK_INTERVAL: float = 0.5  # Per-enemy damage cooldown
 const VOID_RIFT_CUTTER_ROTATE_SPEED: float = 0.8  # rad/s
+
+# Mind Control Dart — mind controls an enemy for 8 seconds. The controlled
+# enemy switches sides: it attacks other enemies instead of the player, and
+# other enemies will attack it. When the effect ends, the enemy returns to
+# normal. Does not work on bosses (too strong-willed). The controlled enemy
+# uses its own damage value against other enemies.
+const MIND_CONTROL_DURATION: float = 8.0
+const MIND_CONTROL_DAMAGE_MULT: float = 1.0  # Controlled enemy deals its normal damage to other enemies
+const MIND_CONTROL_SPEED_MULT: float = 1.2   # Slightly faster — eager to fight former allies
+const MIND_CONTROL_MAX_HP_THRESHOLD: int = 200  # Enemies with max_hp >= this are immune (bosses)
+const MIND_CONTROL_COLOR: Color = Color(0.9, 0.2, 0.6)  # Magenta-pink hypnosis glow
 
 # ─── Phase 26: World Life — NPC Dialogue, Environmental Hazards, Interactive Objects ─
 

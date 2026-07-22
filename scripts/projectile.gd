@@ -800,6 +800,9 @@ func _apply_mod_on_hit(enemy: Node3D, dmg: int) -> void:
 		# Phase 24: Lightning Storm — chain to many nearby enemies
 		GameConstants.WeaponMod.LIGHTNING_STORM:
 			_lightning_storm(enemy, dmg)
+		# Phase 24: Mind Control Dart — mind control the target enemy
+		GameConstants.WeaponMod.MIND_CONTROL_DART:
+			_mind_control_enemy(enemy)
 
 ## Phase 16: Chain lightning — hit jumps to nearby enemies.
 func _chain_lightning(source_enemy: Node3D, dmg: int) -> void:
@@ -1754,3 +1757,38 @@ func _spawn_poison_nova_cloud(cloud_pos: Vector3, base_dmg: int) -> void:
 	# Fade out and free
 	tw.tween_property(cloud_mat, "albedo_color:a", 0.0, 0.5)
 	tw.tween_callback(cloud.queue_free)
+
+## Phase 24: Mind Control Dart — mind controls the target enemy for 8 seconds.
+## The controlled enemy switches sides: it attacks other enemies instead of
+## the player, and other enemies will target it as a traitor. Bosses (max_hp
+## >= MIND_CONTROL_MAX_HP_THRESHOLD) are immune — too strong-willed to control.
+## The dart deals minimal damage (the conversion is the value, not the hit).
+func _mind_control_enemy(enemy: Node3D) -> void:
+	if not enemy or not is_instance_valid(enemy):
+		return
+	# Bosses are immune to mind control
+	var enemy_max_hp: int = int(enemy.get("max_hp")) if "max_hp" in enemy else 0
+	if enemy_max_hp >= GameConstants.MIND_CONTROL_MAX_HP_THRESHOLD:
+		# Fizzles on bosses — small particle puff to show it didn't work
+		ParticleEffects.spawn_explosion(get_parent(), enemy.global_position,
+			Color(0.5, 0.5, 0.5), 8, 0.2)
+		return
+	# Don't mind-control dead enemies
+	if "is_dead" in enemy and enemy.is_dead:
+		return
+	# Apply mind control
+	if enemy.has_method("start_mind_control"):
+		enemy.start_mind_control()
+	# Brief hypnosis light at the enemy
+	var mc_light := OmniLight3D.new()
+	mc_light.light_color = GameConstants.MIND_CONTROL_COLOR
+	mc_light.light_energy = 3.0
+	mc_light.omni_range = 6.0
+	get_parent().add_child(mc_light)
+	mc_light.global_position = enemy.global_position + Vector3(0, 1.5, 0)
+	var light_tw := mc_light.create_tween()
+	light_tw.tween_property(mc_light, "light_energy", 0.0, 0.6)
+	light_tw.tween_callback(mc_light.queue_free)
+	# Swirling particle burst
+	ParticleEffects.spawn_explosion(get_parent(), enemy.global_position,
+		GameConstants.MIND_CONTROL_COLOR, 20, 0.5)

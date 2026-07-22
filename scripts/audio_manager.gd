@@ -344,6 +344,7 @@ func _build_mod_shoot_sfx_map() -> void:
 	_mod_shoot_sfx[WM.TURRET_DEPLOY] = SFX_SHOOT_UTILITY
 	_mod_shoot_sfx[WM.GRAVITY_FLIP_FIELD] = SFX_SHOOT_UTILITY
 	_mod_shoot_sfx[WM.VOID_RIFT_CUTTER] = SFX_SHOOT_VOID
+	_mod_shoot_sfx[WM.MIND_CONTROL_DART] = SFX_SHOOT_UTILITY  # Mind control — soft hypnotic chime
 
 # SFX that get subtle random pitch variation. These are short, percussive
 # combat sounds where micro-detuning reads as natural variation rather than

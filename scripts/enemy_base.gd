@@ -88,6 +88,14 @@ var _time_scale: float = 1.0
 # ── Phase 19: Co-op — track which player killed this enemy ──
 var _killed_by_p2: bool = false
 
+# ── Phase 24: Mind Control — when controlled, enemy fights for the player ──
+# The controlled enemy retargets to attack other enemies instead of the player.
+# Other enemies will also target the controlled enemy. Lasts MIND_CONTROL_DURATION.
+var is_mind_controlled: bool = false
+var _mind_control_timer: float = 0.0
+var _mind_control_original_color: Color = Color.RED
+var _mind_control_target: Node3D = null  # Current enemy being chased/attacked
+
 # ─── Node References ─────────────────────────────────────────────────────────
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var alert_indicator: Label3D = $AlertIndicator
@@ -239,7 +247,14 @@ func _update_ai(delta: float) -> void:
 		_cached_player = get_tree().get_first_node_in_group("player")
 	if not _cached_player:
 		return
-
+	
+	# ── Phase 24: Mind Control — controlled enemy fights for the player ──
+	# When mind-controlled, retarget to the nearest non-controlled enemy.
+	# The controlled enemy chases and attacks other enemies, not the player.
+	if is_mind_controlled:
+		_update_mind_control_ai(delta)
+		return
+	
 	# ── Phase 19: Co-op — target the nearest player ──
 	var player: Node3D = _cached_player
 	if CoOpManager.is_coop_active():
@@ -258,6 +273,34 @@ func _update_ai(delta: float) -> void:
 		else:
 			player = p1
 	var dist_to_player := global_position.distance_to(player.global_position)
+	
+	# ── Phase 24: Mind Control — target nearby mind-controlled enemies ──
+	# Normal enemies prioritize attacking mind-controlled traitors over the
+	# player if one is within detection range. This makes mind control a
+	# double-edged sword: the controlled enemy fights for you, but it also
+	# draws aggro from other enemies (both spreading damage and protecting
+	# the player). We check for the nearest MC enemy within detect_range.
+	var mc_target: Node3D = _find_nearest_mind_controlled_enemy()
+	if mc_target:
+		var mc_dist: float = global_position.distance_to(mc_target.global_position)
+		if mc_dist < effective_detect_range_for(ambush_detect_mult):
+			# Override: chase and attack the mind-controlled enemy
+			player = mc_target
+			dist_to_player = mc_dist
+			if not is_alerted:
+				is_alerted = true
+				alert_indicator_timer = GameConstants.ENEMY_ALERT_INDICATOR_DURATION
+				if alert_indicator:
+					alert_indicator.visible = true
+					alert_indicator.text = "!"
+					alert_indicator.scale = Vector3(0.001, 0.001, 0.001)
+					var alert_tween := create_tween()
+					alert_tween.tween_property(alert_indicator, "scale",
+						Vector3.ONE * GameConstants.ENEMY_ALERT_INDICATOR_SCALE, 0.12) \
+						.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+					alert_tween.tween_property(alert_indicator, "scale",
+						Vector3.ONE, 0.1) \
+						.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 	# ── Phase 10: Ambush behavior ──
 	# If the AI controller is in ambush mode, it overrides velocity to zero
@@ -406,6 +449,201 @@ func _wander(delta: float) -> void:
 		wander_timer = randf_range(2.0, 5.0)
 	velocity = wander_dir * speed * 0.3
 
+# ── Phase 24: Mind Control — AI for controlled enemies ──────────────────────
+# The controlled enemy finds the nearest non-controlled enemy and attacks it.
+# If no enemies are nearby, it wanders. Other enemies can also target the
+# controlled enemy (they see it as a traitor). The controlled enemy's attack
+# calls take_damage on other enemies instead of the player.
+func _update_mind_control_ai(delta: float) -> void:
+	# Tick down the mind control timer
+	_mind_control_timer -= delta
+	if _mind_control_timer <= 0:
+		_end_mind_control()
+		return
+	
+	# Find or validate the current target
+	if not _mind_control_target or not is_instance_valid(_mind_control_target):
+		_mind_control_target = _find_nearest_enemy_for_mc()
+	if _mind_control_target and is_instance_valid(_mind_control_target):
+		var dist_to_target: float = global_position.distance_to(_mind_control_target.global_position)
+		var mc_speed: float = speed * GameConstants.MIND_CONTROL_SPEED_MULT
+		# Weather speed multiplier also applies to controlled enemies
+		mc_speed *= WeatherSystem.get_enemy_speed_multiplier()
+		if dist_to_target > attack_range:
+			# Chase the target enemy
+			var move_dir: Vector3 = (_mind_control_target.global_position - global_position).normalized()
+			move_dir.y = 0
+			move_dir = move_dir.normalized()
+			# Use navigation if available
+			if NavigationManager.is_ready():
+				var nav_dir: Vector3 = _get_nav_direction(_mind_control_target.global_position, delta)
+				if nav_dir != Vector3.ZERO:
+					move_dir = nav_dir
+			var desired_velocity: Vector3 = move_dir * mc_speed
+			var weight: float = 1.0 - exp(-velocity_smoothing * delta)
+			velocity = velocity.lerp(desired_velocity, weight)
+			velocity.y = 0
+		else:
+			# In range — attack the target enemy
+			velocity = Vector3.ZERO
+			_try_attack_enemy(_mind_control_target)
+	else:
+		# No targets — wander
+		_wander(delta)
+
+## Find the nearest non-controlled, non-dead enemy for the controlled enemy to fight
+func _find_nearest_enemy_for_mc() -> Node3D:
+	var nearest: Node3D = null
+	var nearest_dist: float = 99999.0
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if enemy == self:
+			continue
+		if not enemy.is_in_group("enemies"):
+			continue
+		if enemy.is_dead:
+			continue
+		if enemy.is_mind_controlled:
+			continue  # Don't attack other controlled enemies
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < nearest_dist:
+			nearest_dist = d
+			nearest = enemy
+	return nearest
+
+## Find the nearest mind-controlled enemy (for normal enemies to target as traitors)
+func _find_nearest_mind_controlled_enemy() -> Node3D:
+	var nearest: Node3D = null
+	var nearest_dist: float = 99999.0
+	for enemy in GameManager.enemies:
+		if not is_instance_valid(enemy):
+			continue
+		if enemy == self:
+			continue
+		if not enemy.is_in_group("enemies"):
+			continue
+		if enemy.is_dead:
+			continue
+		if not enemy.is_mind_controlled:
+			continue
+		var d: float = global_position.distance_to(enemy.global_position)
+		if d < nearest_dist:
+			nearest_dist = d
+			nearest = enemy
+	return nearest
+
+## Compute effective detect range (mirrors the logic below, usable before the variable is set)
+func effective_detect_range_for(ambush_mult: float) -> float:
+	var r: float = detect_range * ambush_mult
+	if ai_controller and ai_controller.enable_los and not ai_controller.has_los:
+		r *= 0.5
+	r *= WeatherSystem.get_detect_range_multiplier()
+	return r
+
+## Attack an enemy target (instead of the player) while mind-controlled
+func _try_attack_enemy(target: Node3D) -> void:
+	if attack_cooldown_timer > 0:
+		return
+	if is_attacking:
+		return
+	is_attacking = true
+	attack_cooldown_timer = attack_cooldown
+	# Windup telegraph
+	is_windup = true
+	var windup_tween := create_tween()
+	windup_tween.tween_property(self, "scale",
+		Vector3.ONE * base_scale * (1.0 - GameConstants.ENEMY_ATTACK_WINDUP_SQUASH),
+		GameConstants.ENEMY_ATTACK_WINDUP_TIME)
+	windup_tween.tween_callback(_execute_attack_on_enemy.bind(target))
+
+## Execute the attack on an enemy (mind control version)
+func _execute_attack_on_enemy(target: Node3D) -> void:
+	is_windup = false
+	if not target or not is_instance_valid(target):
+		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
+		return
+	# Deal damage to the enemy target
+	if target.has_method("take_damage_from"):
+		target.take_damage_from(damage, global_position)
+	elif target.has_method("take_damage"):
+		target.take_damage(damage)
+	# Lunge animation toward the target
+	var lunge_dir := (target.global_position - global_position).normalized()
+	lunge_dir.y = 0
+	var lunge_mult := clampf(base_scale / GameConstants.ENEMY_ATTACK_LUNGE_SIZE_BASE,
+		GameConstants.ENEMY_ATTACK_LUNGE_SIZE_MULT_MIN, 1.0)
+	var lunge_dist := GameConstants.ENEMY_ATTACK_LUNGE_DISTANCE * lunge_mult
+	var lunge_tween := create_tween()
+	lunge_tween.tween_property(self, "global_position",
+		global_position + lunge_dir * lunge_dist,
+		GameConstants.ENEMY_ATTACK_LUNGE_DURATION)
+	# Lunge stretch
+	if body_mesh:
+		var stretch_scale := Vector3(1.0 - 0.15, 1.0 + 0.3, 1.0 - 0.15)
+		var lunge_stretch := create_tween()
+		lunge_stretch.tween_property(body_mesh, "scale",
+			Vector3.ONE * base_scale * stretch_scale, 0.06) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		lunge_stretch.tween_property(body_mesh, "scale",
+			Vector3.ONE * base_scale, 0.18) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Restore scale
+	var restore_tween := create_tween()
+	restore_tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15)
+	get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
+
+## Begin mind control on this enemy
+func start_mind_control() -> void:
+	if is_mind_controlled:
+		# Refresh timer
+		_mind_control_timer = GameConstants.MIND_CONTROL_DURATION
+		return
+	is_mind_controlled = true
+	_mind_control_timer = GameConstants.MIND_CONTROL_DURATION
+	_mind_control_original_color = current_color
+	_mind_control_target = null
+	# Visual: shift to magenta-pink hypnosis color with bright emission
+	if _material:
+		_material.albedo_color = GameConstants.MIND_CONTROL_COLOR
+		_material.emission = GameConstants.MIND_CONTROL_COLOR * 0.4
+		_material.emission_energy_multiplier = 2.0
+	# Particle burst on mind control
+	ParticleEffects.spawn_explosion(get_parent(), global_position,
+		GameConstants.MIND_CONTROL_COLOR, 16, 0.4)
+	# Add a pulsing magenta light
+	var mc_light := OmniLight3D.new()
+	mc_light.light_color = GameConstants.MIND_CONTROL_COLOR
+	mc_light.light_energy = 2.0
+	mc_light.omni_range = 5.0
+	add_child(mc_light)
+	mc_light.name = "MCMindLight"
+	# Pulse the light
+	var light_tw := mc_light.create_tween()
+	light_tw.set_loops()
+	light_tw.tween_property(mc_light, "light_energy", 0.8, 0.5)
+	light_tw.tween_property(mc_light, "light_energy", 2.0, 0.5)
+	# Alert the enemy so it starts seeking targets immediately
+	is_alerted = true
+
+## End mind control — restore the enemy to normal behavior
+func _end_mind_control() -> void:
+	is_mind_controlled = false
+	_mind_control_timer = 0.0
+	_mind_control_target = null
+	# Restore color
+	if _material:
+		_material.albedo_color = _mind_control_original_color
+		_material.emission = _mind_control_original_color * 0.15
+		_material.emission_energy_multiplier = 1.0
+	# Remove the mind control light
+	var mc_light := get_node_or_null("MCMindLight")
+	if mc_light:
+		mc_light.queue_free()
+	# Shatter effect
+	ParticleEffects.spawn_explosion(get_parent(), global_position,
+		GameConstants.MIND_CONTROL_COLOR, 12, 0.3)
+
 func _try_attack(player: Node3D) -> void:
 	if attack_cooldown_timer > 0:
 		return
@@ -437,6 +675,38 @@ func _execute_attack(player: Node3D) -> void:
 	# P2 in co-op, who can drop out or bleed out mid-windup). Bail out safely.
 	if not player or not is_instance_valid(player):
 		# Still reset the attack flag so the enemy can attack again later
+		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
+		return
+	# ── Phase 24: Mind Control — if the target is a mind-controlled enemy (in the
+	# "enemies" group, not "player" group), damage it directly instead of the player ──
+	if player.is_in_group("enemies") and not player.is_in_group("player"):
+		# Attacking a mind-controlled traitor — deal damage to the enemy
+		if player.has_method("take_damage_from"):
+			player.take_damage_from(damage, global_position)
+		elif player.has_method("take_damage"):
+			player.take_damage(damage)
+		# Skip player-damage routing and variant on-player-hit effects
+		# Lunge animation
+		var lunge_dir_mc := (player.global_position - global_position).normalized()
+		lunge_dir_mc.y = 0
+		var lunge_mult_mc := clampf(base_scale / GameConstants.ENEMY_ATTACK_LUNGE_SIZE_BASE,
+			GameConstants.ENEMY_ATTACK_LUNGE_SIZE_MULT_MIN, 1.0)
+		var lunge_dist_mc := GameConstants.ENEMY_ATTACK_LUNGE_DISTANCE * lunge_mult_mc
+		var lunge_tween_mc := create_tween()
+		lunge_tween_mc.tween_property(self, "global_position",
+			global_position + lunge_dir_mc * lunge_dist_mc,
+			GameConstants.ENEMY_ATTACK_LUNGE_DURATION)
+		if body_mesh:
+			var stretch_scale_mc := Vector3(1.0 - 0.15, 1.0 + 0.3, 1.0 - 0.15)
+			var lunge_stretch_mc := create_tween()
+			lunge_stretch_mc.tween_property(body_mesh, "scale",
+				Vector3.ONE * base_scale * stretch_scale_mc, 0.06) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			lunge_stretch_mc.tween_property(body_mesh, "scale",
+				Vector3.ONE * base_scale, 0.18) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		var restore_tween_mc := create_tween()
+		restore_tween_mc.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15)
 		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
 		return
 	# ── Phase 19: Co-op — damage the correct player ──
@@ -598,6 +868,14 @@ func set_p2_hit() -> void:
 
 func _die() -> void:
 	is_dead = true
+	# ── Phase 24: Clean up mind control state on death ──
+	if is_mind_controlled:
+		is_mind_controlled = false
+		_mind_control_timer = 0.0
+		_mind_control_target = null
+		var mc_light := get_node_or_null("MCMindLight")
+		if mc_light:
+			mc_light.queue_free()
 	# ── Phase 35: Unregister from LOD management ──
 	if PerformanceOptimizer:
 		PerformanceOptimizer.unregister_lod_target(self)
