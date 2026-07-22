@@ -37,7 +37,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	if teleport_cooldown > 0:
-		teleport_cooldown -= delta
+		teleport_cooldown -= delta * _time_scale
 
 func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if is_dead:

@@ -76,6 +76,11 @@ func _physics_process(delta: float) -> void:
 	if is_dead or GameManager.is_paused or spawn_grace_timer > 0:
 		return
 
+	# ── Phase 14: Apply dimension time scale for graviton-specific timers ──
+	# (The base class also scales delta, so we pass the original to super
+	#  to avoid double-scaling the movement/AI delta.)
+	var scaled_delta: float = delta * _time_scale
+
 	# Target nearest valid player — in co-op, the graviton should pull
 	# whichever player is closest, not always P1.
 	var player: Node3D = get_tree().get_first_node_in_group("player")
@@ -94,7 +99,7 @@ func _physics_process(delta: float) -> void:
 	var dist_to_player: float = global_position.distance_to(player.global_position)
 
 	if pull_active:
-		pull_timer -= delta
+		pull_timer -= scaled_delta
 		# Pull player toward this enemy (CharacterBody3D — manual pull, not Area3D gravity)
 		if dist_to_player > 1.0 and dist_to_player < GameConstants.GRAVITON_PULL_RADIUS:
 			var pull_dir: Vector3 = (global_position - player.global_position).normalized()
@@ -129,7 +134,7 @@ func _physics_process(delta: float) -> void:
 			if gravity_well:
 				gravity_well.gravity = 0.0
 	else:
-		cooldown_timer -= delta
+		cooldown_timer -= scaled_delta
 		# Show warning ring when about to pull
 		if cooldown_timer < 1.5 and dist_to_player < GameConstants.GRAVITON_PULL_RADIUS:
 			if pull_ring and not pull_ring.visible:
