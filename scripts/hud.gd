@@ -374,6 +374,13 @@ func _ready() -> void:
 	dch_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dch_ctrl)
 
+	# ── Phase 25: Weekly Challenge HUD (top-center overlay during weekly runs) ──
+	var wch_script := load("res://scripts/weekly_challenge_hud.gd")
+	var wch_ctrl := Control.new()
+	wch_ctrl.set_script(wch_script)
+	wch_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(wch_ctrl)
+
 	# ── Phase 30: Victory Screen (boss rush / speedrun / endless completion) ──
 	var vs_script := load("res://scripts/victory_screen.gd")
 	var vs_ctrl := Control.new()

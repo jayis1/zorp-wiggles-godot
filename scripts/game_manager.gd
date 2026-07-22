@@ -332,6 +332,9 @@ func _start_game() -> void:
 		# HUD display modifiers that don't match the gameplay.
 		if GameModeManager and GameModeManager.is_daily_challenge() and DailyChallengeSystem:
 			DailyChallengeSystem.sync_modifiers_from_world_system()
+		# ── Phase 25: Weekly Challenge — sync modifiers the same way ──
+		if GameModeManager and GameModeManager.is_weekly_challenge() and WeeklyChallengeSystem:
+			WeeklyChallengeSystem.sync_modifiers_from_world_system()
 		# Announce the rolled modifiers via HUD messages
 		if WorldModifierSystem.get_active_modifier_count() > 0:
 			add_message("🎲 World Modifiers active this run:")

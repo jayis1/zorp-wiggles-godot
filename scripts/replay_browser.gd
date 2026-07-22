@@ -68,7 +68,7 @@ func _draw() -> void:
 	else:
 		_draw_replay_list(font, panel_x + 20, panel_y + 70, panel_w - 40, a)
 	# Footer
-	_draw_centered_text(font, "[↑↓] Navigate  |  [Enter] Play  |  [Del] Delete  |  [F11] Close", Vector2(screen.x / 2, panel_y + panel_h - 15), 13, Color(0.5, 0.6, 0.7, a))
+	_draw_centered_text(font, "[↑↓] Navigate  |  [Enter] Play Ghost  |  [S] Spectate  |  [Del] Delete  |  [F11] Close", Vector2(screen.x / 2, panel_y + panel_h - 15), 13, Color(0.5, 0.6, 0.7, a))
 
 
 func _draw_replay_list(font, x: float, y: float, w: float, a: float) -> void:
@@ -125,8 +125,16 @@ func _unhandled_input(event: InputEvent) -> void:
 					var rid: String = String(_replays[_selected_idx].get("id", ""))
 					if not rid.is_empty():
 						ReplaySystem.play_replay(rid)
-						GameManager.add_message("🎬 Playing replay...")
+						GameManager.add_message("🎬 Playing replay ghost...")
 						_visible_flag = false
+				get_viewport().set_input_as_handled()
+			KEY_S:
+				# Phase 32: Spectate the selected replay with free-look camera
+				if _selected_idx >= 0 and _selected_idx < _replays.size() and SpectatorMode:
+					var rid: String = String(_replays[_selected_idx].get("id", ""))
+					if not rid.is_empty():
+						_visible_flag = false
+						SpectatorMode.start_spectating(rid)
 				get_viewport().set_input_as_handled()
 			KEY_DELETE:
 				if _selected_idx >= 0 and _selected_idx < _replays.size() and ReplaySystem:

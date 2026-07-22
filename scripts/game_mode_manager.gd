@@ -46,10 +46,11 @@ enum Mode {
 	GAUNTLET,    # Phase 34: Sequential biome challenges, no breaks, timer
 	BOSS_GAUNTLET, # Phase 34: Every boss in sequence, escalating, no healing
 	DAILY_CHALLENGE, # Phase 25: Seed-based daily challenge, one attempt per day
+	WEEKLY_CHALLENGE, # Phase 25: Seed-based weekly challenge, 3 attempts per week
 }
 
-const MODE_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun", "PvP", "Survival", "Gauntlet", "Boss Gauntlet", "Daily"]
-const MODE_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱", "⚔", "☠", "⚔", "☠", "📅"]
+const MODE_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun", "PvP", "Survival", "Gauntlet", "Boss Gauntlet", "Daily", "Weekly"]
+const MODE_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱", "⚔", "☠", "⚔", "☠", "📅", "🗓"]
 const MODE_DESCRIPTIONS: Array[String] = [
 	"Default open-world adventure. Explore 19 biomes, complete missions, find loot, fight bosses, raise a pet.",
 	"Wave-based survival escalation. No exploration goals — pure combat. Each wave amps difficulty. How long can you last?",
@@ -60,6 +61,7 @@ const MODE_DESCRIPTIONS: Array[String] = [
 	"Phase 34 — Sequential biome challenges with no breaks. Each biome: kill 15 enemies in 90 seconds. Timer runs across all 5.",
 	"Phase 34 — Every boss type in sequence with escalating HP/damage/speed. NO healing between bosses. How far can you get?",
 	"Phase 25 — Daily Challenge: a deterministic seed + fixed modifiers for today. One attempt per day. Compare scores with friends!",
+	"Phase 25 — Weekly Challenge: a deterministic seed + 4-5 modifiers for this week. Up to 3 attempts. Best score counts. More chaos!",
 ]
 const MODE_COLORS: Array[Color] = [
 	Color(0.5, 0.9, 0.6),   # Normal — green
@@ -71,6 +73,7 @@ const MODE_COLORS: Array[Color] = [
 	Color(0.9, 0.6, 0.2),   # Gauntlet — amber
 	Color(0.3, 0.1, 0.2),   # Boss Gauntlet — dark crimson
 	Color(0.95, 0.75, 0.3), # Daily — gold
+	Color(0.6, 0.4, 0.9),   # Weekly — purple
 ]
 
 # ─── Endless Mode Tuning ──────────────────────────────────────────────────────
@@ -219,6 +222,9 @@ func is_boss_gauntlet() -> bool:
 func is_daily_challenge() -> bool:
 	return _current_mode == Mode.DAILY_CHALLENGE
 
+func is_weekly_challenge() -> bool:
+	return _current_mode == Mode.WEEKLY_CHALLENGE
+
 # Endless Mode: wave-based difficulty multipliers (on top of time-based tier)
 func get_endless_wave() -> int:
 	return _wave
@@ -351,6 +357,21 @@ func start_run() -> void:
 				GameManager.add_message("📅 Daily Challenge started! Seed: %s" % DailyChallengeSystem.get_today_seed_string())
 				if DailyChallengeSystem.get_today_modifiers().size() > 0:
 					GameManager.add_message("🎲 Today's modifiers: %s" % DailyChallengeSystem.get_today_modifier_names())
+	elif is_weekly_challenge():
+		# Phase 25: Weekly Challenge — start the attempt via WeeklyChallengeSystem.
+		if WeeklyChallengeSystem:
+			if not WeeklyChallengeSystem.start_weekly_attempt():
+				# No attempts remaining this week — revert to Normal mode
+				GameManager.add_message("🗓 Weekly Challenge: no attempts remaining this week — starting Normal mode instead.")
+				set_mode(Mode.NORMAL)
+			else:
+				GameManager.add_message("🗓 Weekly Challenge started! Seed: %s  (Attempt %d/%d)" % [
+					WeeklyChallengeSystem.get_week_seed_string(),
+					WeeklyChallengeSystem.get_attempts_remaining() > 0 and (WeeklyChallengeSystem.WEEKLY_MAX_ATTEMPTS - WeeklyChallengeSystem.get_attempts_remaining() + 1) or WeeklyChallengeSystem.WEEKLY_MAX_ATTEMPTS,
+					WeeklyChallengeSystem.WEEKLY_MAX_ATTEMPTS
+				])
+				if WeeklyChallengeSystem.get_week_modifiers().size() > 0:
+					GameManager.add_message("🎲 This week's modifiers: %s" % WeeklyChallengeSystem.get_week_modifier_names())
 
 # ─── Per-Frame Update ─────────────────────────────────────────────────────────
 # Called by GameManager._process() (so it pauses with the game).

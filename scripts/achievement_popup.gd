@@ -173,6 +173,10 @@ func _define_achievements() -> void:
 		{"id": "daily_1", "title": "Daily Grind", "desc": "Complete your first Daily Challenge", "icon": "📅", "category": "Special", "target": 1, "progress_key": "daily_challenges_completed"},
 		{"id": "daily_7", "title": "Week Warrior", "desc": "Complete 7 Daily Challenges", "icon": "📅📅", "category": "Special", "target": 7, "progress_key": "daily_challenges_completed"},
 		{"id": "daily_30", "title": "Monthly Devotee", "desc": "Complete 30 Daily Challenges", "icon": "📆", "category": "Special", "target": 30, "progress_key": "daily_challenges_completed"},
+		# ── Phase 25: Weekly Challenge ──
+		{"id": "weekly_1", "title": "Weekly Warrior", "desc": "Complete your first Weekly Challenge", "icon": "🗓", "category": "Special", "target": 1, "progress_key": "weekly_challenges_completed"},
+		{"id": "weekly_4", "title": "Monthly Challenger", "desc": "Complete 4 Weekly Challenges", "icon": "🗓🗓", "category": "Special", "target": 4, "progress_key": "weekly_challenges_completed"},
+		{"id": "weekly_12", "title": "Seasoned Challenger", "desc": "Complete 12 Weekly Challenges", "icon": "🗓🗓🗓", "category": "Special", "target": 12, "progress_key": "weekly_challenges_completed"},
 	]
 	for def in defs:
 		var ach := Achievement.new()

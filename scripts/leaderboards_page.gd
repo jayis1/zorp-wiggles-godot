@@ -13,8 +13,8 @@ class_name LeaderboardsPage
 var _visible_flag: bool = false
 var _fade_alpha: float = 0.0
 var _current_tab: int = 0
-const TAB_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun", "Daily"]
-const TAB_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱", "📅"]
+const TAB_NAMES: Array[String] = ["Normal", "Endless", "Boss Rush", "Speedrun", "Daily", "Weekly"]
+const TAB_ICONS: Array[String] = ["🌍", "♾", "💀", "⏱", "📅", "🗓"]
 const MAX_ROWS: int = 12
 
 # Challenge seed input state
@@ -41,6 +41,7 @@ func _process(delta: float) -> void:
 		elif Input.is_key_pressed(KEY_3): _current_tab = 2
 		elif Input.is_key_pressed(KEY_4): _current_tab = 3
 		elif Input.is_key_pressed(KEY_5): _current_tab = 4
+		elif Input.is_key_pressed(KEY_6): _current_tab = 5
 	# Smooth fade
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
@@ -72,7 +73,7 @@ func _draw() -> void:
 	_draw_centered_text(font, "🏆 LEADERBOARDS", Vector2(screen.x / 2, panel_y + 30), 28, Color(1.0, 0.85, 0.3, a))
 	# Tab buttons
 	var tab_y: float = panel_y + 60
-	var tab_w: float = 200.0
+	var tab_w: float = 140.0
 	for i in TAB_NAMES.size():
 		var tx: float = panel_x + 20 + i * (tab_w + 10)
 		var tab_rect := Rect2(tx, tab_y, tab_w, 36)
@@ -89,7 +90,7 @@ func _draw() -> void:
 	# Challenge seed panel at the bottom
 	_draw_seed_panel(font, panel_x, panel_y + panel_h - 80, panel_w, a)
 	# Footer
-	_draw_centered_text(font, "[1-5] Switch Tabs  |  [F12] Close  |  [S] Share Current Seed", Vector2(screen.x / 2, panel_y + panel_h - 15), 13, Color(0.5, 0.6, 0.7, a))
+	_draw_centered_text(font, "[1-6] Switch Tabs  |  [F12] Close  |  [S] Share Current Seed", Vector2(screen.x / 2, panel_y + panel_h - 15), 13, Color(0.5, 0.6, 0.7, a))
 
 
 func _draw_entries(font, x: float, y: float, w: float, entries: Array[Dictionary], a: float) -> void:

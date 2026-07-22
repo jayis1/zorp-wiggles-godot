@@ -94,9 +94,9 @@ func _draw() -> void:
 	# Title
 	_draw_centered_text(font, "🎮 SELECT GAME MODE", Vector2(screen.x / 2.0, 50.0), 30,
 		Color(0.4, 1.0, 0.6, a))
-	# Mode cards — 3x3 grid (9 modes)
-	var cols: int = 3
-	var rows: int = 3
+	# Mode cards — 5x2 grid (10 modes)
+	var cols: int = 5
+	var rows: int = 2
 	var card_w: float = minf(320.0, (screen.x - 100.0) / float(cols))
 	var card_h: float = 140.0
 	var gap: float = 16.0
