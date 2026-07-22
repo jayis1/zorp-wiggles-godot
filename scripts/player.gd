@@ -89,6 +89,18 @@ const _IDLE_BOB_AMPLITUDE: float = 0.04  # Subtle vertical bob (meters)
 const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
 const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
 const _IDLE_EMISSION_MAX: float = 1.3    # Idle emission pulse max
+# ── Walk bob: a subtle vertical bob while moving that blends smoothly with the
+#    idle breathing. When Zorp walks, the bob frequency increases and the
+#    amplitude scales with speed — so a slow walk has a gentle sway and a
+#    sprint has a pronounced bounce. The walk bob uses a separate phase
+#    accumulator so it stays continuous regardless of the idle phase. A
+#    speed-blend factor lerps between idle and walk bob so the transition
+#    is seamless (no sudden snap when stopping/starting).
+var _walk_phase: float = 0.0  # Phase accumulator for walk bob
+var _walk_blend: float = 0.0  # 0 = idle bob, 1 = walk bob (eased)
+const _WALK_BOB_AMPLITUDE: float = 0.07  # Max bob at full speed (meters)
+const _WALK_BOB_SPEED: float = 11.0      # Bob frequency at full speed (rad/s)
+const _WALK_BOB_BLEND_SPEED: float = 6.0  # How fast idle→walk blend eases (higher = snappier)
 # ── Phase 30: Active cosmetic skin — drives body color + emission multiplier.
 #    Cached at _ready and refreshed whenever CosmeticManager.skin_changed fires.
 #    The RAINBOW skin cycles hue at runtime via _update_cosmetic_color().
@@ -495,11 +507,29 @@ func _update_idle_breathing(delta: float) -> void:
 			mesh.position.y = 0.0
 		return
 	_idle_phase += delta * _IDLE_BOB_SPEED
+	# ── Walk bob: blend between idle breathing and a faster, speed-scaled
+	#    walk bob based on horizontal velocity. The blend factor eases
+	#    smoothly so starting/stopping feels organic — no sudden snap. The
+	#    walk bob uses |sin| (a series of single-sided humps) so each footstep
+	#    reads as a distinct step rather than a continuous sine wave, and the
+	#    frequency scales with speed so sprinting bobs faster than walking.
+	var horiz_speed: float = Vector2(velocity.x, velocity.z).length()
+	var speed_frac: float = clampf(horiz_speed / GameConstants.PLAYER_SPEED, 0.0, 1.0)
+	# Advance walk phase proportional to speed (faster movement = faster bob)
+	_walk_phase += delta * _WALK_BOB_SPEED * speed_frac
+	# Blend factor: 0 = pure idle, 1 = pure walk. Eased for smooth transitions.
+	var blend: float = 1.0 - exp(-_WALK_BOB_BLEND_SPEED * delta)
+	_walk_blend = lerpf(_walk_blend, speed_frac, blend)
+	# Idle bob (slow sine)
+	var idle_y: float = sin(_idle_phase) * _IDLE_BOB_AMPLITUDE
+	# Walk bob (speed-scaled single-sided humps for a "footstep" feel)
+	var walk_y: float = absf(sin(_walk_phase)) * _WALK_BOB_AMPLITUDE * _walk_blend
+	var bob_y: float = lerpf(idle_y, walk_y, _walk_blend)
 	# Only apply visual bob when NOT being tweened by squash/pulse/shoot feedback.
 	# Those tweens set mesh.scale; we only offset y-position to avoid conflicts.
 	if mesh and not is_invuln_blinking:
-		mesh.position.y = sin(_idle_phase) * _IDLE_BOB_AMPLITUDE
-	# Emission pulse synced to bob for a "breathing" glow
+		mesh.position.y = bob_y
+	# Emission pulse synced to the active bob (idle or walk blend)
 	if _player_material:
 		var pulse: float = 0.5 + 0.5 * sin(_idle_phase)
 		_player_material.emission_energy_multiplier = lerpf(

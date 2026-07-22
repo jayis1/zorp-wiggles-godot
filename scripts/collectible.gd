@@ -523,8 +523,33 @@ func _collect() -> void:
 	if collectible_type == GameConstants.CollectibleType.METEOR_SHARD:
 		ParticleEffects.spawn_sky_beam(get_parent(), global_position, Color(1.0, 0.5, 0.1))
 
-	# Pickup animation: pop up + spin fast + shrink, with easing for juicy feel
+	# Pickup animation: spiral orbit around the player + pop up + spin fast +
+	# shrink, with easing for juicy feel. The spiral gives magnetic pickups
+	# a sense of being "drawn in" — the item orbits the player once as it
+	# rises and shrinks, creating a satisfying vortex catch effect. The orbit
+	# uses a single full rotation (TAU) so it reads as one smooth swirl.
+	# We compute the orbit relative to the player's position at pickup time
+	# so the spiral doesn't drift if the player moves during the animation.
+	var spiral_player_pos: Vector3 = Vector3.ZERO
+	if _cached_player and is_instance_valid(_cached_player):
+		spiral_player_pos = _cached_player.global_position
+	var spiral_start_pos: Vector3 = global_position
+	var spiral_radius_start: float = clampf(
+		global_position.distance_to(spiral_player_pos), 0.5, 3.0)
 	var tween := create_tween()
+	# Phase 1: spiral orbit + rise (0.18s) — one full rotation as we lift
+	tween.tween_method(
+		func(t: float):
+			var angle: float = t * TAU
+			var radius: float = spiral_radius_start * (1.0 - t * 0.7)
+			global_position = spiral_player_pos + Vector3(
+				cos(angle) * radius,
+				spiral_start_pos.y - spiral_player_pos.y + 0.8 * t,
+				sin(angle) * radius
+			),
+		0.0, 1.0, 0.18
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# Phase 2: pop scale up + shrink to zero
 	tween.tween_property(self, "scale", Vector3.ONE * 1.5, 0.1) \
 		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BACK)

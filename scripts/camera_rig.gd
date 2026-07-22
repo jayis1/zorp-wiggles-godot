@@ -129,6 +129,12 @@ func _ready() -> void:
 	# CameraRig is instantiated fresh each scene load, so double-connect can't happen.
 	GameManager.boss_spawned.connect(_on_boss_spawned)
 	GameManager.boss_defeated.connect(_on_boss_defeated)
+	# ── Damage FOV dip — connect to the player damage signal so the camera
+	#    narrows briefly on each hit, creating a "tunnel vision" danger cue.
+	#    This complements the screen shake and damage flash for a multi-layer
+	#    damage feedback read. The signal carries the source position but we
+	#    don't need it for the FOV dip (the shake uses it for direction bias).
+	GameManager.damage_taken_from.connect(_on_player_damage_fov_dip)
 
 func _process(delta: float) -> void:
 	if not _target_node or not is_instance_valid(_target_node):
@@ -326,6 +332,23 @@ func add_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> void:
 ## Called on dash. The FOV then eases back to `default_fov` in _process.
 func kick_fov(kick_amount: float) -> void:
 	camera.fov = default_fov + kick_amount
+
+## Damage FOV dip — briefly narrows the FOV by `dip_amount` degrees when the
+## player takes damage, creating a "tunnel vision" danger effect that eases
+## back to normal. This is the inverse of the dash FOV kick: dash widens FOV
+## for a speed rush, damage narrows it for a focus/clench feel. The dip is
+## subtle (3°) so it doesn't hurt visibility — it just adds a visceral "ouch"
+## cue that complements the screen shake and damage flash. The _process FOV
+## return logic will smoothly ease the FOV back to the default + speed-FOV
+## baseline, so we only need to set the initial dip and let it recover.
+## Connected to GameManager.damage_taken_from so it fires on every player hit.
+const DAMAGE_FOV_DIP: float = 3.0
+func _on_player_damage_fov_dip(_source_pos: Vector3) -> void:
+	# Narrow the FOV (subtract from default). The _process FOV return loop
+	# will ease it back to the baseline over ~0.4s via fov_return_speed.
+	# We subtract from the current FOV (not default_fov) so the dip composes
+	# correctly with an active speed-FOV offset (e.g. dashing while hit).
+	camera.fov = maxf(camera.fov - DAMAGE_FOV_DIP, default_fov - DAMAGE_FOV_DIP)
 
 func set_camera_yaw(yaw_deg: float) -> void:
 	# Set the target yaw — _process eases the actual rotation toward this.
