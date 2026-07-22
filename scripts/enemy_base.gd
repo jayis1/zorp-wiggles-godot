@@ -847,10 +847,26 @@ func _update_visuals(delta: float) -> void:
 			# Slight Z sway
 			var sway: float = sin(_walk_phase * 0.5) * 0.08
 			body_mesh.rotation.z = sway
+			# ── Forward lean: tilt the mesh ~5° toward the movement direction ──
+			# Gives enemies a sense of momentum and urgency when chasing the
+			# player. Smoothed via exponential lerp so the lean eases in/out
+			# rather than snapping. Only applies on the X axis (pitch) so it
+			# reads as a forward lean, not a sideways tilt. The lean direction
+			# is derived from the horizontal velocity.
+			var horiz_vel := Vector2(velocity.x, velocity.z)
+			if horiz_vel.length() > 1.0:
+				var speed_frac: float = clampf(horiz_vel.length() / speed, 0.0, 1.0)
+				var target_pitch: float = -speed_frac * 0.09  # ~5° forward tilt
+				body_mesh.rotation.x = lerpf(body_mesh.rotation.x, target_pitch,
+					1.0 - exp(-8.0 * delta))
+			else:
+				body_mesh.rotation.x = lerpf(body_mesh.rotation.x, 0.0,
+					1.0 - exp(-6.0 * delta))
 	elif body_mesh and not is_windup:
 		# Settle to rest position when not moving
 		body_mesh.position.y = move_toward(body_mesh.position.y, 0.5, delta * 3.0)
 		body_mesh.rotation.z = move_toward(body_mesh.rotation.z, 0.0, delta * 3.0)
+		body_mesh.rotation.x = move_toward(body_mesh.rotation.x, 0.0, delta * 3.0)
 
 	# Low-HP warning pulse — only when not currently being hit-flashed
 	# (hit flash tween controls _material.albedo_color during its 0.15s duration)

@@ -57,6 +57,16 @@ const HITSTOP_COOLDOWN: float = 0.12    # Min seconds between freeze triggers
 const HITSTOP_BOSS_DURATION: float = 0.09   # Boss kill freeze (90ms — weighty)
 const HITSTOP_BOSS_TIME_SCALE: float = 0.04 # Boss kill freeze (near-stop)
 
+# ── Normal kill hit-stop ──────────────────────────────────────────────────────
+# Even a non-crit, non-elite kill deserves a tiny freeze so every kill
+# feels weighty — not just the special ones. This is deliberately very
+# short (25ms) and shallow (0.2x) so rapid-fire mook clears don't stutter
+# (the shared cooldown prevents stacking), but each kill pop still gets a
+# micro-punch that reads as "something died." Sits below the crit/elite/
+# boss tiers so it only fires on the most common, least impactful kills.
+const HITSTOP_KILL_DURATION: float = 0.025
+const HITSTOP_KILL_TIME_SCALE: float = 0.2
+
 # ── Elite kill hit-stop ────────────────────────────────────────────────────────
 # Large-but-not-boss enemies (Sentinels, Bombers, Crystal Guardians — anything
 # with base_scale >= 1.5) get a lighter freeze than a boss kill but still more
@@ -255,6 +265,21 @@ func _trigger_elite_hitstop() -> void:
 		Engine.time_scale = 1.0
 	)
 
+## Normal kill hit-stop: the lightest freeze tier, fires on non-crit, non-
+## elite, non-boss kills so even common mook deaths get a micro-punch.
+## Shares the same cooldown so rapid clears don't stack into a stutter.
+## Scheduled via scene-tree timer with ignore_time_scale=true (same as
+## the other tiers) so it survives the projectile's queue_free().
+func _trigger_kill_hitstop() -> void:
+	if _hitstop_cooldown > 0.0:
+		return
+	_hitstop_cooldown = HITSTOP_COOLDOWN
+	Engine.time_scale = HITSTOP_KILL_TIME_SCALE
+	var timer := get_tree().create_timer(HITSTOP_KILL_DURATION, true, false, true)
+	timer.timeout.connect(func():
+		Engine.time_scale = 1.0
+	)
+
 ## Phase 16: Apply weapon mod behavior while the projectile is in flight.
 func _apply_mod_flight_behavior(delta: float) -> void:
 	match _weapon_mod:
@@ -394,12 +419,20 @@ func _update_trail_visuals(delta: float) -> void:
 	# Lazily create trail mesh instances (using shared mesh + per-node material clones)
 	# Each trail node gets its own material clone so we can fade alpha independently.
 	# The mesh itself is shared (static geometry) to save GPU memory.
+	# When a weapon mod is active, the trail material is recolored to match the
+	# mod color so the trail visually matches the bolt body (e.g. fire mod →
+	# orange trail instead of the default cyan).
 	while _trail_meshes.size() < TRAIL_MAX_POINTS:
 		var m := MeshInstance3D.new()
 		_ensure_shared_resources()
 		m.mesh = _shared_trail_mesh
 		# Clone the shared trail material so each trail node can fade independently
 		var mat := _shared_trail_material.duplicate() as StandardMaterial3D
+		# Recolor trail to match the weapon mod / projectile color so the
+		# energy streak reads as the same element as the bolt itself.
+		if _weapon_mod != GameConstants.WeaponMod.NONE:
+			mat.albedo_color = Color(_mod_color.r, _mod_color.g, _mod_color.b, mat.albedo_color.a)
+			mat.emission = _mod_color * 0.3
 		m.material_override = mat
 		_trail_materials.append(mat)
 		add_child(m)
@@ -597,6 +630,13 @@ func _hit_enemy(enemy: Node3D) -> void:
 				_trigger_hitstop(true)
 			elif is_elite_kill:
 				_trigger_elite_hitstop()
+			elif not is_crit:
+				# ── Normal kill hit-stop ── Non-crit, non-elite, non-boss kills
+				# get the lightest freeze tier so even common mook deaths
+				# have a micro-punch. The shared cooldown prevents rapid
+				# clears from stacking into a stutter. Crits already get
+				# the normal hit-stop via _trigger_hitstop() above.
+				_trigger_kill_hitstop()
 		# ── Phase 19: Co-op — mark enemy as hit by P2 if this is a P2 projectile ──
 		if has_meta("is_p2_projectile") and enemy.has_method("set_p2_hit"):
 			enemy.set_p2_hit()
