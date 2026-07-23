@@ -42,6 +42,9 @@ var _material: StandardMaterial3D = null
 var _idle_phase: float = 0.0
 const _IDLE_BOB_AMPLITUDE: float = 0.04
 const _IDLE_BOB_SPEED: float = 2.5
+# ── Dash afterimage timer (shared by dash + slide, matching P1's pattern) ──
+var _afterimage_timer: float = 0.0
+const AFTERIMAGE_INTERVAL: float = 0.03
 
 # ─── Combat ───────────────────────────────────────────────────────────────────
 var shoot_cooldown_timer: float = 0.0
@@ -134,6 +137,7 @@ func _physics_process(delta: float) -> void:
 	_handle_movement(delta)
 	_handle_dash(delta)
 	_update_idle_breathing(delta)
+	_update_movement_lean(delta)
 	_update_invuln_blink()
 	# ── Phase 28: Gravity Anomaly weather — apply vertical force to P2 ──
 	var p2_grav_force: float = WeatherSystem.get_gravity_anomaly_force()
@@ -185,10 +189,19 @@ func _handle_movement(delta: float) -> void:
 	if is_sliding:
 		return
 
-	# Apply speed multipliers (weather, dimension)
+	# Apply speed multipliers (weather, dimension, progression, equipment, world modifier)
 	var speed_mult: float = DimensionSystem.get_player_time_scale()
 	speed_mult *= WeatherSystem.get_speed_multiplier()
 	speed_mult *= GameConstants.P2_SPEED_MULT
+	# ── Phase 25: ProgressionSystem skill tree — P2 also benefits from skills ──
+	if ProgressionSystem:
+		speed_mult *= ProgressionSystem.get_speed_mult()
+	# ── Phase 29: EquipmentSystem — P2 also benefits from equipment bonuses ──
+	if EquipmentSystem:
+		speed_mult *= (1.0 + EquipmentSystem.get_speed_mult_bonus())
+	# ── Phase 33: WorldModifierSystem — P2 also affected by world modifiers ──
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		speed_mult *= WorldModifierSystem.get_player_speed_mult()
 	# ── Phase 23: Time Warden slow field — P2 also slowed inside the field ──
 	if EnemyTimeWarden:
 		speed_mult *= EnemyTimeWarden.get_player_slow_mult(global_position)
@@ -207,6 +220,11 @@ func _handle_dash(delta: float) -> void:
 
 	if is_dashing:
 		dash_timer -= delta
+		# ── Dash afterimage — spawn ghost copies at intervals during dash (matches P1) ──
+		_afterimage_timer -= delta
+		if _afterimage_timer <= 0.0:
+			_spawn_dash_afterimage()
+			_afterimage_timer = AFTERIMAGE_INTERVAL
 		if dash_timer <= 0:
 			is_dashing = false
 			dash_ended()
@@ -218,7 +236,10 @@ func _handle_dash(delta: float) -> void:
 	# only need to check the buffer timer. (P1 uses GameManager.player_dash_cooldown_timer
 	# here, but P2 doesn't track dash cooldown in GameManager.)
 	# ── Phase 28: Magnetic Storm EMP — dashing temporarily disabled for P2 too ──
+	# ── Phase 33: WorldModifierSystem "No Dash" modifier also disables P2 dash ──
 	var p2_can_dash: bool = WeatherSystem.get_emp_dash_disable_remaining() <= 0
+	if WorldModifierSystem and WorldModifierSystem.is_initialized() and WorldModifierSystem.is_dash_disabled():
+		p2_can_dash = false
 	if _dash_buffer_timer > 0 and p2_can_dash:
 		_dash_buffer_timer = 0.0
 		_start_dash()
@@ -240,6 +261,8 @@ func _start_dash() -> void:
 		cam_rig.kick_fov(GameConstants.CAMERA_DASH_FOV_KICK)
 	# Dash trail
 	ParticleEffects.spawn_dash_trail(get_parent(), global_position, base_color)
+	# ── Dash afterimage — P2 also gets ghost copies during dash for visual parity with P1 ──
+	_spawn_dash_afterimage()
 	# Squash-and-stretch
 	if mesh:
 		var t := create_tween()
@@ -247,6 +270,8 @@ func _start_dash() -> void:
 		t.tween_property(mesh, "scale", Vector3.ONE, 0.18).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	# Dash bump enemies
 	_dash_bump_enemies()
+	# ── Smash destructibles & breakable walls on dash (matches P1) ──
+	_dash_smash_destructibles()
 
 func dash_ended() -> void:
 	pass
@@ -284,6 +309,13 @@ func _update_slide(delta: float) -> void:
 
 	if randf() < 0.3:
 		ParticleEffects.spawn_dash_trail(get_parent(), global_position, base_color)
+
+	# ── Dash afterimage during slide — spawn ghosts while sliding fast (matches P1) ──
+	if slide_velocity.length() > GameConstants.DASH_SLIDE_MIN_SPEED * 2.0:
+		_afterimage_timer -= delta
+		if _afterimage_timer <= 0.0:
+			_spawn_dash_afterimage()
+			_afterimage_timer = AFTERIMAGE_INTERVAL * 1.5  # Slightly slower during slide
 
 func _get_forward_fallback() -> Vector3:
 	var cam: Camera3D = _get_camera()
@@ -334,7 +366,15 @@ func _compute_shoot_cooldown() -> float:
 	var cooldown: float = GameConstants.SHOOT_COOLDOWN
 	if WeaponModSystem:
 		cooldown *= WeaponModSystem.get_equipped_fire_rate_mult()
+	# ── Phase 33: WeaponModFusion — fused mods use their own fire-rate mult ──
+	if WeaponModFusion and WeaponModFusion.is_fused_equipped():
+		cooldown *= WeaponModFusion.get_equipped_fire_rate_mult()
 	cooldown *= WeatherSystem.get_fire_rate_multiplier()
+	# ── Phase 25/29: ProgressionSystem + EquipmentSystem — P2 benefits from skills & equipment ──
+	if ProgressionSystem:
+		cooldown *= ProgressionSystem.get_fire_rate_mult()
+	if EquipmentSystem:
+		cooldown *= (1.0 - EquipmentSystem.get_fire_rate_mult_bonus())
 	return cooldown
 
 ## Fire a shot immediately. Assumes the caller has already verified the
@@ -363,9 +403,25 @@ func _spawn_projectile() -> void:
 		mod_color = WeaponModSystem.get_equipped_color()
 		mod_dmg_mult = WeaponModSystem.get_equipped_damage_mult()
 		mod_speed_mult = WeaponModSystem.get_equipped_speed_mult()
+	# ── Phase 33: WeaponModFusion — fused mods override stats + alternate parent behavior ──
+	if WeaponModFusion and WeaponModFusion.is_fused_equipped():
+		mod_id = WeaponModFusion.get_shot_parent_mod()
+		mod_color = WeaponModFusion.get_equipped_color()
+		mod_dmg_mult = WeaponModFusion.get_equipped_damage_mult()
+		mod_speed_mult = WeaponModFusion.get_equipped_speed_mult()
 
 	# P2 damage multiplier
 	mod_dmg_mult *= GameConstants.P2_DAMAGE_MULT
+	# ── Phase 25: ProgressionSystem skill tree — P2 also benefits from damage skills ──
+	if ProgressionSystem:
+		mod_dmg_mult *= ProgressionSystem.get_damage_mult()
+	# ── Phase 29: EquipmentSystem — P2 also benefits from equipment damage bonuses ──
+	if EquipmentSystem:
+		mod_dmg_mult *= (1.0 + EquipmentSystem.get_damage_mult_bonus())
+	# ── Phase 33: WorldModifierSystem — P2 also affected by world modifier damage mult ──
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		mod_dmg_mult *= WorldModifierSystem.get_player_damage_mult()
+		mod_dmg_mult *= WorldModifierSystem.get_berserker_damage_mult()
 
 	var base_dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + GameManager.player_level * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
 	var mod_dmg: int = int(base_dmg * mod_dmg_mult)
@@ -387,6 +443,14 @@ func _spawn_projectile() -> void:
 			_spawn_single_projectile(shoot_dir, mod_dmg, mod_speed, proj_color, mod_id)
 
 	p2_shoot_fired.emit(shoot_dir)
+	# ── Phase 25: Extra Bolts skill — P2 also gets extra projectiles from the skill tree ──
+	if ProgressionSystem:
+		var extra: int = ProgressionSystem.get_extra_projectiles()
+		if extra > 0:
+			var spread_step: float = 0.12
+			for i in range(extra):
+				var angle: float = spread_step * float(i + 1) * (1.0 if i % 2 == 0 else -1.0)
+				_spawn_single_projectile(shoot_dir.rotated(Vector3.UP, angle), mod_dmg, mod_speed, proj_color, mod_id)
 	# ── Phase 30: Adaptive shoot SFX — P2 also gets per-mod shoot sounds ──
 	# P2 shares P1's equipped mod, so the same adaptive SFX mapping applies.
 	AudioManager.play_shoot_sfx(mod_id)
@@ -458,6 +522,95 @@ func _dash_bump_enemies() -> void:
 				enemy.apply_knockback(push_dir, GameConstants.KNOCKBACK_FORCE_DASH_BUMP)
 			if enemy.has_method("take_damage_from"):
 				enemy.take_damage_from(5, global_position)
+
+# ── Smash destructibles & breakable walls on dash (matches P1) ──
+func _dash_smash_destructibles() -> void:
+	for prop in get_tree().get_nodes_in_group("destructibles"):
+		if not is_instance_valid(prop):
+			continue
+		if global_position.distance_to(prop.global_position) < 2.0:
+			if prop.has_method("take_damage_from"):
+				prop.take_damage_from(999, global_position)  # Instant smash
+	for obj in get_tree().get_nodes_in_group("interactive_object"):
+		if not is_instance_valid(obj):
+			continue
+		if "object_type" in obj and obj.object_type == "breakable_wall":
+			if global_position.distance_to(obj.global_position) < 2.5:
+				if obj.has_method("dash_hit"):
+					obj.dash_hit()
+
+# ── Dash afterimage — translucent ghost copies during dash, matching P1's visual ──
+func _spawn_dash_afterimage() -> void:
+	var parent_node: Node = get_parent()
+	if not parent_node:
+		return
+	var ghost := MeshInstance3D.new()
+	var ghost_sphere := SphereMesh.new()
+	ghost_sphere.radius = 0.5
+	ghost_sphere.height = 1.0
+	ghost_sphere.radial_segments = 8
+	ghost_sphere.rings = 4
+	ghost.mesh = ghost_sphere
+	# Unlit transparent material in P2's magenta-purple color
+	var ghost_mat := StandardMaterial3D.new()
+	ghost_mat.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.5)
+	ghost_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ghost_mat.emission_enabled = true
+	ghost_mat.emission = base_color * 0.3
+	ghost_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ghost_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	ghost.material_override = ghost_mat
+	parent_node.add_child(ghost)
+	ghost.global_position = global_position
+	ghost.global_rotation = global_rotation
+	ghost.scale = mesh.scale if mesh else Vector3.ONE
+	# Fade out + slight scale up for dissipating energy look
+	var fade_tween := ghost.create_tween()
+	fade_tween.set_parallel(true)
+	fade_tween.tween_property(ghost_mat, "albedo_color:a", 0.0, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	fade_tween.tween_property(ghost, "scale", ghost.scale * 1.3, 0.35) \
+		.set_ease(Tween.EASE_OUT)
+	fade_tween.chain().tween_callback(ghost.queue_free)
+
+# ── Movement lean — P2 mesh tilts toward movement direction like P1 ──
+func _update_movement_lean(delta: float) -> void:
+	if not mesh:
+		return
+	if is_dashing or is_sliding:
+		# Reset lean during dash/slide (their tweens control mesh.scale)
+		var lr := mesh.rotation
+		mesh.rotation = Vector3(lerpf(lr.x, 0.0, 1.0 - exp(-10.0 * delta)), lr.y, lerpf(lr.z, 0.0, 1.0 - exp(-10.0 * delta)))
+		return
+	if DimensionSystem.gravity_reversed():
+		return  # Mesh is flipped 180°, skip lean
+	var speed_frac: float = clampf(velocity.length() / GameConstants.PLAYER_SPEED, 0.0, 1.0)
+	if speed_frac < 0.05:
+		# Ease back to upright when standing still
+		var lr2 := mesh.rotation
+		mesh.rotation = Vector3(lerpf(lr2.x, 0.0, 1.0 - exp(-10.0 * delta)), lr2.y, lerpf(lr2.z, 0.0, 1.0 - exp(-10.0 * delta)))
+		return
+	# Camera-relative lean: tilt forward/back + strafe
+	var cam: Camera3D = _get_camera()
+	if not cam:
+		return
+	var cam_forward := -cam.global_basis.z
+	cam_forward.y = 0
+	cam_forward = cam_forward.normalized()
+	var cam_right := cam.global_basis.x
+	cam_right.y = 0
+	cam_right = cam_right.normalized()
+	var move_dot: float = velocity.normalized().dot(cam_forward)
+	var strafe_dot: float = velocity.normalized().dot(cam_right)
+	var max_lean: float = deg_to_rad(7.0)
+	var target_pitch: float = -move_dot * max_lean * speed_frac
+	var target_roll: float = strafe_dot * max_lean * speed_frac
+	var cur := mesh.rotation
+	mesh.rotation = Vector3(
+		lerpf(cur.x, target_pitch, 1.0 - exp(-10.0 * delta)),
+		cur.y,
+		lerpf(cur.z, target_roll, 1.0 - exp(-10.0 * delta))
+	)
 
 ## Set invulnerability timer (called by CoOpManager on revive).
 func set_invuln(duration: float) -> void:
