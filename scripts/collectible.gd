@@ -266,6 +266,20 @@ func _apply_type_config() -> void:
 			glow.omni_range = 4.0
 			glow.omni_attenuation = 1.5
 			add_child(glow)
+			# ── Rare spawn emission flash ── A brief white-hot emission spike
+			# on the spawn frame so rare items immediately draw the eye. The
+			# emission energy jumps to 5x then eases back to the breathing
+			# pulse baseline over 0.4s, creating a "flare" effect that reads
+			# as "something valuable just appeared" even in a cluttered field
+			# of common drops. Common items don't get this — the pop-in scale
+			# tween is enough for them, but rare items need the extra light
+			# punch to stand out, especially in dark biomes.
+			if _mat:
+				_mat.emission_energy_multiplier = 5.0
+				var rare_flash_tween := create_tween()
+				rare_flash_tween.tween_property(_mat, "emission_energy_multiplier",
+					1.0, 0.4) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:

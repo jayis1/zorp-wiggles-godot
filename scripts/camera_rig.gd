@@ -318,6 +318,12 @@ func _apply_screen_shake(delta: float) -> void:
 ## to the trauma amount (bigger hits = more directional kick).
 func add_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> void:
 	_trauma = clampf(_trauma + amount, 0.0, 1.0)
+	# Re-seed shake noise on each new impact so no two hits shake identically.
+	# Without this, the static seeds set in _ready() produce the same shake
+	# pattern for every hit over a long session, making impacts feel samey.
+	# A fresh seed per impact is a standard Vlambeer-style juice trick — each
+	# hit gets its own organic noise fingerprint.
+	_shake_seed = Vector3(randf() * 1000.0, randf() * 1000.0, randf() * 1000.0)
 	# Set directional bias if provided. Horizontal-only (y=0) since the camera
 	# shake operates on the X/Y local plane.
 	if bias_dir.length_squared() > 0.01:

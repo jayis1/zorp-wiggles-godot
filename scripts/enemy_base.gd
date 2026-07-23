@@ -155,6 +155,20 @@ func _ready() -> void:
 		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BACK)
 
+	# ── Spawn emission discharge ── A brief emission energy spike at spawn
+	# so enemies read as "materializing" rather than just fading in. The
+	# emission energy jumps to 4x and eases back to 1.0 over 0.5s, synced
+	# with the scale-up tween. This gives each spawn a quick "energy flare"
+	# that sells the teleport-in effect — the enemy is arriving, not just
+	# becoming visible. The discharge fades naturally into the idle emission
+	# so there's no hard transition.
+	if _material:
+		_material.emission_energy_multiplier = 4.0
+		var spawn_emit_tween := create_tween()
+		spawn_emit_tween.tween_property(_material, "emission_energy_multiplier",
+			1.0, 0.5) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
 	# Hide alert indicator
 	if alert_indicator:
 		alert_indicator.visible = false
