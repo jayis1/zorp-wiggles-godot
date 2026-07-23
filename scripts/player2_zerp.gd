@@ -263,6 +263,8 @@ func _start_dash() -> void:
 	ParticleEffects.spawn_dash_trail(get_parent(), global_position, base_color)
 	# ── Dash afterimage — P2 also gets ghost copies during dash for visual parity with P1 ──
 	_spawn_dash_afterimage()
+	# ── Dash SFX — P2 also gets the dash whoosh ──
+	AudioManager.play_sfx(AudioManager.SFX_DASH)
 	# Squash-and-stretch
 	if mesh:
 		var t := create_tween()
@@ -497,6 +499,8 @@ func _use_pulse_wave() -> void:
 	get_parent().add_child(pulse)
 	pulse.global_position = global_position
 	p2_pulse_fired.emit()
+	# ── Pulse wave SFX — P2 also gets the pulse wave sound ──
+	AudioManager.play_sfx(AudioManager.SFX_PULSE_WAVE)
 	# Camera shake
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
@@ -522,6 +526,7 @@ func _dash_bump_enemies() -> void:
 				enemy.apply_knockback(push_dir, GameConstants.KNOCKBACK_FORCE_DASH_BUMP)
 			if enemy.has_method("take_damage_from"):
 				enemy.take_damage_from(5, global_position)
+				AudioManager.play_sfx(AudioManager.SFX_DASH_BUMP)
 
 # ── Smash destructibles & breakable walls on dash (matches P1) ──
 func _dash_smash_destructibles() -> void:
