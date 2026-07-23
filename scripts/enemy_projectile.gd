@@ -176,15 +176,22 @@ func _spawn_impact(col: Color) -> void:
 
 ## Fizzle out when lifetime expires — small particle puff + fade, not a
 ## hard queue_free. Gives the player a visual cue that the threat ended.
+## Both the light AND the mesh alpha tween out together so the bolt
+## visibly "dissipates" instead of just vanishing.
 func _fizzle_out() -> void:
-	# Quick fade on the light + mesh before freeing
+	# Tween the mesh alpha out alongside the light so the whole bolt
+	# fades as a unit. Previously the light tweened but the material
+	# alpha was snapped to 0.0 instantly — the mesh popped out while
+	# the light was still fading, which looked like a bug.
+	if _material:
+		var mat_fade := create_tween()
+		mat_fade.tween_property(_material, "albedo_color:a", 0.0, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	if _light:
 		var fade_tween := create_tween()
 		fade_tween.tween_property(_light, "light_energy", 0.0, 0.15) \
-			.set_ease(Tween.EASE_OUT)
-	if _material:
-		_material.albedo_color.a = 0.0
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Small fizzle particle puff
 	ParticleEffects.spawn_explosion(get_parent(), global_position, projectile_color, 6, 0.15)
-	# Free after a tiny delay so the fade is visible
-	get_tree().create_timer(0.05).timeout.connect(queue_free)
+	# Free after the fade completes so the visual is fully visible
+	get_tree().create_timer(0.18, true, false, true).timeout.connect(queue_free)

@@ -17,8 +17,17 @@ func _ready() -> void:
 	GameManager.damage_taken_from.connect(_on_damage_taken)
 
 func _on_damage_taken(_source_pos: Vector3) -> void:
-	# Flash red on damage
-	_flash_alpha = 0.5
+	# Flash red on damage — intensity scales with how low HP is so a hit
+	# at critical HP feels more urgent than a hit at full HP. The vignette
+	# at full HP is 0.4 (a gentle red pulse); at <25% HP it reaches 0.7
+	# (a strong crimson wash) so the player viscerally feels the danger.
+	var hp_ratio: float = 1.0
+	if GameManager.player_max_hp > 0:
+		hp_ratio = float(GameManager.player_hp) / float(GameManager.player_max_hp)
+	# Quadratic ramp: starts gentle, intensifies sharply as HP drops
+	var danger_factor: float = clampf(1.0 - hp_ratio, 0.0, 1.0)
+	danger_factor = danger_factor * danger_factor  # ease-in quadratic
+	_flash_alpha = 0.4 + danger_factor * 0.3  # 0.4 at full → 0.7 at empty
 
 func _process(delta: float) -> void:
 	if _flash_alpha > 0.01:

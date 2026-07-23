@@ -96,6 +96,20 @@ var _hp_bar_flash_timer: float = 0.0
 const HP_BAR_FLASH_DURATION: float = 0.15  # Slightly shorter than boss (player hits are more frequent)
 const HP_BAR_SHAKE_AMP: float = 4.0        # Slightly less violent than boss (player bar is smaller)
 
+# ── HP bar damage ghost trail ── A "chip damage" trail bar that sits behind
+#    the main HP bar and slowly catches up to the real HP value. When the
+#    player takes damage, the main bar snaps down immediately (per the
+#    _hp_bar_target_ratio smoothing) while the ghost bar lingers at the
+#    pre-damage width and drains slowly — creating the classic fighting-
+#    game / Kingdom Hearts "white trail" that shows how much HP you just
+#    lost. The ghost bar is a ColorRect created in _ready and inserted
+#    behind the HP bar fill in the container. Its smoothing is much slower
+#    than the main bar so the trail is visible for ~0.8s after a hit.
+var _hp_ghost_bar: ColorRect = null
+var _hp_ghost_ratio: float = 1.0       # Current displayed ghost ratio (eased)
+var _hp_ghost_smoothing: float = 2.5   # Slow catch-up (lower = longer trail)
+const HP_GHOST_COLOR: Color = Color(1.0, 0.85, 0.4, 0.35)  # Warm white-gold, semi-transparent
+
 # ── Heal flash ── When the player heals (HP ratio increases), the bar
 #    flashes a soft mint-green and does a tiny upward "lift" pop. This is
 #    the positive counterpart to the damage white-flash + shake: damage
@@ -141,6 +155,30 @@ func _ready() -> void:
 	GameManager.message_added.connect(_on_message_added)
 	GameManager.combo_milestone.connect(_on_combo_milestone)
 	GameManager.pickup_streak_milestone.connect(_on_pickup_streak_milestone)
+	
+	# ── HP bar damage ghost trail ── Create a semi-transparent "chip
+	#    damage" bar that sits behind the HP bar fill and trails behind
+	#    on damage. It uses the same position/size as the HP bar fill but
+	#    is inserted as a sibling BEFORE the fill in the container so it
+	#    renders underneath. The ghost bar only catches up to the real
+	#    HP ratio slowly (_hp_ghost_smoothing), creating a visible trail
+	#    of "where your HP just was" for ~0.8s after a hit.
+	if hp_bar and hp_bar.get_parent():
+		_hp_ghost_bar = ColorRect.new()
+		_hp_ghost_bar.name = "HPGhostBar"
+		_hp_ghost_bar.color = HP_GHOST_COLOR
+		_hp_ghost_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Match the HP bar's initial layout (it sets anchors/offsets in
+		# _on_hp_changed). We copy the fill's layout properties so the
+		# ghost sits pixel-perfect behind it.
+		_hp_ghost_bar.offset_left = hp_bar.offset_left
+		_hp_ghost_bar.offset_top = hp_bar.offset_top
+		_hp_ghost_bar.offset_right = hp_bar.offset_right
+		_hp_ghost_bar.offset_bottom = hp_bar.offset_bottom
+		_hp_ghost_bar.size = hp_bar.size
+		# Insert behind the fill so it renders underneath
+		hp_bar.get_parent().add_child(_hp_ghost_bar)
+		hp_bar.get_parent().move_child(_hp_ghost_bar, hp_bar.get_index())
 	
 	# Create combo milestone flash overlay (full-screen ColorRect)
 	_combo_flash_rect = ColorRect.new()
@@ -545,6 +583,27 @@ func _process(delta: float) -> void:
 	var hp_current_ratio: float = hp_bar.size.x / hp_bar_bg.size.x if hp_bar_bg.size.x > 0 else 0.0
 	hp_current_ratio = lerpf(hp_current_ratio, _hp_bar_target_ratio, weight)
 	hp_bar.size.x = hp_bar_bg.size.x * hp_current_ratio
+	# ── HP ghost trail ── The ghost bar slowly catches up to the real HP
+	#    ratio using a much slower smoothing rate, creating a visible
+	#    "chip damage" trail behind the main bar. The ghost only moves
+	#    DOWN (damage), never up — if the player heals, the ghost snaps
+	#    to the new (higher) ratio instantly so it doesn't trail behind
+	#    a heal (that would look like the bar is "draining" upward).
+	#    The ghost bar's width is set from the bg width * ghost ratio,
+	#    and its position matches the main bar's offset_left (including
+	#    the damage shake) so it stays pixel-aligned underneath.
+	if _hp_ghost_bar and hp_bar_bg and hp_bar_bg.size.x > 0:
+		if _hp_bar_target_ratio > _hp_ghost_ratio + 0.001:
+			# Heal — snap ghost to new ratio (no trail on positive events)
+			_hp_ghost_ratio = _hp_bar_target_ratio
+		else:
+			# Damage or no change — ease ghost toward target slowly
+			var ghost_weight: float = 1.0 - exp(-_hp_ghost_smoothing * delta)
+			_hp_ghost_ratio = lerpf(_hp_ghost_ratio, _hp_bar_target_ratio, ghost_weight)
+		_hp_ghost_bar.size.x = hp_bar_bg.size.x * _hp_ghost_ratio
+		_hp_ghost_bar.offset_left = hp_bar.offset_left
+		# Only show the ghost when it's meaningfully behind the real bar
+		_hp_ghost_bar.visible = _hp_ghost_ratio > _hp_bar_target_ratio + 0.005
 	# ── Player HP bar damage flash + shake ── Mirrors the boss bar juice.
 	# Detect a ratio drop (damage taken) by comparing to last frame's value,
 	# then drive a white flash blend + horizontal sine shake that decays over
@@ -881,6 +940,10 @@ func _on_game_restarted() -> void:
 	_hp_bar_heal_flash_timer = 0.0
 	if hp_bar:
 		hp_bar.offset_left = 2.0
+	# Reset HP ghost trail so a fresh game doesn't carry a stale chip-damage trail
+	_hp_ghost_ratio = 1.0
+	if _hp_ghost_bar:
+		_hp_ghost_bar.visible = false
 	# Reset XP bar level-up flash so a fresh game doesn't carry a lingering
 	# cyan glow from the previous run's last level-up.
 	_xp_bar_flash_timer = 0.0
