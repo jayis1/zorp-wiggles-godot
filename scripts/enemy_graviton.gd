@@ -106,10 +106,10 @@ func _physics_process(delta: float) -> void:
 			pull_dir.y = 0
 			var pull_strength: float = GameConstants.GRAVITON_PULL_FORCE * \
 				(1.0 - dist_to_player / GameConstants.GRAVITON_PULL_RADIUS)
-			player.global_position += pull_dir * pull_strength * delta
+			player.global_position += pull_dir * pull_strength * scaled_delta
 
 			# Damage per second while in pull range — route to correct player
-			pull_damage_accum += GameConstants.GRAVITON_PULL_DAMAGE * delta
+			pull_damage_accum += GameConstants.GRAVITON_PULL_DAMAGE * scaled_delta
 			if pull_damage_accum >= 1.0:
 				if player.is_in_group("player2"):
 					CoOpManager.p2_take_damage(int(pull_damage_accum), global_position)

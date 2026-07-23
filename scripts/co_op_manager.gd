@@ -441,7 +441,7 @@ func is_coop_active() -> bool:
 func get_camera_target_midpoint() -> Vector3:
 	if not is_coop_active():
 		return Vector3.ZERO
-	var p1: Vector3 = GameManager.player.global_position if GameManager.player else Vector3.ZERO
+	var p1: Vector3 = GameManager.player.global_position if (GameManager.player and is_instance_valid(GameManager.player)) else Vector3.ZERO
 	var p2: Vector3 = p2_node.global_position
 	return (p1 + p2) * 0.5
 

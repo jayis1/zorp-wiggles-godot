@@ -199,11 +199,15 @@ func _die() -> void:
 	GameManager.boss_defeated.emit(self)
 	GameManager.clear_current_boss()
 	GameManager.register_kill(enemy_name, "Zorp")
+	GameManager.gain_xp(150)  # Mini-boss XP reward
 	GameManager.add_score(500)
 	GameManager.add_message("🌑 Shadow Clone defeated! +500 score")
 
 	# Remove from enemies list
 	GameManager.enemies.erase(self)
+	# ── Phase 35: Notify EndgameManager for gauntlet mode ──
+	if EndgameManager:
+		EndgameManager.notify_gauntlet_kill()
 
 	# Death animation
 	if _mesh:

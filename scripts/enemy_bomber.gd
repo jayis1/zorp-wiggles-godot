@@ -164,12 +164,38 @@ func _explode() -> void:
 
 	# Mark as dead for game logic
 	is_dead = true
-	GameManager.register_kill(enemy_name, "Zorp")
+	# ── Phase 19: Co-op — credit P2 if they killed the bomber ──
+	var killer_name: String = GameConstants.P2_NAME if _killed_by_p2 else "Zorp"
+	GameManager.register_kill(enemy_name, killer_name)
 	GameManager.gain_xp(xp_reward)
-	GameManager.add_score(score_reward)
+	if _killed_by_p2:
+		CoOpManager.p2_add_score(score_reward)
+	else:
+		GameManager.add_score(score_reward)
 	enemy_died.emit(self)
-	# Remove from GameManager's enemy list (not calling super._die() so erase here)
+	# Remove from GameManager's enemy list
 	GameManager.enemies.erase(self)
+	# ── Phase 35: Unregister from LOD management ──
+	if PerformanceOptimizer:
+		PerformanceOptimizer.unregister_lod_target(self)
+	# ── Phase 24: Clean up mind control state on explosion death ──
+	if is_mind_controlled:
+		is_mind_controlled = false
+		_mind_control_timer = 0.0
+		_mind_control_target = null
+		var mc_light := get_node_or_null("MCMindLight")
+		if mc_light:
+			mc_light.queue_free()
+	# ── Phase 34: Gauntlet mode — notify EndgameManager ──
+	if EndgameManager:
+		EndgameManager.notify_gauntlet_kill()
+	# Drop crafting materials, pet stones, and rare materials (same as base _die)
+	_drop_crafting_material()
+	_drop_pet_stone()
+	_drop_rare_material()
+	# ── Phase 33: Enemy Variant System — variant death hook ──
+	if EnemyVariantSystem:
+		EnemyVariantSystem.on_variant_death(self)
 	# Clean up AI controller
 	if ai_controller:
 		ai_controller.cleanup()
