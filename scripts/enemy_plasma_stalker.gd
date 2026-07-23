@@ -93,6 +93,8 @@ func _advance_cloak_state() -> void:
 			# Particle burst on cloak activation
 			ParticleEffects.spawn_explosion(get_parent(), global_position,
 				GameConstants.PLASMA_STALKER_COLOR, 14, 0.3)
+			# Audio cue — soft ethereal cloak chime
+			AudioManager.play_sfx(AudioManager.SFX_CLOAK)
 		CloakState.CLOAKED:
 			# Return to VISIBLE — solid again
 			_cloak_state = CloakState.VISIBLE
@@ -101,6 +103,8 @@ func _advance_cloak_state() -> void:
 			# Particle burst on decloak
 			ParticleEffects.spawn_explosion(get_parent(), global_position,
 				GameConstants.PLASMA_STALKER_COLOR, 14, 0.3)
+			# Audio cue — decloak shimmer
+			AudioManager.play_sfx(AudioManager.SFX_CLOAK)
 
 ## Per-frame visual updates for the current cloak state.
 func _update_cloak_visuals(delta: float) -> void:

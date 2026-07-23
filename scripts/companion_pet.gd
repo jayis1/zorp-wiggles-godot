@@ -347,6 +347,8 @@ func feed(collectible_type: int) -> void:
 		Statistics.record_pet_feeding()
 	# ── Phase 27: Happy emote on feed ──
 	_trigger_emote(GameConstants.PetEmote.HAPPY)
+	# Audio cue — soft pet blip on feed (positive reinforcement)
+	AudioManager.play_sfx(AudioManager.SFX_PET)
 	# ── Phase 27: Pet Questline — track feeding ──
 	if PetQuestline:
 		PetQuestline.notify_pet_fed()
@@ -371,6 +373,8 @@ func _set_path(new_path: int) -> void:
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	var path_name: String = GameConstants.PET_PATH_NAMES[new_path]
 	GameManager.add_message("✨ Pet path locked: %s!" % path_name)
+	# Audio cue — path lock fanfare (distinct from evolution — a element choice)
+	AudioManager.play_sfx(AudioManager.SFX_PET_EVOLVE)
 	# Emote: LOVE on path change (it's exciting!)
 	_trigger_emote(GameConstants.PetEmote.LOVE)
 	print("[Pet] Path set to %s" % path_name)
@@ -401,6 +405,8 @@ func _evolve_to(new_stage: int) -> void:
 		GameConstants.PET_STAGE_NAMES[stage],
 		" (%s)" % GameConstants.PET_PATH_NAMES[evolution_path] if evolution_path != GameConstants.PetPath.PRISMATIC else ""
 	])
+	# Audio cue — triumphant evolution fanfare (was silent — a major milestone)
+	AudioManager.play_sfx(AudioManager.SFX_PET_EVOLVE)
 	# ── Phase 27: LOVE emote on evolution ──
 	_trigger_emote(GameConstants.PetEmote.LOVE)
 	# ── Phase 27: Pet Questline — notify stage change ──

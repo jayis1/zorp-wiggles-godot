@@ -57,7 +57,7 @@ func _physics_process(delta: float) -> void:
 		return
 	
 	# Check enrage threshold
-	if not is_enraged and float(hp) / float(max_hp) < GameConstants.DRAKE_ENRAGE_HP_THRESHOLD:
+	if not is_enraged and max_hp > 0 and float(hp) / float(max_hp) < GameConstants.DRAKE_ENRAGE_HP_THRESHOLD:
 		_enter_enrage()
 	
 	# Handle boss attacks first — this may set velocity for charging

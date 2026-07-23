@@ -105,6 +105,12 @@ const SFX_PING: String = "ping"                 # Phase 31: Ping placed
 const SFX_DIALOGUE: String = "dialogue"           # Phase 26: NPC dialogue advance
 const SFX_FAST_TRAVEL: String = "fast_travel"    # Phase 26: Fast travel teleport
 const SFX_WORLD_BOSS: String = "world_boss"      # Phase 26: World boss spawned
+# ── Enemy ability SFX ── Distinct audio cues for special enemy abilities so
+# the player can identify threats by sound, not just sight.
+const SFX_TELEPORT: String = "teleport"           # Time Warden / Phase Shifter phase shift
+const SFX_CLOAK: String = "cloak"                 # Plasma Stalker cloak activate/deactivate
+const SFX_CONSUMABLE: String = "consumable"       # Consumable item used (dedicated sound)
+const SFX_PET_EVOLVE: String = "pet_evolve"       # Pet evolution (major milestone)
 
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 # Per-weapon-mod shoot sound variants. Each mod gets a distinct SFX so the
@@ -648,6 +654,15 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_SHOOT_HEAVY] = _gen_rumble(80.0, 0.20, 0.45)         # Heavy cannon
 	_sfx_streams[SFX_SHOOT_UTILITY] = _gen_chime([784.0, 988.0], 0.15, 0.25)  # Soft deploy chime
 	_sfx_streams[SFX_SHOOT_VAMPIRE] = _gen_descending(330.0, 260.0, 0.12, 0.30)  # Crimson hum
+	# ── Enemy ability SFX ── Distinct audio for special enemy abilities
+	# Teleport — a quick upward sweep + shimmer (temporal displacement feel)
+	_sfx_streams[SFX_TELEPORT] = _gen_whoosh(0.22, 0.32)
+	# Cloak — a soft ethereal chime (stealth activate/deactivate)
+	_sfx_streams[SFX_CLOAK] = _gen_chime([880.0, 1175.0], 0.20, 0.22)
+	# Consumable — a distinct potion-swirl sound (short descending + chime)
+	_sfx_streams[SFX_CONSUMABLE] = _gen_descending(660.0, 440.0, 0.15, 0.30)
+	# Pet evolution — a triumphant ascending arpeggio (major milestone)
+	_sfx_streams[SFX_PET_EVOLVE] = _gen_arpeggio([523.0, 659.0, 784.0, 1047.0, 1319.0], 0.07, 0.40)
 
 
 func _generate_all_music() -> void:

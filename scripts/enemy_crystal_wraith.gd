@@ -61,6 +61,8 @@ func _die() -> void:
 	# Shield-break shatter effect for sharp fragment visuals
 	ParticleEffects.spawn_shield_break_shatter(get_parent(), global_position,
 		GameConstants.CRYSTAL_WRAITH_COLOR)
+	# Audio cue — crystal shatter sound (uses breakable SFX for a crystal-crack feel)
+	AudioManager.play_sfx(AudioManager.SFX_BREAKABLE)
 	super._die()
 
 ## Spawn 3-5 RigidBody3D crystal shards that fly outward, then reform into
@@ -197,3 +199,5 @@ func _spawn_mini_wraith(pos: Vector3) -> void:
 	# Materialization particle burst for the "reform" effect
 	ParticleEffects.spawn_materialization(get_parent(), pos,
 		GameConstants.CRYSTAL_WRAITH_MINI_COLOR)
+	# Audio cue — soft materialization chime for the shard reforming
+	AudioManager.play_sfx(AudioManager.SFX_PET)  # Reuse soft blip (same as pet materialize)

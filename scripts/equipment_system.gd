@@ -163,9 +163,9 @@ func use_consumable(type: int) -> bool:
 			# Instant AoE explosion at player position
 			_detonate_void_bomb()
 			GameManager.add_message("💥 Void Bomb!")
-	# Play SFX
+	# Play SFX — dedicated consumable sound (was reusing SFX_LEVEL_UP)
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)  # Reuse a positive SFX
+		AudioManager.play_sfx(AudioManager.SFX_CONSUMABLE)
 	return true
 
 ## Detonate a Void Bomb at the player's position, damaging all enemies in radius.
@@ -192,6 +192,8 @@ func _detonate_void_bomb() -> void:
 		var parent: Node = GameManager.player.get_parent()
 		if parent:
 			ParticleEffects.spawn_mega_explosion(parent, center)
+	# Audio: explosion sound for the void bomb detonation
+	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
 	# Camera shake
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):

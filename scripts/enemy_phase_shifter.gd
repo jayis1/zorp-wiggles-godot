@@ -80,6 +80,8 @@ func _advance_phase_state() -> void:
 			# Particle burst on phase shift
 			ParticleEffects.spawn_explosion(get_parent(), global_position,
 				GameConstants.PHASE_SHIFTER_PHASE_COLOR, 16, 0.3)
+			# Audio cue — spectral phase-shift whoosh
+			AudioManager.play_sfx(AudioManager.SFX_TELEPORT)
 		PhaseState.PHASED:
 			# Return to MATERIAL — vulnerable again
 			_phase_state = PhaseState.MATERIAL
@@ -89,6 +91,8 @@ func _advance_phase_state() -> void:
 			# Particle burst on return
 			ParticleEffects.spawn_explosion(get_parent(), global_position,
 				GameConstants.PHASE_SHIFTER_COLOR, 16, 0.3)
+			# Audio cue — return to material plane
+			AudioManager.play_sfx(AudioManager.SFX_TELEPORT)
 
 ## Per-frame visual updates for the current phase state.
 func _update_phase_visuals(delta: float) -> void:

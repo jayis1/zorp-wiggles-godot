@@ -129,8 +129,8 @@ func _update_field_state(delta: float) -> void:
 func _start_charging() -> void:
 	_field_state = FieldState.CHARGING
 	_field_active_timer = GameConstants.GRAVITY_ELEMENTAL_FIELD_WARN_TIME
-	# Audio cue — charging sound
-	AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
+	# Audio cue — low rumble for charging gravity energy (was generic enemy-hit)
+	AudioManager.play_sfx(AudioManager.SFX_ARENA)
 
 ## Activate the gravity field — repel the player outward and fling loose objects.
 func _activate_field() -> void:
@@ -149,7 +149,7 @@ func _activate_field() -> void:
 		GameConstants.GRAVITY_ELEMENTAL_COLOR, 24, 0.5)
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.3)
-	AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
+	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)  # Gravitic burst — deep boom
 
 ## Update the active field — apply continuous repel force to the player.
 func _update_active_field(delta: float) -> void:

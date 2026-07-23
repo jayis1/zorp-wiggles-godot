@@ -220,8 +220,8 @@ func _execute_teleport() -> void:
 		GameConstants.TIME_WARDEN_COLOR, 20, 0.4)
 	# Camera shake on teleport — disorienting temporal jump
 	_trigger_camera_trauma(0.25)
-	# Audio cue
-	AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
+	# Audio cue — dedicated teleport whoosh (was generic enemy_hit)
+	AudioManager.play_sfx(AudioManager.SFX_TELEPORT)
 
 ## Pulse the slow field visual — gentle breathing animation.
 func _update_field_visual(delta: float) -> void:

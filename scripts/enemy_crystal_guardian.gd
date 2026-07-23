@@ -126,8 +126,8 @@ func _fire_crystal_shard() -> void:
 	ParticleEffects.spawn_explosion(get_parent(), global_position + Vector3(0, 1, 0),
 		GameConstants.CRYSTAL_GUARDIAN_SHARD_COLOR, 10, 0.3)
 
-	# Audio: reuse spitter SFX for ranged attack
-	AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
+	# Audio: crystalline chime for the shard projectile (was generic enemy-hit)
+	AudioManager.play_sfx(AudioManager.SFX_SHOOT_FREEZE)  # Ice-chime fits crystal theme
 
 func _die() -> void:
 	# Crystal Guardians shatter into crystal fragment particles on death

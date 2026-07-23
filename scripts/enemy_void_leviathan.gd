@@ -199,6 +199,8 @@ func _physics_process(delta: float) -> void:
 ## Check HP thresholds and advance the stage when crossed. Each stage adds new
 ## attack patterns; the enraged stage boosts speed and damage.
 func _check_stage_transition() -> void:
+	if max_hp <= 0:
+		return
 	var hp_frac: float = float(hp) / float(max_hp)
 	if _current_stage == Stage.STAGE_1 and hp_frac < GameConstants.VOID_LEVIATHAN_STAGE2_THRESHOLD:
 		_enter_stage_2()
@@ -288,7 +290,8 @@ func _fire_void_breath() -> void:
 	var flash_tw := flash.create_tween()
 	flash_tw.tween_property(flash, "light_energy", 0.0, 0.3)
 	flash_tw.tween_callback(flash.queue_free)
-	AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
+	# Audio cue — deep void breath (uses rumble for a massive boss attack)
+	AudioManager.play_sfx(AudioManager.SFX_ARENA)
 
 ## Summon Void Wisps around the leviathan (stage 2+).
 func _summon_wisps() -> void:

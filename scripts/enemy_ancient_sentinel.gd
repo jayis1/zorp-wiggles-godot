@@ -131,7 +131,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	# Check enrage threshold
-	if not _is_enraged and float(hp) / float(max_hp) < GameConstants.ANCIENT_SENTINEL_ENRAGE_HP_THRESHOLD:
+	if not _is_enraged and max_hp > 0 and float(hp) / float(max_hp) < GameConstants.ANCIENT_SENTINEL_ENRAGE_HP_THRESHOLD:
 		_enter_enrage()
 
 	# Tick the attack phase cycle
@@ -231,7 +231,8 @@ func _update_beam_phase(delta: float) -> void:
 			_beam_material.emission_energy_multiplier = 3.0
 			if _beam_ray:
 				_beam_ray.enabled = true
-			AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
+		# Audio cue — deep rumble for the death ray activation (was generic enemy-hit)
+		AudioManager.play_sfx(AudioManager.SFX_ARENA)
 	else:
 		# Rotate the beam around the Y axis
 		var rotate_speed: float = GameConstants.ANCIENT_SENTINEL_BEAM_ROTATE_SPEED
@@ -393,7 +394,7 @@ func _fire_nova_ring() -> void:
 		nova.set("damage", GameConstants.ANCIENT_SENTINEL_NOVA_DAMAGE)
 		nova.set("max_radius", GameConstants.ANCIENT_SENTINEL_NOVA_MAX_RADIUS)
 		nova.set("expand_speed", GameConstants.ANCIENT_SENTINEL_NOVA_EXPAND_SPEED)
-	AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
+	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)  # Nova ring — shockwave boom
 	# Camera shake on nova
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.2)

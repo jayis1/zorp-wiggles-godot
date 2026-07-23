@@ -127,8 +127,8 @@ func _try_ranged_attack() -> void:
 	_spawn_mimic_projectile(fire_dir)
 	# Muzzle flash in the mimic's current color
 	_spawn_muzzle_flash(_current_mimic_color)
-	# Audio cue
-	AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
+	# Audio cue — mirrored weapon fire (uses standard shoot SFX for weapon-copy feel)
+	AudioManager.play_sfx(AudioManager.SFX_SHOOT)
 
 ## Spawn an EnemyProjectile with the mimic's current color and scaled damage.
 ## The projectile inherits the mimic's color so it visually matches the mod
