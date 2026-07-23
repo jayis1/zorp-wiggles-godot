@@ -227,6 +227,8 @@ func _finish_dimension_entry() -> void:
 
 	var dim_name: String = GameConstants.DIMENSION_NAMES.get(_current_dimension, "Unknown")
 	GameManager.add_message("🌀 %s active! %ds remaining" % [dim_name, int(_dimension_timer)])
+	# Audio cue — dimensional shift whoosh for the reality-warping transition
+	AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	# ── Phase 25: Statistics tracking — record rift entry ──
 	if Statistics:
 		Statistics.record_rift_entered()
@@ -270,6 +272,8 @@ func _finish_dimension_return() -> void:
 	dimension_transition_ended.emit(_current_dimension)
 
 	GameManager.add_message("🌀 Back in Normal Space")
+	# Audio cue — return to normal space
+	AudioManager.play_sfx(AudioManager.SFX_RIFT)
 
 	# Reset rift spawn timer
 	_reset_rift_spawn_timer()

@@ -222,6 +222,16 @@ func _activate() -> void:
 	# Deal damage immediately on activation (one-shot for geyser/rock/vent).
 	if hazard_type_name != "ice_patch":
 		_deal_damage_in_radius()
+	# Audio cue — distinct SFX per hazard type for identifiable audio feedback
+	match hazard_type_name:
+		"lava_geyser":
+			AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
+		"falling_rock":
+			AudioManager.play_sfx(AudioManager.SFX_BREAKABLE)
+		"toxic_vent":
+			AudioManager.play_sfx(AudioManager.SFX_SHOOT_POISON)
+		"ice_patch":
+			AudioManager.play_sfx(AudioManager.SFX_SHOOT_FREEZE)
 	hazard_activated.emit(self)
 
 func _update_active(delta: float) -> void:
