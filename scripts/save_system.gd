@@ -51,6 +51,8 @@ signal autosave_triggered()
 var autosave_enabled: bool = true
 var _autosave_timer: float = 0.0
 var _has_pending_save: bool = false  # Set when a biome change requests a save
+var _last_save_time: float = -999.0  # Game time of the last save (for debounce)
+const BIOME_SAVE_DEBOUNCE: float = 2.0  # Min seconds between a save and a biome-change save
 
 
 func _ready() -> void:
@@ -76,15 +78,17 @@ func _process(delta: float) -> void:
 	if _autosave_timer >= AUTOSAVE_INTERVAL:
 		_autosave_timer = 0.0
 		_do_autosave()
-	# If a biome change requested a save and at least 2s have passed since the
-	# last save, save now (debounced so rapid biome hopping doesn't thrash).
+	# If a biome change requested a save, wait for the debounce window before
+	# actually saving. This prevents rapid biome hopping from thrashing disk I/O.
 	if _has_pending_save:
-		_has_pending_save = false
-		_do_autosave()
+		if GameManager.game_time - _last_save_time >= BIOME_SAVE_DEBOUNCE:
+			_has_pending_save = false
+			_do_autosave()
 
 
 func _do_autosave() -> void:
 	if save_game():
+		_last_save_time = GameManager.game_time
 		autosave_triggered.emit()
 
 
@@ -374,6 +378,7 @@ func _on_game_restarted() -> void:
 	# carry over the old save. The new run will auto-save as it progresses.
 	_autosave_timer = 0.0
 	_has_pending_save = false
+	_last_save_time = -999.0
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

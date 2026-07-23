@@ -172,7 +172,9 @@ func _process(delta: float) -> void:
 
 func _finish_replay() -> void:
 	_playing = false
-	Engine.time_scale = _saved_time_scale
+	# Always restore to 1.0 — never inherit a hit-stop time scale from before
+	# the replay started, or the death screen would render in slow-motion.
+	Engine.time_scale = 1.0
 	# Restore the player's pre-replay transform (safety net — restart will
 	# reset everything anyway, but this prevents a one-frame visual glitch if
 	# the death screen reads the player position before restart clears it).

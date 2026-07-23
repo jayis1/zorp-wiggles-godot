@@ -255,6 +255,16 @@ func _ready() -> void:
 	_lightning_timer = randf_range(GameConstants.THUNDER_LIGHTNING_INTERVAL_MIN, GameConstants.THUNDER_LIGHTNING_INTERVAL_MAX)
 	# Defer world env lookup — autoload runs before main scene exists
 	call_deferred("_resolve_world_env")
+	# Re-resolve the WorldEnvironment after scene transitions so we don't
+	# hold a stale reference to the freed node from the previous scene.
+	if GameManager:
+		GameManager.game_restarted.connect(_on_game_restarted)
+
+func _on_game_restarted() -> void:
+	# The scene was reloaded; the old WorldEnvironment is freed. Re-resolve
+	# on the next frame so the new scene's WorldEnvironment is available.
+	_world_env = null
+	call_deferred("_resolve_world_env")
 
 func _resolve_world_env() -> void:
 	var main: Node = get_tree().current_scene
