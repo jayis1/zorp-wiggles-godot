@@ -283,7 +283,10 @@ func _update_ai(delta: float) -> void:
 	var mc_target: Node3D = _find_nearest_mind_controlled_enemy()
 	if mc_target:
 		var mc_dist: float = global_position.distance_to(mc_target.global_position)
-		if mc_dist < effective_detect_range_for(ambush_detect_mult):
+		# Use default ambush mult (1.0) here — the ambush multiplier is
+		# computed later in this function, but for the mind-control target
+		# check we want the base detect range without ambush reduction.
+		if mc_dist < effective_detect_range_for(1.0):
 			# Override: chase and attack the mind-controlled enemy
 			player = mc_target
 			dist_to_player = mc_dist
