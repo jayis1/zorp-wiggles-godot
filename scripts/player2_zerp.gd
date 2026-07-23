@@ -42,6 +42,15 @@ var _material: StandardMaterial3D = null
 var _idle_phase: float = 0.0
 const _IDLE_BOB_AMPLITUDE: float = 0.04
 const _IDLE_BOB_SPEED: float = 2.5
+# ── Low-HP heartbeat constants (matching P1) ──
+const _HEARTBEAT_BPM: float = 75.0
+const _HEARTBEAT_SCALE_AMP: float = 0.06
+const _HEARTBEAT_HP_THRESHOLD: float = 0.25
+var _heartbeat_phase: float = 0.0
+
+# ── Landing effect: tracks whether P2 is airborne (reverse-gravity, etc.) ──
+var _was_airborne: bool = false
+
 # ── Dash afterimage timer (shared by dash + slide, matching P1's pattern) ──
 var _afterimage_timer: float = 0.0
 const AFTERIMAGE_INTERVAL: float = 0.03
@@ -92,11 +101,17 @@ func _physics_process(delta: float) -> void:
 		global_position.y = lerpf(global_position.y, ceiling_y, 1.0 - exp(-8.0 * delta))
 		if mesh:
 			mesh.rotation.x = lerpf(mesh.rotation.x, deg_to_rad(180), 1.0 - exp(-5.0 * delta))
+		_was_airborne = true
 	else:
 		if mesh and abs(mesh.rotation.x) > 0.01:
 			mesh.rotation.x = lerpf(mesh.rotation.x, 0.0, 1.0 - exp(-5.0 * delta))
 		if global_position.y > 2.0:
 			global_position.y = lerpf(global_position.y, 0.5, 1.0 - exp(-8.0 * delta))
+			_was_airborne = true
+		elif _was_airborne and global_position.y <= 0.8:
+			# Just landed — play landing squash + dust puff
+			_was_airborne = false
+			_play_landing_effect()
 
 	# Cooldowns
 	if shoot_cooldown_timer > 0:
@@ -138,6 +153,7 @@ func _physics_process(delta: float) -> void:
 	_handle_dash(delta)
 	_update_idle_breathing(delta)
 	_update_movement_lean(delta)
+	_update_low_hp_heartbeat(delta)
 	_update_invuln_blink()
 	# ── Phase 28: Gravity Anomaly weather — apply vertical force to P2 ──
 	var p2_grav_force: float = WeatherSystem.get_gravity_anomaly_force()
@@ -338,6 +354,57 @@ func _update_idle_breathing(delta: float) -> void:
 	if _material:
 		var pulse: float = 0.5 + 0.5 * sin(_idle_phase)
 		_material.emission_energy_multiplier = lerpf(0.8, 1.3, pulse)
+
+# ── Landing effect — squash + dust puff when P2 touches down after being airborne ──
+func _play_landing_effect() -> void:
+	if is_dashing or is_sliding:
+		return
+	if mesh:
+		var land_tween := create_tween()
+		land_tween.tween_property(mesh, "scale", Vector3(1.5, 0.4, 1.5), 0.08) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_CUBIC)
+		land_tween.tween_property(mesh, "scale", Vector3.ONE, 0.22) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_ELASTIC)
+	# Dust puff at P2's feet
+	ParticleEffects.spawn_death_poof(get_parent(), global_position + Vector3(0, 0.1, 0),
+		Color(0.7, 0.65, 0.55), 0.6)
+	# Small camera shake on landing
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(0.12)
+
+# ── Low-HP heartbeat — P2 mesh throbs with a "lub-dub" pattern when HP < 25% ──
+func _update_low_hp_heartbeat(delta: float) -> void:
+	var hp_ratio: float = float(CoOpManager.p2_hp) / float(CoOpManager.p2_max_hp) \
+		if CoOpManager.p2_max_hp > 0 else 1.0
+	if hp_ratio > _HEARTBEAT_HP_THRESHOLD or hp_ratio <= 0.0:
+		# Not in danger — ensure mesh scale is at rest
+		if mesh and not is_dashing and not is_sliding:
+			mesh.scale = mesh.scale.lerp(Vector3.ONE, 1.0 - exp(-12.0 * delta))
+		return
+	if is_dashing or is_sliding:
+		return  # Other systems own mesh.scale right now
+	# Advance heartbeat phase (BPM -> rad/s)
+	_heartbeat_phase += delta * (_HEARTBEAT_BPM / 60.0) * TAU
+	var beat_phase: float = fmod(_heartbeat_phase, TAU)
+	# Double-pulse "lub-dub"
+	var pulse1: float = exp(-pow((beat_phase - 0.0) * 2.5, 2.0))
+	var pulse2: float = exp(-pow((beat_phase - TAU * 0.32) * 3.5, 2.0)) * 0.6
+	var heartbeat: float = pulse1 + pulse2
+	if mesh:
+		var pulse_scale: float = 1.0 + _HEARTBEAT_SCALE_AMP * heartbeat
+		mesh.scale = mesh.scale.lerp(Vector3.ONE * pulse_scale, 1.0 - exp(-20.0 * delta))
+	# Emission pulses red on each beat for a danger cue
+	if _material and heartbeat > 0.01:
+		var danger_blend: float = clampf(heartbeat * 0.4, 0.0, 0.5)
+		var danger_color: Color = base_color.lerp(Color(1.0, 0.2, 0.15), danger_blend)
+		_material.emission = danger_color * 0.4
+		_material.emission_energy_multiplier = 1.0 + heartbeat * 0.8
+	elif _material:
+		var idle_emission: Color = base_color * 0.4
+		_material.emission = _material.emission.lerp(idle_emission, 1.0 - exp(-8.0 * delta))
 
 func _update_invuln_blink() -> void:
 	if invuln_timer > 0:
