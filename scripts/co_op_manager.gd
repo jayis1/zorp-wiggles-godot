@@ -49,6 +49,8 @@ var _coop_kills: int = 0
 var _coop_revives: int = 0
 var _coop_mega_pulses: int = 0
 var _coop_milestones_unlocked: Dictionary = {}  # { id: true }
+# ── P2 HP regen accumulator (fractional HP from Regeneration skill) ──
+var _p2_regen_accumulator: float = 0.0
 
 # ── P2 scene ──
 const P2_SCENE := preload("res://scenes/entities/player2_zerp.tscn")
@@ -75,6 +77,17 @@ func _process(delta: float) -> void:
 	# Downed state handling
 	if p2_is_downed:
 		_update_downed(delta)
+	else:
+		# ── Phase 25: HP regen from ProgressionSystem (Regeneration skill) ──
+		# P2 also benefits from passive HP regen, same as P1
+		if ProgressionSystem and p2_hp < p2_max_hp:
+			var regen: float = ProgressionSystem.get_hp_regen_per_sec()
+			if regen > 0:
+				_p2_regen_accumulator += regen * delta
+				while _p2_regen_accumulator >= 1.0:
+					_p2_regen_accumulator -= 1.0
+					p2_hp = min(p2_max_hp, p2_hp + 1)
+				p2_hp_changed.emit(p2_hp, p2_max_hp)
 
 	# Mega pulse sync window countdown
 	if _mega_pulse_window > 0:
@@ -109,6 +122,7 @@ func drop_in_p2() -> void:
 	p2_is_downed = false
 	p2_downed_timer = 0.0
 	p2_revive_progress = 0.0
+	_p2_regen_accumulator = 0.0
 
 	p2_joined.emit()
 	p2_hp_changed.emit(p2_hp, p2_max_hp)
@@ -360,6 +374,19 @@ func p2_take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		var dmg_taken_mult: float = WorldModifierSystem.get_player_damage_taken_mult()
 		if dmg_taken_mult != 1.0:
 			actual = int(actual * dmg_taken_mult)
+	# ── Phase 16: Reflective Shield weapon mod reduces incoming damage (shared mod) ──
+	if WeaponModSystem and WeaponModSystem.get_equipped_mod() == GameConstants.WeaponMod.REFLECTIVE_SHIELD:
+		actual = int(actual * 0.6)  # 40% damage reduction
+	# ── Phase 24: Shield Bubble deployable absorbs damage (same as P1's path) ──
+	if DeployableSystem and DeployableSystem.is_shield_bubble_active():
+		actual = DeployableSystem.absorb_damage(actual)
+		if actual <= 0:
+			# Fully absorbed by the bubble — no damage to P2
+			return
+		# Apply the bubble's damage reduction to the remaining damage
+		var bubble_reduction: float = DeployableSystem.get_shield_bubble_damage_reduction()
+		if bubble_reduction > 0:
+			actual = int(actual * (1.0 - bubble_reduction))
 	# ── Phase 30: Damage SFX — P2 also gets the damage sound ──
 	AudioManager.play_sfx(AudioManager.SFX_DAMAGE)
 	p2_hp = max(0, p2_hp - actual)
