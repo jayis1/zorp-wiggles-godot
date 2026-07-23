@@ -189,7 +189,7 @@ func _draw_mode_card(font, mode_idx: int, rect: Rect2, a: float, current_mode: i
 		desc_y += 12.0
 
 func _word_wrap(font, text: String, max_w: float, font_size: int) -> Array[String]:
-	var words: Array[String] = text.split(" ")
+	var words: PackedStringArray = text.split(" ")
 	var lines: Array[String] = []
 	var current: String = ""
 	for word in words:

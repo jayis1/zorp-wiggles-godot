@@ -108,6 +108,18 @@ var _hp_bar_heal_flash_timer: float = 0.0
 const HP_BAR_HEAL_FLASH_DURATION: float = 0.30  # Longer than damage — a gentle swell, not a pop
 const HP_HEAL_FLASH_COLOR: Color = Color(0.3, 1.0, 0.55)  # Mint green — distinct from the bar's green-yellow-red gradient
 
+# ── XP bar level-up flash ── When the player levels up, the XP bar wraps
+#    around (xp drops to the remainder). This is a celebratory moment, but the
+#    bar just smoothly lerps from full to the new low value — it reads as the
+#    bar "draining" which feels like a loss, not a gain. A brief white-blue
+#    flash + scale pop on the XP bar at the level-up frame recontextualizes the
+#    drain as a positive event: the bar "pulses" with energy before resetting.
+#    This mirrors the HP bar's damage flash but in a celebratory direction.
+var _xp_bar_flash_timer: float = 0.0
+const XP_BAR_FLASH_DURATION: float = 0.30
+const XP_BAR_FLASH_COLOR: Color = Color(0.7, 0.9, 1.0)  # Soft cyan-blue — distinct from HP's white/mint
+var _xp_bar_prev_ratio: float = 0.0  # For detecting level-up wrap (ratio drops from ~1.0 to ~0.0)
+
 # ── Phase 16: Weapon Mod indicator ──
 var _mod_indicator: Label = null
 var _auto_fire_indicator: Label = null
@@ -593,6 +605,21 @@ func _process(delta: float) -> void:
 	var xp_current_ratio: float = xp_bar.size.x / xp_bar_width if xp_bar_width > 0 else 0.0
 	xp_current_ratio = lerpf(xp_current_ratio, _xp_bar_target_ratio, weight)
 	xp_bar.size.x = xp_bar_width * xp_current_ratio
+	# ── XP bar level-up flash ── When the flash timer is active, blend the
+	# XP bar's color toward a cyan-blue glow that decays over
+	# XP_BAR_FLASH_DURATION. The flash envelope uses ease-out cubic (sharp
+	# onset, gentle tail) so the flash punches in on the level-up frame and
+	# fades smoothly. The bar's normal purple color is lerped toward the
+	# flash color, not replaced, so the underlying purple gradient still
+	# reads through the glow. This mirrors the HP bar's damage flash logic.
+	var xp_bar_color: Color = GameConstants.C_XP_PURPLE
+	if _xp_bar_flash_timer > 0.0:
+		_xp_bar_flash_timer = max(0.0, _xp_bar_flash_timer - delta)
+		var xp_flash_env: float = _xp_bar_flash_timer / XP_BAR_FLASH_DURATION
+		# Ease-out cubic — sharp onset, gentle tail (matches HP/boss bar flash)
+		xp_flash_env = 1.0 - pow(1.0 - xp_flash_env, 3.0)
+		xp_bar_color = xp_bar_color.lerp(XP_BAR_FLASH_COLOR, xp_flash_env * 0.8)
+	xp_bar.color = xp_bar.color.lerp(xp_bar_color, 1.0 - exp(-_color_smoothing * delta))
 
 	# Combo timer bar
 	if GameManager.player_combo > 0:
@@ -731,6 +758,24 @@ func _on_level_up(level: int) -> void:
 		lv_tween.tween_property(level_up_text, "scale", Vector2.ONE, 0.15) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		level_up_text.set_meta("_lv_tween", lv_tween)
+	# ── XP bar level-up flash ── Trigger the XP bar flash so the bar
+	# "pulses" with a cyan-blue glow when the player levels up. The flash
+	# is applied in _process (where the bar is drawn) and decays over
+	# XP_BAR_FLASH_DURATION. This makes the XP bar "draining" from full
+	# to the new level's remainder read as a celebratory reset, not a loss.
+	_xp_bar_flash_timer = XP_BAR_FLASH_DURATION
+	# XP bar scale pop — the bar briefly grows vertically (thickness pop)
+	# then settles, giving the level-up a physical "thump" on the UI.
+	# Uses a tracked tween so rapid level-ups don't stack.
+	if xp_bar:
+		if xp_bar.has_meta("_xp_pop_tween") and is_instance_valid(xp_bar.get_meta("_xp_pop_tween") as Tween):
+			(xp_bar.get_meta("_xp_pop_tween") as Tween).kill()
+		var orig_height: float = xp_bar.size.y
+		xp_bar.size.y = orig_height * 1.6
+		var xp_pop := create_tween()
+		xp_pop.tween_property(xp_bar, "size:y", orig_height, 0.22) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		xp_bar.set_meta("_xp_pop_tween", xp_pop)
 	show_message("Level Up! Full HP restored!", 3.0)
 
 func _on_combo_changed(count: int) -> void:
@@ -836,6 +881,12 @@ func _on_game_restarted() -> void:
 	_hp_bar_heal_flash_timer = 0.0
 	if hp_bar:
 		hp_bar.offset_left = 2.0
+	# Reset XP bar level-up flash so a fresh game doesn't carry a lingering
+	# cyan glow from the previous run's last level-up.
+	_xp_bar_flash_timer = 0.0
+	_xp_bar_prev_ratio = 0.0
+	if xp_bar:
+		xp_bar.color = GameConstants.C_XP_PURPLE
 	# Reset the auto-fire indicator — the player's _auto_fire_pinned flag is
 	# reset on respawn (see Player._on_game_restarted_player), but the HUD
 	# indicator also needs to clear so a stale [AUTO] badge doesn't persist

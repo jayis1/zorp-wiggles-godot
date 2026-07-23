@@ -111,6 +111,13 @@ const SFX_TELEPORT: String = "teleport"           # Time Warden / Phase Shifter 
 const SFX_CLOAK: String = "cloak"                 # Plasma Stalker cloak activate/deactivate
 const SFX_CONSUMABLE: String = "consumable"       # Consumable item used (dedicated sound)
 const SFX_PET_EVOLVE: String = "pet_evolve"       # Pet evolution (major milestone)
+# ── Dash cooldown ready chime ── A short, bright two-note "ding" that fires
+#    when the dash cooldown completes. The first note (G5=784Hz) resolves to
+#    a higher note (C6=1047Hz) — a perfect fifth → octave leap that reads as
+#    "ready!" in the player's ear without being intrusive. Lower volume (0.15)
+#    than combat SFX so it doesn't compete with the action. Only plays once
+#    per cooldown cycle (triggered by the cooldown indicator's edge detection).
+const SFX_DASH_READY: String = "dash_ready"
 
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 # Per-weapon-mod shoot sound variants. Each mod gets a distinct SFX so the
@@ -663,6 +670,12 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_CONSUMABLE] = _gen_descending(660.0, 440.0, 0.15, 0.30)
 	# Pet evolution — a triumphant ascending arpeggio (major milestone)
 	_sfx_streams[SFX_PET_EVOLVE] = _gen_arpeggio([523.0, 659.0, 784.0, 1047.0, 1319.0], 0.07, 0.40)
+	# ── Dash cooldown ready chime ── A bright two-note "ding" (G5→C6) using a
+	# short chime so it reads as "ability refreshed" without being intrusive.
+	# The two-note interval (perfect fifth → octave) is the classic "ready"
+	# sound shape (think MOBA ability-off-cooldown cues). Low volume (0.15)
+	# so it sits under combat without competing.
+	_sfx_streams[SFX_DASH_READY] = _gen_chime([784.0, 1047.0], 0.10, 0.15)
 
 
 func _generate_all_music() -> void:

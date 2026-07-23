@@ -39,6 +39,13 @@ const _FLASH_FRAC := 0.85
 
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
+# ── Ground glow light ── An OmniLight3D that illuminates the ground below
+#    the spawn warning, making spawns visible in dark biomes and giving the
+#    telegraph a physical "energy gathering" presence. The light grows with
+#    the ring scale and intensifies during the anticipation flash, so the
+#    ground literally brightens as the enemy is about to materialize.
+var _glow_light: OmniLight3D = null
+
 func _ready() -> void:
 	if mesh:
 		_material = StandardMaterial3D.new()
@@ -48,6 +55,17 @@ func _ready() -> void:
 		_material.emission = _BASE_EMISSION * 0.5
 		_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mesh.material_override = _material
+	# ── Ground glow ── A low OmniLight3D placed at ground level that grows
+	# with the warning ring and intensifies during the anticipation flash.
+	# The light color matches the warning red so it reads as a threat glow.
+	# It starts dim and ramps up so the glow "charges" alongside the ring.
+	_glow_light = OmniLight3D.new()
+	_glow_light.light_color = _BASE_EMISSION
+	_glow_light.light_energy = 0.3  # Starts dim
+	_glow_light.omni_range = 3.0
+	_glow_light.omni_attenuation = 1.5
+	_glow_light.position = Vector3(0, 0.1, 0)  # Just above ground
+	add_child(_glow_light)
 
 func _process(delta: float) -> void:
 	age += delta
@@ -59,6 +77,27 @@ func _process(delta: float) -> void:
 	var eased: float = 1.0 - pow(1.0 - progress, 3.0)
 	var s: float = 1.0 + eased * 0.6
 	scale = Vector3.ONE * s
+
+	# ── Ground glow: ramp the light energy and range with the ring progress.
+	# The light starts dim (0.3, set in _ready) and brightens as the ring
+	# expands, so the ground glow "charges" alongside the visual telegraph.
+	# During the anticipation flash, the light snaps to full white-red
+	# intensity matching the ring's white flash. After the flash, the light
+	# fades to zero as the ring pops out.
+	if _glow_light:
+		if progress < _FLASH_FRAC:
+			# Charging phase — light grows with the ring
+			_glow_light.light_energy = 0.3 + eased * 1.2  # 0.3 → 1.5
+			_glow_light.omni_range = 3.0 + eased * 4.0  # 3.0 → 7.0
+			_glow_light.light_color = _BASE_EMISSION
+		else:
+			# Anticipation flash — light peaks at full intensity and shifts
+			# toward the warm white flash color, matching the ring
+			var glow_flash_t: float = (progress - _FLASH_FRAC) / (1.0 - _FLASH_FRAC)
+			var glow_flash_intensity: float = glow_flash_t * glow_flash_t
+			_glow_light.light_energy = 1.5 + glow_flash_intensity * 2.5  # 1.5 → 4.0
+			_glow_light.omni_range = 7.0 + glow_flash_intensity * 3.0  # 7.0 → 10.0
+			_glow_light.light_color = _BASE_EMISSION.lerp(_FLASH_EMISSION, glow_flash_intensity)
 
 	if _material:
 		# ── Anticipation flash: in the final 15% of the warning, snap to
@@ -102,6 +141,11 @@ func _process(delta: float) -> void:
 			.set_trans(Tween.TRANS_QUAD)
 		if _material:
 			pop_tween.tween_property(_material, "albedo_color:a", 0.0, 0.12) \
+				.set_ease(Tween.EASE_IN)
+		# Fade the ground glow out alongside the ring pop so the light
+		# doesn't snap off while the ring is still fading.
+		if _glow_light:
+			pop_tween.tween_property(_glow_light, "light_energy", 0.0, 0.12) \
 				.set_ease(Tween.EASE_IN)
 		pop_tween.chain().tween_callback(queue_free)
 		# Disable further processing while the pop tween runs
