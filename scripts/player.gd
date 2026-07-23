@@ -1763,6 +1763,18 @@ func _use_pulse_wave() -> void:
 	pulse.global_position = global_position
 	# Camera shake on pulse wave
 	_trigger_camera_trauma(0.25)
+	# ── FOV punch on cast ── A quick inward FOV dip (negative kick) so the
+	# screen briefly "contracts" on the pulse wave cast, complementing the
+	# hit-stop and shake. The dash uses an outward FOV kick (widens) for a
+	# speed rush; the pulse wave uses an inward dip (narrows) for a
+	# "gathering force" feel — the camera clenches inward as the wave
+	# expands outward, creating a visual tension/release that mirrors the
+	# gameplay (you're vulnerable during the cast, then the wave clears
+	# the area). The dip is small (4°) and the _process FOV return loop
+	# eases it back to baseline over ~0.5s. Negative kick = narrows FOV.
+	var pw_cam_rig: Node3D = GameManager.camera_rig
+	if pw_cam_rig and pw_cam_rig.has_method("kick_fov"):
+		pw_cam_rig.kick_fov(-4.0)
 	# ── Hit-stop on cast ── A brief, gentle world freeze (60ms at 0.25x scale)
 	# sells the pulse wave as a weighty "moment" rather than a button press.
 	# Lighter than the crit hit-stop (45ms @ 0.08x) and the boss-kill hit-stop

@@ -572,6 +572,12 @@ func _use_pulse_wave() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.25)
+	# ── FOV punch on cast ── Mirrors P1's pulse wave FOV dip: a quick
+	# inward contraction (−4°) that eases back via the camera's _process
+	# FOV return loop. Creates a "gathering force" tension/release feel
+	# consistent with P1's ability cast feedback.
+	if cam_rig and cam_rig.has_method("kick_fov"):
+		cam_rig.kick_fov(-4.0)
 
 func _try_pulse_wave_or_buffer() -> void:
 	if pulse_wave_cooldown_timer > 0:

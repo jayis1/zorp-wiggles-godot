@@ -446,8 +446,15 @@ func _update_trail_visuals(delta: float) -> void:
 			tm.visible = true
 			# Position trail point relative to projectile parent (trail is in local space)
 			tm.global_position = _trail_positions[i]
-			# Fade and shrink with distance from head
-			var fade: float = 1.0 - float(i) / float(TRAIL_MAX_POINTS)
+			# Fade and shrink with distance from head.
+			# Quadratic fade: the trail stays brighter near the bolt head and
+			# drops off faster toward the tail, giving the streak a more
+			# energetic "comet" look instead of a uniform linear fade. The
+			# scale also uses the eased value so the trail tapers visibly —
+			# wider at the head, pinched at the tail — reinforcing the speed
+			# silhouette without any extra geometry.
+			var linear_fade: float = 1.0 - float(i) / float(TRAIL_MAX_POINTS)
+			var fade: float = linear_fade * linear_fade  # Quadratic ease-out
 			var mat: StandardMaterial3D = _trail_materials[i]
 			if mat:
 				mat.albedo_color.a = fade * 0.5
