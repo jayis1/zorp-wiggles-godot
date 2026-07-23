@@ -183,6 +183,9 @@ func _trigger_mega_pulse() -> void:
 	mega_pulse_triggered.emit(center)
 	_coop_mega_pulses += 1
 	GameManager.add_message("💫 CO-OP MEGA PULSE WAVE!")
+	# Audio cue — mega pulse boom (co-op ultimate ability)
+	AudioManager.play_sfx(AudioManager.SFX_PULSE_WAVE)
+	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
 	# Particle spectacle
 	if GameManager.player and is_instance_valid(GameManager.player):
 		ParticleEffects.spawn_boss_death_spectacle(GameManager.player.get_parent(), center, Color(1.0, 0.6, 1.0))
