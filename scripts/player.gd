@@ -1476,9 +1476,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			])
 		get_viewport().set_input_as_handled()
 
-	# ── Phase 33: Spawn procedural boss for testing (Shift+P) ──
+	# ── Phase 33: Spawn procedural boss for testing (Ctrl+Shift+P) ──
 	# This is a debug/test shortcut to summon a procedural boss at the player's
-	# location. Useful for testing the procedural boss generator in-game.
+	# location. Uses Ctrl+Shift+P to avoid conflicting with cycle_pet (Shift+P).
 	if event.is_action_pressed("spawn_procedural_boss") and not GameManager.is_paused:
 		if ProceduralBossGenerator:
 			ProceduralBossGenerator.generate_boss(GameManager.player_level)
