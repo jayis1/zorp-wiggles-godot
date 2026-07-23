@@ -98,8 +98,13 @@ func drop_in_p2() -> void:
 	p2_node.global_position = GameManager.player.global_position + GameConstants.P2_SPAWN_OFFSET
 
 	p2_active = true
-	p2_hp = GameConstants.P2_HP
+	# ── Phase 25/29: Scale P2 max HP by ProgressionSystem (Vitality) + EquipmentSystem bonuses ──
 	p2_max_hp = GameConstants.P2_HP
+	if ProgressionSystem:
+		p2_max_hp += ProgressionSystem.get_max_hp_bonus()
+	if EquipmentSystem:
+		p2_max_hp += EquipmentSystem.get_max_hp_bonus()
+	p2_hp = p2_max_hp
 	p2_score = 0
 	p2_is_downed = false
 	p2_downed_timer = 0.0
@@ -340,6 +345,23 @@ func p2_take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		var reduction: float = MutationSystem.get_damage_reduction()
 		if reduction > 0:
 			actual = int(actual * (1.0 - reduction))
+	# ── Phase 25: ProgressionSystem damage reduction (Energy Shield + Toughness) ──
+	if ProgressionSystem:
+		var prog_reduce: float = ProgressionSystem.get_damage_reduction()
+		if prog_reduce > 0:
+			actual = int(actual * (1.0 - prog_reduce))
+	# ── Phase 29: EquipmentSystem damage reduction (armor + set bonuses + shield potion) ──
+	if EquipmentSystem:
+		var equip_reduce: float = EquipmentSystem.get_damage_reduction_bonus()
+		if equip_reduce > 0:
+			actual = int(actual * (1.0 - equip_reduce))
+	# ── Phase 33: WorldModifierSystem — THIN_SKIN increases damage taken ──
+	if WorldModifierSystem and WorldModifierSystem.is_initialized():
+		var dmg_taken_mult: float = WorldModifierSystem.get_player_damage_taken_mult()
+		if dmg_taken_mult != 1.0:
+			actual = int(actual * dmg_taken_mult)
+	# ── Phase 30: Damage SFX — P2 also gets the damage sound ──
+	AudioManager.play_sfx(AudioManager.SFX_DAMAGE)
 	p2_hp = max(0, p2_hp - actual)
 	p2_hp_changed.emit(p2_hp, p2_max_hp)
 	# Camera shake
