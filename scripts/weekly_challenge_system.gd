@@ -259,9 +259,13 @@ func _date_to_iso_week(year: int, month: int, day: int) -> Dictionary:
 		doy += days_in_month[i]
 	# ISO weekday: Jan 1 is some weekday. We need to know what day of week
 	# Jan 1 was. Using Zeller's congruence for Jan 1.
-	var jan1_weekday: int = _zeller_weekday(year, 1, 1)  # 0=Sunday
+	# Zeller's congruence returns 0=Saturday, 1=Sunday, 2=Monday, ..., 6=Friday
+	var jan1_weekday: int = _zeller_weekday(year, 1, 1)  # 0=Saturday
 	# Convert to ISO weekday (1=Monday, 7=Sunday)
-	var iso_jan1: int = ((jan1_weekday + 6) % 7) + 1  # 1=Monday..7=Sunday
+	# Zeller: 0=Sat,1=Sun,2=Mon,3=Tue,4=Wed,5=Thu,6=Fri
+	# ISO:    6      7      1      2      3      4      5
+	# So ISO = ((zeller + 5) % 7) + 1
+	var iso_jan1: int = ((jan1_weekday + 5) % 7) + 1  # 1=Monday..7=Sunday
 	# ISO week 1 is the week containing the first Thursday
 	# If Jan 1 is Fri(5)/Sat(6)/Sun(7), it's in the last week of prev year
 	var week: int
@@ -304,10 +308,11 @@ func _zeller_weekday(year: int, month: int, day: int) -> int:
 	return h
 
 func _weeks_in_year(year: int) -> int:
-	# A year has 53 weeks if Jan 1 is Thursday, or if it's a leap year and Jan 1 is Wednesday
-	var jan1: int = _zeller_weekday(year, 1, 1)
+	# A year has 53 weeks if Jan 1 is Thursday (Zeller h=5), or if it's a
+	# leap year and Jan 1 is Wednesday (Zeller h=4).
+	var jan1: int = _zeller_weekday(year, 1, 1)  # 0=Saturday
 	var is_leap: bool = (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
-	if jan1 == 4 or (is_leap and jan1 == 3):
+	if jan1 == 5 or (is_leap and jan1 == 4):
 		return 53
 	return 52
 
