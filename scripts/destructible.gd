@@ -135,7 +135,10 @@ func _shatter() -> void:
 		shatter_light.omni_attenuation = 1.2
 		get_parent().add_child(shatter_light)
 		shatter_light.global_position = global_position + Vector3(0, 0.5, 0)
-		var light_tween := create_tween()
+		# Bind the tween to the light node, NOT to self — self is queue_free'd
+		# at the end of _shatter(), so a self-bound tween would be killed
+		# immediately, leaving the light stuck at full intensity (leak + visual bug).
+		var light_tween := shatter_light.create_tween()
 		light_tween.tween_property(shatter_light, "light_energy", 0.0, 0.18) \
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
@@ -160,15 +163,15 @@ func _shatter() -> void:
 	# (0.1 here), making the 0.05s freeze actually last ~0.5s — 10x too long
 	# and a noticeable stutter instead of a snappy hit-stop beat. This
 	# matches the pattern used by projectile.gd, player.gd, and co_op_manager.gd.
+	# CRITICAL: Use a lambda (not self._restore_time_scale) because self is
+	# queue_free'd below. A method reference on self would be disconnected when
+	# the node is freed, leaving Engine.time_scale stuck at 0.1 forever.
 	var restore_timer := get_tree().create_timer(SHATTER_HITSTOP_DURATION, true, false, true)
-	restore_timer.timeout.connect(_restore_time_scale)
+	restore_timer.timeout.connect(func(): Engine.time_scale = 1.0)
 
 	# Hide self and free after a tiny delay (so signal completes)
 	mesh_instance.visible = false
 	queue_free()
-
-func _restore_time_scale() -> void:
-	Engine.time_scale = 1.0
 
 func _spawn_fragment(index: int) -> void:
 	var frag := RigidBody3D.new()
@@ -234,7 +237,10 @@ func _spawn_fragment(index: int) -> void:
 	# a spawn. The tween targets mesh_inst.scale (not frag.scale) so it
 	# doesn't conflict with any physics-driven scale changes.
 	mesh_inst.scale = Vector3.ONE * 0.1
-	var pop_tween := create_tween()
+	# Bind the tween to the fragment node, NOT to self — self is queue_free'd
+	# at the end of _shatter(), so a self-bound tween would be killed immediately,
+	# leaving fragments stuck at scale 0.1 (invisible shatter debris).
+	var pop_tween := frag.create_tween()
 	# TRANS_BACK gives a ~10% overshoot for a punchy "snap" exit
 	pop_tween.tween_property(mesh_inst, "scale", Vector3.ONE, 0.18) \
 		.set_ease(Tween.EASE_OUT) \

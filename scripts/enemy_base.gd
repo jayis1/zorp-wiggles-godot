@@ -1062,11 +1062,12 @@ func _spawn_physics_corpse() -> void:
 	corpse.add_child(col_shape)
 
 	# Visual mesh — semi-transparent copy of the enemy's color
+	# Uses the shared sphere mesh (scaled per-corpse via the node's scale)
+	# to avoid allocating a new SphereMesh on every kill.
+	_ensure_corpse_shared_resources()
 	var corpse_mesh := MeshInstance3D.new()
-	var corpse_sphere := SphereMesh.new()
-	corpse_sphere.radius = 0.5 * base_scale
-	corpse_sphere.height = 1.0 * base_scale
-	corpse_mesh.mesh = corpse_sphere
+	corpse_mesh.mesh = _shared_corpse_mesh
+	corpse_mesh.scale = Vector3.ONE * base_scale  # Scale the shared mesh
 	var corpse_mat := StandardMaterial3D.new()
 	corpse_mat.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.7)
 	corpse_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -1076,11 +1077,8 @@ func _spawn_physics_corpse() -> void:
 	corpse_mesh.material_override = corpse_mat
 	corpse.add_child(corpse_mesh)
 
-	# Physics material with bounce for a lively tumble
-	var phys_mat := PhysicsMaterial.new()
-	phys_mat.bounce = 0.3
-	phys_mat.friction = 0.6
-	corpse.physics_material_override = phys_mat
+	# Physics material with bounce for a lively tumble (shared resource)
+	corpse.physics_material_override = _shared_corpse_phys_mat
 
 	# Add to scene
 	parent_node.add_child(corpse)
@@ -1209,6 +1207,28 @@ func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> 
 
 ## The Collectible scene, used for spawning material drops.
 const COLLECTIBLE_DROP_SCENE := preload("res://scenes/entities/collectible.tscn")
+
+# ── Shared corpse resources ── The physics corpse spawned on enemy death
+# creates a SphereMesh, PhysicsMaterial, and SphereShape3D per kill. The
+# mesh and physics material are identical across all corpses (only the
+# scale and color differ, which are set on the node, not the resource), so
+# we share them to eliminate per-kill GPU/physics resource allocation.
+# The per-corpse StandardMaterial3D is still created per instance because
+# the fade-out tween writes its alpha independently.
+static var _shared_corpse_mesh: SphereMesh = null
+static var _shared_corpse_phys_mat: PhysicsMaterial = null
+
+static func _ensure_corpse_shared_resources() -> void:
+	if _shared_corpse_mesh == null:
+		_shared_corpse_mesh = SphereMesh.new()
+		_shared_corpse_mesh.radius = 0.5
+		_shared_corpse_mesh.height = 1.0
+		_shared_corpse_mesh.radial_segments = 8
+		_shared_corpse_mesh.rings = 4
+	if _shared_corpse_phys_mat == null:
+		_shared_corpse_phys_mat = PhysicsMaterial.new()
+		_shared_corpse_phys_mat.bounce = 0.3
+		_shared_corpse_phys_mat.friction = 0.6
 
 ## Drop a crafting material when the enemy dies. Chance depends on enemy type
 ## (normal enemies have 12% chance, bosses always drop).

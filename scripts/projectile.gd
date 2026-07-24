@@ -280,6 +280,14 @@ func _trigger_kill_hitstop() -> void:
 		Engine.time_scale = 1.0
 	)
 
+## Add camera shake trauma via the camera rig. Centralized so all weapon mod
+## effects (AoE, shrapnel, black hole, etc.) can trigger shake without
+## duplicating the rig lookup + null check.
+func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> void:
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(amount, bias_dir)
+
 ## Phase 16: Apply weapon mod behavior while the projectile is in flight.
 func _apply_mod_flight_behavior(delta: float) -> void:
 	match _weapon_mod:
@@ -922,17 +930,49 @@ func _aoe_explosion(radius: float, dmg: int, col: Color) -> void:
 				enemy.take_damage_from(aoe_dmg, global_position)
 			else:
 				enemy.take_damage(aoe_dmg)
+			# ── Radial knockback ── Push enemies away from the blast center so
+			# explosions feel physically impactful rather than just applying
+			# damage in place. Knockback force scales with falloff (stronger
+			# at the center) and uses the same KNOCKBACK_FORCE_HIT constant
+			# as normal projectile hits, multiplied by the AoE falloff so
+			# edge hits get a gentle nudge while direct hits get a full shove.
+			if enemy.has_method("apply_knockback") and d > 0.01:
+				var knock_dir: Vector3 = (enemy.global_position - global_position).normalized()
+				knock_dir.y = 0
+				enemy.apply_knockback(knock_dir, GameConstants.KNOCKBACK_FORCE_HIT * falloff)
 	# Big explosion visual
 	ParticleEffects.spawn_mega_explosion(get_parent(), global_position, col)
-	# Light flash
-	var flash := OmniLight3D.new()
-	flash.light_color = col
-	flash.light_energy = 5.0
-	flash.omni_range = radius * 2.0
-	get_parent().add_child(flash)
-	var fade_tween := flash.create_tween()
-	fade_tween.tween_property(flash, "light_energy", 0.0, 0.3)
-	fade_tween.tween_callback(flash.queue_free)
+	# Light flash — use the transient light pool when available (matches the
+	# pattern used for death lights and pickup lights). Falls back to a
+	# standalone OmniLight3D when PerformanceOptimizer isn't available.
+	var flash_energy: float = 5.0
+	var flash_range: float = radius * 2.0
+	if PerformanceOptimizer:
+		var flash_light := PerformanceOptimizer.acquire_transient_light(
+			global_position, col, flash_energy, 0.35, flash_range, 1.2
+		)
+		if flash_light:
+			var fade_tween := flash_light.create_tween()
+			fade_tween.tween_property(flash_light, "light_energy", 0.0, 0.3) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	else:
+		var flash := OmniLight3D.new()
+		flash.light_color = col
+		flash.light_energy = flash_energy
+		flash.omni_range = flash_range
+		flash.omni_attenuation = 1.2
+		get_parent().add_child(flash)
+		flash.global_position = global_position
+		var fade_tween := flash.create_tween()
+		fade_tween.tween_property(flash, "light_energy", 0.0, 0.3) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		fade_tween.tween_callback(flash.queue_free)
+	# ── Camera shake on AoE explosion ── A trauma kick scaled by the blast
+	# radius so bigger explosions shake the camera more. Gives Mega Blast and
+	# Plasma Nova a visceral \"boom\" feel that their particle burst alone
+	# can't convey. The bias direction is zero (omnidirectional blast) so
+	# the shake is centered noise rather than directional.
+	_trigger_camera_trauma(clampf(radius * 0.02, 0.08, 0.25))
 
 ## Phase 16: Shrapnel burst — spawn small fragment projectiles in all directions.
 func _shrapnel_burst(base_dmg: int) -> void:
@@ -956,6 +996,20 @@ func _shrapnel_burst(base_dmg: int) -> void:
 						enemy.take_damage(frag_dmg)
 	# Shrapnel particle effect
 	ParticleEffects.spawn_explosion(get_parent(), global_position, Color(0.7, 0.5, 0.2), 20, 0.4)
+	# ── Light flash + camera shake ── A brief pooled light flash gives the
+	# shrapnel burst a punchy "detonation" read, and a small camera trauma
+	# kick sells the impact. Uses the transient light pool for consistency
+	# with death/pickup/AoE lights. Smaller shake than AoE (shrapnel is a
+	# secondary effect, not the main blast).
+	if PerformanceOptimizer:
+		var shrap_light := PerformanceOptimizer.acquire_transient_light(
+			global_position, Color(0.8, 0.6, 0.3), 3.0, 0.2, 6.0, 1.2
+		)
+		if shrap_light:
+			var shrap_fade := shrap_light.create_tween()
+			shrap_fade.tween_property(shrap_light, "light_energy", 0.0, 0.15) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_trigger_camera_trauma(0.1)
 
 ## Phase 16: Splitter — spawn two angled child projectiles on hit.
 func _spawn_splitter_projectiles(_hit_enemy: Node3D) -> void:
