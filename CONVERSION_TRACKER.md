@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: ALL PHASES COMPLETE (1-20, 22-35) + Mind Control Dart + Biome Enemy Variants — Phases 1-20, 22-35 complete. All 36 weapon mods now implemented (including Mind Control Dart). Phase 22 biome-specific enemy variants for all 7 new biomes implemented. Phase 35 (Final Polish) 10/10 items complete. Daily Challenge, Weekly Challenge, and offline Spectator Mode implemented.
+## Status: ALL PHASES COMPLETE (1-20, 22-35) + Mind Control Dart + Biome Enemy Variants + P2 Visual Feedback — Phases 1-20, 22-35 complete. All 36 weapon mods now implemented (including Mind Control Dart). Phase 22 biome-specific enemy variants for all 7 new biomes implemented. Phase 35 (Final Polish) 10/10 items complete. Daily Challenge, Weekly Challenge, and offline Spectator Mode implemented. P2 co-op visual feedback parity: damage squash/flash, level-up celebration, heal pop — all matching P1's juice patterns.
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features

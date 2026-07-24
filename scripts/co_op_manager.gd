@@ -21,6 +21,10 @@ signal p2_score_changed(score: int)
 signal mega_pulse_triggered(center: Vector3)
 signal co_op_milestone(milestone_id: int, description: String)
 signal revive_progress_changed(progress: float)
+# ── Visual feedback signals (co-op parity with P1's damage/level/heal effects) ──
+signal p2_damaged(source_pos: Vector3)
+signal p2_healed(amount: int)
+signal p2_levelup(level: int)
 
 # ─── State ───────────────────────────────────────────────────────────────────
 var p2_active: bool = false
@@ -391,6 +395,8 @@ func p2_take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	AudioManager.play_sfx(AudioManager.SFX_DAMAGE)
 	p2_hp = max(0, p2_hp - actual)
 	p2_hp_changed.emit(p2_hp, p2_max_hp)
+	# ── Visual feedback: damage squash + emission flash on P2 mesh ──
+	p2_damaged.emit(source_pos)
 	# Camera shake
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
@@ -410,6 +416,8 @@ func p2_heal(amount: int) -> void:
 		return
 	p2_hp = min(p2_max_hp, p2_hp + amount)
 	p2_hp_changed.emit(p2_hp, p2_max_hp)
+	# ── Visual feedback: heal pop + emission flash on P2 mesh ──
+	p2_healed.emit(amount)
 
 func p2_add_score(amount: int) -> void:
 	if not p2_active:

@@ -563,6 +563,9 @@ func _level_up() -> void:
 	else:
 		player_xp_to_next = int(GameConstants.PLAYER_LEVEL_XP_CURVE_BASE * pow(GameConstants.PLAYER_LEVEL_XP_CURVE_EXP, player_level - 1))
 	level_up.emit(player_level)
+	# ── Co-op parity: P2 also gets a level-up visual celebration ──
+	if CoOpManager and CoOpManager.p2_active:
+		CoOpManager.p2_levelup.emit(player_level)
 	# Inform player of stat increases
 	GameManager.add_message("⬆ Level %d! HP: %d (+%d) | DMG: +%d | Speed: +%.1f" % [
 		player_level, player_max_hp, hp_bonus,

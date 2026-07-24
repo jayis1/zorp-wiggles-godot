@@ -85,6 +85,18 @@ func _ready() -> void:
 		_material.rim = 0.7
 		_material.rim_tint = 0.9
 		mesh.material_override = _material
+	
+	# ── Co-op parity: connect visual feedback signals (damage/level/heal) ──
+	# P1 gets these via GameManager signals; P2 gets them via CoOpManager.
+	# Each method mirrors P1's visual: a mesh squash-and-stretch + emission flash
+	# with a distinct color so the two players read as separate even on a shared screen.
+	if CoOpManager:
+		if not CoOpManager.p2_damaged.is_connected(_on_p2_damaged):
+			CoOpManager.p2_damaged.connect(_on_p2_damaged)
+		if not CoOpManager.p2_healed.is_connected(_on_p2_healed):
+			CoOpManager.p2_healed.connect(_on_p2_healed)
+		if not CoOpManager.p2_levelup.is_connected(_on_p2_levelup):
+			CoOpManager.p2_levelup.connect(_on_p2_levelup)
 
 func _physics_process(delta: float) -> void:
 	if CoOpManager.p2_is_downed or not CoOpManager.p2_active:
@@ -690,7 +702,107 @@ func _update_movement_lean(delta: float) -> void:
 		lerpf(cur.z, target_roll, 1.0 - exp(-10.0 * delta))
 	)
 
+# ── Co-op parity: visual feedback for damage, level-up, and heal ──
+# These mirror P1's _on_player_damaged / _on_player_levelup_visual /
+# _on_player_healed_visual, using P2's magenta-purple color palette so
+# the two players read as visually distinct on a shared screen.
+
+var _dmg_squash_tween: Tween = null
+var _levelup_tween: Tween = null
+var _heal_tween: Tween = null
+
+# Damage squash + red emission flash — same juice language as P1.
+# Skipped during dash/slide (their tweens own mesh.scale).
+func _on_p2_damaged(source_pos: Vector3) -> void:
+	if is_dashing or is_sliding:
+		return
+	if not mesh or not _material:
+		return
+	if _dmg_squash_tween and _dmg_squash_tween.is_valid():
+		_dmg_squash_tween.kill()
+	_dmg_squash_tween = create_tween()
+	# Impact frame: flat squash in 50ms (sharp, almost a freeze-frame)
+	_dmg_squash_tween.tween_property(mesh, "scale",
+		Vector3(1.35, 0.55, 1.35), 0.05) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	# Recoil bounce back with elastic for a wobbly recovery
+	_dmg_squash_tween.tween_property(mesh, "scale", Vector3.ONE, 0.28) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Red emission flash — brief red glow that fades back to P2's base emission
+	_material.emission = Color(1.0, 0.15, 0.1)
+	_material.emission_energy_multiplier = 3.0
+	var emit_tween := create_tween()
+	emit_tween.tween_property(_material, "emission_energy_multiplier",
+		1.0, 0.3) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	emit_tween.parallel().tween_property(_material, "emission",
+		GameConstants.P2_EMISSION_COLOR, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+# Level-up celebration: joyful grow pop + golden emission flash.
+# The inverse of the damage squash — growing reads as "powering up".
+func _on_p2_levelup(_level: int) -> void:
+	if is_dashing or is_sliding:
+		return
+	if not mesh or not _material:
+		return
+	if _levelup_tween and _levelup_tween.is_valid():
+		_levelup_tween.kill()
+	_levelup_tween = create_tween()
+	# Joyful grow: scale up to 1.3x with slight overshoot, then settle elastic
+	_levelup_tween.tween_property(mesh, "scale", Vector3.ONE * 1.3, 0.08) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_levelup_tween.tween_property(mesh, "scale", Vector3.ONE, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Golden emission flash — same gold as P1 so both players celebrate together
+	_material.emission = Color(1.0, 0.85, 0.2)
+	_material.emission_energy_multiplier = 3.5
+	var emit_tween := create_tween()
+	emit_tween.tween_property(_material, "emission_energy_multiplier",
+		1.0, 0.4) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	emit_tween.parallel().tween_property(_material, "emission",
+		GameConstants.P2_EMISSION_COLOR, 0.45) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+# Heal reaction: soft "breathe-in" pop + mint-green emission flash.
+# Smaller than level-up — healing is a calm beat, not a triumphant one.
+func _on_p2_healed(amount: int) -> void:
+	if is_dashing or is_sliding:
+		return
+	if not mesh or not _material:
+		return
+	if _heal_tween and _heal_tween.is_valid():
+		_heal_tween.kill()
+	# Scale the pop with heal size: 1.10x for small, up to 1.20x for big
+	var pop_scale: float = lerpf(1.10, 1.20, clampf(float(amount) / 50.0, 0.0, 1.0))
+	_heal_tween = create_tween()
+	_heal_tween.tween_property(mesh, "scale", Vector3.ONE * pop_scale, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_heal_tween.tween_property(mesh, "scale", Vector3.ONE, 0.30) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Soft mint-green emission flash — same mint as P1 for visual consistency
+	_material.emission = Color(0.3, 1.0, 0.6)
+	_material.emission_energy_multiplier = 2.2
+	var emit_tween := create_tween()
+	emit_tween.tween_property(_material, "emission_energy_multiplier",
+		1.0, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	emit_tween.parallel().tween_property(_material, "emission",
+		GameConstants.P2_EMISSION_COLOR, 0.40) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
 ## Set invulnerability timer (called by CoOpManager on revive).
 func set_invuln(duration: float) -> void:
 	invuln_timer = duration
 	is_invuln = true
+
+# Clean up signal connections when P2 is freed (drop-out or bleed-out).
+func _exit_tree() -> void:
+	if CoOpManager:
+		if CoOpManager.p2_damaged.is_connected(_on_p2_damaged):
+			CoOpManager.p2_damaged.disconnect(_on_p2_damaged)
+		if CoOpManager.p2_healed.is_connected(_on_p2_healed):
+			CoOpManager.p2_healed.disconnect(_on_p2_healed)
+		if CoOpManager.p2_levelup.is_connected(_on_p2_levelup):
+			CoOpManager.p2_levelup.disconnect(_on_p2_levelup)
