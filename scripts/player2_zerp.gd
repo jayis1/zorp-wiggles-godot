@@ -37,6 +37,7 @@ const PULSE_BUFFER_WINDOW: float = 0.18
 # ─── Visual ───────────────────────────────────────────────────────────────────
 var base_color: Color = GameConstants.P2_BASE_COLOR
 var is_invuln: bool = false
+var is_invuln_blinking: bool = false
 var invuln_timer: float = 0.0
 var _material: StandardMaterial3D = null
 var _idle_phase: float = 0.0
@@ -54,6 +55,19 @@ var _was_airborne: bool = false
 # ── Dash afterimage timer (shared by dash + slide, matching P1's pattern) ──
 var _afterimage_timer: float = 0.0
 const AFTERIMAGE_INTERVAL: float = 0.03
+
+# ── Idle regen aura (matching P1): green sparkle aura when idle and HP > 80% ──
+var _idle_aura: GPUParticles3D = null
+var _idle_aura_timer: float = 0.0
+const _IDLE_AURA_HP_THRESHOLD: float = 0.8
+const _IDLE_AURA_SPEED_THRESHOLD: float = 1.5
+
+# ── Mutation color support (matching P1): biome mutations shift P2's color ──
+var _mutation_colors: Dictionary = {}  # { mutation_id: Color }
+
+# ── Cosmetic skin support (matching P1): P2 gets its own skin color ──
+var _active_skin_id: int = 0
+var _skin_emission_mult: float = 1.0
 
 # ─── Combat ───────────────────────────────────────────────────────────────────
 var shoot_cooldown_timer: float = 0.0
@@ -97,6 +111,15 @@ func _ready() -> void:
 			CoOpManager.p2_healed.connect(_on_p2_healed)
 		if not CoOpManager.p2_levelup.is_connected(_on_p2_levelup):
 			CoOpManager.p2_levelup.connect(_on_p2_levelup)
+
+	# ── Cosmetic skin: apply active skin and listen for changes (matching P1) ──
+	_apply_cosmetic_skin()
+	if CosmeticManager and not CosmeticManager.skin_changed.is_connected(_on_cosmetic_skin_changed):
+		CosmeticManager.skin_changed.connect(_on_cosmetic_skin_changed)
+
+func _process(delta: float) -> void:
+	# Rainbow skin color cycling (matching P1's _update_cosmetic_color)
+	_update_cosmetic_color(delta)
 
 func _physics_process(delta: float) -> void:
 	if CoOpManager.p2_is_downed or not CoOpManager.p2_active:
@@ -164,6 +187,7 @@ func _physics_process(delta: float) -> void:
 	_handle_movement(delta)
 	_handle_dash(delta)
 	_update_idle_breathing(delta)
+	_update_idle_aura(delta)
 	_update_movement_lean(delta)
 	_update_low_hp_heartbeat(delta)
 	_update_invuln_blink()
@@ -420,10 +444,12 @@ func _update_low_hp_heartbeat(delta: float) -> void:
 
 func _update_invuln_blink() -> void:
 	if invuln_timer > 0:
+		is_invuln_blinking = true
 		var blink_phase = fmod(invuln_timer * GameConstants.PLAYER_BLINK_RATE, 1.0)
 		if mesh:
 			mesh.visible = blink_phase < 0.5
 	else:
+		is_invuln_blinking = false
 		if mesh:
 			mesh.visible = true
 		is_invuln = false
@@ -797,8 +823,93 @@ func set_invuln(duration: float) -> void:
 	invuln_timer = duration
 	is_invuln = true
 
+# ── Idle regen aura (matching P1): green sparkle aura when idle and HP > 80% ──
+func _update_idle_aura(delta: float) -> void:
+	if is_dashing or is_sliding or is_invuln_blinking:
+		_dismiss_idle_aura()
+		return
+	var hp_ratio: float = float(CoOpManager.p2_hp) / float(CoOpManager.p2_max_hp) \
+		if CoOpManager.p2_max_hp > 0 else 1.0
+	var speed: float = velocity.length()
+	var should_show: bool = hp_ratio >= _IDLE_AURA_HP_THRESHOLD and speed < _IDLE_AURA_SPEED_THRESHOLD
+	if should_show:
+		_idle_aura_timer += delta
+		if _idle_aura_timer > 1.5 and not _idle_aura:
+			var parent_node: Node = get_parent()
+			if parent_node:
+				_idle_aura = ParticleEffects.spawn_idle_regen_aura(parent_node, global_position)
+		if _idle_aura and is_instance_valid(_idle_aura):
+			_idle_aura.global_position = global_position
+	else:
+		_dismiss_idle_aura()
+
+func _dismiss_idle_aura() -> void:
+	if _idle_aura and is_instance_valid(_idle_aura):
+		_idle_aura.emitting = false
+		var aura: GPUParticles3D = _idle_aura
+		_idle_aura = null
+		var tree := get_tree()
+		if tree:
+			tree.create_timer(3.0).timeout.connect(aura.queue_free)
+
+# ── Mutation color support (matching P1): biome mutations shift P2's color ──
+func _apply_mutation_color(mutation: int, mut_color: Color) -> void:
+	_mutation_colors[mutation] = mut_color
+	_update_mutation_material()
+
+func _remove_mutation_color(mutation: int) -> void:
+	_mutation_colors.erase(mutation)
+	_update_mutation_material()
+
+func _update_mutation_material() -> void:
+	if not _material:
+		return
+	if _mutation_colors.is_empty():
+		# Reset to base color
+		_material.albedo_color = base_color
+		_material.emission = GameConstants.P2_EMISSION_COLOR
+		return
+	# Blend base color with all active mutation colors (equal weight)
+	var blended: Color = base_color
+	for mut_color in _mutation_colors.values():
+		blended = blended.lerp(mut_color, 0.3)
+	_material.albedo_color = blended
+	_material.emission = blended * 0.4
+
+# ── Cosmetic skin support (matching P1): P2 can wear cosmetic skins ──
+func _apply_cosmetic_skin() -> void:
+	if not CosmeticManager:
+		return
+	_active_skin_id = CosmeticManager.get_active_skin()
+	_skin_emission_mult = CosmeticManager.get_active_skin_emission_mult()
+	# P2 uses its own base color as the "character" color, but skins override it
+	base_color = CosmeticManager.get_active_skin_color()
+	# Tint slightly toward P2's magenta identity so the two players still read as different
+	base_color = base_color.lerp(GameConstants.P2_BASE_COLOR, 0.3)
+	if _material:
+		_material.albedo_color = base_color
+		_material.emission = base_color * 0.4 * _skin_emission_mult
+		_material.rim_tint = 0.9
+
+func _on_cosmetic_skin_changed(_skin_id: int) -> void:
+	_apply_cosmetic_skin()
+
+func _update_cosmetic_color(_delta: float) -> void:
+	if not CosmeticManager:
+		return
+	if _active_skin_id != GameConstants.PlayerSkin.RAINBOW:
+		return
+	if not _material:
+		return
+	var new_color: Color = CosmeticManager.get_active_skin_color()
+	new_color = new_color.lerp(GameConstants.P2_BASE_COLOR, 0.3)
+	base_color = new_color
+	_material.albedo_color = new_color
+	_material.emission = new_color * 0.4 * _skin_emission_mult
+
 # Clean up signal connections when P2 is freed (drop-out or bleed-out).
 func _exit_tree() -> void:
+	_dismiss_idle_aura()
 	if CoOpManager:
 		if CoOpManager.p2_damaged.is_connected(_on_p2_damaged):
 			CoOpManager.p2_damaged.disconnect(_on_p2_damaged)
@@ -806,3 +917,5 @@ func _exit_tree() -> void:
 			CoOpManager.p2_healed.disconnect(_on_p2_healed)
 		if CoOpManager.p2_levelup.is_connected(_on_p2_levelup):
 			CoOpManager.p2_levelup.disconnect(_on_p2_levelup)
+	if CosmeticManager and CosmeticManager.skin_changed.is_connected(_on_cosmetic_skin_changed):
+		CosmeticManager.skin_changed.disconnect(_on_cosmetic_skin_changed)

@@ -184,25 +184,28 @@ func _deactivate_mutation(mutation: int) -> void:
 	_remove_mutation_visuals(mutation)
 
 func _apply_mutation_visuals(mutation: int) -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
-	if not player or not is_instance_valid(player):
-		return
 	var color: Color = MUTATION_COLORS.get(mutation, Color.WHITE)
 
-	# Spawn a mutation activation particle burst
-	ParticleEffects.spawn_explosion(player.get_parent(),
-		player.global_position + Vector3(0, 1, 0), color, 20, 0.8)
+	# Spawn a mutation activation particle burst on the primary player
+	var player: Node3D = get_tree().get_first_node_in_group("player")
+	if player and is_instance_valid(player):
+		ParticleEffects.spawn_explosion(player.get_parent(),
+			player.global_position + Vector3(0, 1, 0), color, 20, 0.8)
 
-	# Shift player color toward mutation color
-	if player.has_method("_apply_mutation_color"):
-		player._apply_mutation_color(mutation, color)
+	# Shift color on ALL players in the "player" group (P1 + P2 in co-op)
+	for p in get_tree().get_nodes_in_group("player"):
+		if not is_instance_valid(p):
+			continue
+		if p.has_method("_apply_mutation_color"):
+			p._apply_mutation_color(mutation, color)
 
 func _remove_mutation_visuals(mutation: int) -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
-	if not player or not is_instance_valid(player):
-		return
-	if player.has_method("_remove_mutation_color"):
-		player._remove_mutation_color(mutation)
+	# Remove visual changes from ALL players in the "player" group
+	for p in get_tree().get_nodes_in_group("player"):
+		if not is_instance_valid(p):
+			continue
+		if p.has_method("_remove_mutation_color"):
+			p._remove_mutation_color(mutation)
 
 # ─── Public API ───────────────────────────────────────────────────────────────
 
