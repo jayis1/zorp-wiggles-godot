@@ -152,18 +152,22 @@ func _update_pending_spawns(delta: float) -> void:
 			pending_spawns.remove_at(i)
 
 func _try_spawn() -> void:
-	# Count active enemies
+	# Count active enemies and nearby density in a SINGLE pass over the
+	# enemies group. The previous code iterated the group twice — once for
+	# the alive count and once for the nearby density throttle — which is
+	# wasteful when many enemies are active. Combining both checks into one
+	# loop halves the iteration cost of every spawn tick.
 	var enemies: Array[Node] = get_tree().get_nodes_in_group("enemies")
 	var alive_count: int = 0
-	for e in enemies:
-		if is_instance_valid(e) and not e.is_dead:
-			alive_count += 1
+	var nearby_count: int = 0
 
 	# Check spawn cap (alive + pending)
 	# ── Phase 19: Co-op increases spawn cap ──
 	# ── Phase 7: Time-based difficulty increases max enemies ──
 	var spawn_cap: int = GameConstants.MAX_ACTIVE_ENEMIES + CoOpManager.get_max_enemies_bonus() + GameManager.get_time_max_enemy_bonus()
-	if alive_count + pending_spawns.size() >= spawn_cap:
+	# Fast early exit: if pending spawns alone fill the cap, no point
+	# counting alive enemies at all (we can't spawn regardless).
+	if pending_spawns.size() >= spawn_cap:
 		return
 
 	# Check nearby density throttle
@@ -171,10 +175,15 @@ func _try_spawn() -> void:
 	if not player:
 		return
 
-	var nearby_count: int = 0
+	# Single-pass: count both alive and nearby in one loop. We bail early
+	# from inside the loop if either threshold (spawn cap or nearby density)
+	# is exceeded, avoiding a full iteration when possible.
 	for e in enemies:
 		if not is_instance_valid(e) or e.is_dead:
 			continue
+		alive_count += 1
+		if alive_count + pending_spawns.size() >= spawn_cap:
+			return  # Spawn cap reached
 		if player.global_position.distance_to(e.global_position) < GameConstants.SPAWN_DENSITY_NEAR_RADIUS:
 			nearby_count += 1
 			if nearby_count >= GameConstants.SPAWN_DENSITY_NEAR_THRESHOLD:

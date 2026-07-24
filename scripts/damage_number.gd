@@ -107,6 +107,16 @@ func _update_popin() -> void:
 	# Replaces the previous linear lerp with the same juice techniques used on
 	# dash squash. Note: Godot's ease(t, curve) uses curve<1 for ease-out, but
 	# the manual pow formula is clearer and matches standard animation terminology.
+	#
+	# ── Crit/Kill anticipation ── Critical and killing hits get a brief
+	# initial shrink (anticipation) before the overshoot pop, so they
+	# read as a "wind-up then snap" impact rather than just appearing.
+	# The anticipation takes the first 15% of the pop-in duration
+	# (shrinking to 0.7× start_scale), then the overshoot pop covers
+	# the remaining 85%. This is classic anticipation→action framing
+	# from animation — the shrink creates a visual "gathering" before
+	# the "release" of the big number landing. Normal hits skip this
+	# for speed (a 0.15s wind-up on every hit would feel sluggish).
 	var progress: float = 1.0 - (popin_timer / GameConstants.DMG_NUMBER_POPIN_DURATION)
 	progress = clampf(progress, 0.0, 1.0)
 
@@ -114,10 +124,19 @@ func _update_popin() -> void:
 	var peak_s := GameConstants.DMG_NUMBER_POPIN_PEAK_SCALE
 	var settle_s := 1.0
 
+	# Anticipation threshold — crit/kill numbers get a wind-up phase
+	var antic_frac: float = 0.15 if (is_crit or is_kill) else 0.0
+
 	var current_scale: float
-	if progress < 0.6:
-		# Ramp from start to peak (first 60%) — ease-out cubic: fast pop, decelerates
-		var t: float = 1.0 - pow(1.0 - progress / 0.6, 3.0)
+	if progress < antic_frac:
+		# Anticipation phase: shrink slightly (ease-in quad for a "pulling back" feel)
+		var t: float = progress / antic_frac
+		t = t * t  # Ease-in quadratic
+		current_scale = lerpf(start_s, start_s * 0.7, t)
+	elif progress < 0.6:
+		# Ramp from start (post-anticipation) to peak (first 60% of total)
+		# — ease-out cubic: fast pop, decelerates
+		var t: float = 1.0 - pow(1.0 - (progress - antic_frac) / (0.6 - antic_frac), 3.0)
 		current_scale = lerpf(start_s, peak_s, t)
 	else:
 		# Settle from peak to base (last 40%) — ease-out quartic: soft landing

@@ -108,9 +108,12 @@ func _physics_process(delta: float) -> void:
 		# Emission fades alongside alpha for a coherent dissipating glow
 		_material.emission_energy_multiplier = 1.5 * fade * fade
 
-	# Fade the center light as the ring expands (punchy flash → off)
+	# Fade the center light as the ring expands (punchy flash → off).
+	# Use an ease-out cubic curve (matching the pulse wave's light fade) so
+	# the flash snaps bright and decays smoothly rather than linearly dimming.
 	if _light:
-		_light.light_energy = 2.5 * fade
+		var light_fade: float = 1.0 - pow(progress, 3.0)  # Ease-out cubic
+		_light.light_energy = 2.5 * light_fade
 
 	# Destroy when fully expanded
 	if current_radius >= max_radius:

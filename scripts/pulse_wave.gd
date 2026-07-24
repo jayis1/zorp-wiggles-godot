@@ -79,8 +79,13 @@ func _physics_process(delta: float) -> void:
 	# Update ring visual
 	if ring_mesh:
 		var scale_val := radius * 2.0
+		# CylinderMesh axis is along Y — X and Z are the radius directions.
+		# Scale X and Z to expand the ring; keep Y at 1.0 so the ring stays
+		# flat (height = 0.1m) regardless of expansion radius. Previously this
+		# used Vector3(scale_val, scale_val, 1.0) which scaled X and Y but
+		# left Z at 1.0, making the ring elliptical (stretched along X only).
 		# Use a smoothed scale so the ring doesn't pop on the first frame
-		ring_mesh.scale = ring_mesh.scale.lerp(Vector3(scale_val, scale_val, 1.0), 1.0 - exp(-12.0 * delta))
+		ring_mesh.scale = ring_mesh.scale.lerp(Vector3(scale_val, 1.0, scale_val), 1.0 - exp(-12.0 * delta))
 		# Fade out as it expands — ease-in so it stays visible early then fades fast
 		var alpha := 1.0 - progress
 		alpha = alpha * alpha  # Quadratic fade for a sharper disappear at the edge
@@ -91,9 +96,16 @@ func _physics_process(delta: float) -> void:
 			# keeping full emission while the ring fades to transparent.
 			_material.emission_energy_multiplier = 1.5 * alpha
 
-	# Fade the center light as the wave expands (punchy flash → gentle glow → off)
+	# Fade the center light as the wave expands (punchy flash → gentle glow → off).
+	# Use an ease-out cubic curve instead of a linear falloff so the light
+	# snaps bright on the cast frame and decays smoothly — a more energetic
+	# "flash → dissipate" read than a constant linear dim. The light range
+	# also contracts with the same curve so the illuminated area shrinks
+	# naturally as the energy disperses.
 	if _light:
-		_light.light_energy = 3.0 * (1.0 - progress)
+		var light_fade: float = 1.0 - pow(progress, 3.0)  # Ease-out cubic
+		_light.light_energy = 3.0 * light_fade
+		_light.omni_range = 8.0 * light_fade + 1.0  # Floor at 1m so it never fully snaps off
 	
 	# Damage enemies in ring
 	var enemies := get_tree().get_nodes_in_group("enemies")
