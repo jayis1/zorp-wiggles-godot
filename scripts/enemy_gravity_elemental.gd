@@ -255,13 +255,22 @@ func _end_field() -> void:
 		_field_light.light_energy = 0.0
 
 func _die() -> void:
-	# Clean up the field visual
+	# Clean up the field visual. Reparent the mesh and light to the scene root
+	# first so their 0.3s fade tweens survive super._die()'s queue_free on self
+	# (which fires after 0.1s and would free these children, killing the tweens).
+	var scene_root: Node = get_parent()
 	if _field_mesh:
+		var mesh_global_pos: Vector3 = _field_mesh.global_position
+		_field_mesh.reparent(scene_root)
+		_field_mesh.global_position = mesh_global_pos
 		var fade_tw := _field_mesh.create_tween()
 		fade_tw.tween_property(_field_material, "albedo_color:a", 0.0, 0.3)
 		fade_tw.tween_callback(_field_mesh.queue_free)
 		_field_mesh = null
 	if _field_light:
+		var light_global_pos: Vector3 = _field_light.global_position
+		_field_light.reparent(scene_root)
+		_field_light.global_position = light_global_pos
 		var light_tw := _field_light.create_tween()
 		light_tw.tween_property(_field_light, "light_energy", 0.0, 0.3)
 		light_tw.tween_callback(_field_light.queue_free)

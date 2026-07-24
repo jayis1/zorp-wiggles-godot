@@ -182,9 +182,15 @@ func _execute_attack(player: Node3D) -> void:
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 func _die() -> void:
-	# Fade out all copies when the real knight dies
+	# Fade out all copies when the real knight dies. Reparent them to the scene
+	# root first so their fade tweens survive super._die()'s queue_free on self
+	# (which fires after 0.1s and would free these children, killing the tweens).
+	var scene_root: Node = get_parent()
 	for cm in _copies:
 		if is_instance_valid(cm):
+			var cm_global_pos: Vector3 = cm.global_position
+			cm.reparent(scene_root)
+			cm.global_position = cm_global_pos
 			var mat: StandardMaterial3D = cm.material_override as StandardMaterial3D
 			if mat:
 				var fade_tween := cm.create_tween()
@@ -194,9 +200,12 @@ func _die() -> void:
 			else:
 				cm.queue_free()
 	_copies.clear()
-	# Fade out copy lights
+	# Fade out copy lights (reparent to scene root for the same reason)
 	for cl in _copy_lights:
 		if is_instance_valid(cl):
+			var cl_global_pos: Vector3 = cl.global_position
+			cl.reparent(scene_root)
+			cl.global_position = cl_global_pos
 			var fade_tween := cl.create_tween()
 			fade_tween.tween_property(cl, "light_energy", 0.0, 0.3) \
 				.set_ease(Tween.EASE_IN)

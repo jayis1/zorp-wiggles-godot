@@ -244,14 +244,23 @@ func _update_ai(delta: float) -> void:
 func _die() -> void:
 	# Remove from the slow-field registry
 	_active_wardens.erase(get_instance_id())
-	# Fade out the field visual
+	# Fade out the field visual. Reparent the mesh and light to the scene root
+	# first so their 0.3s fade tweens survive super._die()'s queue_free on self
+	# (which fires after 0.1s and would free these children, killing the tweens).
+	var scene_root: Node = get_parent()
 	if _field_mesh:
+		var mesh_global_pos: Vector3 = _field_mesh.global_position
+		_field_mesh.reparent(scene_root)
+		_field_mesh.global_position = mesh_global_pos
 		var fade_tween := _field_mesh.create_tween()
 		fade_tween.tween_property(_field_material, "albedo_color:a", 0.0, 0.3) \
 			.set_ease(Tween.EASE_OUT)
 		fade_tween.tween_callback(_field_mesh.queue_free)
 		_field_mesh = null
 	if _field_light:
+		var light_global_pos: Vector3 = _field_light.global_position
+		_field_light.reparent(scene_root)
+		_field_light.global_position = light_global_pos
 		var light_tween := _field_light.create_tween()
 		light_tween.tween_property(_field_light, "light_energy", 0.0, 0.3) \
 			.set_ease(Tween.EASE_OUT)

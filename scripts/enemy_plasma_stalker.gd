@@ -139,7 +139,7 @@ func _apply_visible_material() -> void:
 	if not _material:
 		return
 	_material.albedo_color = base_color
-	_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_material.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 	_material.emission = base_color * 0.5
 	_material.emission_energy_multiplier = 1.6
 

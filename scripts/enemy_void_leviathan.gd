@@ -401,10 +401,20 @@ func _update_body_segments(delta: float) -> void:
 			sl.light_energy = 0.4 + 0.3 * pulse
 
 func _die() -> void:
-	# Collapse the body segment-by-segment with cascading particle bursts
+	# Collapse the body segment-by-segment with cascading particle bursts.
+	# IMPORTANT: The segment meshes and lights are children of this leviathan,
+	# but super._die() (called below) schedules queue_free on self after 0.1s,
+	# which would free all children and kill these staggered collapse tweens
+	# (delays up to ~0.56s + 0.3s animation) before they can play. Reparent
+	# them to the scene root first so they outlive the leviathan's deletion.
+	var scene_root: Node = get_parent()
 	for i in range(_segment_nodes.size()):
 		var seg: MeshInstance3D = _segment_nodes[i]
 		if is_instance_valid(seg):
+			# Reparent to scene root so the tween survives the leviathan's queue_free
+			var seg_global_pos: Vector3 = seg.global_position
+			seg.reparent(scene_root)
+			seg.global_position = seg_global_pos
 			# Stagger the collapse for a dramatic death
 			var delay: float = i * 0.08
 			var collapse_tween := seg.create_tween()
@@ -415,18 +425,22 @@ func _die() -> void:
 			# Particle burst at the segment position (scheduled via tween callback)
 			var seg_pos: Vector3 = seg.global_position
 			collapse_tween.tween_callback(func():
-				ParticleEffects.spawn_explosion(get_parent(), seg_pos,
+				ParticleEffects.spawn_explosion(scene_root, seg_pos,
 					GameConstants.VOID_LEVIATHAN_COLOR, 16, 0.4)
 			)
 	_segment_nodes.clear()
-	# Fade out segment lights
+	# Fade out segment lights (reparent to scene root for the same reason)
 	for sl in _segment_lights:
 		if is_instance_valid(sl):
+			var sl_global_pos: Vector3 = sl.global_position
+			sl.reparent(scene_root)
+			sl.global_position = sl_global_pos
 			var fade_tw := sl.create_tween()
 			fade_tw.tween_property(sl, "light_energy", 0.0, 0.4)
 			fade_tw.tween_callback(sl.queue_free)
 	_segment_lights.clear()
-	# Free segment colliders
+	# Free segment colliders (no tweens — direct queue_free is fine; they
+	# will be freed before the parent's delayed queue_free executes)
 	for collider in _segment_colliders:
 		if is_instance_valid(collider):
 			collider.queue_free()
