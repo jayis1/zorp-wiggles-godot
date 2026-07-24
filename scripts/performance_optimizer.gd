@@ -77,6 +77,10 @@ func _ready() -> void:
 	# Connect to game restart for full pool flush
 	if GameManager:
 		GameManager.game_restarted.connect(_on_game_restarted)
+	# Pre-register and warm pools for high-frequency effects.
+	# Impact bursts spawn at ~9/sec during combat — pre-warming 10 means
+	# the first few seconds of combat don't hit the instantiate path.
+	register_pool("res://scenes/entities/impact_burst.tscn", 10)
 	# Start at high quality (will auto-adjust down if needed)
 	_current_quality_level = 2
 	print("[PerformanceOptimizer] Initialized — auto-quality enabled")
@@ -144,8 +148,23 @@ func acquire(scene_path: String, parent: Node) -> Node:
 		# Pool empty — create a new instance
 		node = pool["scene"].instantiate()
 		pool["created"] += 1
+	# Call reset BEFORE adding to tree so _ready() sees the clean state
+	# (e.g. impact_color is reset before _ready() reads it).
+	if node.has_method("_pool_reset"):
+		node.call("_pool_reset")
+	# Register as active BEFORE add_child so is_pooled_instance() returns
+	# true during _ready() — lets nodes decide whether to auto-play or
+	# wait for the caller to trigger them.
+	pool["active"] += 1
+	_active_instances[node.get_instance_id()] = scene_path
 	# Activate and add to tree
 	if node.get_parent() == null:
+		# Request _ready() to fire again on re-entry to the scene tree so
+		# the node can re-trigger its animation/effect (e.g. impact burst
+		# re-flares its light + tween on each reuse). Without this, _ready()
+		# only fires once (the first time the node enters the tree), so
+		# pooled instances would be inert on their second+ use.
+		node.request_ready()
 		parent.add_child(node)
 	# Re-enable processing
 	node.process_mode = Node.PROCESS_MODE_INHERIT
@@ -153,11 +172,6 @@ func acquire(scene_path: String, parent: Node) -> Node:
 		(node as Node3D).visible = true
 	elif node is CanvasItem:
 		(node as CanvasItem).visible = true
-	pool["active"] += 1
-	_active_instances[node.get_instance_id()] = scene_path
-	# Call reset if the node supports it
-	if node.has_method("_pool_reset"):
-		node.call("_pool_reset")
 	return node
 
 ## Release an instance back to the pool. The instance is deactivated and
@@ -485,8 +499,86 @@ func get_quality_name() -> String:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#   DRAW CALL REDUCTION
+#   TRANSIENT LIGHT POOL
 # ═══════════════════════════════════════════════════════════════════════════════
+
+# A pool of reusable OmniLight3D nodes for transient flash effects (enemy
+# death flashes, collectible pickup flashes, etc.). These are spawned
+# frequently during combat and each create→tween→queue_free churns the
+# allocator. The pool pre-warms a set of lights and recycles them: callers
+# get a light via acquire_light(), position/color/tween it, then the
+# scheduled release_light() returns it to the pool. Lights are parented to
+# a persistent holder node so they survive scene changes.
+const LIGHT_POOL_PREWARM: int = 12
+const LIGHT_POOL_MAX: int = 30
+var _light_pool: Array[OmniLight3D] = []
+var _light_holder: Node3D = null
+
+## Acquire a transient OmniLight3D from the pool. The light is activated,
+## positioned at `pos`, colored to `color`, and set to `energy`.
+## The caller is responsible for tweening the energy to 0 and calling
+## release_light() when done (typically via a tween_callback).
+## Returns null if the pool is exhausted and the max cap is reached.
+func acquire_light(pos: Vector3, color: Color, energy: float, range: float = 4.0, attenuation: float = 1.2) -> OmniLight3D:
+	_ensure_light_pool()
+	var light: OmniLight3D = null
+	if _light_pool.size() > 0:
+		light = _light_pool.pop_back()
+	else:
+		# Pool empty — create a new one (up to the cap)
+		if _light_holder.get_child_count() >= LIGHT_POOL_MAX:
+			return null  # Cap reached — skip this flash
+		light = OmniLight3D.new()
+		_light_holder.add_child(light)
+	light.light_color = color
+	light.light_energy = energy
+	light.omni_range = range
+	light.omni_attenuation = attenuation
+	light.global_position = pos
+	light.visible = true
+	light.process_mode = Node.PROCESS_MODE_INHERIT
+	return light
+
+## Release a transient light back to the pool. Safe to call on a null or
+## already-released light. Zeroes the energy and hides it so it has no
+## render cost while dormant.
+func release_light(light: OmniLight3D) -> void:
+	if light == null or not is_instance_valid(light):
+		return
+	light.light_energy = 0.0
+	light.visible = false
+	if _light_pool.size() < LIGHT_POOL_MAX:
+		_light_pool.append(light)
+	else:
+		# Pool full — actually free the light
+		light.queue_free()
+
+## Acquire a transient light and schedule its automatic release after `duration`
+## seconds. The caller should tween the energy to 0 within that time window.
+## Uses a scene-tree timer with ignore_time_scale so the release fires on
+## schedule even during hit-stop.
+func acquire_transient_light(pos: Vector3, color: Color, energy: float, duration: float, range: float = 4.0, attenuation: float = 1.2) -> OmniLight3D:
+	var light := acquire_light(pos, color, energy, range, attenuation)
+	if light:
+		var timer := get_tree().create_timer(duration, true, false, true)
+		timer.timeout.connect(func():
+			if is_instance_valid(light):
+				release_light(light)
+		)
+	return light
+
+func _ensure_light_pool() -> void:
+	if _light_holder == null:
+		_light_holder = Node3D.new()
+		_light_holder.name = "TransientLightPool"
+		add_child(_light_holder)
+		# Pre-warm the pool with dormant lights
+		for i in range(LIGHT_POOL_PREWARM):
+			var light := OmniLight3D.new()
+			light.light_energy = 0.0
+			light.visible = false
+			_light_holder.add_child(light)
+			_light_pool.append(light)
 
 ## Enable visibility culling for a node — the node will be hidden when beyond
 ## the cull distance from the player. Useful for decorations, structures, etc.
@@ -562,6 +654,11 @@ func _on_game_restarted() -> void:
 	# Reset quality to high
 	_current_quality_level = 2
 	_apply_quality_level(2)
+	# Reclaim all transient lights (reset them to dormant)
+	for light in _light_pool:
+		if is_instance_valid(light):
+			light.light_energy = 0.0
+			light.visible = false
 
 ## Clear all pools (called on scene change or game exit).
 func clear_all_pools() -> void:

@@ -111,18 +111,35 @@ func _shatter() -> void:
 	# reads in dark biomes even without looking directly at the crate.
 	# Matches the impact_burst light technique. Color is warm-tinted toward
 	# white so it reads as a "break" rather than a colored magic effect.
-	var shatter_light := OmniLight3D.new()
-	shatter_light.light_color = fragment_color.lerp(Color(1.0, 1.0, 0.9), 0.5)
-	shatter_light.light_energy = 3.0
-	shatter_light.omni_range = 5.0
-	shatter_light.omni_attenuation = 1.2
-	get_parent().add_child(shatter_light)
-	shatter_light.global_position = global_position + Vector3(0, 0.5, 0)
-	var light_tween := create_tween()
-	light_tween.tween_property(shatter_light, "light_energy", 0.0, 0.18) \
-		.set_ease(Tween.EASE_OUT) \
-		.set_trans(Tween.TRANS_QUAD)
-	light_tween.chain().tween_callback(shatter_light.queue_free)
+	# POOLING: Uses the PerformanceOptimizer transient light pool.
+	var shatter_color: Color = fragment_color.lerp(Color(1.0, 1.0, 0.9), 0.5)
+	if PerformanceOptimizer:
+		var shatter_light := PerformanceOptimizer.acquire_transient_light(
+			global_position + Vector3(0, 0.5, 0),
+			shatter_color,
+			3.0,
+			0.25,
+			5.0,
+			1.2
+		)
+		if shatter_light:
+			var light_tween := shatter_light.create_tween()
+			light_tween.tween_property(shatter_light, "light_energy", 0.0, 0.18) \
+				.set_ease(Tween.EASE_OUT) \
+				.set_trans(Tween.TRANS_QUAD)
+	else:
+		var shatter_light := OmniLight3D.new()
+		shatter_light.light_color = shatter_color
+		shatter_light.light_energy = 3.0
+		shatter_light.omni_range = 5.0
+		shatter_light.omni_attenuation = 1.2
+		get_parent().add_child(shatter_light)
+		shatter_light.global_position = global_position + Vector3(0, 0.5, 0)
+		var light_tween := create_tween()
+		light_tween.tween_property(shatter_light, "light_energy", 0.0, 0.18) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_QUAD)
+		light_tween.chain().tween_callback(shatter_light.queue_free)
 
 	# Spawn RigidBody3D fragments
 	for i in range(shatter_count):

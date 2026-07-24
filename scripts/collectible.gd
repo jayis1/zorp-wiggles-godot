@@ -516,22 +516,39 @@ func _collect() -> void:
 	# flashes the collectible's color and fades over 0.25s. Gives pickups
 	# extra punch in dark biomes where the sparkle particles alone can be
 	# subtle. Rare items get a brighter, wider flash for a juicier reward.
-	var pickup_light := OmniLight3D.new()
-	pickup_light.light_color = config["color"]
+	# POOLING: Uses the PerformanceOptimizer transient light pool instead
+	# of creating/freeing a new OmniLight3D per pickup.
 	var flash_intensity: float = 2.0
 	var flash_range: float = 3.0
 	if _is_rare():
 		flash_intensity = 3.5
 		flash_range = 5.0
-	pickup_light.light_energy = flash_intensity
-	pickup_light.omni_range = flash_range
-	pickup_light.omni_attenuation = 1.2
-	get_parent().add_child(pickup_light)
-	pickup_light.global_position = global_position
-	var light_fade := pickup_light.create_tween()
-	light_fade.tween_property(pickup_light, "light_energy", 0.0, 0.25) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	light_fade.tween_callback(pickup_light.queue_free)
+	if PerformanceOptimizer:
+		var pickup_light := PerformanceOptimizer.acquire_transient_light(
+			global_position,
+			config["color"],
+			flash_intensity,
+			0.3,
+			flash_range,
+			1.2
+		)
+		if pickup_light:
+			var light_fade := pickup_light.create_tween()
+			light_fade.tween_property(pickup_light, "light_energy", 0.0, 0.25) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	else:
+		# Fallback: standalone light (non-pooled path)
+		var pickup_light := OmniLight3D.new()
+		pickup_light.light_color = config["color"]
+		pickup_light.light_energy = flash_intensity
+		pickup_light.omni_range = flash_range
+		pickup_light.omni_attenuation = 1.2
+		get_parent().add_child(pickup_light)
+		pickup_light.global_position = global_position
+		var light_fade := pickup_light.create_tween()
+		light_fade.tween_property(pickup_light, "light_energy", 0.0, 0.25) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		light_fade.tween_callback(pickup_light.queue_free)
 
 	# Rare items get a sky beam
 	if collectible_type == GameConstants.CollectibleType.METEOR_SHARD:

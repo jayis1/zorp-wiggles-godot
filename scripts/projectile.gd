@@ -1038,9 +1038,17 @@ func _crit_impact_color(is_crit: bool, is_kill: bool) -> Color:
 
 func _impact_effect(override_color: Color = Color(0.0, 0.0, 0.0, -1.0)) -> void:
 	# Spawn impact burst effect
+	# POOLING: Use PerformanceOptimizer pool instead of instantiate/free.
+	# Impact bursts are spawned at ~9/sec during combat — pooling eliminates
+	# the instantiate/free churn. The burst's _deactivate() releases it back
+	# to the pool when the animation completes.
 	if IMPACT_SCENE:
-		var burst: Node3D = IMPACT_SCENE.instantiate()
-		get_parent().add_child(burst)
+		var burst: Node3D = null
+		if PerformanceOptimizer:
+			burst = PerformanceOptimizer.acquire("res://scenes/entities/impact_burst.tscn", get_parent())
+		else:
+			burst = IMPACT_SCENE.instantiate()
+			get_parent().add_child(burst)
 		burst.global_position = global_position
 		# ── Crit / kill color override ── A crit or kill gets a gold-tinted
 		# impact burst instead of the default cyan, so critical hits are
@@ -1050,6 +1058,16 @@ func _impact_effect(override_color: Color = Color(0.0, 0.0, 0.0, -1.0)) -> void:
 		# language across UI + world effects.
 		if override_color.a >= 0.0 and burst.has_method("set") and "impact_color" in burst:
 			burst.set("impact_color", override_color)
+		# For pooled instances, _ready() doesn't auto-play (it checks
+		# is_pooled_instance). We must explicitly call _play() after
+		# setting impact_color. Non-pooled instances already auto-played
+		# in _ready(), but that happened before impact_color was set —
+		# so we call _play() again to apply the override color.
+		# (For non-pooled, _play() is idempotent — it kills the prior
+		# tween and restarts, so calling twice just re-flashes with the
+		# correct color, which is the intended behavior.)
+		if burst.has_method("_play"):
+			burst._play()
 	# Phase 6: Small explosion particles on impact — tinted to match the
 	# override color (gold for crits, cyan for normal hits) so the particle
 	# burst and the impact sphere share the same color identity.

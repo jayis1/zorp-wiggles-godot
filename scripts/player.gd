@@ -85,6 +85,17 @@ var is_invuln_blinking: bool = false
 var blink_visible: bool = true
 var _player_material: StandardMaterial3D = null
 var _idle_phase: float = 0.0  # Phase accumulator for idle breathing
+
+# ── Reusable muzzle flash light ── Instead of creating a new OmniLight3D on
+#    every shot (~9/sec), we create ONE persistent light as a child of the
+#    player's parent and re-tween it per shot. This eliminates the
+#    allocate→tween→queue_free churn that generates GC pressure during
+#    sustained combat. The light stays at energy=0 between shots (no render
+#    cost — Godot skips zero-energy lights) and is repositioned + re-flared
+#    on each _spawn_projectile call. The tween is killed and recreated each
+#    shot so rapid fire never stacks tweens.
+var _muzzle_light: OmniLight3D = null
+var _muzzle_tween: Tween = null
 const _IDLE_BOB_AMPLITUDE: float = 0.04  # Subtle vertical bob (meters)
 const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
 const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
@@ -262,6 +273,11 @@ func _on_player_damaged_pet_emote(_source_pos: Vector3) -> void:
 func _on_game_restarted_player() -> void:
 	_auto_fire_pinned = false
 	_shoot_held = false
+	# Clean up the reusable muzzle light — the parent node is being freed on
+	# scene reload, so the light reference becomes invalid. Clear it so
+	# the next shot creates a fresh one in the new scene.
+	_muzzle_light = null
+	_muzzle_tween = null
 
 func _on_player_levelup_pet_emote(_level: int) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
@@ -1713,17 +1729,26 @@ func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Col
 	#    light is added to the parent (not the projectile) so it stays at the
 	#    muzzle position instead of traveling with the bolt. Color matches the
 	#    equipped weapon mod for cohesive visual language.
-	var muzzle_light := OmniLight3D.new()
-	muzzle_light.light_color = col if mod_id != GameConstants.WeaponMod.NONE else Color(0.2, 1.0, 0.8)
-	muzzle_light.light_energy = 4.0
-	muzzle_light.omni_range = 3.5
-	muzzle_light.omni_attenuation = 1.5
-	get_parent().add_child(muzzle_light)
-	muzzle_light.global_position = global_position + Vector3(0, 0.5, 0)
-	var muzzle_tween := muzzle_light.create_tween()
-	muzzle_tween.tween_property(muzzle_light, "light_energy", 0.0, 0.06) \
+	#    POOLING: We reuse a single persistent OmniLight3D instead of
+	#    creating/freeing one per shot (~9/sec). The light sits at energy=0
+	#    between shots (no render cost) and is re-flared + re-tweened on each
+	#    shot. This eliminates GC pressure from rapid light allocation.
+	var muzzle_color: Color = col if mod_id != GameConstants.WeaponMod.NONE else Color(0.2, 1.0, 0.8)
+	if not _muzzle_light:
+		_muzzle_light = OmniLight3D.new()
+		_muzzle_light.omni_range = 3.5
+		_muzzle_light.omni_attenuation = 1.5
+		_muzzle_light.light_energy = 0.0
+		get_parent().add_child(_muzzle_light)
+	_muzzle_light.light_color = muzzle_color
+	_muzzle_light.global_position = global_position + Vector3(0, 0.5, 0)
+	_muzzle_light.light_energy = 4.0
+	# Kill any in-progress muzzle tween so rapid fire doesn't stack tweens
+	if _muzzle_tween and _muzzle_tween.is_valid():
+		_muzzle_tween.kill()
+	_muzzle_tween = _muzzle_light.create_tween()
+	_muzzle_tween.tween_property(_muzzle_light, "light_energy", 0.0, 0.06) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	muzzle_tween.tween_callback(muzzle_light.queue_free)
 
 	# Subtle camera micro-recoil on each shot — a tiny trauma kick that makes
 	# shooting feel punchy without being distracting. At ~9 shots/sec this stays

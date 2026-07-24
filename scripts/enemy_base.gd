@@ -961,21 +961,43 @@ func _die() -> void:
 		ParticleEffects.spawn_death_shockwave(get_parent(), global_position, base_color, shockwave_radius)
 
 	# ── Death light flash ── A brief OmniLight3D that flashes the enemy's
-	# color at the death point, then fades. Gives extra punch in dark biomes
-	# where the particle burst alone can be hard to see. Intensity scales
-	# with enemy size so a Drake gets a bigger flash than a Blob.
-	var death_light := OmniLight3D.new()
-	death_light.light_color = base_color
-	death_light.light_energy = 3.0 + base_scale * 2.0
-	death_light.omni_range = 4.0 + base_scale * 3.0
-	death_light.omni_attenuation = 1.2
-	get_parent().add_child(death_light)
-	death_light.global_position = global_position + Vector3(0, 0.5, 0)
-	var light_tween := death_light.create_tween()
-	light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
-		.set_ease(Tween.EASE_OUT) \
-		.set_trans(Tween.TRANS_QUAD)
-	light_tween.tween_callback(death_light.queue_free)
+	#    color at the death point, then fades. Gives extra punch in dark biomes
+	#    where the particle burst alone can be hard to see. Intensity scales
+	#    with enemy size so a Drake gets a bigger flash than a Blob.
+	#    POOLING: Uses the PerformanceOptimizer transient light pool instead
+	#    of creating/freeing a new OmniLight3D per death. The pool handles
+	#    the light lifecycle — we just tween the energy and the pool
+	#    auto-reclaims it after the duration.
+	var death_flash_energy: float = 3.0 + base_scale * 2.0
+	var death_flash_range: float = 4.0 + base_scale * 3.0
+	if PerformanceOptimizer:
+		var death_light := PerformanceOptimizer.acquire_transient_light(
+			global_position + Vector3(0, 0.5, 0),
+			base_color,
+			death_flash_energy,
+			0.35,
+			death_flash_range,
+			1.2
+		)
+		if death_light:
+			var light_tween := death_light.create_tween()
+			light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
+				.set_ease(Tween.EASE_OUT) \
+				.set_trans(Tween.TRANS_QUAD)
+	else:
+		# Fallback: create a standalone light (non-pooled path)
+		var death_light := OmniLight3D.new()
+		death_light.light_color = base_color
+		death_light.light_energy = death_flash_energy
+		death_light.omni_range = death_flash_range
+		death_light.omni_attenuation = 1.2
+		get_parent().add_child(death_light)
+		death_light.global_position = global_position + Vector3(0, 0.5, 0)
+		var light_tween := death_light.create_tween()
+		light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_QUAD)
+		light_tween.tween_callback(death_light.queue_free)
 
 	# ── Phase 8: Enemy corpse physics ── Spawn a RigidBody3D proxy corpse
 	#    that tumbles and settles realistically before fading out and freeing.

@@ -165,14 +165,25 @@ func _on_hit_player(target: Node3D = null) -> void:
 
 ## Spawn an impact burst effect at the projectile's position.
 ## Uses the shared impact_burst scene, retinted to the projectile's color.
+## POOLING: Uses the PerformanceOptimizer pool when available to avoid
+## per-hit instantiate/free churn.
 func _spawn_impact(col: Color) -> void:
 	if IMPACT_SCENE:
-		var burst: Node3D = IMPACT_SCENE.instantiate()
+		var burst: Node3D = null
+		if PerformanceOptimizer:
+			burst = PerformanceOptimizer.acquire("res://scenes/entities/impact_burst.tscn", get_parent())
+		else:
+			burst = IMPACT_SCENE.instantiate()
 		# Set the impact color BEFORE adding to the tree so _ready() picks
 		# it up and retints the material + light to match this projectile.
 		burst.set("impact_color", col)
-		get_parent().add_child(burst)
+		if not PerformanceOptimizer:
+			get_parent().add_child(burst)
 		burst.global_position = global_position
+		# For pooled instances, _ready() doesn't auto-play. Call _play()
+		# explicitly after setting the impact color.
+		if burst.has_method("_play"):
+			burst._play()
 
 ## Fizzle out when lifetime expires — small particle puff + fade, not a
 ## hard queue_free. Gives the player a visual cue that the threat ended.
