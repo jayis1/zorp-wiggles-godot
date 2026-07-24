@@ -126,6 +126,15 @@ func _physics_process(delta: float) -> void:
 		# Downed — can't move, but still tick invuln
 		if invuln_timer > 0:
 			invuln_timer -= delta
+		# ── Co-op visual parity: show downed state (slumped + blinking) ──
+		# P1 has this in player.gd (lines 393-397); P2 needs the same visual
+		# cue so co-op players can tell at a glance that Zerp is down and
+		# needs reviving. Without this, P2's mesh stays in its last pose,
+		# fully visible, looking alive — confusing when the HUD says DOWN.
+		if CoOpManager.p2_is_downed and mesh:
+			var blink_phase = fmod(Time.get_ticks_msec() * 0.005, 1.0)
+			mesh.visible = blink_phase < 0.7
+			mesh.position.y = -0.2  # Slumped down (matches P1)
 		return
 	if GameManager.is_paused:
 		return
@@ -656,20 +665,56 @@ func _dash_smash_destructibles() -> void:
 					obj.dash_hit()
 
 # ── Dash afterimage — translucent ghost copies during dash, matching P1's visual ──
+# Uses the trail style (mesh shape, lifetime, scale, jitter) from CosmeticManager
+# so P2 shares the player's chosen trail aesthetic in co-op. P2 keeps its own
+# magenta-purple color (P2's identity), only borrowing the shape/lifetime/jitter.
 func _spawn_dash_afterimage() -> void:
 	var parent_node: Node = get_parent()
 	if not parent_node:
 		return
+	# ── Trail customization: read style params from CosmeticManager (matching P1) ──
+	# P2 uses the same trail style (mesh shape, lifetime, scale, jitter) as P1
+	# so both players share the player's chosen trail aesthetic in co-op.
+	# P2 keeps its own base_color for the ghost color (visual identity).
+	var trail_alpha: float = 0.5
+	var life_mult: float = 1.0
+	var scale_mult: float = 1.0
+	var mesh_type: int = 0  # 0=sphere, 1=cube, 2=ellipsoid
+	var jitter: float = 0.0
+	if CosmeticManager:
+		var p: Dictionary = CosmeticManager.get_trail_params()
+		trail_alpha = float(p.get("alpha", 0.5))
+		life_mult = float(p.get("life_mult", 1.0))
+		scale_mult = float(p.get("scale_mult", 1.0))
+		mesh_type = int(p.get("mesh", 0))
+		jitter = float(p.get("jitter", 0.0))
+	var lifetime: float = 0.35 * life_mult
+
 	var ghost := MeshInstance3D.new()
-	var ghost_sphere := SphereMesh.new()
-	ghost_sphere.radius = 0.5
-	ghost_sphere.height = 1.0
-	ghost_sphere.radial_segments = 8
-	ghost_sphere.rings = 4
-	ghost.mesh = ghost_sphere
+	var ghost_mesh: Mesh
+	match mesh_type:
+		1:  # CUBE (Glitch style)
+			var cube := BoxMesh.new()
+			cube.size = Vector3(0.8, 0.8, 0.8)
+			ghost_mesh = cube
+		2:  # ELLIPSOID (Comet — stretched sphere)
+			var ellipsoid := SphereMesh.new()
+			ellipsoid.radius = 0.5
+			ellipsoid.height = 1.6  # Stretched along Y for a comet-tail look
+			ellipsoid.radial_segments = 8
+			ellipsoid.rings = 4
+			ghost_mesh = ellipsoid
+		_:  # SPHERE (Classic / Spark / Aurora)
+			var ghost_sphere := SphereMesh.new()
+			ghost_sphere.radius = 0.5
+			ghost_sphere.height = 1.0
+			ghost_sphere.radial_segments = 8
+			ghost_sphere.rings = 4
+			ghost_mesh = ghost_sphere
+	ghost.mesh = ghost_mesh
 	# Unlit transparent material in P2's magenta-purple color
 	var ghost_mat := StandardMaterial3D.new()
-	ghost_mat.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.5)
+	ghost_mat.albedo_color = Color(base_color.r, base_color.g, base_color.b, trail_alpha)
 	ghost_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	ghost_mat.emission_enabled = true
 	ghost_mat.emission = base_color * 0.3
@@ -679,13 +724,21 @@ func _spawn_dash_afterimage() -> void:
 	parent_node.add_child(ghost)
 	ghost.global_position = global_position
 	ghost.global_rotation = global_rotation
-	ghost.scale = mesh.scale if mesh else Vector3.ONE
+	var base_scale: Vector3 = mesh.scale if mesh else Vector3.ONE
+	ghost.scale = base_scale * scale_mult
+	# GLITCH style: apply a random jitter offset for a digital-noise look
+	if jitter > 0.0:
+		ghost.global_position += Vector3(
+			randf_range(-jitter, jitter),
+			randf_range(-jitter, jitter),
+			randf_range(-jitter, jitter)
+		)
 	# Fade out + slight scale up for dissipating energy look
 	var fade_tween := ghost.create_tween()
 	fade_tween.set_parallel(true)
-	fade_tween.tween_property(ghost_mat, "albedo_color:a", 0.0, 0.35) \
+	fade_tween.tween_property(ghost_mat, "albedo_color:a", 0.0, lifetime) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	fade_tween.tween_property(ghost, "scale", ghost.scale * 1.3, 0.35) \
+	fade_tween.tween_property(ghost, "scale", ghost.scale * 1.3, lifetime) \
 		.set_ease(Tween.EASE_OUT)
 	fade_tween.chain().tween_callback(ghost.queue_free)
 

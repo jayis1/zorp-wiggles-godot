@@ -326,6 +326,14 @@ func _revive_p2() -> void:
 	# Phase 20: Audio — revive SFX
 	AudioManager.play_sfx(AudioManager.SFX_REVIVE)
 	GameManager.add_message("✨ %s revived! Back in action!" % GameConstants.P2_NAME)
+	# Restore mesh from downed slumped state (P2's _physics_process sets
+	# mesh.position.y = -0.2 while downed — reset so Zerp stands tall).
+	# Matches P1's _revive_p1() pattern in game_manager.gd (lines 174-179).
+	if p2_node and is_instance_valid(p2_node):
+		var mesh_node: MeshInstance3D = p2_node.get_node_or_null("BodyMesh")
+		if mesh_node:
+			mesh_node.visible = true
+			mesh_node.position.y = 0.0
 	# Heal particles
 	if p2_node and is_instance_valid(p2_node):
 		ParticleEffects.spawn_levelup_burst(p2_node.get_parent(), p2_node.global_position)
