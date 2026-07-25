@@ -45,6 +45,15 @@ var alert_indicator_timer: float = 0.0
 var hit_flinch_timer: float = 0.0
 var _hit_flash_timer: float = 0.0
 var is_windup: bool = false
+# ── Windup emission tween ── Tracks the emission-energy ramp tween so a new
+#    windup (or a hit-flash during windup) can kill the in-flight emission
+#    tween cleanly. Without this, the windup emission ramp could fight the
+#    hit-flash emission spike or stack across rapid re-attacks.
+var _windup_emit_tween: Tween = null
+# Cached pre-windup emission energy so _execute_attack can restore it exactly,
+# even if the windup was interrupted by a hit-flash that also touches
+# emission_energy_multiplier.
+var _windup_prev_emission: float = 1.0
 var knockback_vel: Vector3 = Vector3.ZERO
 var _spawn_target_alpha: float = 1.0
 
@@ -570,17 +579,27 @@ func _try_attack_enemy(target: Node3D) -> void:
 		return
 	is_attacking = true
 	attack_cooldown_timer = attack_cooldown
-	# Windup telegraph
+	# Windup telegraph — ease-out cubic so the squash decelerates as it
+	# gathers, reading as an organic "winding up" motion rather than a
+	# mechanical linear shrink. The deceleration sells the gathering of
+	# force before the lunge release.
 	is_windup = true
 	var windup_tween := create_tween()
 	windup_tween.tween_property(self, "scale",
 		Vector3.ONE * base_scale * (1.0 - GameConstants.ENEMY_ATTACK_WINDUP_SQUASH),
-		GameConstants.ENEMY_ATTACK_WINDUP_TIME)
+		GameConstants.ENEMY_ATTACK_WINDUP_TIME) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	windup_tween.tween_callback(_execute_attack_on_enemy.bind(target))
+	# ── Windup emission ramp ── Brighten the enemy's emission during windup
+	# so the charge-up is readable as a glow, not just a silhouette squash.
+	# Uses the ENEMY_ATTACK_WINDUP_BRIGHTNESS constant (previously unused) as
+	# the peak multiplier. Restored in _execute_attack_on_enemy().
+	_ramp_windup_emission()
 
 ## Execute the attack on an enemy (mind control version)
 func _execute_attack_on_enemy(target: Node3D) -> void:
 	is_windup = false
+	_restore_windup_emission()
 	if not target or not is_instance_valid(target):
 		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
 		return
@@ -681,16 +700,22 @@ func _try_attack(player: Node3D) -> void:
 	is_attacking = true
 	attack_cooldown_timer = attack_cooldown
 
-	# Attack windup telegraph
+	# Attack windup telegraph — ease-out cubic for organic decelerating squash
 	is_windup = true
 	var windup_tween := create_tween()
 	windup_tween.tween_property(self, "scale",
 		Vector3.ONE * base_scale * (1.0 - GameConstants.ENEMY_ATTACK_WINDUP_SQUASH),
-		GameConstants.ENEMY_ATTACK_WINDUP_TIME)
+		GameConstants.ENEMY_ATTACK_WINDUP_TIME) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	windup_tween.tween_callback(_execute_attack.bind(player))
+	# ── Windup emission ramp ── Brighten the enemy's emission during windup
+	# so the charge-up is readable as a glow, not just a silhouette squash.
+	# Restored in _execute_attack().
+	_ramp_windup_emission()
 
 func _execute_attack(player: Node3D) -> void:
 	is_windup = false
+	_restore_windup_emission()
 	# The windup tween calls this via tween_callback after ENEMY_ATTACK_WINDUP_TIME.
 	# The bound `player` reference may have been freed during that delay (especially
 	# P2 in co-op, who can drop out or bleed out mid-windup). Bail out safely.
@@ -793,6 +818,40 @@ func _reset_attack_flag() -> void:
 	if is_instance_valid(self) and not is_dead:
 		is_attacking = false
 
+# ── Windup emission ramp ── Brightens the enemy's emission during the attack
+#    windup so the charge-up reads as a glow (visible in all biomes, even when
+#    the silhouette squash is hard to see). The ramp eases from the current
+#    emission energy to ENEMY_ATTACK_WINDUP_BRIGHTNESS (default 0.5, i.e. +50%
+#    above baseline 1.0 → peak 1.5) over the windup duration. The previous
+#    emission is cached so _restore_windup_emission() can put it back exactly,
+#    even if a hit-flash (which also touches emission_energy_multiplier)
+#    fired during the windup. The tween is tracked so a new windup or a
+#    hit-flash can kill it cleanly.
+func _ramp_windup_emission() -> void:
+	if not _material:
+		return
+	# Kill any in-flight windup emission tween so rapid re-attacks don't stack.
+	if _windup_emit_tween and _windup_emit_tween.is_valid():
+		_windup_emit_tween.kill()
+	_windup_prev_emission = _material.emission_energy_multiplier
+	_windup_emit_tween = create_tween()
+	_windup_emit_tween.tween_property(
+		_material, "emission_energy_multiplier",
+		1.0 + GameConstants.ENEMY_ATTACK_WINDUP_BRIGHTNESS,
+		GameConstants.ENEMY_ATTACK_WINDUP_TIME
+	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+
+## Restore emission energy to the pre-windup value. Called at the start of
+## _execute_attack / _execute_attack_on_enemy. Uses the cached value rather
+## than a hardcoded 1.0 so the restore is correct even if the enemy was
+## mind-controlled (emission 2.0) or enraging when the windup began.
+func _restore_windup_emission() -> void:
+	if _windup_emit_tween and _windup_emit_tween.is_valid():
+		_windup_emit_tween.kill()
+		_windup_emit_tween = null
+	if _material:
+		_material.emission_energy_multiplier = _windup_prev_emission
+
 func take_damage(amount: int) -> void:
 	take_damage_from(amount, Vector3.ZERO)
 
@@ -835,6 +894,15 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# enemies (Void Wisp, etc.) don't briefly become fully opaque during the flash.
 	_hit_flash_timer = 0.15
 	if _material:
+		# Kill any in-flight windup emission tween so the hit-flash owns the
+		# emission_energy_multiplier exclusively during its 0.15s window.
+		# Without this, the windup ramp and the flash restore would both
+		# tween the same property and fight each other. The windup restore
+		# (_restore_windup_emission in _execute_attack) will put the cached
+		# pre-windup value back after the flash settles.
+		if _windup_emit_tween and _windup_emit_tween.is_valid():
+			_windup_emit_tween.kill()
+			_windup_emit_tween = null
 		_material.albedo_color = Color(1.0, 1.0, 1.0, _spawn_target_alpha)
 		var _prev_emission_energy: float = _material.emission_energy_multiplier
 		_material.emission_energy_multiplier = 4.0
