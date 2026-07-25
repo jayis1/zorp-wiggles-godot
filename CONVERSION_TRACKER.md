@@ -639,3 +639,30 @@ Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy cor
 - New entries in WEATHER_BIOME_AFFINITY, WEATHER_SPAWN_BONUS, and WEATHER_INFO dictionaries.
 - `WeatherSystem` updated: SANDSTORM candidate in `_pick_next_weather()`, `_tick_sandstorm()` damage tick function, `get_enemy_speed_multiplier()` new API method (returns 1.25 for sandstorm, 0.7 for snow storm, 1.0 otherwise), sandstorm particle type in `_create_weather_particles()`, sandstorm start in `_start_weather_effects()` (particles + fog + ambient light), sandstorm light position in `_update_weather_particle_position()` (lower than other weather — 15m).
 - `enemy_base.gd` updated: Line 289 now uses `WeatherSystem.get_enemy_speed_multiplier()` instead of `get_speed_multiplier()`, so enemies are sped up by sandstorm (not slowed like the player). Snow storm still slows enemies via the same function.
+
+## Enhancement Pack 3 — Phase 26 World-Life Juice & Bug Fix
+
+### Bug Fix
+- **Lore Stone particle spawn logic** (`lore_stone.gd:134`) — removed misleading `parent.has_node("ParticleEffects") == false` dead-code condition. The parent (world) node never has a child named "ParticleEffects" (it's an autoload at scene root), so the `has_node` check was always false and the negation always true — harmless but confusing. Now simply checks `parent and ParticleEffects` and spawns directly. The redundant inner `if ParticleEffects:` is gone; the outer check covers it.
+
+### Visual Juice — Environmental Hazards (`environmental_hazard.gd`)
+- Impact particle bursts on activation for all 4 hazard types (previously only light flash + camera shake):
+  - **lava_geyser**: 28-particle vertical eruption burst (glow color, 0.7s lifetime) at 2m height.
+  - **falling_rock**: dust poof + 18-particle debris explosion on impact (0.8m height).
+  - **toxic_vent**: greenish gas puff (death_poof, 0.8 scale) at 1m height.
+  - **ice_patch**: subtle frost sparkle (pickup_sparkle) at 0.3m — no big burst for the low-key hazard.
+
+### Visual Juice — Treasure Chest (`treasure_chest.gd`)
+- **Spawn-in animation**: chest rises 0.6m from below ground with an ease-out cubic + scale pop (TRANS_BACK) over 0.5s. Previously chests just appeared instantly at full scale.
+- **Trap telegraph**: trapped chests now flash red on the lid + lock for 0.18s before damage lands, with a small 0.1 camera shake on the telegraph. Previously the trap damage was instant with no warning — the player had no chance to react. The flash restores the previous albedo/emission/emission_energy via tween after the hold.
+
+### Visual Juice — Interactive Objects (`interactive_object.gd`)
+- **Switch toggle pulse**: quick squash-and-stretch on the body mesh (1.25× horizontal, 0.75× vertical for 0.08s, then elastic ease back) for tactile feedback when the player toggles a switch. Previously the switch only changed emission brightness with no motion.
+- **Switch glow flash**: the accent sphere's emission_energy_multiplier flashes to 4.0 for 0.05s then eases back over 0.3s, selling the "click" moment.
+- **Breakable wall hit dust**: each hit on a breakable wall now spawns a small dust poof (death_poof, 0.4 scale) at 1.5m height. Previously hits only had a material emission flash — no particle feedback until destruction.
+
+### Visual Juice — Lore Stone (`lore_stone.gd`)
+- **Spawn-in animation**: lore stone scales from zero to full over 0.6s with ease-out elastic transition, so it "emerges" into the world rather than popping in. Matches the treasure chest spawn-in feel.
+
+### Visual Juice — Dialogue NPC (`dialogue_npc.gd`)
+- **Dialogue-start acknowledgment**: when the player starts a conversation, the NPC does a quick upward bob (0.3m over 0.18s, ease-out cubic, then sine ease back to 0) and a glow-light flash (energy to 2.0 for 0.1s, ease back over 0.4s). Previously the NPC had no visual reaction to dialogue starting — only the prompt label disappeared.

@@ -233,6 +233,23 @@ func interact() -> void:
 	_is_active = not _is_active
 	_cooldown_timer = GameConstants.INTERACTIVE_SWITCH_COOLDOWN
 	_apply_state_visual()
+	# Toggle pulse: quick squash-and-stretch on the body mesh for tactile feedback.
+	if _body_mesh:
+		var base_s: Vector3 = _body_mesh.scale
+		var pulse_tween := create_tween()
+		pulse_tween.tween_property(_body_mesh, "scale",
+			base_s * Vector3(1.25, 0.75, 1.25), 0.08) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		pulse_tween.chain().tween_property(_body_mesh, "scale", base_s, 0.18) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Glow flash on the accent sphere when toggled.
+	if _glow_mesh and _glow_mesh.material_override:
+		var glow_mat: StandardMaterial3D = _glow_mesh.material_override
+		var prev_e: float = glow_mat.emission_energy_multiplier
+		glow_mat.emission_energy_multiplier = 4.0
+		var glow_tween := create_tween()
+		glow_tween.tween_interval(0.05)
+		glow_tween.tween_property(glow_mat, "emission_energy_multiplier", prev_e, 0.3)
 	# Toggle all linked doors and hidden passages.
 	_toggle_linked()
 	toggled.emit(self, _is_active)
@@ -272,6 +289,11 @@ func take_damage(amount: int, _source_pos: Vector3 = Vector3.ZERO) -> void:
 		_material.emission_energy_multiplier = 3.0
 		var t := create_tween()
 		t.tween_property(_material, "emission_energy_multiplier", 0.8, 0.2)
+	# Small dust puff on each hit — sells the wall taking damage.
+	var parent: Node = get_parent()
+	if parent and ParticleEffects:
+		ParticleEffects.spawn_death_poof(parent, global_position + Vector3(0, 1.5, 0),
+			_config.get("color", Color(0.5, 0.45, 0.4)), 0.4)
 	# Camera shake feedback.
 	var cam: Node3D = GameManager.camera_rig
 	if cam and cam.has_method("add_trauma"):

@@ -193,6 +193,20 @@ func start_dialogue() -> void:
 		return
 	_is_talking = true
 	_prompt_label.visible = false
+	# Visual acknowledgment: quick upward bob + glow flash on the body.
+	if _body_mesh:
+		var bob_tween := create_tween()
+		bob_tween.tween_property(_body_mesh, "position:y",
+			_body_mesh.position.y + 0.3, 0.18) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		bob_tween.chain().tween_property(_body_mesh, "position:y", 0.0, 0.25) \
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	if _glow_light:
+		var prev_e: float = _glow_light.light_energy
+		_glow_light.light_energy = 2.0
+		var light_tween := create_tween()
+		light_tween.tween_interval(0.1)
+		light_tween.tween_property(_glow_light, "light_energy", prev_e, 0.4)
 	# Pick the dialogue topic pool.
 	var topic_key: String = archetype + ("_intro" if not _has_met else "_repeat")
 	var lines: Array = GameConstants.DIALOGUE_LINES.get(topic_key, ["..."])

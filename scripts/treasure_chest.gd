@@ -33,6 +33,17 @@ func _ready() -> void:
 	_build_visuals()
 	# Collision shape is provided by the scene (ChestCollision).
 	body_entered.connect(_on_body_entered)
+	# Spawn-in animation: chest rises from the ground with a scale pop.
+	# Disable collision during the rise so the player can't trigger it mid-spawn.
+	# (Collision shape is on the scene root; we monitor body_entered via signal.)
+	scale = Vector3.ZERO
+	global_position.y -= 0.6
+	var spawn_tween := create_tween()
+	spawn_tween.tween_property(self, "global_position:y",
+		global_position.y + 0.6, 0.45) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	spawn_tween.parallel().tween_property(self, "scale", Vector3.ONE, 0.5) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 func _build_visuals() -> void:
 	# Base — wide flat box (the chest body), partly sunk into the ground.
@@ -141,7 +152,7 @@ func _open_chest() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.2)
-	# Trapped chests: deal damage + spawn a Swarm Mite, then still give loot.
+	# Trapped chests: telegraph flash, then deal damage + spawn a Swarm Mite.
 	if _trapped:
 		_trigger_trap()
 	# Particle burst (golden).
@@ -202,7 +213,33 @@ func _spawn_loot() -> void:
 			collectible.start_tumble(Vector3(cos(angle), 0.5, sin(angle)))
 
 func _trigger_trap() -> void:
-	# Deal damage to the player.
+	# Telegraph: brief red flash on the lid + lock so the player sees the trap
+	# trigger a fraction of a second before damage lands. Feels fairer than
+	# instant damage out of nowhere.
+	var flash_col: Color = Color(1.0, 0.15, 0.15)
+	if _lid and _lid.material_override:
+		var lid_mat: StandardMaterial3D = _lid.material_override
+		var prev_albedo: Color = lid_mat.albedo_color
+		var prev_emi: Color = lid_mat.emission
+		var prev_emi_e: float = lid_mat.emission_energy_multiplier
+		lid_mat.albedo_color = flash_col
+		lid_mat.emission = flash_col
+		lid_mat.emission_energy_multiplier = 3.0
+		var flash_tween := create_tween()
+		flash_tween.tween_interval(0.18)  # Brief red hold.
+		flash_tween.tween_property(lid_mat, "albedo_color", prev_albedo, 0.25)
+		flash_tween.parallel().tween_property(lid_mat, "emission", prev_emi, 0.25)
+		flash_tween.parallel().tween_property(lid_mat, "emission_energy_multiplier",
+			prev_emi_e, 0.25)
+	if _lock and _lock.material_override:
+		var lock_mat: StandardMaterial3D = _lock.material_override
+		lock_mat.emission = flash_col
+		lock_mat.emission_energy_multiplier = 4.0
+	# Small camera shake on the telegraph to sell the "uh oh" moment.
+	var cam_pre: Node3D = GameManager.camera_rig
+	if cam_pre and cam_pre.has_method("add_trauma"):
+		cam_pre.add_trauma(0.1)
+	# Deal damage to the player (after the brief telegraph flash).
 	GameManager.take_damage(GameConstants.TREASURE_CHEST_TRAP_DAMAGE, global_position)
 	GameManager.add_message("💥 It's a trap! The chest was rigged!")
 	# Spawn a "Chest Mimic" enemy. We use the blob scene (EnemyBase) rather than

@@ -214,6 +214,29 @@ func _activate() -> void:
 	# Light flash.
 	if _hazard_light:
 		_hazard_light.light_energy = 4.0
+	# Impact particle burst — type-specific color for a satisfying "eruption" feel.
+	var parent: Node = get_parent()
+	if parent and ParticleEffects:
+		var burst_col: Color = _config.get("glow_color", Color(1.0, 0.6, 0.2))
+		match hazard_type_name:
+			"lava_geyser":
+				# Tall vertical eruption burst (more particles, upward bias).
+				ParticleEffects.spawn_explosion(parent, global_position + Vector3(0, 2.0, 0),
+					burst_col, 28, 0.7)
+			"falling_rock":
+				# Dust + debris burst on impact.
+				ParticleEffects.spawn_death_poof(parent, global_position + Vector3(0, 0.8, 0),
+					burst_col, 1.0)
+				ParticleEffects.spawn_explosion(parent, global_position + Vector3(0, 0.8, 0),
+					burst_col, 18, 0.5)
+			"toxic_vent":
+				# Greenish gas puff.
+				ParticleEffects.spawn_death_poof(parent, global_position + Vector3(0, 1.0, 0),
+					burst_col, 0.8)
+			"ice_patch":
+				# Subtle frost shimmer — small sparkle, no big burst.
+				ParticleEffects.spawn_pickup_sparkle(parent,
+					global_position + Vector3(0, 0.3, 0), burst_col)
 	# Camera shake for impactful hazards.
 	if hazard_type_name == "lava_geyser" or hazard_type_name == "falling_rock":
 		var cam: Node3D = GameManager.camera_rig

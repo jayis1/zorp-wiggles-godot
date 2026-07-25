@@ -37,6 +37,11 @@ func _ready() -> void:
 	_build_visuals()
 	# Collision shape is provided by the scene (LoreStoneCollision).
 	body_entered.connect(_on_body_entered)
+	# Spawn-in: gentle rise + scale pop so the stone "emerges" into the world.
+	scale = Vector3.ZERO
+	var spawn_tween := create_tween()
+	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.6) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 func _build_visuals() -> void:
 	# Stone pillar — tall thin box, ancient purple-grey.
@@ -130,11 +135,10 @@ func _read_lore() -> void:
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.08)
 	# Particle burst (purple) — reuse levelup burst as a soft sparkle.
+	# ParticleEffects is an autoload singleton; spawn directly via the parent.
 	var parent: Node = get_parent()
-	if parent and parent.has_node("ParticleEffects") == false:
-		# ParticleEffects is an autoload; spawn at our position via the parent.
-		if ParticleEffects:
-			ParticleEffects.spawn_levelup_burst(parent, global_position)
+	if parent and ParticleEffects:
+		ParticleEffects.spawn_levelup_burst(parent, global_position)
 	# Fade out + shrink animation, then queue_free.
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3.ONE * 1.3, 0.2) \
