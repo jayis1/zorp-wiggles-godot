@@ -236,6 +236,9 @@ func _build_ui() -> void:
 	for btn in [_back_btn, _filter_btn, _cb_btn, rebind_btn]:
 		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+		# Press feedback: scale-down on press, elastic bounce on release.
+		btn.button_down.connect(_on_button_press.bind(btn))
+		btn.button_up.connect(_on_button_release.bind(btn))
 
 
 func _make_label(text: String, x: float, y: float, w: float, h: float) -> Label:
@@ -418,6 +421,33 @@ func _on_button_hover(btn: Button, is_hovering: bool) -> void:
 	# Play a subtle UI hover sound on enter only (avoids spam on exit)
 	if is_hovering:
 		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+
+## Press feedback: scale down to 0.92x on button_down for a tactile push.
+## Matches main_menu/pause_menu press juice for cohesive UI feel.
+func _on_button_press(btn: Button) -> void:
+	if not is_instance_valid(btn):
+		return
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", Vector2(0.92, 0.92), 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+
+## Release feedback: elastic bounce back to hover scale (1.06x).
+func _on_button_release(btn: Button) -> void:
+	if not is_instance_valid(btn):
+		return
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", Vector2(1.06, 1.06), 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	_hover_tweens[btn] = tween
 
 func _on_back() -> void:
 	if _animating_out:

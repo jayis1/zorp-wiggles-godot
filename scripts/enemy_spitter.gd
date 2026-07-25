@@ -97,6 +97,11 @@ func _update_spit(delta: float, player: Node3D, dist_to_player: float) -> void:
 			var bright_color := base_color.lerp(Color(1.0, 0.6, 0.0),
 				GameConstants.SPORE_SPIT_CHARGE_BRIGHTNESS * charge_t)
 			_material.albedo_color = bright_color
+			# Emission energy ramp — the charge glows brighter so it reads
+			# as a glowing charge-up in dark biomes where albedo alone is
+			# subtle. Ramps from 1.0 → 3.5 alongside the swell, mirroring
+			# the enemy_base attack windup emission trick.
+			_material.emission_energy_multiplier = 1.0 + 2.5 * charge_t
 
 	# Fire when timer expires
 	if spit_timer <= 0 and dist_to_player < GameConstants.SPORE_SPIT_RANGE:
@@ -107,6 +112,7 @@ func _update_spit(delta: float, player: Node3D, dist_to_player: float) -> void:
 		scale = Vector3.ONE * base_scale
 		if _material:
 			_material.albedo_color = base_color
+			_material.emission_energy_multiplier = 1.0
 	elif spit_timer <= 0:
 		# Player out of range — reset without firing
 		spit_timer = randf_range(2.5, 4.5)
@@ -114,6 +120,7 @@ func _update_spit(delta: float, player: Node3D, dist_to_player: float) -> void:
 		scale = Vector3.ONE * base_scale
 		if _material:
 			_material.albedo_color = base_color
+			_material.emission_energy_multiplier = 1.0
 
 func _fire_spit(player: Node3D) -> void:
 	# Create enemy projectile

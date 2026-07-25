@@ -145,6 +145,8 @@ func _build_ui() -> void:
 		# treatment as the action buttons for a cohesive feel.
 		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+		btn.button_down.connect(_on_button_press.bind(btn))
+		btn.button_up.connect(_on_button_release.bind(btn))
 		_material_grid.add_child(btn)
 		_material_buttons[mat_type] = btn
 	
@@ -184,6 +186,8 @@ func _build_ui() -> void:
 	btn_hbox.add_child(fuse_btn)
 	fuse_btn.mouse_entered.connect(_on_button_hover.bind(fuse_btn, true))
 	fuse_btn.mouse_exited.connect(_on_button_hover.bind(fuse_btn, false))
+	fuse_btn.button_down.connect(_on_button_press.bind(fuse_btn))
+	fuse_btn.button_up.connect(_on_button_release.bind(fuse_btn))
 	
 	# Result label (shows craft success/failure)
 	_result_label = Label.new()
@@ -204,6 +208,10 @@ func _build_ui() -> void:
 	for btn in [_craft_button, _clear_button, _close_button]:
 		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+		# Press feedback: scale-down on button_down, elastic bounce on release.
+		# Matches main_menu/pause_menu so all menus share cohesive click feel.
+		btn.button_down.connect(_on_button_press.bind(btn))
+		btn.button_up.connect(_on_button_release.bind(btn))
 	
 	# Right column: Discovered mods
 	_discovered_panel = Panel.new()
@@ -394,6 +402,8 @@ func _update_discovered_list() -> void:
 			# Hover juice on dynamically-created equip buttons too.
 			equip_btn.mouse_entered.connect(_on_button_hover.bind(equip_btn, true))
 			equip_btn.mouse_exited.connect(_on_button_hover.bind(equip_btn, false))
+			equip_btn.button_down.connect(_on_button_press.bind(equip_btn))
+			equip_btn.button_up.connect(_on_button_release.bind(equip_btn))
 			entry.add_child(equip_btn)
 
 # ─── Button Handlers ──────────────────────────────────────────────────────────
@@ -432,6 +442,31 @@ func _on_button_hover(btn: Button, is_hovering: bool) -> void:
 	_hover_tweens[btn] = tween
 	if is_hovering and not btn.disabled:
 		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+
+## Press feedback: scale the button down to 0.92x on mouse down for a tactile
+## "push" feel. The hover tween is killed so the press scale isn't fighting
+## the hover scale. Matches main_menu/pause_menu press juice.
+func _on_button_press(btn: Button) -> void:
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", Vector2(0.92, 0.92), 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+
+## Release feedback: elastic bounce back to hover scale (1.06x) so the button
+## springs up after the click, complementing the click SFX.
+func _on_button_release(btn: Button) -> void:
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", Vector2(1.06, 1.06), 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	_hover_tweens[btn] = tween
 
 func _on_material_button_pressed(mat_type: int) -> void:
 	if _selected_materials.has(mat_type):

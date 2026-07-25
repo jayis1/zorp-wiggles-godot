@@ -23,6 +23,10 @@ var _cost_label: Label
 var _result_label: Label
 var _fuse_button: Button
 
+# Track hover/press tweens so we can kill them before starting a new one.
+# Matches the hover+press juice pattern used in all other Button-based menus.
+var _hover_tweens: Dictionary = {}  # button -> Tween
+
 const PANEL_BG_COLOR: Color = Color(0.05, 0.03, 0.12, 0.97)
 const PANEL_BORDER_COLOR: Color = Color(0.7, 0.4, 1.0, 0.7)
 const SELECTED_COLOR: Color = Color(0.4, 0.2, 0.7, 0.6)
@@ -119,6 +123,7 @@ func _build_ui() -> void:
 		btn.add_theme_font_size_override("font_size", 12)
 		btn.add_theme_color_override("font_color", mod_color)
 		btn.pressed.connect(_on_mod_selected.bind(mod_id))
+		_connect_button_juice(btn)
 		mods_list.add_child(btn)
 		_selected_buttons[mod_id] = btn
 
@@ -155,18 +160,21 @@ func _build_ui() -> void:
 	_fuse_button.add_theme_color_override("font_color", Color(0.9, 0.7, 1.0))
 	_fuse_button.disabled = true
 	_fuse_button.pressed.connect(_on_fuse_pressed)
+	_connect_button_juice(_fuse_button)
 	btn_hbox.add_child(_fuse_button)
 
 	var clear_btn := Button.new()
 	clear_btn.text = "Clear Selection"
 	clear_btn.custom_minimum_size = Vector2(150, 38)
 	clear_btn.pressed.connect(_on_clear_pressed)
+	_connect_button_juice(clear_btn)
 	btn_hbox.add_child(clear_btn)
 
 	var close_btn := Button.new()
 	close_btn.text = "Close (Esc)"
 	close_btn.custom_minimum_size = Vector2(140, 38)
 	close_btn.pressed.connect(hide_menu)
+	_connect_button_juice(close_btn)
 	btn_hbox.add_child(close_btn)
 
 	# Result label
@@ -294,6 +302,7 @@ func _refresh_fused_list() -> void:
 		name_btn.add_theme_font_size_override("font_size", 12)
 		name_btn.add_theme_color_override("font_color", fm.color)
 		name_btn.tooltip_text = fm.description
+		_connect_button_juice(name_btn)
 		entry.add_child(name_btn)
 		# Equip/Unequip button
 		var equip_btn := Button.new()
@@ -305,6 +314,7 @@ func _refresh_fused_list() -> void:
 			equip_btn.pressed.connect(_on_equip_fused.bind(fm.id))
 		equip_btn.custom_minimum_size = Vector2(80, 30)
 		equip_btn.add_theme_font_size_override("font_size", 11)
+		_connect_button_juice(equip_btn)
 		entry.add_child(equip_btn)
 		# Delete button
 		var del_btn := Button.new()
@@ -312,6 +322,7 @@ func _refresh_fused_list() -> void:
 		del_btn.custom_minimum_size = Vector2(36, 30)
 		del_btn.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5))
 		del_btn.pressed.connect(_on_delete_fused.bind(fm.id))
+		_connect_button_juice(del_btn)
 		entry.add_child(del_btn)
 	# Empty state
 	if WeaponModFusion.get_fused_count() == 0:
@@ -368,3 +379,59 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		hide_menu()
 		get_viewport().set_input_as_handled()
+
+# ─── Button Hover/Press Juice ─────────────────────────────────────────────────
+# Matches the hover+press pattern used in all other Button-based menus so the
+# fusion menu feels cohesive with the rest of the UI. Buttons grow ~6% on
+# hover, scale down to 0.92x on press, and elastic-bounce back on release.
+
+func _connect_button_juice(btn: Button) -> void:
+	btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
+	btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+	btn.button_down.connect(_on_button_press.bind(btn))
+	btn.button_up.connect(_on_button_release.bind(btn))
+
+func _on_button_hover(btn: Button, is_hovering: bool) -> void:
+	if not is_instance_valid(btn):
+		return
+	btn.pivot_offset = btn.size * 0.5
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+		_hover_tweens.erase(btn)
+	# Clean up freed buttons
+	for key in _hover_tweens.keys():
+		if not is_instance_valid(key):
+			_hover_tweens.erase(key)
+	var target_scale := Vector2(1.06, 1.06) if is_hovering else Vector2.ONE
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", target_scale, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+	if is_hovering and not btn.disabled:
+		AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+
+func _on_button_press(btn: Button) -> void:
+	if not is_instance_valid(btn):
+		return
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", Vector2(0.92, 0.92), 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_hover_tweens[btn] = tween
+
+func _on_button_release(btn: Button) -> void:
+	if not is_instance_valid(btn):
+		return
+	if _hover_tweens.has(btn):
+		var existing: Tween = _hover_tweens[btn]
+		if is_instance_valid(existing):
+			existing.kill()
+	var tween := create_tween()
+	tween.tween_property(btn, "scale", Vector2(1.06, 1.06), 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	_hover_tweens[btn] = tween
