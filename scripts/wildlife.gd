@@ -150,10 +150,19 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-	# Face the movement direction (yaw only).
+	# Face the movement direction (yaw only) — smoothly interpolate yaw
+	# instead of snapping via look_at every frame. Direct look_at causes
+	# instant 180° flips when the wander direction reverses, which looks
+	# mechanical. We lerp the yaw toward the target heading with an
+	# frame-rate-independent weight, matching the camera rig's smoothing
+	# approach. The shortest-angle path is handled by wrapf so the wildlife
+	# always turns the short way around.
 	if velocity.length() > 0.1:
-		var look_target: Vector3 = global_position + velocity.normalized()
-		look_at(look_target, Vector3.UP)
+		var target_yaw: float = atan2(-velocity.x, -velocity.z)
+		var current_yaw: float = rotation.y
+		var diff: float = wrapf(target_yaw - current_yaw, -PI, PI)
+		var yaw_weight: float = 1.0 - exp(-10.0 * delta)
+		rotation.y = current_yaw + diff * yaw_weight
 
 	# Bob animation — gentle vertical hop while moving.
 	_bob_phase += delta * (8.0 if _is_fleeing else 3.0)

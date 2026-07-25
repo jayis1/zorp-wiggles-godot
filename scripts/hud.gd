@@ -517,6 +517,7 @@ func _process(delta: float) -> void:
 				msg_fade.tween_callback(func():
 					message_text.visible = false
 					message_text.modulate.a = 1.0
+					message_text.scale = Vector2.ONE
 				)
 				message_text.set_meta("_msg_tween", msg_fade)
 
@@ -973,6 +974,21 @@ func show_message(text: String, duration: float = 2.0) -> void:
 		if message_text.has_meta("_msg_tween") and is_instance_valid(message_text.get_meta("_msg_tween") as Tween):
 			(message_text.get_meta("_msg_tween") as Tween).kill()
 		message_text.modulate.a = 1.0
+		# ── Entrance pop: scale in from 0.8 → 1.0 with ease-out-back for a
+		#    quick overshoot, mirroring the level-up text's pop-in. This gives
+		#    every notification (mission complete, lore, boss spawn, etc.) a
+		#    consistent juicy entrance instead of a flat text swap. The pivot
+		#    is set to the label's center so the scale grows from the middle,
+		#    not the top-left corner. The tween is tracked via meta so a new
+		#    message can kill it and restart cleanly.
+		if not message_text.has_meta("_pivot_set"):
+			message_text.pivot_offset = message_text.size / 2.0
+			message_text.set_meta("_pivot_set", true)
+		message_text.scale = Vector2(0.8, 0.8)
+		var pop_tween := create_tween()
+		pop_tween.tween_property(message_text, "scale", Vector2.ONE, 0.22) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		message_text.set_meta("_msg_tween", pop_tween)
 	message_text.text = text
 	message_text.visible = true
 	message_timer = duration

@@ -124,6 +124,63 @@ func _set_visible(v: bool) -> void:
 	_bg.visible = v
 	_panel.visible = v
 
+# ── Entrance / exit animation ── The panel slides up from below + fades in
+#    when dialogue starts, and slides down + fades out when it ends. This
+#    matches the pause menu and boss bar entrance language so all UI panels
+#    feel cohesive. The backdrop fades independently. A tracked tween on the
+#    panel lets _end() kill an in-progress entrance if the player skips
+#    immediately. The panel's pivot_offset is set to its center so the
+#    optional scale overshoot grows from the middle.
+var _panel_tween: Tween = null
+var _bg_tween: Tween = null
+
+func _animate_in() -> void:
+	if _panel_tween and _panel_tween.is_valid():
+		_panel_tween.kill()
+	if _bg_tween and _bg_tween.is_valid():
+		_bg_tween.kill()
+	# Backdrop fade-in
+	_bg.modulate.a = 0.0
+	_bg_tween = create_tween()
+	_bg_tween.tween_property(_bg, "modulate:a", 1.0, 0.2) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# Panel slide-up + fade — start 30px below resting position
+	var rest_y: float = _panel.position.y
+	_panel.position.y = rest_y + 30.0
+	_panel.modulate.a = 0.0
+	_panel_tween = create_tween()
+	_panel_tween.set_parallel(true)
+	_panel_tween.tween_property(_panel, "modulate:a", 1.0, 0.22) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_panel_tween.tween_property(_panel, "position:y", rest_y, 0.3) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
+func _animate_out(on_done: Callable) -> void:
+	if _panel_tween and _panel_tween.is_valid():
+		_panel_tween.kill()
+	if _bg_tween and _bg_tween.is_valid():
+		_bg_tween.kill()
+	var rest_y: float = _panel.position.y
+	_panel_tween = create_tween()
+	_panel_tween.set_parallel(true)
+	_panel_tween.tween_property(_panel, "modulate:a", 0.0, 0.18) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_panel_tween.tween_property(_panel, "position:y", rest_y + 20.0, 0.2) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	_bg_tween = create_tween()
+	_bg_tween.tween_property(_bg, "modulate:a", 0.0, 0.18) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	# Hide + restore after the animation so the next dialogue starts clean
+	_panel_tween.chain().tween_callback(func():
+		_panel.visible = false
+		_bg.visible = false
+		_panel.modulate.a = 1.0
+		_bg.modulate.a = 1.0
+		_panel.position.y = rest_y
+		if on_done.is_valid():
+			on_done.call()
+	)
+
 # ─── Public API ──────────────────────────────────────────────────────────────
 
 func show_dialogue(npc_name: String, lines: Array, npc_node: Node) -> void:
@@ -137,6 +194,7 @@ func show_dialogue(npc_name: String, lines: Array, npc_node: Node) -> void:
 	_is_active = true
 	_name_label.text = npc_name
 	_set_visible(true)
+	_animate_in()
 	_update_text_display()
 
 func is_active() -> bool:
@@ -155,7 +213,13 @@ func _advance() -> void:
 
 func _end() -> void:
 	_is_active = false
-	_set_visible(false)
+	# Defer the NPC callback and state cleanup until the exit animation
+	# finishes so the panel doesn't disappear before the slide-out completes.
+	# The _is_active flag is cleared immediately so input/typewriter stop
+	# processing right away, but the visual exit lingers ~0.2s for polish.
+	_animate_out(_finish_end)
+
+func _finish_end() -> void:
 	if _npc and is_instance_valid(_npc) and _npc.has_method("end_dialogue"):
 		_npc.end_dialogue()
 	_npc = null
