@@ -462,6 +462,9 @@ func _enter_enrage() -> void:
 		enrage_tween.tween_property(_material, "albedo_color",
 			GameConstants.ANCIENT_SENTINEL_ENRAGE_COLOR, 0.6)
 		base_color = GameConstants.ANCIENT_SENTINEL_ENRAGE_COLOR
+	# Keep current_color in sync with base_color so systems that save/restore
+	# it (mind control, variant tinting) use the enraged color.
+	current_color = base_color
 	GameManager.add_message("Ancient Sentinel awakens — ENRAGE!")
 	ParticleEffects.spawn_mega_explosion(get_parent(), global_position,
 		GameConstants.ANCIENT_SENTINEL_ENRAGE_COLOR)

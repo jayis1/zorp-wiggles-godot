@@ -228,6 +228,9 @@ func _enter_stage_3() -> void:
 		enrage_tween.tween_property(_material, "albedo_color",
 			GameConstants.VOID_LEVIATHAN_ENRAGE_COLOR, 0.6)
 		base_color = GameConstants.VOID_LEVIATHAN_ENRAGE_COLOR
+	# Keep current_color in sync with base_color so systems that save/restore
+	# it (mind control, variant tinting) use the enraged color.
+	current_color = base_color
 	GameManager.add_message("Void Leviathan is ENRAGED!")
 	ParticleEffects.spawn_mega_explosion(get_parent(), global_position,
 		GameConstants.VOID_LEVIATHAN_ENRAGE_COLOR)

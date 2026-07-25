@@ -129,6 +129,10 @@ func _ready() -> void:
 	wander_timer = randf_range(2.0, 5.0)
 
 	# Set up material with base color
+	# Sync current_color to base_color so systems that read/restore it
+	# (mind control, variant tinting) use the actual enemy color, not
+	# the default Color.RED that the var was initialised with.
+	current_color = base_color
 	if body_mesh:
 		_material = StandardMaterial3D.new()
 		_material.albedo_color = base_color

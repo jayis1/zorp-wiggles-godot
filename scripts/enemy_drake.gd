@@ -84,6 +84,10 @@ func _enter_enrage() -> void:
 		enrage_tween.tween_property(_material, "albedo_color",
 			Color(1.0, 0.2, 0.0), 0.5)
 		base_color = Color(1.0, 0.2, 0.0)
+	# Keep current_color in sync with base_color so systems that save/restore
+	# it (mind control, variant tinting) use the enraged color, not the
+	# pre-enrage color that current_color was initialised with.
+	current_color = base_color
 	GameManager.add_message("Plasma Drake is enraged!")
 
 func _update_boss_attacks(delta: float) -> void:
