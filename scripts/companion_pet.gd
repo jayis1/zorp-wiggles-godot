@@ -636,6 +636,23 @@ func _update_attack(delta: float) -> void:
 							_apply_ice_shard_slow(enemy)
 						GameConstants.PetPath.ELECTRIC:
 							_electric_chain_zap(enemy, dmg)
+		# ── Melee lunge ── A quick forward dash toward the target on the
+		#    attack frame, mirroring the enemy lunge. Gives the pet's melee
+		#    attack a sense of commitment and impact — the pet physically
+		#    moves toward the enemy instead of standing still and scaling.
+		#    The lunge is small (0.5m) and fast (0.1s) so it doesn't overshoot
+		#    or interfere with the pet's follow movement. Skipped for ranged
+		#    paths (they fire from distance). The lunge uses global_position
+		#    (not mesh local) because the pet is a Node3D, not a
+		#    CharacterBody3D with a collider that needs to stay accurate.
+		if not is_ranged_path:
+			var lunge_dir: Vector3 = (enemy.global_position - global_position).normalized()
+			lunge_dir.y = 0.0
+			if lunge_dir.length_squared() > 0.01:
+				var lunge_tween := create_tween()
+				lunge_tween.tween_property(self, "global_position",
+					global_position + lunge_dir * 0.5, 0.1) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		# Visual pop on attack
 		if _mesh:
 			var pop := create_tween()
