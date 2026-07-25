@@ -231,8 +231,11 @@ func _update_beam_phase(delta: float) -> void:
 			_beam_material.emission_energy_multiplier = 3.0
 			if _beam_ray:
 				_beam_ray.enabled = true
-		# Audio cue — deep rumble for the death ray activation (was generic enemy-hit)
-		AudioManager.play_sfx(AudioManager.SFX_ARENA)
+			# Audio cue — deep rumble for the death ray activation.
+			# Played ONCE when the beam activates (not every frame during the
+			# warn telegraph). Previously this was outside the if-block, causing
+			# ~60 SFX plays per second for the entire warn duration.
+			AudioManager.play_sfx(AudioManager.SFX_ARENA)
 	else:
 		# Rotate the beam around the Y axis
 		var rotate_speed: float = GameConstants.ANCIENT_SENTINEL_BEAM_ROTATE_SPEED
