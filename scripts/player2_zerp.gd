@@ -72,6 +72,9 @@ var _skin_emission_mult: float = 1.0
 # ─── Combat ───────────────────────────────────────────────────────────────────
 var shoot_cooldown_timer: float = 0.0
 var pulse_wave_cooldown_timer: float = 0.0
+# ── Tracked shoot pulse tween ── Tracks the shoot recoil + scale pulse so
+#    rapid fire doesn't stack tweens. P2 parity with P1.
+var _shoot_pulse_tween: Tween = null
 const PROJECTILE_SCENE := preload("res://scenes/entities/projectile.tscn")
 const PULSE_WAVE_SCENE := preload("res://scenes/entities/pulse_wave.tscn")
 
@@ -570,11 +573,32 @@ func _spawn_projectile() -> void:
 	# ── Phase 30: Adaptive shoot SFX — P2 also gets per-mod shoot sounds ──
 	# P2 shares P1's equipped mod, so the same adaptive SFX mapping applies.
 	AudioManager.play_shoot_sfx(mod_id)
-	# Scale pulse on shoot
+	# Scale pulse + recoil on shoot — P2 parity with P1's shoot juice.
+	# The recoil nudges the mesh backward (opposite the shoot direction)
+	# using tween_method so mesh.position.y (owned by the idle bob) is
+	# preserved. Tracked tween prevents stacking during rapid fire.
 	if mesh and not is_dashing:
-		var t := create_tween()
-		t.tween_property(mesh, "scale", Vector3.ONE * 1.12, 0.04).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-		t.tween_property(mesh, "scale", Vector3.ONE, 0.07).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		if _shoot_pulse_tween and _shoot_pulse_tween.is_valid():
+			_shoot_pulse_tween.kill()
+		_shoot_pulse_tween = create_tween()
+		var recoil_dir := -shoot_dir
+		recoil_dir.y = 0.0
+		if recoil_dir.length_squared() > 0.01:
+			recoil_dir = recoil_dir.normalized()
+			_shoot_pulse_tween.tween_method(
+				func(offset: float):
+					mesh.position.x = recoil_dir.x * offset
+					mesh.position.z = recoil_dir.z * offset,
+				0.0, 0.06, 0.04
+			).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			_shoot_pulse_tween.tween_method(
+				func(offset: float):
+					mesh.position.x = recoil_dir.x * offset
+					mesh.position.z = recoil_dir.z * offset,
+				0.06, 0.0, 0.09
+			).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		_shoot_pulse_tween.parallel().tween_property(mesh, "scale", Vector3.ONE * 1.12, 0.04).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		_shoot_pulse_tween.parallel().tween_property(mesh, "scale", Vector3.ONE, 0.07).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	# Camera micro-recoil
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
@@ -963,6 +987,7 @@ func _update_cosmetic_color(_delta: float) -> void:
 # Clean up signal connections when P2 is freed (drop-out or bleed-out).
 func _exit_tree() -> void:
 	_dismiss_idle_aura()
+	_shoot_pulse_tween = null
 	if CoOpManager:
 		if CoOpManager.p2_damaged.is_connected(_on_p2_damaged):
 			CoOpManager.p2_damaged.disconnect(_on_p2_damaged)

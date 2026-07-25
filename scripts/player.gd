@@ -96,6 +96,10 @@ var _idle_phase: float = 0.0  # Phase accumulator for idle breathing
 #    shot so rapid fire never stacks tweens.
 var _muzzle_light: OmniLight3D = null
 var _muzzle_tween: Tween = null
+# ── Tracked shoot pulse tween ── Tracks the shoot recoil + scale pulse so
+#    rapid fire doesn't stack tweens. Each shot kills the previous pulse
+#    and restarts from rest, keeping the recoil crisp at all fire rates.
+var _shoot_pulse_tween: Tween = null
 const _IDLE_BOB_AMPLITUDE: float = 0.04  # Subtle vertical bob (meters)
 const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
 const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
@@ -278,6 +282,7 @@ func _on_game_restarted_player() -> void:
 	# the next shot creates a fresh one in the new scene.
 	_muzzle_light = null
 	_muzzle_tween = null
+	_shoot_pulse_tween = null
 
 func _on_player_levelup_pet_emote(_level: int) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
@@ -1713,14 +1718,48 @@ func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Col
 	# every shot — single or spread — at the same perceived volume and timbre,
 	# so rapid fire stays crisp and distinct.
 	# Quick scale pulse on shoot for juicy feedback (skip if dashing to avoid tween conflict)
+	# ── Shoot recoil ── A subtle backward nudge opposite the shoot direction,
+	#    giving each shot physical "kick" — Zorp leans back from the shot
+	#    then springs forward. The recoil is tiny (~0.06m) so it doesn't
+	#    interfere with aiming, but it reads as the gun pushing Zorp back.
+	#    Combined with the scale pulse, this makes shooting feel weighty
+	#    instead of weightless. The mesh position is nudged in local space
+	#    (not global_position, which would move the collider) so the hitbox
+	#    stays accurate. Only X/Z are tweened — the Y component is owned by
+	#    the idle/walk bob in _process, so we use tween_method to write only
+	#    the horizontal offset and preserve mesh.position.y. Uses a tracked
+	#    tween so rapid fire doesn't stack recoils.
 	if mesh and not is_dashing:
-		var pulse_tween := create_tween()
-		pulse_tween.tween_property(mesh, "scale", Vector3.ONE * 1.12, 0.04) \
-			.set_ease(Tween.EASE_OUT) \
-			.set_trans(Tween.TRANS_CUBIC)
-		pulse_tween.tween_property(mesh, "scale", Vector3.ONE, 0.07) \
-			.set_ease(Tween.EASE_OUT) \
-			.set_trans(Tween.TRANS_ELASTIC)
+		if _shoot_pulse_tween and _shoot_pulse_tween.is_valid():
+			_shoot_pulse_tween.kill()
+		_shoot_pulse_tween = create_tween()
+		# Compute recoil direction (opposite of shoot direction, horizontal only)
+		var recoil_dir := -shoot_dir
+		recoil_dir.y = 0.0
+		if recoil_dir.length_squared() > 0.01:
+			recoil_dir = recoil_dir.normalized()
+			# Phase 1: snap backward (impact frame, 40ms) — tween_method
+			# preserves mesh.position.y (owned by the bob) while writing X/Z.
+			_shoot_pulse_tween.tween_method(
+				func(offset: float):
+					mesh.position.x = recoil_dir.x * offset
+					mesh.position.z = recoil_dir.z * offset,
+				0.0, 0.06, 0.04
+			).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			# Phase 2: spring back to center with elastic overshoot
+			_shoot_pulse_tween.tween_method(
+				func(offset: float):
+					mesh.position.x = recoil_dir.x * offset
+					mesh.position.z = recoil_dir.z * offset,
+				0.06, 0.0, 0.09
+			).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		# Scale pulse runs in parallel with the recoil
+		_shoot_pulse_tween.parallel().tween_property(mesh, "scale",
+			Vector3.ONE * 1.12, 0.04) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		_shoot_pulse_tween.parallel().tween_property(mesh, "scale",
+			Vector3.ONE, 0.07) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 	# ── Muzzle flash: a brief OmniLight3D at the shoot origin that flares the
 	#    projectile's color, then fades in ~60ms. This adds a punchy light burst
