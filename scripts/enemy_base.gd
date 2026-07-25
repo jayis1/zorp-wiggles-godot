@@ -990,6 +990,34 @@ func _die() -> void:
 	# are NOT arena-bound, so we do NOT call clear_current_boss() here. ──
 	if is_world_boss:
 		GameManager.boss_defeated.emit(self)
+	# ── Boss death spectacle for arena-promoted and world bosses ──
+	# Dedicated boss scripts (Drake, Void Leviathan, Ancient Sentinel, Shadow
+	# Clone) call spawn_boss_death_spectacle() in their own _die() override.
+	# But arena-promoted regular enemies and world bosses fall through to this
+	# base _die(), so they only got the standard death poof + shockwave — a
+	# flat finale for such a climactic kill. Now ALL boss-tier deaths get the
+	# full spectacle: mega explosion + sky beam + 200-particle ring shockwave,
+	# a heavy 0.6 camera trauma (vs 0.35 cap for normal enemies), and a 90ms
+	# hit-stop freeze (0.04x time scale) so the killing blow lands with real
+	# weight. The hit-stop uses the same scene-tree timer + ignore_time_scale
+	# pattern as the projectile's _trigger_hitstop so it survives the enemy's
+	# queue_free and restores Engine.time_scale to 1.0 exactly on time.
+	var _is_promoted_boss: bool = is_arena_boss or is_world_boss
+	if _is_promoted_boss:
+		ParticleEffects.spawn_boss_death_spectacle(
+			get_parent(), global_position, base_color, base_scale)
+		# Override the normal death camera trauma with a heavier boss shake.
+		# The normal _trigger_camera_trauma call below still runs, but
+		# add_trauma() accumulates so we just add the boss delta on top.
+		_trigger_camera_trauma(0.6)
+		# Boss-kill hit-stop — 90ms near-stop freeze for weighty kill blow.
+		# Scene-tree timer with ignore_time_scale=true so the restore fires
+		# in real-time seconds regardless of the freeze scale.
+		Engine.time_scale = 0.04
+		var hs_tree := get_tree()
+		if hs_tree:
+			var hs_timer := hs_tree.create_timer(0.09, true, false, true)
+			hs_timer.timeout.connect(func(): Engine.time_scale = 1.0)
 	# Remove from GameManager's enemy list to prevent the array from growing
 	# with invalid references over time (performance leak).
 	GameManager.enemies.erase(self)

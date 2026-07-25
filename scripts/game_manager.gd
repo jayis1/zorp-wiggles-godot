@@ -702,6 +702,19 @@ func _check_combo_milestone(combo: int) -> void:
 	# Phase 6: Combo milestone fireworks
 	if player and is_instance_valid(player):
 		ParticleEffects.spawn_combo_fireworks(player.get_parent(), player.global_position, tier)
+	# ── Combo milestone camera juice ── A small trauma bump that scales with
+	#    tier so high-tier combos (x15, x20+) feel increasingly triumphant.
+	#    Tier 1 (x5) = 0.08 (barely a flutter), tier 2 (x10) = 0.16, tier 3
+	#    (x15) = 0.24, etc. Capped at 0.4 so it never overwhelms combat
+	#    readability. Combined with the existing fireworks + XP bonus + HUD
+	#    flash, this makes combo milestones a multi-sensory reward.
+	_trigger_camera_trauma(clampf(float(tier) * 0.08, 0.08, 0.4))
+	# ── FOV kick for high-tier combos ── Tiers 3+ (x15+) get a small FOV
+	#    widen (scales with tier, capped at 5°) for a "rising tension" feel
+	#    that eases back automatically. Lower tiers skip this so the camera
+	#    doesn't breathe during frequent early milestones.
+	if tier >= 3 and camera_rig and camera_rig.has_method("kick_fov"):
+		camera_rig.kick_fov(clampf(float(tier) * 1.5, 3.0, 5.0))
 
 func add_pickup_streak() -> void:
 	player_pickup_streak += 1
@@ -718,6 +731,17 @@ func add_pickup_streak() -> void:
 			gain_xp(xp_bonus)
 			pickup_streak_milestone.emit(player_pickup_streak, xp_bonus)
 			add_message("✦ PICKUP STREAK x%d! +%d XP" % [player_pickup_streak, xp_bonus])
+			# ── Pickup streak camera juice ── A gentle trauma bump (0.12) +
+			#    a small golden sparkle burst at the player's position. Pickup
+			#    streaks are a rewarding moment for explorers and collectors;
+			#    the sparkle uses the level-up gold color to echo that
+			#    celebration language. The trauma is small so it doesn't
+			#    interrupt combat flow — this is a positive buzz, not a shake.
+			_trigger_camera_trauma(0.12)
+			if player and is_instance_valid(player):
+				ParticleEffects.spawn_pickup_sparkle(
+					player.get_parent(), player.global_position,
+					Color(1.0, 0.85, 0.3))  # warm gold
 
 func add_message(text: String) -> void:
 	messages.append(text)

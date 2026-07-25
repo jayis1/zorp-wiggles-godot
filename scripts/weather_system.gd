@@ -405,6 +405,23 @@ func _finalize_transition() -> void:
 		GameManager.add_message("The weather clears up.")
 	else:
 		GameManager.add_message("☁ Weather: %s" % name)
+	# ── Weather change camera juice ── A tiny trauma bump (0.06) when the
+	#    weather actually shifts, giving the transition a subtle physical
+	#    presence — like a gust of wind or a shift in atmospheric pressure.
+	#    Clear weather gets a gentler 0.03 (settling calm). Severe weather
+	#    types (thunderstorm, meteor shower, blood moon, dimensional storm)
+	#    get a slightly stronger 0.1 to match their dramatic entrance.
+	var weather_trauma: float = 0.06
+	if _current_weather == GameConstants.Weather.CLEAR:
+		weather_trauma = 0.03
+	elif _current_weather in [GameConstants.Weather.THUNDERSTORM,
+			GameConstants.Weather.METEOR_SHOWER,
+			GameConstants.Weather.BLOOD_MOON,
+			GameConstants.Weather.DIMENSIONAL_STORM,
+			GameConstants.Weather.SANDSTORM]:
+		weather_trauma = 0.1
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(weather_trauma)
 
 # ─── Per-weather effect ticking ───────────────────────────────────────────────
 

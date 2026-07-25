@@ -229,6 +229,13 @@ func _finish_dimension_entry() -> void:
 	GameManager.add_message("🌀 %s active! %ds remaining" % [dim_name, int(_dimension_timer)])
 	# Audio cue — dimensional shift whoosh for the reality-warping transition
 	AudioManager.play_sfx(AudioManager.SFX_RIFT)
+	# ── Dimension entry camera juice ── A moderate trauma bump (0.3) for
+	#    the reality-warping shift. Entering a dimension is a major event
+	#    — the screen already does a shader wipe, and the shake adds
+	#    physical weight to the reality "snapping" into a new state.
+	#    Pairs with the SFX_RIFT whoosh for a multi-sensory transition.
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.3)
 	# ── Phase 25: Statistics tracking — record rift entry ──
 	if Statistics:
 		Statistics.record_rift_entered()
@@ -274,6 +281,11 @@ func _finish_dimension_return() -> void:
 	GameManager.add_message("🌀 Back in Normal Space")
 	# Audio cue — return to normal space
 	AudioManager.play_sfx(AudioManager.SFX_RIFT)
+	# ── Dimension return camera juice ── A gentler trauma bump (0.15) for
+	#    the return to normal space — less dramatic than entry (0.3) since
+	#    returning is a "settling" moment rather than a "warping" one.
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.15)
 
 	# Reset rift spawn timer
 	_reset_rift_spawn_timer()
