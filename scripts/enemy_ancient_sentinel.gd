@@ -439,8 +439,7 @@ func _update_enrage_extra(delta: float) -> void:
 func _apply_aoe_damage(center: Vector3, radius: float, dmg: int) -> void:
 	var p1: Node3D = get_tree().get_first_node_in_group("player")
 	if p1 and is_instance_valid(p1) and not GameManager.player_is_downed:
-		if global_position.distance_to(p1.global_position) < radius or \
-				center.distance_to(p1.global_position) < radius:
+		if center.distance_to(p1.global_position) < radius:
 			GameManager.take_damage(dmg, center)
 	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
 		if not CoOpManager.p2_is_downed and center.distance_to(CoOpManager.p2_node.global_position) < radius:
