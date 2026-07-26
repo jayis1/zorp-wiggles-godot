@@ -48,6 +48,9 @@ var _ancient_vault: Dictionary = {}
 var _ancient_vault_unlocked: bool = false
 var _vault_guardian_died_handled: bool = false
 var _rng := RandomNumberGenerator.new()
+# Entrance visual references for pulsing animation.
+var _loot_cave_entrance_visuals: Array[Dictionary] = []  # {ring_mat, light, time_offset}
+var _vault_entrance_visuals: Dictionary = {}  # {ring_mat, arch_mat, light, time_offset}
 
 # ─── Persistence ─────────────────────────────────────────────────────────────────
 const SAVE_PATH: String = "user://zorp_endgame.json"
@@ -439,6 +442,17 @@ func _build_loot_cave_entrance(cave: Dictionary) -> void:
 	root.add_child(area)
 	# Attach to the scene.
 	get_tree().current_scene.add_child(root)
+	# Spawn-in animation: scale from 0 with ease-out elastic for a satisfying reveal.
+	root.scale = Vector3.ZERO
+	var spawn_t := root.create_tween()
+	spawn_t.tween_property(root, "scale", Vector3.ONE, 0.6) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Store visual references for pulsing in update().
+	_loot_cave_entrance_visuals.append({
+		"ring_mat": mat,
+		"light": light,
+		"time_offset": randf() * TAU
+	})
 
 func _on_loot_cave_entered(body: Node, cave_id: int) -> void:
 	if not body.is_in_group("player"):
@@ -457,7 +471,11 @@ func enter_loot_cave(cave_id: int) -> void:
 		loot_cave_discovered.emit(cave_id)
 		GameManager.add_message("💎 Discovered a Loot Cave!")
 		AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
-	_spawn_loot_cave_interior(cave)
+		# Camera shake for the discovery moment.
+		var cam_rig: Node3D = GameManager.camera_rig
+		if cam_rig and cam_rig.has_method("add_trauma"):
+			cam_rig.add_trauma(0.2)
+		_spawn_loot_cave_interior(cave)
 
 func _spawn_loot_cave_interior(cave: Dictionary) -> void:
 	# Build a small interior below the surface — a single round room.
@@ -637,6 +655,17 @@ func _build_vault_entrance() -> void:
 	area.body_entered.connect(_on_vault_entered.bind(root))
 	root.add_child(area)
 	get_tree().current_scene.add_child(root)
+	# Spawn-in animation: scale from 0 with ease-out elastic.
+	root.scale = Vector3.ZERO
+	var spawn_t := root.create_tween()
+	spawn_t.tween_property(root, "scale", Vector3.ONE, 0.7) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Store visual references for pulsing in update().
+	_vault_entrance_visuals = {
+		"arch_mat": mat,
+		"light": light,
+		"time_offset": randf() * TAU
+	}
 
 func _on_vault_entered(body: Node, root: Node3D) -> void:
 	if not body.is_in_group("player"):
@@ -665,6 +694,11 @@ func try_open_vault(root: Node) -> void:
 	# Solve the puzzle (procedural: walk to N glowing runes in order).
 	_spawn_vault_puzzle(root)
 	GameManager.add_message("✦ Ancient Vault unlocked! Solve the rune puzzle to claim the legendary loot.")
+	# Dramatic SFX + camera shake for the unlock moment.
+	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(0.4)
 
 func _spawn_vault_puzzle(root: Node) -> void:
 	# Spawn ANCIENT_VAULT_PUZZLE_STEPS runes around the vault that the player
@@ -810,6 +844,26 @@ func update(delta: float) -> void:
 		_update_gauntlet(delta)
 	if _boss_gauntlet_active and not _boss_gauntlet_completed:
 		_update_boss_gauntlet(delta)
+	# Pulse entrance visuals — loot caves + ancient vault.
+	var t: float = Time.get_ticks_msec() * 0.001
+	for entry in _loot_cave_entrance_visuals:
+		var phase: float = t + entry.time_offset
+		var pulse: float = 0.7 + 0.3 * sin(phase * 2.5)
+		var rm: StandardMaterial3D = entry.ring_mat
+		if rm:
+			rm.emission_energy_multiplier = 1.5 + 1.5 * pulse
+		var lt: OmniLight3D = entry.light
+		if lt:
+			lt.light_energy = 2.5 + 2.0 * pulse
+	if not _vault_entrance_visuals.is_empty():
+		var vphase: float = t + _vault_entrance_visuals.time_offset
+		var vpulse: float = 0.6 + 0.4 * sin(vphase * 1.8)
+		var vam: StandardMaterial3D = _vault_entrance_visuals.arch_mat
+		if vam:
+			vam.emission_energy_multiplier = 0.4 + 0.6 * vpulse
+		var vlt: OmniLight3D = _vault_entrance_visuals.light
+		if vlt:
+			vlt.light_energy = 2.5 + 2.0 * vpulse
 
 # ─── Signal Handlers ───────────────────────────────────────────────────────────
 
@@ -822,6 +876,8 @@ func _on_game_restarted() -> void:
 	_boss_gauntlet_active = false
 	_boss_gauntlet_completed = false
 	# Regenerate loot caves + vault for the new world.
+	_loot_cave_entrance_visuals.clear()
+	_vault_entrance_visuals.clear()
 	call_deferred("generate_loot_caves")
 	call_deferred("generate_ancient_vault")
 

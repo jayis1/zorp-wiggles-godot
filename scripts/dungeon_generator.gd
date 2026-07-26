@@ -29,6 +29,8 @@ var _dungeons: Array[Dictionary] = []
 var _active_dungeon_id: int = -1
 var _active_root: Node3D = null  # Parent node for the live dungeon geometry
 var _rng := RandomNumberGenerator.new()
+# Entrance visual nodes for pulsing animation — parallel arrays keyed by dungeon id.
+var _entrance_nodes: Array[Dictionary] = []  # each: {ring_mat, beam, beam_mat, light, time_offset}
 
 # ─── Public API ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +55,9 @@ func _generate_all_dungeons() -> void:
 	# Seed RNG from the world seed for deterministic dungeons.
 	var seed_val: int = GameManager.world_seed if GameManager else randi()
 	_rng.seed = seed_val
+	# Clear any previous state (scene reload re-runs _ready).
+	_dungeons.clear()
+	_entrance_nodes.clear()
 	var count: int = GameConstants.DUNGEON_COUNT
 	var min_dist: float = GameConstants.DUNGEON_MIN_DISTANCE_FROM_SPAWN
 	var max_dist: float = GameConstants.DUNGEON_MAX_DISTANCE_FROM_SPAWN
@@ -175,6 +180,20 @@ func _build_entrance(dungeon: Dictionary) -> void:
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	root.add_child(label)
+	# Spawn-in animation: scale from 0 with ease-out elastic for a satisfying
+	# "emerging" reveal, matching the treasure chest and lore stone spawn-in feel.
+	root.scale = Vector3.ZERO
+	var spawn_tween := root.create_tween()
+	spawn_tween.tween_property(root, "scale", Vector3.ONE, 0.6) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Store visual references for pulsing in _process.
+	_entrance_nodes.append({
+		"ring_mat": ring_mat,
+		"beam": beam,
+		"beam_mat": beam_mat,
+		"light": light,
+		"time_offset": randf() * TAU  # Randomize phase so entrances don't sync
+	})
 
 func _on_entrance_body_entered(body: Node, dungeon_id: int) -> void:
 	if not body.is_in_group("player"):
@@ -202,6 +221,10 @@ func enter_dungeon(dungeon_id: int) -> void:
 	dungeon_entered.emit(dungeon_id, dungeon.theme)
 	GameManager.add_message("▼ Descending into %s..." % GameConstants.DUNGEON_THEME_NAMES[dungeon.theme])
 	AudioManager.play_sfx(AudioManager.SFX_FAST_TRAVEL)
+	# Camera shake for tactile descent feel.
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(0.3)
 	# Move player into the first room.
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if player and is_instance_valid(player):
@@ -481,7 +504,27 @@ func _on_reward_chest_opened(_chest: Node, _trapped: bool, dungeon_id: int) -> v
 
 # ─── Per-Frame ──────────────────────────────────────────────────────────────────
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	# Allow exiting dungeon via Esc key when inside.
 	if _active_dungeon_id >= 0 and Input.is_action_just_pressed("ui_cancel"):
 		exit_dungeon()
+		return
+	# Pulse dungeon entrance visuals — ring emission, beam rotation, light energy.
+	# Each entrance gets a phase-randomized sine pulse so they don't all sync.
+	var t: float = Time.get_ticks_msec() * 0.001
+	for entry in _entrance_nodes:
+		var phase: float = t + entry.time_offset
+		var pulse: float = 0.7 + 0.3 * sin(phase * 2.0)
+		var rm: StandardMaterial3D = entry.ring_mat
+		if rm:
+			rm.emission_energy_multiplier = 1.2 + 0.8 * pulse
+		var bm: StandardMaterial3D = entry.beam_mat
+		if bm:
+			bm.emission_energy_multiplier = 0.9 + 0.6 * pulse
+			bm.albedo_color.a = 0.35 + 0.25 * pulse
+		var lt: OmniLight3D = entry.light
+		if lt:
+			lt.light_energy = 2.0 + 1.5 * pulse
+		var beam_node: MeshInstance3D = entry.beam
+		if beam_node:
+			beam_node.rotation.y = phase * 0.5
