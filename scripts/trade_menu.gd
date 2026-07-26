@@ -38,6 +38,13 @@ var _close_rect: Rect2 = Rect2()
 var _purchase_flash_index: int = -1
 var _purchase_flash_timer: float = 0.0
 const PURCHASE_FLASH_DURATION: float = 0.35
+# ── Hover state ── Tracks which item the mouse is currently over so we can
+#    highlight it in _draw() and play a hover SFX on enter, matching the juice
+#    already present in the Button-based menus. -1 = no item hovered.
+#    The hover also drives a subtle scale pulse on the hovered row so the list
+#    feels responsive instead of static.
+var _hovered_item: int = -1
+var _hover_pulse: float = 0.0  # 0..1 eased hover scale pulse
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -69,6 +76,7 @@ func close() -> void:
 	_trader = null
 	GameManager.is_paused = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hovered_item = -1  # Clear hover so reopening doesn't start with a stale highlight
 
 func _process(delta: float) -> void:
 	var target: float = 1.0 if _is_open else 0.0
@@ -76,6 +84,13 @@ func _process(delta: float) -> void:
 	# Tick purchase flash timer so the highlight fades after buying
 	if _purchase_flash_timer > 0.0:
 		_purchase_flash_timer = maxf(0.0, _purchase_flash_timer - delta)
+	# ── Hover pulse ease ── Drive a smooth 0→1 scale pulse when an item is
+	#    hovered and ease back to 0 when the mouse leaves. Uses frame-rate-
+	#    independent exponential lerp so the pulse ramps in ~80ms and out in
+	#    ~120ms — snappy enter, softer exit — matching the Button hover feel.
+	var hover_target: float = 1.0 if _hovered_item >= 0 else 0.0
+	var hover_weight: float = 1.0 - exp(-12.0 * delta)
+	_hover_pulse = lerpf(_hover_pulse, hover_target, hover_weight)
 	if _fade_alpha > 0.01 or _is_open:
 		queue_redraw()
 	# Close on escape or trade key
@@ -100,6 +115,27 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_gui_click(event.position)
+	elif event is InputEventMouseMotion:
+		_update_hover(event.position)
+
+## Track which item the mouse is hovering over so _draw() can highlight it.
+## Plays a UI hover SFX on enter (not on every motion) so sweeping the cursor
+## across the list gives a subtle tick per row entered, mirroring the
+## Button-based menus' mouse_entered handler without the overhead of real
+## Control nodes. The _item_rects are populated by _draw() each frame, so we
+## check against the previous frame's rects — this is fine since the layout
+## is static while the menu is open.
+func _update_hover(mouse_pos: Vector2) -> void:
+	var new_hover: int = -1
+	for i in range(_item_rects.size()):
+		if _item_rects[i].has_point(mouse_pos):
+			new_hover = i
+			break
+	if new_hover != _hovered_item:
+		_hovered_item = new_hover
+		if new_hover >= 0:
+			AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+		queue_redraw()
 
 func _buy_item(index: int) -> void:
 	if index < 0 or index >= _active_items.size():
@@ -222,18 +258,34 @@ func _draw() -> void:
 		var rect := Rect2(ix, iy, item_w, item_h)
 		_item_rects.append(rect)
 
+		# ── Hover highlight ── Brighten the background and thicken the border
+		#    on the hovered row so the list feels interactive. The hover pulse
+		#    (_hover_pulse 0..1) eases in/out for a soft glow rather than a
+		#    hard snap — matches the Button-based menus' scale hover feel but
+		#    applied as a color/border blend since _draw rows can't scale.
+		var is_hovered: bool = (i == _hovered_item)
+		var hover_glow: float = _hover_pulse if is_hovered else 0.0
+
 		# Item background
 		var can_afford: bool = gloop >= item["cost"]
 		var item_bg_col := Color(0.1, 0.12, 0.22, 0.7 * a)
 		if not can_afford:
 			item_bg_col = Color(0.15, 0.08, 0.08, 0.5 * a)
+		# Blend toward a warm highlight when hovered
+		if hover_glow > 0.01:
+			var hover_bg := Color(0.2, 0.18, 0.12, 0.85 * a)
+			item_bg_col = item_bg_col.lerp(hover_bg, hover_glow)
 		draw_rect(rect, item_bg_col, true)
 
 		# Item border
 		var item_border := Color(1.0, 200.0 / 255.0, 100.0 / 255.0, 0.3 * a)
 		if can_afford:
 			item_border = Color(0.4, 1.0, 0.5, 0.4 * a)
-		var border_width: float = 1.0
+		# Hover brightens the border toward full warm orange
+		if hover_glow > 0.01:
+			var hover_border := Color(1.0, 200.0 / 255.0, 100.0 / 255.0, 0.9 * a)
+			item_border = item_border.lerp(hover_border, hover_glow)
+		var border_width: float = 1.0 + hover_glow * 1.0  # 1px → 2px on hover
 		# Purchase flash: draw a bright pulsing border on the just-bought item
 		# that fades over PURCHASE_FLASH_DURATION. Gives instant click feedback.
 		if i == _purchase_flash_index and _purchase_flash_timer > 0.0:

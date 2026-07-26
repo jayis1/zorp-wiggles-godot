@@ -12,6 +12,11 @@ var _is_open: bool = false
 var _fade_alpha: float = 0.0
 var _item_rects: Array[Rect2] = []
 var _close_rect: Rect2 = Rect2()
+# ── Hover state ── Tracks which waypoint the mouse is over so _draw() can
+#    highlight it and play a hover SFX on enter, matching the trade menu and
+#    the Button-based menus. -1 = no item hovered.
+var _hovered_item: int = -1
+var _hover_pulse: float = 0.0  # 0..1 eased hover glow
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -36,6 +41,7 @@ func close() -> void:
 	_is_open = false
 	GameManager.is_paused = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hovered_item = -1  # Clear hover so reopening doesn't start with a stale highlight
 
 # Public accessor so the player toggle can check state without touching the
 # private _is_open variable directly.
@@ -45,6 +51,11 @@ func is_open() -> bool:
 func _process(delta: float) -> void:
 	var target: float = 1.0 if _is_open else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 8.0)
+	# ── Hover pulse ease ── Smooth 0→1 glow when an item is hovered, eased
+	#    back to 0 on exit. Matches the trade menu's hover pulse timing.
+	var hover_target: float = 1.0 if _hovered_item >= 0 else 0.0
+	var hover_weight: float = 1.0 - exp(-12.0 * delta)
+	_hover_pulse = lerpf(_hover_pulse, hover_target, hover_weight)
 	if _fade_alpha > 0.01 or _is_open:
 		queue_redraw()
 	# Close on escape or the missions key (the fast_travel key is handled by
@@ -69,6 +80,25 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_gui_click(event.position)
+	elif event is InputEventMouseMotion:
+		_update_hover(event.position)
+
+## Track which waypoint the mouse is hovering over so _draw() can highlight it.
+## Plays a UI hover SFX on enter (not on every motion), mirroring the trade
+## menu and Button-based menus. _item_rects are populated by _draw() each
+## frame; we check against the previous frame's rects which is fine since
+## the layout is static while the menu is open.
+func _update_hover(mouse_pos: Vector2) -> void:
+	var new_hover: int = -1
+	for i in range(_item_rects.size()):
+		if _item_rects[i].has_point(mouse_pos):
+			new_hover = i
+			break
+	if new_hover != _hovered_item:
+		_hovered_item = new_hover
+		if new_hover >= 0:
+			AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+		queue_redraw()
 
 func _select_waypoint(index: int) -> void:
 	if not FastTravelNetwork:
@@ -158,15 +188,30 @@ func _draw() -> void:
 				break
 			var rect := Rect2(panel_x + 15, iy, panel_w - 30, item_h)
 			_item_rects.append(rect)
+			# Array index of this row in _item_rects (for hover matching).
+			# _drawn_index is 1 ahead because it's incremented before the append.
+			var item_idx: int = _item_rects.size() - 1
 			var can_afford: bool = gloop >= cost
+			# ── Hover highlight ── Brighten background + thicken border on the
+			#    hovered row so the list feels interactive. The eased _hover_pulse
+			#    gives a soft glow instead of a hard snap.
+			var is_hovered: bool = (item_idx == _hovered_item)
+			var hover_glow: float = _hover_pulse if is_hovered else 0.0
 			var item_bg := Color(0.05, 0.15, 0.18, 0.7 * a)
 			if not can_afford:
 				item_bg = Color(0.15, 0.08, 0.08, 0.5 * a)
+			if hover_glow > 0.01:
+				var hover_bg := Color(0.1, 0.25, 0.22, 0.85 * a)
+				item_bg = item_bg.lerp(hover_bg, hover_glow)
 			draw_rect(rect, item_bg, true)
 			var item_border := Color(0.3, 1.0, 0.7, 0.3 * a)
 			if can_afford:
 				item_border = Color(0.4, 1.0, 0.5, 0.4 * a)
-			draw_rect(rect, item_border, false, 1.0)
+			if hover_glow > 0.01:
+				var hover_border := Color(0.3, 1.0, 0.7, 0.9 * a)
+				item_border = item_border.lerp(hover_border, hover_glow)
+			var border_width: float = 1.0 + hover_glow * 1.0
+			draw_rect(rect, item_border, false, border_width)
 			# Icon.
 			font.draw_string(get_canvas_item(),
 				Vector2(rect.position.x + 10, rect.position.y + 22),

@@ -15,6 +15,15 @@ var _game_rects: Dictionary = {}   # game_id → Rect2 (start button)
 var _stat_rects: Dictionary = {}   # stat_id → Rect2 (spend TP button)
 var _close_btn_rect: Rect2 = Rect2()
 var _cancel_btn_rect: Rect2 = Rect2()
+# ── Hover state ── Tracks which clickable region the mouse is over so _draw()
+#    can highlight it and play a hover SFX on enter, matching the trade menu,
+#    fast travel menu, and Button-based menus. Stores the region type + id so
+#    we can detect a change across different region types (e.g. moving from a
+#    game button to a stat button).
+#    _hover_type: "game", "stat", "close", "cancel", or "" (none)
+var _hover_type: String = ""
+var _hover_id: int = -1
+var _hover_pulse: float = 0.0  # 0..1 eased hover glow
 
 const PANEL_COLOR: Color = Color(0.08, 0.06, 0.12, 0.92)
 const BORDER_COLOR: Color = Color(0.4, 0.3, 0.6, 0.8)
@@ -46,11 +55,21 @@ func _process(delta: float) -> void:
 		if GameManager and not GameManager.is_paused and GameManager.player_is_alive:
 			_visible_flag = not _visible_flag
 			AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+			if not _visible_flag:
+				_hover_type = ""
+				_hover_id = -1
 	if _visible_flag and Input.is_action_just_pressed("pause"):
 		_visible_flag = false
+		_hover_type = ""  # Clear hover so reopening doesn't start with a stale highlight
+		_hover_id = -1
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
 	mouse_filter = Control.MOUSE_FILTER_STOP if _fade_alpha > 0.5 else Control.MOUSE_FILTER_IGNORE
+	# ── Hover pulse ease ── Smooth 0→1 glow when a region is hovered, eased
+	#    back to 0 on exit. Matches the trade/fast-travel menu hover timing.
+	var hover_target: float = 1.0 if _hover_type != "" else 0.0
+	var hover_weight: float = 1.0 - exp(-12.0 * delta)
+	_hover_pulse = lerpf(_hover_pulse, hover_target, hover_weight)
 	if _fade_alpha > 0.01 or _visible_flag:
 		queue_redraw()
 
@@ -75,6 +94,39 @@ func _gui_input(event: InputEvent) -> void:
 			if _stat_rects[sid].has_point(mouse_pos):
 				PetTrainingSystem.spend_tp(sid)
 				return
+	elif event is InputEventMouseMotion:
+		_update_hover(event.position)
+
+
+## Track which clickable region the mouse is over so _draw() can highlight it.
+## Plays a UI hover SFX on enter (not on every motion), mirroring the other
+## _draw()-based menus. Checks all clickable regions each motion event and
+## updates _hover_type/_hover_id so _draw() can match against them.
+func _update_hover(mouse_pos: Vector2) -> void:
+	var new_type: String = ""
+	var new_id: int = -1
+	if _close_btn_rect.has_point(mouse_pos):
+		new_type = "close"
+	elif _cancel_btn_rect.has_point(mouse_pos):
+		new_type = "cancel"
+	else:
+		for gid in _game_rects:
+			if _game_rects[gid].has_point(mouse_pos):
+				new_type = "game"
+				new_id = gid
+				break
+		if new_type == "":
+			for sid in _stat_rects:
+				if _stat_rects[sid].has_point(mouse_pos):
+					new_type = "stat"
+					new_id = sid
+					break
+	if new_type != _hover_type or new_id != _hover_id:
+		_hover_type = new_type
+		_hover_id = new_id
+		if new_type != "":
+			AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+		queue_redraw()
 
 
 func _draw() -> void:
@@ -106,7 +158,11 @@ func _draw() -> void:
 
 	# Close button
 	_close_btn_rect = Rect2(panel_pos + Vector2(panel_w - 40, 10), Vector2(30, 30))
-	draw_rect(_close_btn_rect, Color(BTN_COLOR.r, BTN_COLOR.g, BTN_COLOR.b, BTN_COLOR.a * alpha))
+	var close_hover: float = _hover_pulse if _hover_type == "close" else 0.0
+	var close_bg := Color(BTN_COLOR.r, BTN_COLOR.g, BTN_COLOR.b, BTN_COLOR.a * alpha)
+	if close_hover > 0.01:
+		close_bg = close_bg.lerp(Color(0.4, 0.35, 0.55, 0.95 * alpha), close_hover)
+	draw_rect(_close_btn_rect, close_bg)
 	draw_string(ThemeDB.fallback_font, _close_btn_rect.position + Vector2(8, 22), "✕",
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 18, TEXT_COLOR * alpha)
 
@@ -125,7 +181,11 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, TEXT_COLOR * alpha)
 		# Cancel button
 		_cancel_btn_rect = Rect2(panel_pos + Vector2(panel_w - 140, y + 10), Vector2(110, 30))
-		draw_rect(_cancel_btn_rect, Color(0.4, 0.15, 0.15, 0.9 * alpha))
+		var cancel_hover: float = _hover_pulse if _hover_type == "cancel" else 0.0
+		var cancel_bg := Color(0.4, 0.15, 0.15, 0.9 * alpha)
+		if cancel_hover > 0.01:
+			cancel_bg = cancel_bg.lerp(Color(0.6, 0.2, 0.2, 0.95 * alpha), cancel_hover)
+		draw_rect(_cancel_btn_rect, cancel_bg)
 		draw_string(ThemeDB.fallback_font, _cancel_btn_rect.position + Vector2(30, 20),
 			"CANCEL", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, RED_COLOR * alpha)
 		y += 60
@@ -150,7 +210,11 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, int(gw - 140), 11, Color(0.6, 0.6, 0.7, alpha))
 			# Start button
 			var btn_rect: Rect2 = Rect2(Vector2(gx + gw - 120, y + 15), Vector2(100, 30))
-			draw_rect(btn_rect, Color(0.2, 0.3, 0.15, 0.9 * alpha))
+			var game_hover: float = _hover_pulse if (_hover_type == "game" and _hover_id == gid) else 0.0
+			var start_bg := Color(0.2, 0.3, 0.15, 0.9 * alpha)
+			if game_hover > 0.01:
+				start_bg = start_bg.lerp(Color(0.3, 0.45, 0.2, 0.95 * alpha), game_hover)
+			draw_rect(btn_rect, start_bg)
 			draw_string(ThemeDB.fallback_font, btn_rect.position + Vector2(28, 20),
 				"START", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, GREEN_COLOR * alpha)
 			_game_rects[gid] = btn_rect
@@ -180,13 +244,17 @@ func _draw() -> void:
 			HORIZONTAL_ALIGNMENT_LEFT, 240, 13, TEXT_COLOR * alpha)
 		# Buy button
 		var btn_rect: Rect2 = Rect2(Vector2(sx + 230, sy + 8), Vector2(80, 26))
+		var stat_hover: float = _hover_pulse if (_hover_type == "stat" and _hover_id == sid) else 0.0
 		if maxed:
 			draw_rect(btn_rect, Color(0.15, 0.3, 0.15, 0.6 * alpha))
 			draw_string(ThemeDB.fallback_font, btn_rect.position + Vector2(12, 18),
 				"MAXED", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, GREEN_COLOR * alpha)
 		elif can_buy:
 			_stat_rects[sid] = btn_rect
-			draw_rect(btn_rect, Color(0.2, 0.3, 0.15, 0.9 * alpha))
+			var buy_bg := Color(0.2, 0.3, 0.15, 0.9 * alpha)
+			if stat_hover > 0.01:
+				buy_bg = buy_bg.lerp(Color(0.3, 0.45, 0.2, 0.95 * alpha), stat_hover)
+			draw_rect(btn_rect, buy_bg)
 			draw_string(ThemeDB.fallback_font, btn_rect.position + Vector2(12, 18),
 				"+1 (%dTP)" % cost, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, GOLD_COLOR * alpha)
 		else:
