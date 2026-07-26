@@ -643,7 +643,10 @@ func start_mind_control() -> void:
 	_mind_control_timer = GameConstants.MIND_CONTROL_DURATION
 	_mind_control_original_color = current_color
 	_mind_control_target = null
-	# Visual: shift to magenta-pink hypnosis color with bright emission
+	# Visual: shift to magenta-pink hypnosis color with bright emission.
+	# Sync current_color so _flash_hit() restores to the mind-control color
+	# (not base_color) when the enemy takes damage while controlled.
+	current_color = GameConstants.MIND_CONTROL_COLOR
 	if _material:
 		_material.albedo_color = GameConstants.MIND_CONTROL_COLOR
 		_material.emission = GameConstants.MIND_CONTROL_COLOR * 0.4
@@ -671,7 +674,9 @@ func _end_mind_control() -> void:
 	is_mind_controlled = false
 	_mind_control_timer = 0.0
 	_mind_control_target = null
-	# Restore color
+	# Restore color + sync current_color so subsequent hit-flashes restore
+	# to the original color, not the mind-control color.
+	current_color = _mind_control_original_color
 	if _material:
 		_material.albedo_color = _mind_control_original_color
 		_material.emission = _mind_control_original_color * 0.15
@@ -908,7 +913,10 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		_material.emission_energy_multiplier = 4.0
 		var flash_tween := create_tween()
 		flash_tween.set_parallel(true)
-		flash_tween.tween_property(_material, "albedo_color", base_color, 0.15)
+		# Restore to current_color (not base_color) so mind-controlled enemies
+		# flash back to their MC color, enraged enemies to their enraged color, etc.
+		flash_tween.tween_property(_material, "albedo_color",
+			Color(current_color.r, current_color.g, current_color.b, _spawn_target_alpha), 0.15)
 		flash_tween.tween_property(_material, "emission_energy_multiplier",
 			_prev_emission_energy, 0.15) \
 			.set_ease(Tween.EASE_OUT) \

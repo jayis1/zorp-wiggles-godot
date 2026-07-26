@@ -205,6 +205,9 @@ func _update_enrage(delta: float, enemy: EnemyBase) -> void:
 			var enraged_color: Color = enemy.base_color.lerp(Color(1.0, 0.15, 0.15), mix_t)
 			enraged_color.a = enemy._spawn_target_alpha
 			enemy._material.albedo_color = enraged_color
+			# Sync current_color so _flash_hit() restores to the enraged color
+			# (not the pre-enrage base_color) when the enemy takes damage.
+			enemy.current_color = enraged_color
 
 	# Pulse the enrage aura
 	if is_enraged and _enrage_aura and is_instance_valid(_enrage_aura):
