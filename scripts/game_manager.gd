@@ -585,6 +585,18 @@ func _level_up() -> void:
 	_trigger_camera_trauma(0.25)
 	if camera_rig and camera_rig.has_method("kick_fov"):
 		camera_rig.kick_fov(8.0)  # Widen FOV by 8° — eases back over ~1s
+	# ── Level-up freeze-frame ── A brief world freeze (80ms at 0.15x scale)
+	#    so the level-up moment lands with weight, mirroring the crit/boss-kill
+	#    hit-stop language. The freeze is slightly longer than the crit hit-stop
+	#    (45ms @ 0.08x) because leveling is a rarer, more celebratory beat —
+	#    the player should have time to register the golden flash + shockwave.
+	#    The restore timer uses ignore_time_scale=true so the freeze lasts
+	#    exactly 80ms of real time regardless of DimensionSystem time scale.
+	#    Restores to 1.0 because per-node _time_scale multipliers handle
+	#    dimension slow-down (same pattern as all other hit-stops).
+	Engine.time_scale = 0.15
+	var lv_timer := get_tree().create_timer(0.08, true, false, true)
+	lv_timer.timeout.connect(func(): Engine.time_scale = 1.0)
 
 func add_score(amount: int) -> void:
 	player_score += amount

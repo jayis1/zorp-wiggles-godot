@@ -163,10 +163,56 @@ func use_consumable(type: int) -> bool:
 			# Instant AoE explosion at player position
 			_detonate_void_bomb()
 			GameManager.add_message("💥 Void Bomb!")
+	# ── Consumable visual juice ── A color-matched particle burst + light
+	#    flash + mesh scale pop on the player makes using a consumable feel
+	#    tactile rather than just a text message + sound. Void Bomb already
+	#    gets a mega explosion from _detonate_void_bomb(), so it's excluded.
+	#    The pickup_sparkle uses the consumable's theme color (red for Health,
+	#    cyan for Speed, blue for Shield, orange for Power) so the player
+	#    can tell at a glance which buff just activated. The mesh pop is a
+	#    quick 1.2× scale bounce (TRANS_ELASTIC) — the same language as the
+	#    shoot scale pulse but slightly larger to distinguish "item used"
+	#    from "fired weapon". The light flash is a brief OmniLight3D in the
+	#    consumable color that fades over 0.3s, readable even in dark biomes.
+	if type != GameConstants.Consumable.VOID_BOMB:
+		_spawn_consumable_juice(type)
 	# Play SFX — dedicated consumable sound (was reusing SFX_LEVEL_UP)
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_CONSUMABLE)
 	return true
+
+# Spawn visual juice (particle burst + light flash + mesh pop) on the player
+# when a consumable is used. Color-matched to the consumable type.
+func _spawn_consumable_juice(type: int) -> void:
+	if not GameManager.player or not is_instance_valid(GameManager.player):
+		return
+	var player: Node3D = GameManager.player
+	var pos: Vector3 = player.global_position
+	var color: Color = GameConstants.CONSUMABLE_COLORS[type]
+	var parent: Node = player.get_parent()
+	# Particle burst (consumable-colored sparkle)
+	if parent and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(parent, pos + Vector3(0, 0.8, 0), color)
+	# Light flash — brief OmniLight3D in the consumable color
+	var light := OmniLight3D.new()
+	light.light_color = color
+	light.light_energy = 4.0
+	light.omni_range = 6.0
+	light.omni_attenuation = 1.2
+	parent.add_child(light)
+	light.global_position = pos + Vector3(0, 1.0, 0)
+	var light_tween := parent.create_tween()
+	light_tween.tween_property(light, "light_energy", 0.0, 0.3).set_ease(Tween.EASE_OUT)
+	light_tween.parallel().tween_property(light, "omni_range", 1.0, 0.3).set_ease(Tween.EASE_IN)
+	light_tween.tween_callback(light.queue_free)
+	# Mesh scale pop — 1.2× bounce on the player's body mesh (if accessible)
+	var mesh: Node3D = player.get("mesh") if "mesh" in player else null
+	if mesh and is_instance_valid(mesh):
+		var pop_tween := player.create_tween()
+		pop_tween.tween_property(mesh, "scale", Vector3(1.2, 1.2, 1.2), 0.06) \
+			.set_ease(Tween.EASE_OUT)
+		pop_tween.tween_property(mesh, "scale", Vector3.ONE, 0.18) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 ## Detonate a Void Bomb at the player's position, damaging all enemies in radius.
 func _detonate_void_bomb() -> void:
