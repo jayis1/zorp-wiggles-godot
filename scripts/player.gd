@@ -140,6 +140,19 @@ var _heartbeat_phase: float = 0.0
 const _HEARTBEAT_BPM: float = 90.0       # Heartbeat tempo (faster = more urgent)
 const _HEARTBEAT_HP_THRESHOLD: float = 0.25  # Start heartbeat below 25% HP
 const _HEARTBEAT_SCALE_AMP: float = 0.06     # Scale pulse amplitude (subtle)
+# ── Heartbeat audio ── Tracks the previous beat phase so we fire the "lub-dub"
+#    SFX exactly once per beat cycle, synchronized with the visual pulse. The
+#    audio intensity scales from 0.0 (just crossed the HP threshold) to 1.0
+#    (near death), mirroring the visual urgency. The BPM also increases as HP
+#    drops — at 25% HP it's 90 BPM (baseline), at 5% HP it's ~140 BPM — so the
+#    heartbeat audibly accelerates as the player nears death, matching the
+#    visual acceleration. This is the classic "Doom critical health" audio
+#    cue — the player feels the urgency through sound even if they're not
+#    looking at the HP bar.
+var _heartbeat_prev_phase: float = 0.0
+var _heartbeat_audio_active: bool = false
+const _HEARTBEAT_BPM_CRITICAL: float = 140.0  # BPM at near-zero HP
+const _HEARTBEAT_HP_CRITICAL: float = 0.05     # HP ratio for max BPM
 
 # ── Movement lean: Zorp's mesh tilts subtly toward the direction of motion,
 #    giving a sense of weight and momentum. The lean is smoothed via exponential
@@ -571,13 +584,36 @@ func _update_low_hp_heartbeat(delta: float) -> void:
 		if mesh and not is_dashing and not is_sliding and not is_invuln_blinking:
 			# Ease scale back to ONE only if it was offset by heartbeat
 			mesh.scale = mesh.scale.lerp(Vector3.ONE, 1.0 - exp(-12.0 * delta))
+		_heartbeat_audio_active = false
 		return
 	if is_dashing or is_sliding or is_invuln_blinking:
 		return  # Other systems own mesh.scale/visibility right now
 
+	# ── Dynamic BPM: accelerate as HP drops toward zero ──
+	# At 25% HP → 90 BPM (baseline), at 5% HP → 140 BPM (critical).
+	# Linear interpolation between the two thresholds, clamped.
+	var heartbeat_bpm: float = _HEARTBEAT_BPM
+	if hp_ratio <= _HEARTBEAT_HP_CRITICAL:
+		heartbeat_bpm = _HEARTBEAT_BPM_CRITICAL
+	else:
+		var bpm_t: float = 1.0 - (hp_ratio - _HEARTBEAT_HP_CRITICAL) / (_HEARTBEAT_HP_THRESHOLD - _HEARTBEAT_HP_CRITICAL)
+		heartbeat_bpm = lerpf(_HEARTBEAT_BPM, _HEARTBEAT_BPM_CRITICAL, clampf(bpm_t, 0.0, 1.0))
+
 	# Advance heartbeat phase (BPM → rad/s)
-	_heartbeat_phase += delta * (_HEARTBEAT_BPM / 60.0) * TAU
+	_heartbeat_phase += delta * (heartbeat_bpm / 60.0) * TAU
 	var beat_phase: float = fmod(_heartbeat_phase, TAU)  # 0..TAU per beat
+
+	# ── Heartbeat audio: fire once per beat cycle at phase ~0 (the "lub") ──
+	# Detect the wrap-around (phase went from near-TAU back to near-0) to
+	# trigger exactly one SFX per beat. The audio intensity scales with how
+	# close to death the player is (0 at threshold, 1 at 0 HP).
+	if _heartbeat_prev_phase > TAU * 0.5 and beat_phase < TAU * 0.5:
+		# Phase wrapped — new beat started
+		if not _heartbeat_audio_active:
+			_heartbeat_audio_active = true
+		var audio_intensity: float = 1.0 - clampf(hp_ratio / _HEARTBEAT_HP_THRESHOLD, 0.0, 1.0)
+		AudioManager.play_heartbeat_sfx(audio_intensity)
+	_heartbeat_prev_phase = beat_phase
 
 	# Double-pulse "lub-dub": two Gaussian bumps, first at phase 0, second at ~0.35*TAU
 	# The first pulse is stronger (the "lub"), the second is softer (the "dub").

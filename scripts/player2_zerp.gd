@@ -45,9 +45,14 @@ const _IDLE_BOB_AMPLITUDE: float = 0.04
 const _IDLE_BOB_SPEED: float = 2.5
 # ── Low-HP heartbeat constants (matching P1) ──
 const _HEARTBEAT_BPM: float = 75.0
+const _HEARTBEAT_BPM_CRITICAL: float = 125.0  # BPM at near-zero HP (P2 slightly lower than P1)
+const _HEARTBEAT_HP_CRITICAL: float = 0.05     # HP ratio for max BPM
 const _HEARTBEAT_SCALE_AMP: float = 0.06
 const _HEARTBEAT_HP_THRESHOLD: float = 0.25
 var _heartbeat_phase: float = 0.0
+# ── Heartbeat audio tracking (matches P1) — fires SFX once per beat cycle ──
+var _heartbeat_prev_phase: float = 0.0
+var _heartbeat_audio_active: bool = false
 
 # ── Landing effect: tracks whether P2 is airborne (reverse-gravity, etc.) ──
 var _was_airborne: bool = false
@@ -431,12 +436,32 @@ func _update_low_hp_heartbeat(delta: float) -> void:
 		# Not in danger — ensure mesh scale is at rest
 		if mesh and not is_dashing and not is_sliding:
 			mesh.scale = mesh.scale.lerp(Vector3.ONE, 1.0 - exp(-12.0 * delta))
+		_heartbeat_audio_active = false
 		return
 	if is_dashing or is_sliding:
 		return  # Other systems own mesh.scale right now
+
+	# ── Dynamic BPM: accelerate as HP drops toward zero (matches P1) ──
+	var heartbeat_bpm: float = _HEARTBEAT_BPM
+	if hp_ratio <= _HEARTBEAT_HP_CRITICAL:
+		heartbeat_bpm = _HEARTBEAT_BPM_CRITICAL
+	else:
+		var bpm_t: float = 1.0 - (hp_ratio - _HEARTBEAT_HP_CRITICAL) / (_HEARTBEAT_HP_THRESHOLD - _HEARTBEAT_HP_CRITICAL)
+		heartbeat_bpm = lerpf(_HEARTBEAT_BPM, _HEARTBEAT_BPM_CRITICAL, clampf(bpm_t, 0.0, 1.0))
+
 	# Advance heartbeat phase (BPM -> rad/s)
-	_heartbeat_phase += delta * (_HEARTBEAT_BPM / 60.0) * TAU
+	_heartbeat_phase += delta * (heartbeat_bpm / 60.0) * TAU
 	var beat_phase: float = fmod(_heartbeat_phase, TAU)
+
+	# ── Heartbeat audio: fire once per beat cycle at phase ~0 (the "lub") ──
+	if _heartbeat_prev_phase > TAU * 0.5 and beat_phase < TAU * 0.5:
+		# Phase wrapped — new beat started
+		if not _heartbeat_audio_active:
+			_heartbeat_audio_active = true
+		var audio_intensity: float = 1.0 - clampf(hp_ratio / _HEARTBEAT_HP_THRESHOLD, 0.0, 1.0)
+		AudioManager.play_heartbeat_sfx(audio_intensity)
+	_heartbeat_prev_phase = beat_phase
+
 	# Double-pulse "lub-dub"
 	var pulse1: float = exp(-pow((beat_phase - 0.0) * 2.5, 2.0))
 	var pulse2: float = exp(-pow((beat_phase - TAU * 0.32) * 3.5, 2.0)) * 0.6

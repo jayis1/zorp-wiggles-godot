@@ -119,6 +119,17 @@ const SFX_PET_EVOLVE: String = "pet_evolve"       # Pet evolution (major milesto
 #    per cooldown cycle (triggered by the cooldown indicator's edge detection).
 const SFX_DASH_READY: String = "dash_ready"
 
+# ── Low-HP heartbeat SFX ── A procedural "lub-dub" heartbeat sound that pairs
+#    with the existing visual heartbeat (mesh scale pulse + emission flash)
+#    in player.gd / player2_zerp.gd. Two low-frequency thumps per beat: the
+#    first ("lub") is louder and longer, the second ("dub") is softer and
+#    shorter — the classic cardiac auscultation pattern. A low sine fundamental
+#    (~55 Hz) plus a slightly higher body (~110 Hz) gives it a felt-in-the-chest
+#    quality rather than a tonal beep. play_heartbeat_sfx(intensity) scales the
+#    volume by how close the player is to death (0..1), so the heartbeat grows
+#    louder and more urgent as HP drops — mirroring the visual urgency.
+const SFX_HEARTBEAT: String = "heartbeat"
+
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 # Per-weapon-mod shoot sound variants. Each mod gets a distinct SFX so the
 # player hears the weapon change — a standard laser zaps, a black hole
@@ -359,6 +370,41 @@ func _build_mod_shoot_sfx_map() -> void:
 	_mod_shoot_sfx[WM.VOID_RIFT_CUTTER] = SFX_SHOOT_VOID
 	_mod_shoot_sfx[WM.MIND_CONTROL_DART] = SFX_SHOOT_UTILITY  # Mind control — soft hypnotic chime
 
+# ── Low-HP heartbeat audio ── Plays the heartbeat SFX at a scaled volume.
+#    intensity (0..1) maps to volume — 0.0 is barely audible (just crossed the
+#    threshold), 1.0 is full heartbeat volume (near death). This mirrors the
+#    visual heartbeat's urgency curve so the audio and visual stay in sync.
+#    We use a dedicated SFX pool slot rather than the round-robin pool to
+#    prevent the heartbeat from stealing a player's combat SFX slot (and vice
+#    versa) during intense fights — a dedicated player guarantees the heartbeat
+#    always has a voice available without cutting off a shoot/dash sound.
+var _heartbeat_sfx_player: AudioStreamPlayer = null
+func play_heartbeat_sfx(intensity: float) -> void:
+	if not _initialized:
+		return
+	if not _sfx_streams.has(SFX_HEARTBEAT):
+		return
+	if intensity <= 0.0:
+		return
+	# Clamp intensity to 0..1 for safety
+	intensity = clampf(intensity, 0.0, 1.0)
+	# Lazy-init the dedicated heartbeat player
+	if not _heartbeat_sfx_player:
+		_heartbeat_sfx_player = AudioStreamPlayer.new()
+		_heartbeat_sfx_player.bus = "Master"
+		add_child(_heartbeat_sfx_player)
+	_heartbeat_sfx_player.stream = _sfx_streams[SFX_HEARTBEAT]
+	# Volume scales with intensity: at intensity 0.0 → -24 dB (whisper),
+	# at intensity 1.0 → -6 dB (clearly felt but below combat SFX).
+	# We then apply the master volume multiplier on top. SFX volume is
+	# intentionally NOT applied to the full extent — the heartbeat should
+	# always be audible when critical, so we use a gentler attenuation.
+	var vol_db: float = lerpf(-24.0, -6.0, intensity)
+	var master_db: float = linear_to_db(maxf(master_volume, 0.0001))
+	_heartbeat_sfx_player.volume_db = vol_db + master_db
+	_heartbeat_sfx_player.pitch_scale = 1.0
+	_heartbeat_sfx_player.play()
+
 # SFX that get subtle random pitch variation. These are short, percussive
 # combat sounds where micro-detuning reads as natural variation rather than
 # a tuning error. Melodic SFX (arpeggios, chimes) are excluded so their
@@ -572,6 +618,9 @@ func _on_biome_changed(biome_id: int) -> void:
 
 func _on_player_died() -> void:
 	play_sfx(SFX_DEATH)
+	# Stop the heartbeat SFX so it doesn't continue after death
+	if _heartbeat_sfx_player and _heartbeat_sfx_player.playing:
+		_heartbeat_sfx_player.stop()
 
 
 func _on_game_restarted() -> void:
@@ -580,6 +629,9 @@ func _on_game_restarted() -> void:
 	_current_biome = -1
 	# Phase 30: Reset dynamic music intensity
 	_music_intensity_current = 0.0
+	# Stop the heartbeat SFX player so it doesn't carry over into the new run
+	if _heartbeat_sfx_player and _heartbeat_sfx_player.playing:
+		_heartbeat_sfx_player.stop()
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -676,6 +728,14 @@ func _generate_all_sfx() -> void:
 	# sound shape (think MOBA ability-off-cooldown cues). Low volume (0.15)
 	# so it sits under combat without competing.
 	_sfx_streams[SFX_DASH_READY] = _gen_chime([784.0, 1047.0], 0.10, 0.15)
+	# ── Low-HP heartbeat ── A procedural "lub-dub" cardiac sound. Two low thumps
+	# per sample: lub (55 Hz sine, 0.12s, louder) + dub (55 Hz sine, 0.08s, 60%
+	# volume) separated by a 0.15s gap. A second harmonic at 110 Hz adds body
+	# so it reads as a chest-felt throb rather than a beep. The double-pulse
+	# envelope mimics real heart auscultation (S1/S2) so it's instantly
+	# recognizable as "heart in danger" — the universal audio shorthand for
+	# critical health in games ( Doom, Zelda, Call of Duty, etc.).
+	_sfx_streams[SFX_HEARTBEAT] = _gen_heartbeat()
 
 
 func _generate_all_music() -> void:
@@ -900,6 +960,46 @@ func _gen_rumble(freq: float, duration: float, vol: float) -> AudioStreamWAV:
 		else:
 			env = 1.0
 		sample *= vol * env
+		_pack_sample(data, i, sample)
+	return _make_wav(data)
+
+
+## Generate a "lub-dub" heartbeat sound (low-HP warning audio).
+## Two low-frequency thumps in sequence — the S1/S2 cardiac pattern:
+##   - "lub" (S1): 55 Hz fundamental + 110 Hz body, 0.12s, louder
+##   - gap:       0.15s silence
+##   - "dub" (S2): 55 Hz fundamental + 110 Hz body, 0.08s, 60% volume
+## A fast attack + exponential decay envelope on each thump gives the
+## percussive "thump" character. Total duration ~0.35s — short enough that
+## rapid heartbeats (at high BPM + low HP) don't overlap into a drone.
+func _gen_heartbeat() -> AudioStreamWAV:
+	var lub_dur: float = 0.12
+	var gap_dur: float = 0.15
+	var dub_dur: float = 0.08
+	var total_dur: float = lub_dur + gap_dur + dub_dur
+	var n: int = int(total_dur * SAMPLE_RATE)
+	var data = PackedByteArray()
+	data.resize(n * 2)
+	var dub_start: int = int((lub_dur + gap_dur) * SAMPLE_RATE)
+	for i in n:
+		var t: float = float(i) / SAMPLE_RATE
+		var sample: float = 0.0
+		# Lub (S1) — first thump
+		if i < dub_start:
+			var local_t: float = t
+			var env: float = exp(-local_t * 18.0)  # Fast decay
+			if local_t < 0.005:
+				env *= local_t / 0.005  # Click-free attack
+			sample = (sin(local_t * 55.0 * TAU) * 0.7 + sin(local_t * 110.0 * TAU) * 0.3) * env
+		# Dub (S2) — second thump, softer
+		else:
+			var local_t: float = t - (lub_dur + gap_dur)
+			var env: float = exp(-local_t * 22.0)  # Slightly faster decay
+			if local_t < 0.004:
+				env *= local_t / 0.004
+			sample = (sin(local_t * 55.0 * TAU) * 0.42 + sin(local_t * 110.0 * TAU) * 0.18) * env
+		# Overall normalization — keep headroom so stacked SFX don't clip
+		sample *= 0.85
 		_pack_sample(data, i, sample)
 	return _make_wav(data)
 

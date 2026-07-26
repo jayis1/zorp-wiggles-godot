@@ -666,3 +666,16 @@ Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy cor
 
 ### Visual Juice — Dialogue NPC (`dialogue_npc.gd`)
 - **Dialogue-start acknowledgment**: when the player starts a conversation, the NPC does a quick upward bob (0.3m over 0.18s, ease-out cubic, then sine ease back to 0) and a glow-light flash (energy to 2.0 for 0.1s, ease back over 0.4s). Previously the NPC had no visual reaction to dialogue starting — only the prompt label disappeared.
+
+## Enhancement Pack 4 — Low-HP Heartbeat Audio + Dynamic BPM
+
+### Heartbeat Audio SFX (`audio_manager.gd`)
+- **Procedural "lub-dub" heartbeat SFX** (`SFX_HEARTBEAT`) — a procedurally synthesized cardiac auscultation sound (S1/S2 pattern) that pairs with the existing visual heartbeat (mesh scale pulse + emission flash) in `player.gd` / `player2_zerp.gd`. Two low-frequency thumps per beat: "lub" (55 Hz fundamental + 110 Hz body harmonic, 0.12s, louder) followed by a 0.15s gap and "dub" (same frequencies, 0.08s, 60% volume). Fast attack + exponential decay envelope gives a percussive chest-felt throb rather than a tonal beep. The universal audio shorthand for critical health in games (Doom, Zelda, Call of Duty).
+- **`_gen_heartbeat()`** — new procedural sound generator in the audio manager. Total duration ~0.35s — short enough that rapid heartbeats (at high BPM + low HP) don't overlap into a drone.
+- **`play_heartbeat_sfx(intensity)`** — new public API that plays the heartbeat at a scaled volume. Intensity (0..1) maps from -24 dB (whisper, just crossed the HP threshold) to -6 dB (clearly felt, near death). Uses a dedicated `AudioStreamPlayer` rather than the round-robin SFX pool so the heartbeat never steals a combat SFX slot and vice versa. Master volume is applied; SFX volume is intentionally NOT fully applied so the heartbeat remains audible when critical even if the player lowered SFX volume.
+- **Cleanup on death/restart** — `_on_player_died()` and `_on_game_restarted()` both stop the heartbeat SFX player so it doesn't carry over after death or into a new run.
+
+### Dynamic Heartbeat BPM (`player.gd` + `player2_zerp.gd`)
+- **BPM accelerates as HP drops** — previously the visual heartbeat used a fixed 90 BPM (P1) / 75 BPM (P2). Now the BPM dynamically scales from the baseline at 25% HP to a critical rate at 5% HP: P1 goes 90→140 BPM, P2 goes 75→125 BPM. The heartbeat audibly and visibly accelerates as the player nears death, matching the rising urgency. Linear interpolation between thresholds, clamped.
+- **Audio-visual sync** — the heartbeat SFX fires exactly once per beat cycle, synchronized with the visual "lub" pulse (phase 0). Phase wrap-around detection (`_heartbeat_prev_phase > TAU * 0.5 and beat_phase < TAU * 0.5`) triggers the SFX on the beat boundary. Audio intensity scales with HP proximity to zero (0 at threshold, 1 at 0 HP), mirroring the visual emission intensity.
+- **P2 parity** — `player2_zerp.gd` receives the same audio + dynamic BPM system with slightly lower BPM values (75→125 vs P1's 90→140) reflecting P2's character profile.
