@@ -761,6 +761,10 @@ func _play_landing_effect() -> void:
 #    visibly recoils from the attacker.
 var _dmg_squash_tween: Tween = null
 
+# ── Pulse wave cast squash tween ── Tracks the pulse-cast body squash so
+#    rapid re-casts don't stack tweens on mesh.scale.
+var _pulse_squash_tween: Tween = null
+
 # ── Level-up celebration reaction ── When Zorp levels up, the mesh does a
 #    quick celebratory "grow" pop (scale up to 1.3 then settle with elastic
 #    wobble) and the emission flashes gold-green. This is the positive
@@ -1890,6 +1894,28 @@ func _use_pulse_wave() -> void:
 	restore_timer.timeout.connect(func(): Engine.time_scale = 1.0)
 	# Phase 20: Audio — pulse wave SFX
 	AudioManager.play_sfx(AudioManager.SFX_PULSE_WAVE)
+	# ── Player body squash on cast ── The dash has a squash-and-stretch
+	#    reaction, but the pulse wave — a significant cooldown ability —
+	#    didn't move the player mesh at all. A quick downward squash
+	#    (compress vertically, stretch horizontally) on the cast frame
+	#    gives the ability physical weight: Zorp "gathers" energy before
+	#    the wave bursts outward. The squash is faster than the dash
+	#    squash (0.06s impact vs 0.08s) so it doesn't delay movement —
+	#    the wave is already expanding by the time the squash finishes.
+	#    Skipped during dash/slide (their tweens own mesh.scale) and
+	#    uses a tracked tween so rapid re-casts don't stack.
+	if mesh and not is_dashing and not is_sliding:
+		if _pulse_squash_tween and _pulse_squash_tween.is_valid():
+			_pulse_squash_tween.kill()
+		_pulse_squash_tween = create_tween()
+		# Impact: quick flat squash (wider + shorter) in 60ms
+		_pulse_squash_tween.tween_property(mesh, "scale",
+			Vector3(1.3, 0.65, 1.3), 0.06) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		# Recovery: bounce back with elastic for a juicy spring
+		_pulse_squash_tween.tween_property(mesh, "scale",
+			Vector3.ONE, 0.22) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	# ── Phase 25: Statistics tracking ──
 	if Statistics:
 		Statistics.record_pulse_wave()

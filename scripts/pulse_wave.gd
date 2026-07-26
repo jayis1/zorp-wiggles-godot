@@ -80,12 +80,17 @@ func _physics_process(delta: float) -> void:
 	if ring_mesh:
 		var scale_val := radius * 2.0
 		# CylinderMesh axis is along Y — X and Z are the radius directions.
-		# Scale X and Z to expand the ring; keep Y at 1.0 so the ring stays
-		# flat (height = 0.1m) regardless of expansion radius. Previously this
-		# used Vector3(scale_val, scale_val, 1.0) which scaled X and Y but
-		# left Z at 1.0, making the ring elliptical (stretched along X only).
+		# Scale X and Z to expand the ring. Y gets a brief vertical stretch
+		# on the cast frame that eases back to 1.0, so the ring reads as a
+		# 3D shockwave disk that "pops up" vertically before settling flat —
+		# a flat hoop that only scales X/Z looks like a 2D circle on the
+		# ground, but a Y stretch that decays gives it volume and energy.
+		# The stretch peaks at cast (progress≈0) and fades to 1.0 by the
+		# time the ring reaches ~30% expansion, so only the initial burst
+		# has vertical lift — the trailing edge stays flat as it dissipates.
+		var y_stretch: float = 1.0 + 3.0 * (1.0 - clampf(progress * 3.3, 0.0, 1.0)) ** 2
 		# Use a smoothed scale so the ring doesn't pop on the first frame
-		ring_mesh.scale = ring_mesh.scale.lerp(Vector3(scale_val, 1.0, scale_val), 1.0 - exp(-12.0 * delta))
+		ring_mesh.scale = ring_mesh.scale.lerp(Vector3(scale_val, y_stretch, scale_val), 1.0 - exp(-12.0 * delta))
 		# Fade out as it expands — ease-in so it stays visible early then fades fast
 		var alpha := 1.0 - progress
 		alpha = alpha * alpha  # Quadratic fade for a sharper disappear at the edge

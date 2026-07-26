@@ -13,6 +13,36 @@ var spawn_timer: float = 0.0
 var spawn_warning_timer: float = 0.0
 var pending_spawns: Array[Dictionary] = []
 
+# ─── Precached Enemy Scenes ──────────────────────────────────────────────────
+# PackedScenes are loaded once at _ready and reused for every materialize call.
+# The previous code called load() on every spawn — a resource lookup that hits
+# the filesystem cache but still allocates a String-keyed lookup and does a
+# ref-count dance each time. Precaching eliminates that per-spawn cost entirely,
+# which matters during heavy combat (swarm packs, endless mode, double-trouble
+# modifier) where spawns fire multiple times per second.
+static var _cached_scenes: Dictionary = {}  # { enemy_type: PackedScene }
+
+static func _get_cached_scene(enemy_type: int) -> PackedScene:
+	if _cached_scenes.has(enemy_type):
+		return _cached_scenes[enemy_type]
+	var scene_path: String = ENEMY_SCENES.get(enemy_type, "")
+	if scene_path.is_empty():
+		return null
+	var scene: PackedScene = load(scene_path)
+	if scene:
+		_cached_scenes[enemy_type] = scene
+	return scene
+
+# ─── Nearby enemy count (shared between _try_spawn and _reset_spawn_timer) ───
+# _try_spawn already counts nearby enemies during its single-pass loop. Previously
+# _reset_spawn_timer re-iterated the entire enemy group to count them again — a
+# redundant O(n) scan every spawn cycle. We cache the count from _try_spawn so
+# _reset_spawn_timer can reuse it without a second pass.
+var _last_nearby_count: int = 0
+
+# Precached spawn-warning scene (loaded once, reused for every spawn).
+static var _cached_spawn_warning: PackedScene = null
+
 # ─── Enemy Type Tiers ─────────────────────────────────────────────────────────
 # Maps to enemy scenes by difficulty tier (easy/medium/hard)
 const EASY_TYPES: Array[int] = [
@@ -183,11 +213,16 @@ func _try_spawn() -> void:
 			continue
 		alive_count += 1
 		if alive_count + pending_spawns.size() >= spawn_cap:
+			_last_nearby_count = nearby_count
 			return  # Spawn cap reached
 		if player.global_position.distance_to(e.global_position) < GameConstants.SPAWN_DENSITY_NEAR_RADIUS:
 			nearby_count += 1
 			if nearby_count >= GameConstants.SPAWN_DENSITY_NEAR_THRESHOLD:
+				_last_nearby_count = nearby_count
 				return  # Too many nearby, skip this spawn
+	# Cache the nearby count so _reset_spawn_timer can reuse it without
+	# re-iterating the entire enemy group (eliminates a redundant O(n) scan).
+	_last_nearby_count = nearby_count
 
 	# Pick spawn position around player
 	var angle: float = randf() * TAU
@@ -239,8 +274,15 @@ func _try_spawn() -> void:
 					"timer": GameConstants.ENEMY_SPAWN_WARNING_DURATION + randf_range(0.0, 0.5),
 				})
 
-	# Create visual warning ring
-	var warning_scene: PackedScene = load("res://scenes/entities/spawn_warning.tscn")
+	# Create visual warning ring — use the precached scene if available.
+	# load() is called here every spawn tick; precaching avoids the repeated
+	# resource lookup. The scene is tiny but the lookup still costs a String
+	# hash + dictionary probe per spawn.
+	var warning_scene: PackedScene = _cached_spawn_warning
+	if warning_scene == null:
+		warning_scene = load("res://scenes/entities/spawn_warning.tscn")
+		if warning_scene:
+			_cached_spawn_warning = warning_scene
 	if warning_scene:
 		var warning: Node3D = warning_scene.instantiate()
 		get_parent().add_child(warning)
@@ -251,13 +293,11 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	var enemy_type: int = spawn_data["type"]
 	var pos: Vector3 = spawn_data["pos"]
 
-	var scene_path: String = ENEMY_SCENES.get(enemy_type, "")
-	if scene_path.is_empty():
-		return
-
-	var scene: PackedScene = load(scene_path)
+	# Use the precached PackedScene (loaded once at first use, reused for
+	# every subsequent spawn of this type). Avoids a per-spawn load() lookup.
+	var scene: PackedScene = _get_cached_scene(enemy_type)
 	if not scene:
-		print("[EnemySpawner] Failed to load enemy scene: %s" % scene_path)
+		print("[EnemySpawner] Failed to load enemy scene for type %d" % enemy_type)
 		return
 
 	var enemy: CharacterBody3D = scene.instantiate()
@@ -469,16 +509,13 @@ func _reset_spawn_timer() -> void:
 		if spawn_mult > 0.0:
 			interval /= spawn_mult
 
-	# Throttle if too many nearby enemies
-	var player: Node3D = get_tree().get_first_node_in_group("player")
-	if player:
-		var nearby: int = 0
-		for e in get_tree().get_nodes_in_group("enemies"):
-			if not is_instance_valid(e) or e.is_dead:
-				continue
-			if player.global_position.distance_to(e.global_position) < GameConstants.SPAWN_DENSITY_NEAR_RADIUS:
-				nearby += 1
-		if nearby >= GameConstants.SPAWN_DENSITY_NEAR_THRESHOLD:
-			interval /= GameConstants.SPAWN_DENSITY_SLOWDOWN  # SLOWER (longer interval)
+	# Throttle if too many nearby enemies — reuse the count from _try_spawn's
+	# single-pass loop instead of re-iterating the entire enemy group.
+	# _last_nearby_count is set every spawn cycle by _try_spawn; if no spawn
+	# cycle ran (e.g. first frame), it defaults to 0 which is correct (no
+	# throttle). This eliminates a redundant O(n) enemy-group scan per
+	# spawn cycle — meaningful when 50+ enemies are active.
+	if _last_nearby_count >= GameConstants.SPAWN_DENSITY_NEAR_THRESHOLD:
+		interval /= GameConstants.SPAWN_DENSITY_SLOWDOWN  # SLOWER (longer interval)
 
 	spawn_timer = interval
