@@ -115,14 +115,20 @@ func _process(delta: float) -> void:
 			var mat: StandardMaterial3D = _crystal.material_override
 			if mat:
 				mat.albedo_color = Color(60.0 / 255.0, 100.0 / 255.0, 70.0 / 255.0)
+				if mat.emission_enabled:
+					mat.emission_energy_multiplier = 0.2
 		if _ring:
 			var mat2: StandardMaterial3D = _ring.material_override
 			if mat2:
 				mat2.albedo_color = Color(60.0 / 255.0, 100.0 / 255.0, 70.0 / 255.0, 20.0 / 255.0)
+				if mat2.emission_enabled:
+					mat2.emission_energy_multiplier = 0.2
 		if _ground_glow:
 			var mat3: StandardMaterial3D = _ground_glow.material_override
 			if mat3:
 				mat3.albedo_color = Color(60.0 / 255.0, 100.0 / 255.0, 70.0 / 255.0, 10.0 / 255.0)
+				if mat3.emission_enabled:
+					mat3.emission_energy_multiplier = 0.15
 		if _light:
 			_light.light_energy = 0.3 + _discharge_light_energy
 	else:
@@ -132,14 +138,20 @@ func _process(delta: float) -> void:
 			var mat: StandardMaterial3D = _crystal.material_override
 			if mat:
 				mat.albedo_color = Color(100.0 / 255.0, 1.0, 150.0 / 255.0)
+				if mat.emission_enabled:
+					mat.emission_energy_multiplier = 1.0
 		if _ring:
 			var mat2: StandardMaterial3D = _ring.material_override
 			if mat2:
 				mat2.albedo_color = Color(100.0 / 255.0, 1.0, 150.0 / 255.0, glow_a)
+				if mat2.emission_enabled:
+					mat2.emission_energy_multiplier = 0.8
 		if _ground_glow:
 			var mat3: StandardMaterial3D = _ground_glow.material_override
 			if mat3:
 				mat3.albedo_color = Color(100.0 / 255.0, 1.0, 150.0 / 255.0, 30.0 / 255.0)
+				if mat3.emission_enabled:
+					mat3.emission_energy_multiplier = 0.6
 		if _light:
 			_light.light_energy = 1.0 + 0.3 * sin(_time * 3.0) + _discharge_light_energy
 
@@ -224,6 +236,17 @@ func _create_sphere(pos: Vector3, radius: float, col: Color) -> MeshInstance3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = col
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# ── Emission so the crystal glows on its own ── The shrine crystal
+	#    is described as "glowing" and has an OmniLight, but the mesh
+	#    material itself had no emission — so in a dark biome the crystal
+	#    body was lit only by its own child light (which is inside it,
+	#    so most of the light escapes outward, not back onto the crystal
+	#    surface). Adding emission makes the crystal surface self-luminous
+	#    so it reads as a glowing gem from any angle, matching the
+	#    collectibles, portals, and spawn warnings which all use emission.
+	mat.emission_enabled = true
+	mat.emission = col * 0.5
+	mat.emission_energy_multiplier = 1.0
 	mi.material_override = mat
 	return mi
 
@@ -238,6 +261,10 @@ func _create_ring(pos: Vector3, size: float, col: Color) -> MeshInstance3D:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Emission so the ring glows in dark biomes (matches portal rings).
+	mat.emission_enabled = true
+	mat.emission = col * 0.5
+	mat.emission_energy_multiplier = 0.8
 	mi.material_override = mat
 	return mi
 
@@ -252,5 +279,9 @@ func _create_ground_disc(pos: Vector3, size: float, col: Color) -> MeshInstance3
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Emission so the ground glow disc is visible in dark biomes.
+	mat.emission_enabled = true
+	mat.emission = col * 0.4
+	mat.emission_energy_multiplier = 0.6
 	mi.material_override = mat
 	return mi
