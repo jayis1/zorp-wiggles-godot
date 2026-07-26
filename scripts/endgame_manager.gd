@@ -442,8 +442,11 @@ func _build_loot_cave_entrance(cave: Dictionary) -> void:
 	root.add_child(area)
 	# Attach to the scene.
 	get_tree().current_scene.add_child(root)
-	# Spawn-in animation: scale from 0 with ease-out elastic for a satisfying reveal.
-	root.scale = Vector3.ZERO
+	# Spawn-in animation: scale from near-zero with ease-out elastic for a
+	# satisfying reveal. Use 0.001 instead of exactly 0 to avoid a degenerate
+	# basis (det == 0) — the Label3D billboard child needs the parent
+	# transform's inverse, which fails when scale is exactly zero.
+	root.scale = Vector3(0.001, 0.001, 0.001)
 	var spawn_t := root.create_tween()
 	spawn_t.tween_property(root, "scale", Vector3.ONE, 0.6) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
@@ -655,8 +658,10 @@ func _build_vault_entrance() -> void:
 	area.body_entered.connect(_on_vault_entered.bind(root))
 	root.add_child(area)
 	get_tree().current_scene.add_child(root)
-	# Spawn-in animation: scale from 0 with ease-out elastic.
-	root.scale = Vector3.ZERO
+	# Spawn-in animation: scale from near-zero with ease-out elastic.
+	# Use 0.001 instead of exactly 0 to avoid a degenerate basis (det == 0) —
+	# the Label3D billboard child needs the parent transform's inverse.
+	root.scale = Vector3(0.001, 0.001, 0.001)
 	var spawn_t := root.create_tween()
 	spawn_t.tween_property(root, "scale", Vector3.ONE, 0.7) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)

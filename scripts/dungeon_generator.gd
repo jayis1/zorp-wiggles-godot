@@ -180,9 +180,12 @@ func _build_entrance(dungeon: Dictionary) -> void:
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	root.add_child(label)
-	# Spawn-in animation: scale from 0 with ease-out elastic for a satisfying
-	# "emerging" reveal, matching the treasure chest and lore stone spawn-in feel.
-	root.scale = Vector3.ZERO
+	# Spawn-in animation: scale from near-zero with ease-out elastic for a
+	# satisfying "emerging" reveal, matching the treasure chest and lore stone
+	# spawn-in feel. Use 0.001 instead of exactly 0 to avoid a degenerate basis
+	# (det == 0) — the Label3D billboard child needs the parent transform's
+	# inverse, which fails when scale is exactly zero.
+	root.scale = Vector3(0.001, 0.001, 0.001)
 	var spawn_tween := root.create_tween()
 	spawn_tween.tween_property(root, "scale", Vector3.ONE, 0.6) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
