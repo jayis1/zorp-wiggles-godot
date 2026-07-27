@@ -78,6 +78,10 @@ const SFX_PULSE_WAVE: String = "pulse_wave"
 const SFX_HEAL: String = "heal"
 const SFX_DASH_BUMP: String = "dash_bump"
 const SFX_COMBO_MILESTONE: String = "combo_milestone"
+# Pickup streak milestone — a warm golden chime distinct from the combat
+# combo milestone. Uses a major triad (C-E-G) at a higher octave so it
+# reads as a "collection reward" rather than a "kill reward".
+const SFX_PICKUP_STREAK: String = "pickup_streak"
 const SFX_UI_CLICK: String = "ui_click"
 # A softer, shorter, higher-pitched tick for mouse-hover over buttons.
 # Distinct from SFX_UI_CLICK so hover and click events don't sound identical
@@ -279,6 +283,8 @@ func _connect_signals() -> void:
 	GameManager.level_up.connect(_on_level_up)
 	# Combo milestones
 	GameManager.combo_milestone.connect(_on_combo_milestone)
+	# Pickup streak milestones — golden chime for collection rewards
+	GameManager.pickup_streak_milestone.connect(_on_pickup_streak_milestone)
 	# Biome change → switch music
 	GameManager.biome_changed.connect(_on_biome_changed)
 	# Player death
@@ -621,8 +627,36 @@ func _on_level_up(_level: int) -> void:
 	play_sfx(SFX_LEVEL_UP)
 
 
-func _on_combo_milestone(_combo: int, _tier: int, _color: Color) -> void:
-	play_sfx(SFX_COMBO_MILESTONE)
+## Combo milestone — the SFX pitch rises with each tier so higher combos
+## feel increasingly triumphant. Tier 1 (x5) plays at unity pitch, tier 2
+## (x10) at +1 semitone, tier 3 (x15) at +2 semitones, etc. Capped at
+## +6 semitones (one octave) so very high combos don't squeak into
+## cartoonishness. The pitch escalation complements the existing tier-
+## scaled camera trauma and FOV kick, making each milestone feel bigger
+## than the last through multiple sensory channels. Semitones use the
+## standard 2^(n/12) pitch ratio.
+func _on_combo_milestone(_combo: int, tier: int, _color: Color) -> void:
+	if not _initialized:
+		return
+	if not _sfx_streams.has(SFX_COMBO_MILESTONE):
+		return
+	var player = _next_sfx_player()
+	player.stream = _sfx_streams[SFX_COMBO_MILESTONE]
+	player.volume_db = linear_to_db(maxf(sfx_volume * master_volume, 0.0001))
+	# Pitch escalation: +1 semitone per tier, capped at +6 (one octave)
+	var semitones: int = clampi(tier - 1, 0, 6)
+	player.pitch_scale = pow(2.0, float(semitones) / 12.0)
+	player.play()
+
+
+## Pickup streak milestone — plays a warm golden chime to complement the
+## existing camera trauma + sparkle. Previously this milestone had visual
+## juice (sparkle + shake) but no audio, making it feel incomplete next
+## to the combat combo milestone which has full audio-visual feedback.
+## The chime is a C-major triad (C5-E5-G5) — bright and rewarding, distinct
+## from the combat milestone's ascending arpeggio so the two don't blur.
+func _on_pickup_streak_milestone(_streak: int, _xp: int) -> void:
+	play_sfx(SFX_PICKUP_STREAK)
 
 
 func _on_biome_changed(biome_id: int) -> void:
@@ -675,6 +709,11 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_HEAL] = _gen_chime([659.0, 988.0], 0.2, 0.3)
 	_sfx_streams[SFX_DASH_BUMP] = _gen_blip(200.0, 0.06, 0.3)
 	_sfx_streams[SFX_COMBO_MILESTONE] = _gen_arpeggio([523.0, 659.0, 784.0], 0.06, 0.35)
+	# Pickup streak milestone — warm golden chime (C5-E5-G5 major triad).
+	# Brighter and shorter than the combat combo milestone so it reads as a
+	# "collection reward" rather than a "kill streak". The chime uses a
+	# major triad (no 7th) for a clean, satisfying resolution.
+	_sfx_streams[SFX_PICKUP_STREAK] = _gen_chime([523.0, 659.0, 784.0], 0.18, 0.32)
 	_sfx_streams[SFX_UI_CLICK] = _gen_blip(600.0, 0.03, 0.2)
 	# UI hover — softer, shorter, higher-pitched than the click. The lower
 	# volume (0.08 vs 0.2) and shorter duration (0.018s vs 0.03s) make it

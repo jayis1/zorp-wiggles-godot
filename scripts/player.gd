@@ -914,7 +914,7 @@ func _handle_movement(delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	
 	# ── Phase 33: Mirror Surface anomalous zone — reverse horizontal controls ──
-	if ProcBiomeGen and ProcBiomeGen.is_mirror_surface_active():
+	if ProceduralBiomeGenerator and ProceduralBiomeGenerator.is_mirror_surface_active():
 		input_dir = -input_dir
 	
 	# Camera-relative movement direction

@@ -313,10 +313,12 @@ func _tick_crystal_shard(delta: float, player: Node3D) -> void:
 	if _crystal_shard_timer < 0.8:
 		return
 	_crystal_shard_timer = 0.0
-	if ParticleEffects and ParticleEffects.has_method("spawn_pickup_sparkle"):
-		var parent: Node = player.get_parent()
-		if parent:
-			ParticleEffects.spawn_pickup_sparkle(parent, player.global_position + Vector3(randf_range(-3, 3), 1, randf_range(-3, 3)), GameConstants.PROC_BIOME_TRAIT_COLORS[1])
+	# ParticleEffects uses static methods (class_name, not an autoload),
+	# so we call spawn_pickup_sparkle directly — no has_method check needed
+	# (the method always exists on the class).
+	var parent: Node = player.get_parent()
+	if parent:
+		ParticleEffects.spawn_pickup_sparkle(parent, player.global_position + Vector3(randf_range(-3, 3), 1, randf_range(-3, 3)), GameConstants.PROC_BIOME_TRAIT_COLORS[1])
 
 func get_crystal_shard_loot_bonus() -> float:
 	if _player_in_zone < 0:

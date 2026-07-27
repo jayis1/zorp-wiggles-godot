@@ -103,6 +103,8 @@ const META_ORIGINAL_COLOR := "variant_original_color"
 const META_ORIGINAL_XP := "variant_original_xp"
 const META_ORIGINAL_SCORE := "variant_original_score"
 const META_REGEN_ACCUMULATOR := "variant_regen_accumulator"
+const META_REGEN_EMISSION_TIMER := "variant_regen_emission_timer"
+const META_REGEN_PREV_EMISSION := "variant_regen_prev_emission"
 const META_TELEPORT_TIMER := "variant_teleport_timer"
 const META_VENOM_TIMER := "variant_venom_timer"
 const META_EVASIVE_DODGE_CHANCE := "variant_evasive_dodge_chance"
@@ -304,10 +306,40 @@ func _tick_regen(enemy: Node, eb: EnemyBase, delta: float) -> void:
 		return
 	var acc: float = enemy.get_meta(META_REGEN_ACCUMULATOR, 0.0)
 	acc += 2.0 * delta
+	var healed_this_tick: bool = false
 	while acc >= 1.0:
 		acc -= 1.0
 		eb.hp = min(eb.max_hp, eb.hp + 1)
+		healed_this_tick = true
 	enemy.set_meta(META_REGEN_ACCUMULATOR, acc)
+	# ── Regenerating visual feedback ── When the enemy heals, a subtle
+	# green emission pulse plays so the player can see the trait working
+	# — otherwise the HP bar silently refills and the player can't tell
+	# why this enemy isn't dying. The pulse uses the Regenerating trait's
+	# signature green color (0.3, 1.0, 0.4) and is gated by a 0.4s
+	# emission timer so the pulse doesn't re-fire every tick (2 HP/sec
+	# would strobe the emission). The emission snaps to green and eases
+	# back to the enemy's base emission over 0.35s via a tracked tween
+	# that's killed on each new pulse. Skipped if the enemy has no
+	# material (e.g. some special enemies use a different render path).
+	var emit_timer: float = enemy.get_meta(META_REGEN_EMISSION_TIMER, 0.0)
+	if healed_this_tick and eb._material and emit_timer <= 0.0:
+		enemy.set_meta(META_REGEN_EMISSION_TIMER, 0.4)
+		var prev_emission: float = eb._material.emission_energy_multiplier
+		var prev_emission_color: Color = eb._material.emission
+		eb._material.emission = Color(0.3, 1.0, 0.4)
+		eb._material.emission_energy_multiplier = 2.5
+		var regen_tween := eb.create_tween()
+		regen_tween.set_parallel(true)
+		regen_tween.tween_property(eb._material, "emission_energy_multiplier",
+			prev_emission, 0.35) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		regen_tween.tween_property(eb._material, "emission",
+			prev_emission_color, 0.35) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# Decay the regen emission gate timer regardless of healing
+	if emit_timer > 0.0:
+		enemy.set_meta(META_REGEN_EMISSION_TIMER, maxf(0.0, emit_timer - delta))
 
 func _tick_teleport(enemy: Node, eb: EnemyBase, delta: float) -> void:
 	var timer: float = enemy.get_meta(META_TELEPORT_TIMER, 4.0)
@@ -379,9 +411,11 @@ func on_enemy_take_damage(enemy: Node, amount: int) -> Dictionary:
 			return {"damage": 0, "dodged": true}
 	# Shielded — 20% damage reduction
 	var actual: int = amount
+	var was_shielded: bool = false
 	if Trait.SHIELDED in traits:
 		actual = int(actual * 0.8)
-	return {"damage": actual, "dodged": false}
+		was_shielded = true
+	return {"damage": actual, "dodged": false, "shielded": was_shielded}
 
 # Called by enemy_base.gd when the enemy is about to be knocked back. Returns
 # true if the knockback should be cancelled (Knockback-Immune trait).

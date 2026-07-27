@@ -882,6 +882,34 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 				dodge_tween.tween_callback(func(): alert.visible = false)
 			return
 		amount = int(result.get("damage", amount))
+		# ── Shielded variant: blue shield flash on hit ── When a SHIELDED
+		# variant absorbs damage, a brief blue emission pulse plays on the
+		# hit frame so the player sees the shield working. Without this,
+		# the 20% damage reduction is invisible — the player can't tell
+		# why this enemy is tankier. The flash sets the emission COLOR to
+		# the Shielded trait's signature blue (0.4, 0.6, 1.0) and tweens
+		# it back to the enemy's base emission color. The emission ENERGY
+		# is left to the hit-flash below (which spikes it to 4.0 and eases
+		# back), so the two effects compose cleanly: blue-tinted bright
+		# flash → white hit flash → normal. A quick shield-ring scale pop
+		# on the body_mesh (biased outward) reinforces the deflector read.
+		if result.get("shielded", false) and _material:
+			var _shield_prev_emission_color: Color = _material.emission
+			_material.emission = Color(0.4, 0.6, 1.0)
+			var shield_color_tween := create_tween()
+			shield_color_tween.tween_property(_material, "emission",
+				_shield_prev_emission_color, 0.22) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			# ── Shield ring pop ── A quick scale pulse on the body_mesh
+			# so it reads as a shield deflector bulge rather than a generic
+			# hit squash. Runs before the hit squash below — the hit squash
+			# will override scale with its own pop, which is fine (the
+			# shield pop is 0.05s, the squash starts after).
+			if body_mesh and not is_windup and not is_dead:
+				var shield_scale_tween := create_tween()
+				shield_scale_tween.tween_property(body_mesh, "scale",
+					Vector3.ONE * base_scale * 1.18, 0.05) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	# ── Phase 19: Co-op — mark if this is a P2 projectile hit ──
 	# The projectile sets a meta flag on itself; we check via get_meta on the
 	# caller. Since we can't access the caller here, P2 projectiles call
@@ -1381,8 +1409,8 @@ func _drop_crafting_material() -> void:
 			if pet and is_instance_valid(pet) and not (pet.get("is_dead") if "is_dead" in pet else false):
 				drop_chance = minf(1.0, drop_chance * (1.0 + pet_loot_mult))
 	# ── Phase 33: Crystal Shard anomalous zone — +25% loot bonus ──
-	if ProcBiomeGen:
-		drop_chance = minf(1.0, drop_chance * (1.0 + ProcBiomeGen.get_crystal_shard_loot_bonus()))
+	if ProceduralBiomeGenerator:
+		drop_chance = minf(1.0, drop_chance * (1.0 + ProceduralBiomeGenerator.get_crystal_shard_loot_bonus()))
 	if randf() > drop_chance:
 		return
 	# Pick a crafting material via the weighted loot table.
