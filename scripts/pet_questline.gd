@@ -257,6 +257,12 @@ func _complete_quest(idx: int) -> void:
 	var title: String = QUESTS[idx]["title"]
 	quest_completed.emit(idx, title)
 	GameManager.add_message("🐾 Pet Questline: '%s' complete!" % title)
+	# Quest completion juice — chime + camera shake matching the mission/
+	# procedural quest completion language for consistency.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.12)
 	# Apply rewards
 	_apply_reward(idx)
 	# Unlock next quest
