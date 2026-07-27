@@ -12,6 +12,7 @@ class_name ShockwaveRing
 @export var expand_speed: float = 15.0
 
 var current_radius: float = 0.0
+var _prev_radius: float = 0.0  # Previous-frame radius for band-skip detection
 var age: float = 0.0
 var _material: StandardMaterial3D = null
 var _has_hit_player: bool = false
@@ -71,6 +72,12 @@ func _physics_process(delta: float) -> void:
 	var progress: float = current_radius / max_radius if max_radius > 0.0 else 0.0
 	progress = clampf(progress, 0.0, 1.0)
 	var speed_mult: float = 1.0 - 0.6 * progress
+	# Track previous radius BEFORE advancing so the hit band covers the full
+	# swept area this frame. Without this, a fast-expanding ring (or a
+	# low-FPS physics tick) can skip past the player between frames — the
+	# player is inside the ring at frame N and outside at frame N+1, but
+	# never within the 1.0m band at either sample, so the hit is dropped.
+	_prev_radius = current_radius
 	current_radius += expand_speed * speed_mult * delta
 
 	# Scale the shockwave ring to the actual current radius.
@@ -85,19 +92,27 @@ func _physics_process(delta: float) -> void:
 
 	# Check player hit — damage once when ring passes through
 	# In co-op, check both players — the ring can hit either one
+	# ── Swept-band hit detection ── Instead of only checking a fixed 1.0m
+	#    band around the current radius, we check the full swept area between
+	#    _prev_radius and current_radius (plus a small margin). This prevents
+	#    fast-expanding rings or low-FPS ticks from skipping past the player
+	#    — the player is hit if they're anywhere in the ring's path this
+	#    frame, not just within a thin annulus at the final radius.
 	if not _has_hit_player:
 		var player: Node3D = get_tree().get_first_node_in_group("player")
 		if player and GameManager.player_is_alive and not GameManager.player_is_downed:
 			var dist: float = global_position.distance_to(player.global_position)
-			# Hit when player is near the ring edge
-			if abs(dist - current_radius) < 1.0:
+			# Hit if the player falls within the swept band this frame
+			var band_min: float = _prev_radius - 0.5
+			var band_max: float = current_radius + 0.5
+			if dist >= band_min and dist <= band_max:
 				GameManager.take_damage(damage, global_position)
 				_has_hit_player = true
 		# ── Phase 19: Co-op — check P2 ──
 		if not _has_hit_player and CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
 			if not CoOpManager.p2_is_downed:
 				var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)
-				if abs(p2_dist - current_radius) < 1.0:
+				if p2_dist >= band_min and p2_dist <= band_max:
 					CoOpManager.p2_take_damage(damage, global_position)
 					_has_hit_player = true
 

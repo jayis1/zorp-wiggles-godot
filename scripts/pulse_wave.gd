@@ -5,6 +5,7 @@
 extends Node3D
 
 var radius: float = 0.0
+var _prev_radius: float = 0.0  # Previous-frame radius for band-skip detection
 var max_radius: float = GameConstants.PULSE_WAVE_RADIUS
 var damage: int = GameConstants.PULSE_WAVE_DAMAGE
 var expand_speed: float = 30.0
@@ -74,6 +75,13 @@ func _physics_process(delta: float) -> void:
 	progress = clampf(progress, 0.0, 1.0)
 	# Ease-out quadratic: fast start, gentle finish
 	var speed_mult: float = 1.0 - 0.65 * progress
+	# Track previous radius BEFORE advancing so the enemy hit band covers
+	# the full swept area this frame. Without this, a fast-expanding ring
+	# (or a low-FPS physics tick) can skip past an enemy between frames —
+	# the enemy is just outside the 2m band at frame N and already inside
+	# (past the band) at frame N+1, so the hit is dropped. The swept band
+	# catches any enemy in the ring's path, not just a thin annulus.
+	_prev_radius = radius
 	radius += expand_speed * speed_mult * delta
 	
 	# Update ring visual
@@ -122,8 +130,11 @@ func _physics_process(delta: float) -> void:
 			continue
 		if not has_hit.has(enemy_node.get_instance_id()):
 			var dist := global_position.distance_to(enemy_node.global_position)
-			# Only hit enemies within the ring's current band
-			if dist <= radius and dist >= radius - 2.0:
+			# Hit if the enemy falls within the swept band this frame —
+			# between the previous radius and the current radius (plus a
+			# small margin). This prevents fast-expanding rings or low-FPS
+			# ticks from skipping past enemies between frames.
+			if dist <= radius + 0.5 and dist >= _prev_radius - 0.5:
 				has_hit[enemy_node.get_instance_id()] = true
 				if enemy_node.has_method("take_damage_from"):
 					enemy_node.take_damage_from(damage, global_position)

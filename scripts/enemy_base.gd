@@ -1286,10 +1286,18 @@ func _update_visuals(delta: float) -> void:
 				body_mesh.rotation.x = lerpf(body_mesh.rotation.x, 0.0,
 					1.0 - exp(-6.0 * delta))
 	elif body_mesh and not is_windup:
-		# Settle to rest position when not moving
-		body_mesh.position.y = move_toward(body_mesh.position.y, 0.5, delta * 3.0)
-		body_mesh.rotation.z = move_toward(body_mesh.rotation.z, 0.0, delta * 3.0)
-		body_mesh.rotation.x = move_toward(body_mesh.rotation.x, 0.0, delta * 3.0)
+		# Settle to rest position when not moving.
+		# Uses frame-rate-independent exponential lerp (1 - exp(-k*delta))
+		# instead of move_toward with a fixed delta-scaled step. The old
+		# move_toward(... delta * 3.0) was frame-rate dependent — at 144Hz
+		# the settle rate per real second was 2.4x slower than at 60Hz,
+		# making the rest pose ease-in feel sluggish on high-refresh
+		# displays. Exponential lerp converges at the same real-time rate
+		# regardless of FPS, matching the lean/bob smoothing above.
+		var settle_w: float = 1.0 - exp(-6.0 * delta)
+		body_mesh.position.y = lerpf(body_mesh.position.y, 0.5, settle_w)
+		body_mesh.rotation.z = lerpf(body_mesh.rotation.z, 0.0, settle_w)
+		body_mesh.rotation.x = lerpf(body_mesh.rotation.x, 0.0, settle_w)
 
 	# Low-HP warning pulse — only when not currently being hit-flashed
 	# (hit flash tween controls _material.albedo_color during its 0.15s duration)

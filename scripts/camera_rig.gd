@@ -254,9 +254,19 @@ func _process(delta: float) -> void:
 		camera.fov = lerpf(camera.fov, fov_baseline, fov_weight)
 
 func _apply_screen_shake(delta: float) -> void:
-	# Decay trauma
+	# Decay trauma — exponential decay for a more organic shake feel.
+	# Linear decay (_trauma -= rate * delta) fades the shake at a constant
+	# rate, so the tail end of a heavy hit fades just as slowly as the
+	# initial punch — making big shakes feel "draggy" instead of punchy.
+	# Exponential decay (_trauma *= exp(-rate * delta)) fades fast at the
+	# start (when trauma is high) and gently as it approaches zero, so
+	# heavy hits snap hard then settle smoothly — the classic Vlambeer
+	# juice curve. The decay rate is scaled so the perceived settle time
+	# roughly matches the old linear feel at mid trauma values.
 	if _trauma > 0.0:
-		_trauma = max(0.0, _trauma - shake_decay_rate * delta)
+		_trauma *= exp(-shake_decay_rate * delta)
+		if _trauma < 0.001:
+			_trauma = 0.0
 
 	# Trauma² gives a more organic shake feel (small hits are subtle, big hits punch)
 	var shake_amount: float = _trauma * _trauma
