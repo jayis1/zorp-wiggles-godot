@@ -13,6 +13,7 @@ class KillEntry:
 	var timer: float
 	var alpha: float
 	var y_offset: float
+	var entrance_t: float  # 0..1 eased entrance progress
 
 # ─── Internal State ───────────────────────────────────────────────────────────
 var _entries: Array[KillEntry] = []
@@ -31,8 +32,9 @@ func _on_enemy_killed(enemy_name: String, killer_name: String) -> void:
 	var entry := KillEntry.new()
 	entry.text = "%s ▸ %s" % [killer_name, enemy_name]
 	entry.timer = GameConstants.KILL_FEED_LIFETIME
-	entry.alpha = 1.0
+	entry.alpha = 0.0  # Start at 0 and ease in for a soft entrance
 	entry.y_offset = -20.0  # Slide in from above
+	entry.entrance_t = 0.0
 	_entries.append(entry)
 	# Cap max entries (remove oldest)
 	while _entries.size() > GameConstants.KILL_FEED_MAX_ENTRIES:
@@ -45,10 +47,18 @@ func _process(delta: float) -> void:
 	var needs_redraw: bool = false
 	for entry in _entries:
 		entry.timer -= delta
-		# Fade out in the last second
+		# ── Entrance animation: ease the alpha in over ~0.25s with an
+		#    ease-out-cubic curve so new kills fade in softly rather than
+		#    snapping to full opacity. The slide-down y_offset is already
+		#    eased; this adds the matching alpha ease. Matches the
+		#    achievement-popup and boss-bar entrance language.
+		if entry.entrance_t < 1.0:
+			entry.entrance_t = minf(entry.entrance_t + delta / 0.25, 1.0)
+			var eased: float = 1.0 - pow(1.0 - entry.entrance_t, 3.0)
+			entry.alpha = eased
+		# Fade out in the last second (overrides the entrance alpha)
 		if entry.timer < 1.0:
 			entry.alpha = clampf(entry.timer, 0.0, 1.0)
-		# Slide down to position
 		# Slide down to position (frame-rate-independent exponential decay)
 		entry.y_offset = lerpf(entry.y_offset, 0.0, 1.0 - exp(-8.0 * delta))
 		needs_redraw = true
