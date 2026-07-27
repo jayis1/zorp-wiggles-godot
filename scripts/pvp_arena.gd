@@ -161,6 +161,11 @@ func _start_next_round() -> void:
 	pvp_timer_changed.emit(_round_timer)
 	if GameManager:
 		GameManager.add_message("⚔ Round %d — Fight!" % _round_num)
+	# ── Enhancement: PvP round-start juice ── a UI-click chime + small
+	# camera shake so each round's "Fight!" moment has punch.
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	if GameManager and GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.2)
 	# Reset player positions to opposite ends of the arena
 	_reset_player_positions()
 
@@ -176,6 +181,12 @@ func _end_round(winner_is_p1: bool) -> void:
 	if GameManager:
 		var winner_name: String = "Zorp" if winner_is_p1 else "Zerp"
 		GameManager.add_message("🏆 %s wins round %d! (%d-%d)" % [winner_name, _round_num, _p1_wins, _p2_wins])
+	# ── Enhancement: PvP round-end juice ── a combo-milestone chime + camera
+	# shake so each round win feels decisive. Trauma is moderate (0.3) —
+	# celebratory but not as heavy as a boss kill.
+	AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+	if GameManager and GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.3)
 	# Check if the match is over
 	var wins_needed: int = int(_best_of / 2) + 1
 	if _p1_wins >= wins_needed or _p2_wins >= wins_needed:
@@ -203,6 +214,13 @@ func _end_match(p1_wins_match: bool) -> void:
 		# capping at 1.
 		if Statistics:
 			Statistics.add_lifetime("pvp_wins_p1" if p1_wins_match else "pvp_wins_p2", 1.0)
+	# ── Enhancement: PvP match-end juice ── the final round gets the
+	# boss-defeated fanfare + level-up chime + a strong 0.5 camera shake,
+	# matching the Boss Gauntlet / prestige celebration weight.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_DEFEATED)
+	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	if GameManager and GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.5)
 
 
 func _reset_player_positions() -> void:

@@ -208,6 +208,11 @@ func _spawn_survival_boss() -> void:
 			boss.is_arena_boss = true
 	GameManager.boss_spawned.emit(boss)
 	GameManager.add_message("☠ Survival boss incoming!")
+	# ── Enhancement: Survival boss spawn juice ── the periodic boss gets the
+	# boss-spawn rumble + camera shake, matching all other boss spawn paths.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.45)
 
 # ─── Gauntlet Mode ─────────────────────────────────────────────────────────────
 
@@ -250,6 +255,13 @@ func _advance_gauntlet_biome() -> void:
 		GameConstants.BIOME_NAMES.get(biome_id, "Unknown"),
 		GameConstants.GAUNTLET_KILLS_PER_BIOME, int(GameConstants.GAUNTLET_TIME_PER_BIOME)
 	])
+	# ── Enhancement: Gauntlet biome-transition juice ── each new biome
+	# challenge gets a UI-click SFX + small camera shake so the transition
+	# feels like a new round starting. Matches the wave-transition feel
+	# in Endless mode.
+	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.2)
 
 func _update_gauntlet(delta: float) -> void:
 	if _gauntlet_completed:
@@ -260,9 +272,13 @@ func _update_gauntlet(delta: float) -> void:
 		var success: bool = _gauntlet_kills_this_biome >= GameConstants.GAUNTLET_KILLS_PER_BIOME
 		if not success:
 			GameManager.add_message("✦ Gauntlet %d failed — moving on." % (_gauntlet_index + 1))
+			AudioManager.play_sfx(AudioManager.SFX_DAMAGE)
 		else:
 			GameManager.gain_xp(80)
 			GameManager.add_message("✦ Gauntlet %d cleared! +80 XP" % (_gauntlet_index + 1))
+			AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+				GameManager.camera_rig.add_trauma(0.15)
 		_gauntlet_index += 1
 		_advance_gauntlet_biome()
 
@@ -270,6 +286,11 @@ func _finish_gauntlet() -> void:
 	_gauntlet_completed = true
 	_gauntlet_active = false
 	gauntlet_completed.emit(_gauntlet_total_time)
+	# ── Enhancement: Gauntlet completion juice ── celebratory chime + camera
+	# shake, matching the Boss Rush completion feedback.
+	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.4)
 	GameManager.add_message("🏆 GAUNTLET COMPLETE! Total time: %.1fs" % _gauntlet_total_time)
 	if Statistics:
 		Statistics.set_lifetime_max("gauntlet_pb_time", _gauntlet_total_time)
@@ -360,12 +381,26 @@ func _spawn_boss_gauntlet_next() -> void:
 	GameManager.boss_spawned.emit(boss)
 	boss_gauntlet_progress.emit(_boss_gauntlet_index, GameConstants.BOSS_GAUNTLET_QUEUE.size())
 	GameManager.add_message("☠ Boss Gauntlet %d/%d" % [_boss_gauntlet_index + 1, GameConstants.BOSS_GAUNTLET_QUEUE.size()])
+	# ── Enhancement: Boss Gauntlet boss spawn juice ── each escalating boss
+	# gets the boss-spawn rumble + camera shake, matching the Boss Rush
+	# and world-boss spawn feedback. The shake is slightly stronger (0.5)
+	# than Boss Rush (0.4) because Boss Gauntlet has no healing between.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.5)
 
 func _finish_boss_gauntlet() -> void:
 	_boss_gauntlet_completed = true
 	_boss_gauntlet_active = false
 	boss_gauntlet_completed.emit(_boss_gauntlet_total_time)
 	GameManager.add_message("🏆 BOSS GAUNTLET COMPLETE! Total time: %.1fs" % _boss_gauntlet_total_time)
+	# ── Enhancement: Boss Gauntlet completion juice ── the hardest mode in
+	# the game gets the strongest celebratory feedback: boss-defeated fanfare
+	# + level-up chime + 0.5 camera trauma (matching prestige weight).
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_DEFEATED)
+	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.5)
 	if Statistics:
 		Statistics.set_lifetime_max("boss_gauntlet_pb_time", _boss_gauntlet_total_time)
 
@@ -768,6 +803,11 @@ func notify_puzzle_rune_touched(rune: Node) -> void:
 				r.material_override.emission_energy_multiplier = 1.5
 				r.set_meta("puzzle_activated", false)
 		GameManager.add_message("✗ Wrong rune! Puzzle reset.")
+		# ── Enhancement: Wrong-rune feedback ── a damage SFX + small camera
+		# shake so the mistake has negative feedback weight.
+		AudioManager.play_sfx(AudioManager.SFX_DAMAGE)
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.15)
 
 func _complete_vault_puzzle() -> void:
 	_ancient_vault["opened"] = true

@@ -703,3 +703,28 @@ Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy cor
 - **Achievement unlocks** (`achievement_popup.gd`) — `_unlock()` now plays `SFX_LEVEL_UP` (celebratory chime) and triggers 0.15 camera trauma. Previously achievements had a popup slide-in + HUD message but no audio or camera feedback. Lighter than level-up (0.25) since achievements are less gameplay-critical.
 - **Prestige** (`progression_system.gd`) — `prestige()` now triggers full multi-sensory celebration: SFX_PET_EVOLVE fanfare, 0.5 camera trauma (strongest celebratory shake, matching boss-death weight), tier-5 combo fireworks + level-up burst at the player's position. Previously one of the biggest milestones in the game had only a text message.
 - **Quest/mission completion** (all 3 quest systems) — `mission_system.gd`, `procedural_quest_system.gd`, and `pet_questline.gd` now play `SFX_COMBO_MILESTONE` (pleasant arpeggio) and trigger 0.12 camera trauma on completion. Previously all three quest completion types had only a text message. Consistent 0.12 trauma across all three since quests complete more frequently than level-ups (0.25) or evolutions (0.2).
+
+## Enhancement Pack 6 — Game Mode & Endgame Event Feedback Polish
+
+### Game Mode Start Juice (`game_mode_manager.gd`)
+- **Mode-start SFX + camera trauma** — every special game mode's kickoff now gets a distinctive SFX + camera shake so the start feels like a moment rather than just a text message. Normal mode stays quiet (it's the default). SFX choices are thematic: Endless uses `SFX_COMBO_MILESTONE` (escalation arpeggio, 0.3 trauma), Boss Rush uses `SFX_BOSS_SPAWN` (deep rumble, 0.4), Speedrun uses `SFX_UI_CLICK` (clean start, 0.15), PvP uses `SFX_SHIELD` (deploy, 0.3), Survival uses `SFX_EXPLOSION` (impact, 0.4), Gauntlet uses `SFX_EXPLOSION` (0.3), Boss Gauntlet uses `SFX_BOSS_SPAWN` (0.5 — strongest start shake), Daily Challenge uses `SFX_LEVEL_UP` (fresh challenge chime, 0.25), Weekly Challenge uses `SFX_LEVEL_UP` (0.3). Centralized via `_play_mode_start_juice(sfx, trauma)` helper with AudioManager + camera_rig null guards.
+
+### Boss Spawn Juice for Mode-Driven Bosses (`game_mode_manager.gd` + `endgame_manager.gd`)
+- **Boss Rush boss spawn** — each boss's arrival in Boss Rush mode now plays `SFX_BOSS_SPAWN` + 0.4 camera trauma. Previously only the HUD boss bar appeared + a text message — the next contender's entrance was silent with no physical feedback.
+- **Boss Gauntlet boss spawn** — each escalating boss in Boss Gauntlet now plays `SFX_BOSS_SPAWN` + 0.5 camera trauma (stronger than Boss Rush's 0.4 because Boss Gauntlet has no healing between bosses). Previously the escalating boss appeared with only a text message.
+- **Survival mode boss spawn** — the periodic survival boss now plays `SFX_BOSS_SPAWN` + 0.45 camera trauma, matching all other boss spawn paths (world boss, arena boss, Boss Rush). Previously the survival boss appeared silently.
+
+### Mode Completion Juice (`game_mode_manager.gd` + `endgame_manager.gd`)
+- **Speedrun completion** — `_finish_speedrun()` now adds 0.4 camera trauma alongside the existing `SFX_LEVEL_UP` chime. Previously the speedrun finish had audio but no camera feedback.
+- **Speedrun biome splits** — each new biome split now adds 0.1 camera trauma (the `SFX_LEVEL_UP` chime already played). Previously splits had audio but no physical feedback.
+- **Gauntlet biome transitions** — `_advance_gauntlet_biome()` now plays `SFX_UI_CLICK` + 0.2 camera trauma so each new biome challenge feels like a new round starting. Matches the Endless wave-transition feel.
+- **Gauntlet per-biome success** — clearing a gauntlet biome now plays `SFX_COMBO_MILESTONE` + 0.15 camera trauma. Failing a biome now plays `SFX_DAMAGE` (negative feedback). Previously both success and failure had only text messages.
+- **Gauntlet completion** — `_finish_gauntlet()` now plays `SFX_LEVEL_UP` + 0.4 camera trauma, matching Boss Rush completion feedback. Previously the gauntlet finish had only a text message.
+- **Boss Gauntlet completion** — `_finish_boss_gauntlet()` now plays `SFX_BOSS_DEFEATED` + `SFX_LEVEL_UP` + 0.5 camera trauma (the strongest celebratory shake, matching prestige weight). Previously the hardest mode's completion had only a text message — the ultimate challenge deserved the ultimate feedback.
+- **Dungeon clear** — `_on_reward_chest_opened()` in `dungeon_generator.gd` now plays `SFX_LEVEL_UP` + 0.35 camera trauma on dungeon completion. Previously clearing a dungeon had only a text message with no audio or camera feedback.
+- **Ancient Vault wrong rune** — touching the wrong rune in the vault puzzle now plays `SFX_DAMAGE` + 0.15 camera trauma for negative feedback weight. Previously the mistake had only a text message — the player got no sensory feedback for a puzzle error.
+
+### PvP Arena Event Juice (`pvp_arena.gd`)
+- **PvP round start** — `_start_next_round()` now plays `SFX_UI_CLICK` + 0.2 camera trauma so each round's "Fight!" moment has punch. Previously the round start was silent with only a text message.
+- **PvP round end** — `_end_round()` now plays `SFX_COMBO_MILESTONE` + 0.3 camera trauma so each round win feels decisive. Previously the round win was silent with only a text message.
+- **PvP match end** — `_end_match()` now plays `SFX_BOSS_DEFEATED` + `SFX_LEVEL_UP` + 0.5 camera trauma (matching Boss Gauntlet / prestige celebration weight). Previously the match win was silent with only a text message — the final round of a PvP series deserved the biggest feedback.

@@ -507,6 +507,11 @@ func _on_reward_chest_opened(_chest: Node, _trapped: bool, dungeon_id: int) -> v
 	GameManager.player_score += GameConstants.DUNGEON_REWARD_SCORE
 	dungeon_cleared.emit(dungeon_id)
 	GameManager.add_message("🏆 Dungeon cleared! +%d XP, +%d score" % [GameConstants.DUNGEON_REWARD_XP, GameConstants.DUNGEON_REWARD_SCORE])
+	# ── Enhancement: Dungeon-clear juice ── celebratory chime + camera
+	# shake, matching the Gauntlet/Boss Rush completion feedback.
+	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.35)
 
 # ─── Per-Frame ──────────────────────────────────────────────────────────────────
 

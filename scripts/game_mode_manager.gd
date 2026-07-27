@@ -316,17 +316,29 @@ func start_run() -> void:
 	_speedrun_visited_biomes.clear()
 	_speedrun_finished = false
 	mode_changed.emit(_current_mode)
+	# ── Enhancement: Mode-start juice ── Each special mode's kickoff now gets
+	# a distinctive SFX + camera trauma so the start feels like a moment
+	# rather than just a text message. Normal mode stays quiet (it's the
+	# default). The SFX choices are thematic: Endless uses the combo-milestone
+	# arpeggio (escalation), Boss Rush / Boss Gauntlet use the boss-spawn
+	# rumble, Speedrun uses UI-click (clean start), PvP uses the shield
+	# deploy, Survival/Gauntlet use the explosion, Daily/Weekly use the
+	# level-up chime (a fresh challenge). Trauma scales with intensity:
+	# combat-focused modes get a stronger shake than exploration modes.
 	if is_endless():
 		wave_changed.emit(_wave)
 		GameManager.add_message("♾ Endless Mode — Wave 1 begins! Survive as long as you can.")
+		_play_mode_start_juice(AudioManager.SFX_COMBO_MILESTONE, 0.3)
 	elif is_boss_rush():
 		GameManager.add_message("💀 Boss Rush! Defeat all %d bosses as fast as possible!" % BOSS_RUSH_QUEUE.size())
 		# Start the first boss after a short delay so the player can orient
 		_boss_rush_active = true
 		_boss_rush_intermission_timer = 2.0
 		boss_rush_boss_index.emit(_boss_rush_index, BOSS_RUSH_QUEUE.size())
+		_play_mode_start_juice(AudioManager.SFX_BOSS_SPAWN, 0.4)
 	elif is_speedrun():
 		GameManager.add_message("⏱ Speedrun! Visit %d unique biomes as fast as possible!" % SPEEDRUN_SPLIT_BIOME_COUNT)
+		_play_mode_start_juice(AudioManager.SFX_UI_CLICK, 0.15)
 	elif is_pvp():
 		# Phase 32: Start a PvP match — force P2 to join and begin the match
 		if CoOpManager and not CoOpManager.p2_active:
@@ -334,18 +346,22 @@ func start_run() -> void:
 		if PvpArena:
 			PvpArena.start_pvp_match(3)  # Best of 3 by default
 		GameManager.add_message("⚔ PvP Arena! Zorp vs Zerp — first to 2 round wins!")
+		_play_mode_start_juice(AudioManager.SFX_SHIELD, 0.3)
 	elif is_survival():
 		# Phase 34: Survival mode — EndgameManager drives the rules.
 		if EndgameManager:
 			EndgameManager.start_survival()
+		_play_mode_start_juice(AudioManager.SFX_EXPLOSION, 0.4)
 	elif is_gauntlet():
 		# Phase 34: Gauntlet mode — sequential biome challenges.
 		if EndgameManager:
 			EndgameManager.start_gauntlet()
+		_play_mode_start_juice(AudioManager.SFX_EXPLOSION, 0.3)
 	elif is_boss_gauntlet():
 		# Phase 34: Boss Gauntlet — every boss in sequence, escalating.
 		if EndgameManager:
 			EndgameManager.start_boss_gauntlet()
+		_play_mode_start_juice(AudioManager.SFX_BOSS_SPAWN, 0.5)
 	elif is_daily_challenge():
 		# Phase 25: Daily Challenge — start the attempt via DailyChallengeSystem.
 		if DailyChallengeSystem:
@@ -357,6 +373,7 @@ func start_run() -> void:
 				GameManager.add_message("📅 Daily Challenge started! Seed: %s" % DailyChallengeSystem.get_today_seed_string())
 				if DailyChallengeSystem.get_today_modifiers().size() > 0:
 					GameManager.add_message("🎲 Today's modifiers: %s" % DailyChallengeSystem.get_today_modifier_names())
+				_play_mode_start_juice(AudioManager.SFX_LEVEL_UP, 0.25)
 	elif is_weekly_challenge():
 		# Phase 25: Weekly Challenge — start the attempt via WeeklyChallengeSystem.
 		if WeeklyChallengeSystem:
@@ -372,6 +389,19 @@ func start_run() -> void:
 				])
 				if WeeklyChallengeSystem.get_week_modifiers().size() > 0:
 					GameManager.add_message("🎲 This week's modifiers: %s" % WeeklyChallengeSystem.get_week_modifier_names())
+				_play_mode_start_juice(AudioManager.SFX_LEVEL_UP, 0.3)
+
+# ── Enhancement: Mode-start juice helper ──────────────────────────────────────
+# Plays the given SFX + applies camera trauma so each special mode's start
+# has a multi-sensory kickoff. Centralized here so all mode starts share the
+# same pattern and the trauma is consistent with the rest of the game's juice
+# language (trauma² decay, additive). Guarded so a missing AudioManager or
+# camera rig never breaks mode startup.
+func _play_mode_start_juice(sfx_name: String, trauma: float) -> void:
+	if AudioManager:
+		AudioManager.play_sfx(sfx_name)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(trauma)
 
 # ─── Per-Frame Update ─────────────────────────────────────────────────────────
 # Called by GameManager._process() (so it pauses with the game).
@@ -477,6 +507,13 @@ func _spawn_next_boss_rush_boss() -> void:
 	if "enemy_name" in boss:
 		bname = boss.enemy_name
 	GameManager.add_message("💀 Boss %d/%d: %s" % [_boss_rush_index + 1, BOSS_RUSH_QUEUE.size(), bname])
+	# ── Enhancement: Boss Rush boss spawn juice ── each boss's arrival gets
+	# the boss-spawn rumble + a camera shake so the player feels the next
+	# contender enter the arena. Matches the world-boss and arena-boss
+	# spawn feedback language.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.4)
 
 func _boss_rush_scene_path(boss_type: int) -> String:
 	match boss_type:
@@ -531,6 +568,11 @@ func _on_biome_changed(biome_id: int) -> void:
 	])
 	# Bonus XP for finding a new biome
 	GameManager.gain_xp(SPEEDRUN_SPLIT_BONUS_XP)
+	# ── Enhancement: Speedrun split juice ── a tiny camera shake so each
+	# biome split feels like a checkpoint hit. (SFX_LEVEL_UP already plays
+	# below as the existing audio feedback.)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.1)
 	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
 	if _speedrun_visited_biomes.size() >= SPEEDRUN_SPLIT_BIOME_COUNT:
 		_finish_speedrun()
@@ -547,6 +589,10 @@ func _finish_speedrun() -> void:
 			Statistics.set_lifetime_stat(SPEEDRUN_PB_SPLITS_KEY, _speedrun_splits)
 			GameManager.add_message("🏆 NEW PERSONAL BEST!")
 	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# ── Enhancement: Speedrun completion juice ── celebratory camera shake
+	# matching the other mode-completion feedback.
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.4)
 
 # ─── Signal Handlers ───────────────────────────────────────────────────────────
 
