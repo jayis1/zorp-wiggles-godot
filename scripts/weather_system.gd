@@ -397,6 +397,10 @@ func _finalize_transition() -> void:
 	_is_transitioning = false
 	_start_weather_effects(_current_weather)
 	weather_changed.emit(_current_weather, old)
+	# Weather transition SFX — a soft whoosh signals the atmospheric shift.
+	# Pairs with the existing camera trauma (0.03-0.1 depending on severity)
+	# to give weather changes a multi-sensory presence like a gust front.
+	AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	weather_transition_ended.emit(_current_weather)
 	# Announce weather change in message log
 	var info: Dictionary = GameConstants.WEATHER_INFO.get(_current_weather, {})

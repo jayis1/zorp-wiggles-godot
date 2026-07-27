@@ -90,6 +90,11 @@ func _do_autosave() -> void:
 	if save_game():
 		_last_save_time = GameManager.game_time
 		autosave_triggered.emit()
+		# Subtle HUD message so the player knows their progress is safe.
+		# The HUD controls message display duration, so this will show
+		# briefly and fade — unobtrusive during combat.
+		if GameManager and GameManager.has_method("add_message"):
+			GameManager.add_message("💾 Saved")
 
 
 # ── Public API ──────────────────────────────────────────────────────────────
