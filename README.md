@@ -166,9 +166,9 @@ zorp-wiggles-godot/
 │   ├── animation_system.gd       # AnimationPlayer library
 │   ├── navigation_manager.gd     # NavMesh generation (autoload)
 │   ├── co_op_manager.gd          # Co-op system (autoload)
-│   └── ...                       # 50+ scripts total
+│   └── ...                       # 159 scripts total
 ├── assets/
-│   └── shaders/                  # 10 custom .gdshader files
+│   └── shaders/                  # 13 custom .gdshader files
 ├── CONVERSION_TRACKER.md         # Development progress tracker
 └── README.md
 ```
@@ -179,7 +179,7 @@ zorp-wiggles-godot/
 
 This game was originally built with the **Ursina engine** (Python/Panda3D) as a 21,927-line single-file `game.py`. It has been fully converted to **Godot 4.4 GDScript** with a proper scene-tree architecture:
 
-- Single `Game` class → 15+ autoloads and scene scripts
+- Single `Game` class → 49+ autoloads and scene scripts
 - `color.rgb()` 0-255 → `Color()` 0-1 normalized
 - `held_keys[]` → `Input.is_action_pressed()`
 - `time.dt` → `delta` parameter
@@ -194,18 +194,20 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 
 ## 📊 Stats
 
-- **21,000+ lines** of GDScript
-- **70+ files** (scripts + scenes + shaders)
-- **20+ enemy types** with unique AI
-- **20+ weapon mods** craftable
-- **19 biomes** with procedural generation (12 original + 7 Phase 22 new)
+- **61,000+ lines** of GDScript across 159 scripts
+- **221 files** (159 scripts + 49 scenes + 13 shaders)
+- **21 enemy types** with unique AI (including 10 Phase 23 bosses/elites)
+- **36 weapon mods** craftable (20 original + 2 Enhancement + 2 Enhancement Pack 2 + 12 Phase 24)
+- **20 biomes** with procedural generation (12 original + 7 Phase 22 + 1 Underground)
 - **15 weather types** with gameplay effects (6 original + 3 Enhancement + 6 Phase 28) + weather combo system
 - **13 biome mutations** (6 original + 7 Phase 22 new)
 - **4 dimensional rifts** with unique mechanics
-- **3 pet evolution stages** with abilities
+- **5 pet evolution paths** (Fire/Ice/Electric/Void/Nature) with 3 stages each + fusion system
+- **10 game modes** (Normal, Endless, Boss Rush, Speedrun, PvP, Survival, Gauntlet, Boss Gauntlet, Daily Challenge, Weekly Challenge)
 - **Local co-op** with Player 2 "Zerp"
-- **24 procedural SFX** + 12 biome music tracks
-- **80+ git commits** of development history
+- **30+ procedural SFX** + 12 biome music tracks + dynamic music intensity
+- **8 procedural anomalous zone traits** with real gameplay effects (toxic haze, magma fissures, gravity well, echo chamber, glowing, crystal shard, mirror surface, rain indoor)
+- **224+ git commits** of development history
 
 ---
 

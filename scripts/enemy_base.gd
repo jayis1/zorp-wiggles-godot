@@ -1380,6 +1380,9 @@ func _drop_crafting_material() -> void:
 			var pet: Node3D = get_tree().get_first_node_in_group("companion_pet")
 			if pet and is_instance_valid(pet) and not (pet.get("is_dead") if "is_dead" in pet else false):
 				drop_chance = minf(1.0, drop_chance * (1.0 + pet_loot_mult))
+	# ── Phase 33: Crystal Shard anomalous zone — +25% loot bonus ──
+	if ProcBiomeGen:
+		drop_chance = minf(1.0, drop_chance * (1.0 + ProcBiomeGen.get_crystal_shard_loot_bonus()))
 	if randf() > drop_chance:
 		return
 	# Pick a crafting material via the weighted loot table.

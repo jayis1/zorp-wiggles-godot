@@ -3458,6 +3458,15 @@ const PROC_BIOME_CHANCE: float = 0.02
 const PROC_BIOME_TRAIT_COUNT: int = 2
 const PROC_BIOME_RADIUS: float = 25.0
 
+# ── Anomalous zone trait effect constants (Phase 33 gameplay wiring) ──
+const PROC_BIOME_TOXIC_HAZE_DAMAGE: int = 3
+const PROC_BIOME_TOXIC_HAZE_INTERVAL: float = 1.5
+const PROC_BIOME_MAGMA_DAMAGE: int = 5
+const PROC_BIOME_MAGMA_INTERVAL: float = 1.2
+const PROC_BIOME_GRAVITY_WELL_FORCE: float = 6.0
+const PROC_BIOME_ECHO_CHAMBER_PITCH: float = 0.6
+const PROC_BIOME_GLOWING_LIGHT_BOOST: float = 0.4
+
 # ── Phase 33: Procedural boss generation ──
 enum BossPattern {
 	CHARGE,

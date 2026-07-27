@@ -728,3 +728,21 @@ Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy cor
 - **PvP round start** — `_start_next_round()` now plays `SFX_UI_CLICK` + 0.2 camera trauma so each round's "Fight!" moment has punch. Previously the round start was silent with only a text message.
 - **PvP round end** — `_end_round()` now plays `SFX_COMBO_MILESTONE` + 0.3 camera trauma so each round win feels decisive. Previously the round win was silent with only a text message.
 - **PvP match end** — `_end_match()` now plays `SFX_BOSS_DEFEATED` + `SFX_LEVEL_UP` + 0.5 camera trauma (matching Boss Gauntlet / prestige celebration weight). Previously the match win was silent with only a text message — the final round of a PvP series deserved the biggest feedback.
+
+## Enhancement Pack 7 — Procedural Biome Trait Gameplay Wiring
+
+### Anomalous Zone Trait Effects (`procedural_biome_generator.gd` + `game_constants.gd` + `biome_effects.gd` + `player.gd` + `player2_zerp.gd` + `enemy_base.gd`)
+- **All 8 ProcBiomeTrait values now have real gameplay effects** — previously the trait query functions (`get_toxic_haze_active()`, `get_magma_fissures_active()`, `get_gravity_well_active()`, `get_echo_chamber_active()`, `get_glowing_mult()`) existed but were **never called by any other script**. The anomalous zones were purely cosmetic (just a HUD message on entry). Now every trait has tangible gameplay impact:
+  - **TOXIC_HAZE** — periodic poison damage (3 dmg per 1.5s, reduced 50% by fire resistance mutations since the heat burns off spores)
+  - **MAGMA_FISSURES** — periodic heat damage (5 dmg per 1.2s, fully reduced by fire resistance)
+  - **GRAVITY_WELL** — pulls the player toward the zone center at 6 m/s (scales with proximity, stronger near the edge)
+  - **ECHO_CHAMBER** — lowers ambient music pitch to 0.6× for an eerie cavernous feel; restored to 1.0 on zone exit
+  - **GLOWING** — boosts WorldEnvironment ambient light energy by +0.4 (only when below the target, doesn't fight darkness mutations); BiomeEffects `_apply_darkness()` yields to this and skips its own lerp while in a Glowing zone
+  - **CRYSTAL_SHARD** — periodic sparkle particles around the player + +25% loot chance bonus (wired into `enemy_base.gd._drop_crafting_material()`)
+  - **MIRROR_SURFACE** — reverses the player's horizontal movement controls (wired into both `player.gd` and `player2_zerp.gd._handle_movement()`)
+  - **RAIN_INDOOR** — spawns 200-particle ambient rain GPUParticles3D following the player within the zone; cleaned up on zone exit
+- **Audio + camera juice on zone entry** — `SFX_MUTATION` chime + 0.15 camera trauma when entering an anomalous zone, giving the zone a sensory identity beyond just a text message
+- **Trait effect constants** added to `game_constants.gd`: `PROC_BIOME_TOXIC_HAZE_DAMAGE`, `PROC_BIOME_TOXIC_HAZE_INTERVAL`, `PROC_BIOME_MAGMA_DAMAGE`, `PROC_BIOME_MAGMA_INTERVAL`, `PROC_BIOME_GRAVITY_WELL_FORCE`, `PROC_BIOME_ECHO_CHAMBER_PITCH`, `PROC_BIOME_GLOWING_LIGHT_BOOST`
+- **Cached player reference** — `_cached_player` avoids per-frame `get_first_node_in_group("player")` scans
+- **Cleanup on death/restart** — rain particles cleared, music pitch restored to 1.0, timers reset, zone state cleared on both `player_died` and `game_restarted` signals
+- **README stats updated** — corrected from 21,000 lines / 70+ files / 20+ enemies / 20+ mods to the actual 61,000+ lines / 221 files / 21 enemy types / 36 weapon mods / 20 biomes / 10 game modes / 224+ commits
