@@ -109,8 +109,9 @@ func _spawn_single_mite() -> void:
 	# Small particle burst at the spawn point — "birth" effect
 	ParticleEffects.spawn_materialization(get_parent(), spawn_pos,
 		GameConstants.SWARM_MITE_COLOR)
-	# Materialization audio — soft spawn blip (was generic enemy_hit)
-	AudioManager.play_sfx(AudioManager.SFX_PET)
+	# Materialization audio — uses the dedicated spawn-in sound for
+	# consistency with all other enemy materializations.
+	AudioManager.play_sfx(AudioManager.SFX_SPAWN_IN)
 
 ## Remove freed/invalid mites from the tracking list. Called each frame and
 ## before spawning a new batch so the cap check is accurate.

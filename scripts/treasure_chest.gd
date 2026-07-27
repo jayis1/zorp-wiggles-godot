@@ -275,6 +275,8 @@ func _trigger_trap() -> void:
 	# Materialization particle burst.
 	if ParticleEffects:
 		ParticleEffects.spawn_materialization(parent, enemy.global_position)
+	# Spawn-in SFX for the mimic ambush
+	AudioManager.play_sfx(AudioManager.SFX_SPAWN_IN)
 
 # ─── Mesh helpers ────────────────────────────────────────────────────────────
 

@@ -199,5 +199,5 @@ func _spawn_mini_wraith(pos: Vector3) -> void:
 	# Materialization particle burst for the "reform" effect
 	ParticleEffects.spawn_materialization(get_parent(), pos,
 		GameConstants.CRYSTAL_WRAITH_MINI_COLOR)
-	# Audio cue — soft materialization chime for the shard reforming
-	AudioManager.play_sfx(AudioManager.SFX_PET)  # Reuse soft blip (same as pet materialize)
+	# Audio cue — dedicated materialization sound for the shard reforming
+	AudioManager.play_sfx(AudioManager.SFX_SPAWN_IN)

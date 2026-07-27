@@ -129,6 +129,19 @@ const SFX_DASH_READY: String = "dash_ready"
 #    volume by how close the player is to death (0..1), so the heartbeat grows
 #    louder and more urgent as HP drops — mirroring the visual urgency.
 const SFX_HEARTBEAT: String = "heartbeat"
+# Enemy materialization — a short descending energy-coalesce sound for when
+# enemies finish spawning (after the warning ring). Quieter than boss_spawn
+# so it doesn't overwhelm during heavy waves, but audible enough to give the
+# materialization particles an audio identity.
+const SFX_SPAWN_IN: String = "spawn_in"
+# Variant promotion — a distinctive ascending shimmer for when an enemy is
+# promoted to Golden or Champion tier. Higher pitch + longer than a normal
+# spawn so rare variants feel special when they appear.
+const SFX_VARIANT_PROMOTE: String = "variant_promote"
+# Variant defeat — a triumphant descending arpeggio for killing Golden/Champion
+# enemies. Rewards the player for taking down a tough variant with a satisfying
+# "elite down" cue, distinct from the normal enemy death sound.
+const SFX_VARIANT_DEFEAT: String = "variant_defeat"
 
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 # Per-weapon-mod shoot sound variants. Each mod gets a distinct SFX so the
@@ -736,6 +749,19 @@ func _generate_all_sfx() -> void:
 	# recognizable as "heart in danger" — the universal audio shorthand for
 	# critical health in games ( Doom, Zelda, Call of Duty, etc.).
 	_sfx_streams[SFX_HEARTBEAT] = _gen_heartbeat()
+	# ── Enemy materialization SFX ── A short descending energy-coalesce blip
+	# (220→110 Hz over 0.12s) that reads as "something materializing." Low
+	# volume (0.12) so it doesn't overwhelm during heavy waves where multiple
+	# enemies materialize in quick succession.
+	_sfx_streams[SFX_SPAWN_IN] = _gen_descending(220.0, 110.0, 0.12, 0.12)
+	# ── Variant promotion SFX ── A bright ascending arpeggio (C5→E5→G5→C6)
+	# that signals a rare enemy has appeared. Higher and longer than the
+	# normal spawn sound so the player notices a Golden/Champion variant.
+	_sfx_streams[SFX_VARIANT_PROMOTE] = _gen_arpeggio([523.0, 659.0, 784.0, 1047.0], 0.05, 0.30)
+	# ── Variant defeat SFX ── A triumphant descending arpeggio (C6→G5→E5→C5)
+	# that rewards the player for taking down a tough variant. Reversed from
+	# the promotion arpeggio so it sounds like "victory over the elite."
+	_sfx_streams[SFX_VARIANT_DEFEAT] = _gen_arpeggio([1047.0, 784.0, 659.0, 523.0], 0.06, 0.35)
 
 
 func _generate_all_music() -> void:

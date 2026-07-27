@@ -322,6 +322,8 @@ func _summon_wisps() -> void:
 		GameManager.enemies.append(wisp)
 		ParticleEffects.spawn_materialization(get_parent(), spawn_pos,
 			Color(0.4, 1.0, 0.8, 0.6))
+	# Spawn-in SFX for the summoned wisps
+	AudioManager.play_sfx(AudioManager.SFX_SPAWN_IN)
 	GameManager.add_message("Void Leviathan summons wisps!")
 
 ## Start the vacuum pull — sucks the player toward the maw for VACUUM_DURATION.

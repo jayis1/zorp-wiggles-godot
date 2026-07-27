@@ -322,6 +322,12 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	var enemy_base: EnemyBase = enemy as EnemyBase
 	if enemy_base:
 		ParticleEffects.spawn_materialization(get_parent(), pos, enemy_base.base_color)
+		# Materialization SFX — a subtle descending blip that gives the
+		# coalescing particles an audio identity. Low volume so it doesn't
+		# overwhelm during heavy waves where several enemies materialize
+		# in quick succession. Skipped for bosses (boss_spawn SFX covers it).
+		if not enemy_base.is_arena_boss and not enemy_base.is_world_boss:
+			AudioManager.play_sfx(AudioManager.SFX_SPAWN_IN)
 
 	# Emit spawn direction signal for HUD arrows
 	GameManager.enemy_spawned_near.emit(pos, enemy_type)

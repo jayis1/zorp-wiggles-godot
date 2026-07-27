@@ -397,6 +397,9 @@ func _spawn_enemy_at(enemy_type: int, pos: Vector3) -> void:
 		enemy.max_hp = int(enemy.max_hp * 1.4)
 		enemy.hp = enemy.max_hp
 		enemy.damage = int(enemy.damage * 1.3)
+		# Materialization particles + SFX for dungeon enemy spawns
+		ParticleEffects.spawn_materialization(get_tree().current_scene, pos, enemy.base_color)
+		AudioManager.play_sfx(AudioManager.SFX_SPAWN_IN)
 
 func _enemy_scene_path(enemy_type: int) -> String:
 	match enemy_type:

@@ -243,6 +243,12 @@ func _apply_variant(enemy: Node, tier: int, traits: Array[int]) -> void:
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	# Spawn a materialization burst to telegraph the variant
 	ParticleEffects.spawn_materialization(eb.get_parent(), eb.global_position, tier_color)
+	# Promotion SFX — a bright ascending arpeggio signals a rare variant has
+	# appeared. Only for Golden and Champion tiers (not Elite) so the sound
+	# remains special — Elites are common enough that playing it every time
+	# would dilute the cue.
+	if tier >= Tier.GOLDEN:
+		AudioManager.play_sfx(AudioManager.SFX_VARIANT_PROMOTE)
 	# Spawn a glow light for golden/champion tiers
 	if tier >= Tier.GOLDEN:
 		_spawn_variant_glow(eb, tier)
@@ -396,6 +402,11 @@ func on_variant_death(enemy: Node) -> void:
 	# Exploding trait — AoE explosion on death
 	if Trait.EXPLODING in traits and eb:
 		_spawn_death_explosion(eb)
+	# Variant defeat SFX — a triumphant descending arpeggio rewards the player
+	# for taking down a Golden or Champion variant. Only for rare tiers so the
+	# sound stays special (Elite kills use the normal enemy death sound).
+	if tier >= Tier.GOLDEN:
+		AudioManager.play_sfx(AudioManager.SFX_VARIANT_DEFEAT)
 	# Bonus loot drop — champions get a guaranteed rare material
 	if tier >= Tier.CHAMPION and eb:
 		# Drop an extra collectible (rare)
@@ -409,6 +420,10 @@ func on_variant_death(enemy: Node) -> void:
 func _spawn_death_explosion(eb: EnemyBase) -> void:
 	# Visual + damage AoE
 	ParticleEffects.spawn_mega_explosion(eb.get_parent(), eb.global_position, Color(1.0, 0.5, 0.1))
+	# Explosion SFX — the death explosion has particles + damage + camera
+	# shake but was missing its audio counterpart. Reuses the existing
+	# explosion sound for a satisfying boom.
+	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
 	# Damage the player if within 3m
 	var player: Node3D = GameManager.player
 	if player and is_instance_valid(player):

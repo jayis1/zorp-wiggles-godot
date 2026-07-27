@@ -558,6 +558,9 @@ func _spawn_loot_cave_elites(root: Node3D, _cave: Dictionary) -> void:
 			elite.max_hp = int(elite.max_hp * GameConstants.LOOT_CAVE_ELITE_HP_MULT)
 			elite.hp = elite.max_hp
 			elite.damage = int(elite.damage * GameConstants.LOOT_CAVE_ELITE_DAMAGE_MULT)
+			# Materialization particles + SFX for loot cave elite spawns
+			ParticleEffects.spawn_materialization(get_tree().current_scene, pos, elite.base_color)
+			AudioManager.play_sfx(AudioManager.SFX_SPAWN_IN)
 	# Mark the last elite's death to clear the cave — connect to boss_defeated
 	# via a flag on the cave.
 	# We track via remaining-enemy count: when all elite guards are dead, the
