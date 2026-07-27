@@ -339,6 +339,18 @@ func _unlock(achievement_id: String) -> void:
 	while _popups.size() > 3:
 		_popups.pop_front()
 	GameManager.add_message("🏆 Achievement: %s" % ach.title)
+	# Achievement SFX — reuse the level-up chime for a celebratory cue.
+	# Achievements are milestones that reward the player's persistence, so
+	# the same triumphant sound language fits. Low-volume so it doesn't
+	# compete with combat during back-to-back unlocks.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# Gentle camera trauma — 0.15 gives a subtle celebratory shake without
+	# being distracting. Pairs with the popup slide-in + SFX for a complete
+	# multi-sensory reward. Lighter than level-up (0.25) or evolution (0.2)
+	# since achievements are less gameplay-critical than those events.
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.15)
 
 # Phase 26: Public unlock entry point so external systems (WorldBossManager,
 # FastTravelNetwork, WanderingMerchant) can trigger one-shot achievements

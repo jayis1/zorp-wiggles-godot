@@ -407,6 +407,12 @@ func _evolve_to(new_stage: int) -> void:
 	])
 	# Audio cue — triumphant evolution fanfare (was silent — a major milestone)
 	AudioManager.play_sfx(AudioManager.SFX_PET_EVOLVE)
+	# Camera trauma — a major milestone deserves a celebratory camera punch.
+	# 0.2 trauma (squared = 0.04 amplitude) is gentle but noticeable, matching
+	# the level-up feel without overwhelming. Pairs with the particle burst +
+	# scale punch + SFX for a multi-sensory evolution moment.
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.2)
 	# ── Phase 27: LOVE emote on evolution ──
 	_trigger_emote(GameConstants.PetEmote.LOVE)
 	# ── Phase 27: Pet Questline — notify stage change ──

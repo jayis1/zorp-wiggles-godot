@@ -208,7 +208,14 @@ func try_fuse() -> CharacterBody3D:
 	_donors.clear()
 	fusion_completed.emit(ft)
 	GameManager.add_message("✨ Fused a %s! A legendary companion is born!" % GameConstants.PET_FUSION_NAMES[ft])
-	AudioManager.play_sfx(AudioManager.SFX_PET)
+	# Use the evolution fanfare (triumphant arpeggio) instead of the basic pet
+	# blip — fusion is a legendary milestone, the biggest pet event in the game.
+	AudioManager.play_sfx(AudioManager.SFX_PET_EVOLVE)
+	# Camera trauma — a legendary moment deserves a celebratory camera punch.
+	# 0.3 trauma is slightly stronger than evolution (0.2) to reflect that
+	# fusion is rarer and more impactful.
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.3)
 	# Tutorial notification
 	if TutorialManager and TutorialManager.has_method("notify_pet_summoned"):
 		TutorialManager.notify_pet_summoned()
