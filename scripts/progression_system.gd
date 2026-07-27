@@ -305,6 +305,18 @@ func prestige() -> bool:
 	GameManager.add_message("🌟 PRESTIGE! Level %d — +%d SP, +%.0f%% XP multiplier" % [
 		_prestige_level, bonus_sp, _prestige_level * PRESTIGE_XP_MULT_PER_LEVEL * 100.0
 	])
+	# Prestige juice — one of the biggest milestones in the game deserves
+	# full multi-sensory celebration: triumphant fanfare, strong camera
+	# shake, and a spectacular particle burst at the player's position.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_PET_EVOLVE)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.5)
+	if GameManager.player and is_instance_valid(GameManager.player):
+		var pp: Node3D = GameManager.player
+		if ParticleEffects:
+			ParticleEffects.spawn_combo_fireworks(pp.get_parent(), pp.global_position, 5)
+			ParticleEffects.spawn_levelup_burst(pp.get_parent(), pp.global_position)
 	return true
 
 func get_prestige_xp_mult() -> float:
