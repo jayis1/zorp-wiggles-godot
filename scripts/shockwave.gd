@@ -99,12 +99,16 @@ func _physics_process(delta: float) -> void:
 	#    — the player is hit if they're anywhere in the ring's path this
 	#    frame, not just within a thin annulus at the final radius.
 	if not _has_hit_player:
+		# Swept-band bounds shared by both the P1 and P2 hit checks. Declared
+		# here (not inside the player branch) so the co-op P2 branch below can
+		# use them — GDScript 4 block-scopes `var`, so a variable declared in
+		# the `if player and ...` sibling block would be out of scope here.
+		var band_min: float = _prev_radius - 0.5
+		var band_max: float = current_radius + 0.5
 		var player: Node3D = get_tree().get_first_node_in_group("player")
 		if player and GameManager.player_is_alive and not GameManager.player_is_downed:
 			var dist: float = global_position.distance_to(player.global_position)
 			# Hit if the player falls within the swept band this frame
-			var band_min: float = _prev_radius - 0.5
-			var band_max: float = current_radius + 0.5
 			if dist >= band_min and dist <= band_max:
 				GameManager.take_damage(damage, global_position)
 				_has_hit_player = true
