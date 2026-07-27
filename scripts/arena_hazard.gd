@@ -63,12 +63,44 @@ func _process(delta: float) -> void:
 			_update_fading(delta)
 
 # ─── Telegraph Phase ──────────────────────────────────────────────────────────
+# ── Anticipation flash ── In the final 20% of the telegraph, the ring snaps
+#    to white and peaks in emission — a classic "tell" telegraphing the
+#    exact activation moment. Matches the spawn_warning and
+#    environmental_hazard language so all ground telegraphs read the same.
+const _ANTICIP_FRAC: float = 0.80
+const _FLASH_COLOR: Color = Color(1.0, 1.0, 1.0)
+var _anticip_sfx_played: bool = false
+
 func _update_telegraph(delta: float) -> void:
 	_timer -= delta
-	# Pulsing telegraph intensity
+	var progress: float = clampf(1.0 - (_timer / telegraph_time), 0.0, 1.0)
+	# ── Telegraph intensity ──
+	# Pre-anticipation: multi-octave pulse (two sines at incommensurate
+	# frequencies) for an organic, non-rhythmic flicker. Anticipation
+	# phase: ramp to white with ease-in-quad so the flash accelerates
+	# into the activation moment.
 	if _telegraph_mat:
-		var pulse: float = 0.4 + 0.3 * sin(Time.get_ticks_msec() * 0.012)
-		_telegraph_mat.albedo_color.a = pulse
+		if progress < _ANTICIP_FRAC:
+			var pulse: float = 0.4 + 0.3 * (sin(Time.get_ticks_msec() * 0.012) * 0.7
+				+ sin(Time.get_ticks_msec() * 0.019) * 0.3)
+			var fade: float = 1.0 - (progress / _ANTICIP_FRAC) * 0.3
+			var col: Color = _get_hazard_color()
+			_telegraph_mat.albedo_color = Color(col.r, col.g, col.b, pulse * fade)
+			_telegraph_mat.emission_energy_multiplier = 1.5 * fade
+		else:
+			var flash_t: float = (progress - _ANTICIP_FRAC) / (1.0 - _ANTICIP_FRAC)
+			var flash_intensity: float = flash_t * flash_t
+			var base_col: Color = _get_hazard_color()
+			var glow_col: Color = _get_glow_color()
+			_telegraph_mat.albedo_color = base_col.lerp(_FLASH_COLOR, flash_intensity)
+			_telegraph_mat.albedo_color.a = 0.6 + 0.4 * flash_intensity
+			_telegraph_mat.emission_energy_multiplier = 1.5 + flash_intensity * 3.0
+			_telegraph_mat.emission = glow_col.lerp(_FLASH_COLOR, flash_intensity)
+			# Play warp SFX once at the start of the anticipation flash
+			if not _anticip_sfx_played:
+				_anticip_sfx_played = true
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	# For falling crystal, drop the crystal during telegraph
 	if hazard_type == HazardType.FALLING_CRYSTAL and _hazard_mesh:
 		var t: float = 1.0 - (_timer / telegraph_time)
@@ -90,6 +122,19 @@ func _activate() -> void:
 	# Show hazard visual
 	if _hazard_mesh:
 		_hazard_mesh.visible = true
+		# ── Scale-in pop: the hazard mesh snaps in from a small scale and
+		#    overshoots to full size with an ease-out-back curve, so the
+		#    eruption/impact reads as an explosive birth rather than
+		#    popping in at full size. Void shockwaves skip this (they use
+		#    scale for their expansion). Falling crystals skip this too
+		#    (the descent from above IS the entrance). Matches the
+		#    environmental_hazard and spawn_warning pop language.
+		if hazard_type == HazardType.LAVA_GEYSER:
+			_hazard_mesh.scale = Vector3(0.1, 0.1, 0.1)
+			var pop_tween := _hazard_mesh.create_tween()
+			pop_tween.tween_property(_hazard_mesh, "scale", Vector3.ONE, 0.15) \
+				.set_ease(Tween.EASE_OUT) \
+				.set_trans(Tween.TRANS_BACK)
 
 	# Activate damage area
 	if _damage_area:

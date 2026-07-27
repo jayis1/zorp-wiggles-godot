@@ -184,19 +184,55 @@ func _start_telegraph() -> void:
 	_state = State.TELEGRAPH
 	_timer = GameConstants.ENV_HAZARD_TELEGRAPH_TIME
 	_has_dealt_damage = false
+	_anticip_sfx_played = false
 	_telegraph_mesh.visible = true
 	# For falling_rock, show the rock dropping during telegraph.
 	if hazard_type_name == "falling_rock":
 		_hazard_mesh.visible = true
 		_hazard_mesh.position.y = 12.0  # Start high.
 
+# ── Anticipation flash ── In the final 20% of the telegraph, the ring snaps
+#    to white and peaks in emission — a classic "tell" that telegraphs the
+#    exact activation moment so the player can dodge. Same technique used
+#    by spawn_warning.gd. Also plays a warp SFX once at the flash onset so
+#    off-screen hazards the player can't see still register audibly.
+const _ANTICIP_FRAC: float = 0.80
+const _FLASH_COLOR: Color = Color(1.0, 1.0, 1.0)
+var _anticip_sfx_played: bool = false
+
 func _update_telegraph(delta: float) -> void:
 	_timer -= delta
-	# Pulsing telegraph intensity.
+	var progress: float = 1.0 - (_timer / GameConstants.ENV_HAZARD_TELEGRAPH_TIME)
+	progress = clampf(progress, 0.0, 1.0)
+	# ── Telegraph intensity ──
+	# Pre-anticipation: multi-octave pulse (two sines at incommensurate
+	# frequencies) for an organic, non-rhythmic flicker instead of the
+	# mechanical single-sine blink. Matches the spawn_warning telegraph
+	# language so world hazards and enemy spawns read as the same visual
+	# grammar. Anticipation phase: ramp to full white with ease-in-quad so
+	# the flash accelerates into the activation moment.
 	if _telegraph_mat:
-		var pulse: float = 0.3 + 0.3 * sin(_time * 14.0)
-		_telegraph_mat.albedo_color.a = pulse
-		_telegraph_mat.emission_energy_multiplier = pulse * 1.5
+		if progress < _ANTICIP_FRAC:
+			var pulse: float = 0.3 + 0.3 * (sin(_time * 14.0) * 0.7 + sin(_time * 21.0) * 0.3)
+			var fade: float = 1.0 - (progress / _ANTICIP_FRAC) * 0.3
+			var col: Color = _config.get("color", Color(1.0, 0.4, 0.1))
+			_telegraph_mat.albedo_color = Color(col.r, col.g, col.b, pulse * fade)
+			_telegraph_mat.emission_energy_multiplier = pulse * fade * 1.5
+		else:
+			# Anticipation flash — ramp to white, accelerate into activation
+			var flash_t: float = (progress - _ANTICIP_FRAC) / (1.0 - _ANTICIP_FRAC)
+			var flash_intensity: float = flash_t * flash_t  # ease-in quad
+			var base_col: Color = _config.get("color", Color(1.0, 0.4, 0.1))
+			var glow_col: Color = _config.get("glow_color", Color(1.0, 0.6, 0.2))
+			_telegraph_mat.albedo_color = base_col.lerp(_FLASH_COLOR, flash_intensity)
+			_telegraph_mat.albedo_color.a = 0.6 + 0.4 * flash_intensity
+			_telegraph_mat.emission_energy_multiplier = 1.5 + flash_intensity * 3.0
+			_telegraph_mat.emission = glow_col.lerp(_FLASH_COLOR, flash_intensity)
+			# Play the warp SFX once at the start of the anticipation flash
+			if not _anticip_sfx_played:
+				_anticip_sfx_played = true
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	# Falling rock: drop the boulder during telegraph.
 	if hazard_type_name == "falling_rock" and _hazard_mesh:
 		var t: float = 1.0 - (_timer / GameConstants.ENV_HAZARD_TELEGRAPH_TIME)
@@ -211,6 +247,18 @@ func _activate() -> void:
 	_telegraph_mesh.visible = false
 	_hazard_mesh.visible = true
 	_damage_area.monitoring = true
+	# ── Scale-in pop: the hazard mesh snaps in from a small scale and
+	#    overshoots to full size with an ease-out-back curve, so the
+	#    eruption/impact reads as an explosive birth rather than popping
+	#    in at full size. Falling rocks skip this (the boulder has
+	#    already descended from above during telegraph — the descent IS
+	#    the scale-in). Matches the spawn_warning final-pop language.
+	if _hazard_mesh and hazard_type_name != "falling_rock":
+		_hazard_mesh.scale = Vector3(0.1, 0.1, 0.1)
+		var pop_tween := _hazard_mesh.create_tween()
+		pop_tween.tween_property(_hazard_mesh, "scale", Vector3.ONE, 0.15) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_BACK)
 	# Light flash.
 	if _hazard_light:
 		_hazard_light.light_energy = 4.0
@@ -279,6 +327,7 @@ func _start_cooldown() -> void:
 	_state = State.COOLDOWN
 	_timer = GameConstants.ENV_HAZARD_COOLDOWN_TIME
 	_hazard_mesh.visible = false
+	_hazard_mesh.scale = Vector3.ONE  # Reset for next cycle's scale-in pop
 	_damage_area.monitoring = false
 	if _hazard_light:
 		# Fade the light out.
