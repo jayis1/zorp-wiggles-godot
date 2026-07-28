@@ -326,6 +326,19 @@ func _physics_process(delta: float) -> void:
 		if _mat:
 			var pulse: float = 0.7 + 0.4 * sin(bob_offset * 1.5)
 			_mat.emission_energy_multiplier = pulse
+		# ── Breathing scale pulse ── A subtle scale oscillation synced to the
+		#    bob so the collectible feels alive — it "breathes" as it floats,
+		#    growing and shrinking slightly with the same rhythm as the
+		#    vertical bob. The pulse is small (±6%) so it reads as organic
+		#    life rather than a mechanical throb. Rare items get a slightly
+		#    larger pulse (±9%) so they feel more energetic and eye-catching.
+		#    We use the same bob_offset phase as the Y bob so the scale
+		#    peaks align with the top of the bob arc — the item swells as it
+		#    rises, creating a cohesive "breathing" rhythm.
+		if mesh_instance:
+			var pulse_amp: float = 0.06 if not _is_rare() else 0.09
+			var scale_pulse: float = 1.0 + sin(bob_offset * 1.5) * pulse_amp
+			mesh_instance.scale = Vector3.ONE * scale_pulse
 
 	# Magnetic pull toward player — uses direct global_position writes, so the
 	# X/Z wobble is only applied above when NOT being pulled (otherwise the

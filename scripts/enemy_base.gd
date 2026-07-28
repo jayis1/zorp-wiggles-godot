@@ -321,7 +321,12 @@ func _update_ai(delta: float) -> void:
 				is_alerted = true
 				alert_indicator_timer = GameConstants.ENEMY_ALERT_INDICATOR_DURATION
 				if alert_indicator:
+					# Kill any in-progress exit fade so the pop-in doesn't fight it
+					if alert_indicator.has_meta("_alert_exit_tween") and is_instance_valid(alert_indicator.get_meta("_alert_exit_tween") as Tween):
+						(alert_indicator.get_meta("_alert_exit_tween") as Tween).kill()
+						alert_indicator.remove_meta("_alert_exit_tween")
 					alert_indicator.visible = true
+					alert_indicator.modulate.a = 1.0
 					alert_indicator.text = "!"
 					alert_indicator.scale = Vector3(0.001, 0.001, 0.001)
 					var alert_tween := create_tween()
@@ -353,7 +358,12 @@ func _update_ai(delta: float) -> void:
 		is_alerted = true
 		alert_indicator_timer = GameConstants.ENEMY_ALERT_INDICATOR_DURATION
 		if alert_indicator:
+			# Kill any in-progress exit fade so the pop-in doesn't fight it
+			if alert_indicator.has_meta("_alert_exit_tween") and is_instance_valid(alert_indicator.get_meta("_alert_exit_tween") as Tween):
+				(alert_indicator.get_meta("_alert_exit_tween") as Tween).kill()
+				alert_indicator.remove_meta("_alert_exit_tween")
 			alert_indicator.visible = true
+			alert_indicator.modulate.a = 1.0
 			alert_indicator.text = "!"
 			# Pop-in bounce: scale from 0 → 1.4 → 1.0 for a juicy "!" appearance.
 			# Kills any prior tween so repeated alerts don't stack.
@@ -373,7 +383,30 @@ func _update_ai(delta: float) -> void:
 	if alert_indicator_timer > 0:
 		alert_indicator_timer -= delta
 		if alert_indicator_timer <= 0 and alert_indicator:
-			alert_indicator.visible = false
+			# ── Alert indicator exit fade ── Instead of a hard visible=false
+			#    cut, the "!" quickly shrinks and fades out over 0.15s. This
+			#    mirrors the pop-in bounce's energy in reverse — the indicator
+			#    "deflates" rather than vanishing, giving the player a smooth
+			#    visual cue that the alert state has ended. A tracked tween
+			#    ensures a re-alert can kill the in-progress fade and restart
+			#    the pop-in cleanly without stacking.
+			if not alert_indicator.has_meta("_alert_exit_tween") or not is_instance_valid(alert_indicator.get_meta("_alert_exit_tween") as Tween):
+				var alert_exit := create_tween()
+				alert_exit.set_parallel(true)
+				alert_exit.tween_property(alert_indicator, "scale",
+					Vector3(0.001, 0.001, 0.001), 0.15) \
+					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+				alert_exit.tween_property(alert_indicator, "modulate:a",
+					0.0, 0.15) \
+					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+				alert_exit.tween_callback(func():
+					alert_indicator.visible = false
+					alert_indicator.modulate.a = 1.0
+					alert_indicator.scale = Vector3.ONE
+				)
+				alert_indicator.set_meta("_alert_exit_tween", alert_exit)
+			else:
+				alert_indicator.visible = false
 
 	# ── Phase 10: Retreat check ──
 	# If the enemy is at low HP, it may retreat instead of attacking
@@ -1305,9 +1338,17 @@ func _update_visuals(delta: float) -> void:
 		if body_mesh:
 			var bob_y: float = sin(_walk_phase) * _walk_amp
 			body_mesh.position.y = 0.5 + bob_y
-			# Slight Z sway
+			# Sway: Z sway (side-to-side) + X sway (forward-back) using a
+			# 90° phase offset so the two axes create a circular wobble —
+			# the enemy "swims" through the air rather than just tilting
+			# on one axis. The X sway is smaller (0.5× the Z amplitude) so
+			# the dominant read is side-to-side with a subtle forward-back
+			# undulation underneath. This gives the walk cycle a more
+			# organic, three-dimensional feel.
 			var sway: float = sin(_walk_phase * 0.5) * 0.08
+			var sway_x: float = sin(_walk_phase * 0.5 + PI * 0.5) * 0.04
 			body_mesh.rotation.z = sway
+			body_mesh.rotation.y = sway_x
 			# ── Forward lean: tilt the mesh ~5° toward the movement direction ──
 			# Gives enemies a sense of momentum and urgency when chasing the
 			# player. Smoothed via exponential lerp so the lean eases in/out
@@ -1336,6 +1377,7 @@ func _update_visuals(delta: float) -> void:
 		body_mesh.position.y = lerpf(body_mesh.position.y, 0.5, settle_w)
 		body_mesh.rotation.z = lerpf(body_mesh.rotation.z, 0.0, settle_w)
 		body_mesh.rotation.x = lerpf(body_mesh.rotation.x, 0.0, settle_w)
+		body_mesh.rotation.y = lerpf(body_mesh.rotation.y, 0.0, settle_w)
 
 	# Low-HP warning pulse — only when not currently being hit-flashed
 	# (hit flash tween controls _material.albedo_color during its 0.15s duration)

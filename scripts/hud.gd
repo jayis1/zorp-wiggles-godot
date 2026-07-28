@@ -802,6 +802,22 @@ func _on_level_up(level: int) -> void:
 	level_up_text.text = "LEVEL UP! → Lv %d" % level
 	level_up_text.visible = true
 	level_up_display_timer = 3.0
+	# ── Level text scale pop ── The "Lv N" label in the corner just swaps
+	#    text on level-up — a flat, invisible change. A quick scale pop
+	#    (1.0 → 1.35 → 1.0 with elastic settle) gives the corner label a
+	#    celebratory "thump" that mirrors the level-up text's entrance pop,
+	#    so the player notices the level change even if they're not looking
+	#    at the center of the screen. Uses a tracked tween so rapid level-
+	#    ups don't stack. Skipped on the initial _update_all_displays() call
+	#    (level 1 → 1 is not a gain) via a guard on the previous level.
+	if level_text and level > 1:
+		if level_text.has_meta("_lv_corner_tween") and is_instance_valid(level_text.get_meta("_lv_corner_tween") as Tween):
+			(level_text.get_meta("_lv_corner_tween") as Tween).kill()
+		level_text.scale = Vector2.ONE * 1.35
+		var corner_pop := create_tween()
+		corner_pop.tween_property(level_text, "scale", Vector2.ONE, 0.25) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		level_text.set_meta("_lv_corner_tween", corner_pop)
 	# Animated scale-in with bounce overshoot — the text pops in from zero
 	# scale, overshoots slightly, then settles. This makes level-ups feel
 	# celebratory instead of a flat text swap. The tween is killed if a
@@ -933,6 +949,10 @@ func _on_game_restarted() -> void:
 	combo_text.scale = Vector2.ONE
 	combo_text.modulate.a = 1.0
 	level_up_text.visible = false
+	# Reset level text scale so a mid-pop corner tween doesn't carry a
+	# stale 1.35x scale into the new run.
+	if level_text:
+		level_text.scale = Vector2.ONE
 	# Reset HP bar damage-flash state so a fresh game doesn't carry over a
 	# lingering flash/shake from the previous run's last hit. The boss bar
 	# state is reset in its own block above (when boss_ref clears).
