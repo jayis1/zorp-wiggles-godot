@@ -411,6 +411,16 @@ func _enemy_scene_path(enemy_type: int) -> String:
 			return "res://scenes/entities/enemy_wisp.tscn"
 		GameConstants.EnemyType.BOMBER:
 			return "res://scenes/entities/enemy_bomber.tscn"
+		GameConstants.EnemyType.SENTINEL:
+			return "res://scenes/entities/enemy_sentinel.tscn"
+		GameConstants.EnemyType.SPITTER:
+			return "res://scenes/entities/enemy_spitter.tscn"
+		GameConstants.EnemyType.DRAKE:
+			return "res://scenes/entities/enemy_drake.tscn"
+		GameConstants.EnemyType.GRAVITON:
+			return "res://scenes/entities/enemy_graviton.tscn"
+		GameConstants.EnemyType.TOXIC_SPORE:
+			return "res://scenes/entities/enemy_toxic_spore.tscn"
 		GameConstants.EnemyType.CRYSTAL_GUARDIAN:
 			return "res://scenes/entities/enemy_crystal_guardian.tscn"
 		GameConstants.EnemyType.CRYSTAL_WRAITH:
@@ -427,6 +437,12 @@ func _enemy_scene_path(enemy_type: int) -> String:
 			return "res://scenes/entities/enemy_time_warden.tscn"
 		GameConstants.EnemyType.VOID_LEVIATHAN:
 			return "res://scenes/entities/enemy_void_leviathan.tscn"
+		GameConstants.EnemyType.ANCIENT_SENTINEL:
+			return "res://scenes/entities/enemy_ancient_sentinel.tscn"
+		GameConstants.EnemyType.GRAVITY_ELEMENTAL:
+			return "res://scenes/entities/enemy_gravity_elemental.tscn"
+		GameConstants.EnemyType.PHASE_SHIFTER:
+			return "res://scenes/entities/enemy_phase_shifter.tscn"
 		_:
 			return "res://scenes/entities/enemy_blob.tscn"
 

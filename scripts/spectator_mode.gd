@@ -285,7 +285,7 @@ func _create_hud() -> void:
 		_spec_hud.queue_free()
 	if _spec_hud_canvas and is_instance_valid(_spec_hud_canvas):
 		_spec_hud_canvas.queue_free()
-	_spec_hud = Control.new()
+	_spec_hud = SpectatorHudControl.new(self)
 	_spec_hud.name = "SpectatorHUD"
 	_spec_hud.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_spec_hud.set_process_mode(Node.PROCESS_MODE_ALWAYS)

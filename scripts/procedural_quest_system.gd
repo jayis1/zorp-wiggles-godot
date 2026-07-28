@@ -133,6 +133,7 @@ func _ready() -> void:
 		GameManager.enemy_killed.connect(_on_enemy_killed)
 		GameManager.combo_milestone.connect(_on_combo_milestone)
 		GameManager.level_up.connect(_on_level_up)
+		GameManager.damage_taken_from.connect(_on_player_damaged)
 	# Track dashes via Statistics signals (if available)
 	if Statistics:
 		# We can't easily intercept dashes; we'll poll Statistics lifetime stats
@@ -497,6 +498,14 @@ func _on_combo_milestone(combo: int, _tier: int, _color: Color) -> void:
 func _on_level_up(_level: int) -> void:
 	# REACH_LEVEL quests track via player_level in _update_quest_progress
 	pass
+
+func _on_player_damaged(_source_pos: Vector3) -> void:
+	# Mark all active NO_DAMAGE quests as failed (took damage)
+	for quest in _active_quests:
+		if quest.completed or quest.expired:
+			continue
+		if quest.modifier == Modifier.NO_DAMAGE:
+			quest._no_damage = true
 
 func _on_mod_crafted(_mod_id: int) -> void:
 	_crafts_this_run += 1

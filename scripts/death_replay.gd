@@ -164,13 +164,14 @@ func _process(delta: float) -> void:
 	if s.is_empty():
 		_finish_replay()
 		return
-	# Reconstruct position from the "p" array (stored as [x, y, z])
-	var p: Array = s.get("p", [_saved_pos.x, _saved_pos.y, _saved_pos.z])
-	_player_ref.global_position = Vector3(float(p[0]), float(p[1]), float(p[2]))
-	# Defensive mesh access
+	# Reconstruct position from the recorded "pos" Vector3
+	var p: Vector3 = s.get("pos", _saved_pos)
+	_player_ref.global_position = p
+	# Defensive mesh access — "mesh_rot" is stored as a Vector3
 	var mr: Variant = _player_ref.get("mesh")
 	if mr and is_instance_valid(mr):
-		mr.rotation = Vector3(0.0, float(s.get("mrot", _saved_mesh_rot.y)), 0.0)
+		var mrot: Vector3 = s.get("mesh_rot", _saved_mesh_rot)
+		mr.rotation = Vector3(0.0, mrot.y, 0.0)
 	_player_ref.camera_yaw = s.get("yaw", _saved_yaw)
 	_player_ref.camera_pitch = s.get("pitch", _saved_pitch)
 

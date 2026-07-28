@@ -161,6 +161,14 @@ func set_skill_points(amount: int) -> void:
 	skill_points_changed.emit(_skill_points)
 	_save()
 
+## Add skill points (e.g. from quest rewards). Updates the unspent count,
+## lifetime total, emits the changed signal, and persists to save.
+func add_skill_points(amount: int) -> void:
+	_skill_points += amount
+	_total_skill_points_earned += amount
+	skill_points_changed.emit(_skill_points)
+	_save()
+
 ## Set the prestige level from a save file.
 func set_prestige_level(level: int) -> void:
 	_prestige_level = max(0, level)

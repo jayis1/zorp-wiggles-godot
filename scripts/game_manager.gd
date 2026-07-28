@@ -499,7 +499,7 @@ func heal(amount: int) -> void:
 	var actual_heal: int = min(amount, player_max_hp - player_hp)
 	if actual_heal <= 0:
 		return
-	player_hp = min(player_max_hp, player_hp + amount)
+	player_hp = player_hp + actual_heal
 	hp_changed.emit(player_hp, player_max_hp)
 	# Phase polish: emit a dedicated heal signal so the player mesh can play a
 	# positive green flash + scale pop. Distinct from hp_changed (which also
