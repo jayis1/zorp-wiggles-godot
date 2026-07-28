@@ -143,6 +143,20 @@ func fuse_mods(parent_a: int, parent_b: int) -> int:
 	fusion_created.emit(fused_id, parent_a, parent_b)
 	if GameManager:
 		GameManager.add_message("✦ Fused: %s" % fm.name)
+	# ── Juice: SFX + camera trauma + blended-color particle burst ──
+	# Weapon mod fusion is a significant late-game event — it costs 15
+	# Space Gloop + a PRISM_HEART. The ascending level-up chime pairs
+	# with a 0.2 camera trauma (matching equipment craft) and a particle
+	# burst in the fused mod's blended color so the player sees the new
+	# mod's color identity at the moment of creation.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	var cam_rig_fuse: Node3D = GameManager.camera_rig
+	if cam_rig_fuse and cam_rig_fuse.has_method("add_trauma"):
+		cam_rig_fuse.add_trauma(0.2)
+	var player_fuse: Node3D = GameManager.player
+	if player_fuse and is_instance_valid(player_fuse) and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(player_fuse.get_parent(), player_fuse.global_position + Vector3(0, 1.0, 0), fm.color)
 	# Track in statistics
 	if Statistics and Statistics.has_method("add_lifetime"):
 		Statistics.add_lifetime("fusions_created", 1.0)

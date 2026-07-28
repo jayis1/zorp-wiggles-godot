@@ -101,7 +101,18 @@ func spend_tp(stat_id: int) -> bool:
 		_stat_levels[stat_id],
 		str(GameConstants.PET_TRAINING_STAT_BONUSES[stat_id]),
 	])
-	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	# ── Juice: craft SFX + camera trauma + sparkle on pet ──
+	# Training is a meaningful permanent-ish investment (TP is scarce).
+	# Upgraded from the plain UI_CLICK to the craft SFX for a "forged"
+	# feel. A light 0.08 camera trauma + cyan sparkle on the pet makes
+	# the stat upgrade feel like it physically enhanced the companion.
+	AudioManager.play_sfx(AudioManager.SFX_CRAFT)
+	var cam_rig_pt: Node3D = GameManager.camera_rig
+	if cam_rig_pt and cam_rig_pt.has_method("add_trauma"):
+		cam_rig_pt.add_trauma(0.08)
+	var pet_pt: Node3D = get_tree().get_first_node_in_group("companion_pet")
+	if pet_pt and is_instance_valid(pet_pt) and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(pet_pt.get_parent(), pet_pt.global_position + Vector3(0, 0.5, 0), Color(0.4, 0.9, 1.0))
 	return true
 
 

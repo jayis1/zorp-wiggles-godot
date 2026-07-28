@@ -133,11 +133,37 @@ func craft_mod(material_types: Array) -> int:
 		_refund_half(material_types)
 		return -1
 	# Mark as discovered
-	if not _discovered_mods.has(mod_id):
+	var is_new_discovery: bool = not _discovered_mods.has(mod_id)
+	if is_new_discovery:
 		_discovered_mods.append(mod_id)
 		mod_crafted.emit(mod_id)
 	# Auto-equip the newly crafted mod
 	equip_mod(mod_id)
+	# ── Juice: SFX + camera trauma + particle burst ──
+	# Crafting a weapon mod is the core crafting loop. First discovery
+	# gets a bigger celebration (SFX_LEVEL_UP + 0.18 trauma + mod-colored
+	# sparkle) — finding a new mod is exciting. Re-crafting an already-
+	# discovered mod gets the craft SFX + lighter 0.08 trauma + sparkle.
+	if GameManager:
+		var mod_color: Color = GameConstants.WEAPON_MOD_COLORS[mod_id] if mod_id < GameConstants.WEAPON_MOD_COLORS.size() else Color(0.5, 0.8, 1.0)
+		var player_wm: Node3D = GameManager.player
+		if is_new_discovery:
+			GameManager.add_message("✨ New mod discovered: %s!" % GameConstants.WEAPON_MOD_NAMES[mod_id])
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+			var cam_rig_new: Node3D = GameManager.camera_rig
+			if cam_rig_new and cam_rig_new.has_method("add_trauma"):
+				cam_rig_new.add_trauma(0.18)
+			if player_wm and is_instance_valid(player_wm) and ParticleEffects:
+				ParticleEffects.spawn_pickup_sparkle(player_wm.get_parent(), player_wm.global_position + Vector3(0, 1.0, 0), mod_color)
+		else:
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX_CRAFT)
+			var cam_rig_re: Node3D = GameManager.camera_rig
+			if cam_rig_re and cam_rig_re.has_method("add_trauma"):
+				cam_rig_re.add_trauma(0.08)
+			if player_wm and is_instance_valid(player_wm) and ParticleEffects:
+				ParticleEffects.spawn_pickup_sparkle(player_wm.get_parent(), player_wm.global_position + Vector3(0, 0.8, 0), mod_color)
 	return mod_id
 
 ## Look up the recipe key from material types. Returns WeaponMod.NONE if no match.

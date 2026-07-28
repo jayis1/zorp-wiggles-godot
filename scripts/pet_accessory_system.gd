@@ -76,7 +76,14 @@ func craft_accessory(id: int) -> bool:
 	accessory_crafted.emit(id)
 	accessories_changed.emit()
 	GameManager.add_message("🎀 Crafted %s!" % GameConstants.PET_ACCESSORY_NAMES[id])
-	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	AudioManager.play_sfx(AudioManager.SFX_CRAFT)
+	# ── Juice: camera trauma + sparkle on pet ──
+	var cam_rig_acc: Node3D = GameManager.camera_rig
+	if cam_rig_acc and cam_rig_acc.has_method("add_trauma"):
+		cam_rig_acc.add_trauma(0.1)
+	var pet: Node3D = get_tree().get_first_node_in_group("companion_pet")
+	if pet and is_instance_valid(pet) and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(pet.get_parent(), pet.global_position + Vector3(0, 0.5, 0), Color(1.0, 0.75, 0.9))
 	return true
 
 

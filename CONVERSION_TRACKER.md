@@ -746,3 +746,34 @@ Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy cor
 - **Cached player reference** — `_cached_player` avoids per-frame `get_first_node_in_group("player")` scans
 - **Cleanup on death/restart** — rain particles cleared, music pitch restored to 1.0, timers reset, zone state cleared on both `player_died` and `game_restarted` signals
 - **README stats updated** — corrected from 21,000 lines / 70+ files / 20+ enemies / 20+ mods to the actual 61,000+ lines / 221 files / 21 enemy types / 36 weapon mods / 20 biomes / 10 game modes / 224+ commits
+
+## Enhancement Pack 8 — Crafting & Progression Event Feedback Polish
+
+### Skill Purchase Juice (`progression_system.gd`)
+- **Skill purchase SFX + camera trauma + particle burst** — `purchase_skill()` now plays `SFX_COMBO_MILESTONE` (ascending arpeggio) + 0.12 camera trauma + golden sparkle burst on the player. Previously skill upgrades had only a text message — no audio, no visual feedback. The 0.12 trauma matches quest-completion weight since skill purchases are infrequent (1 SP per level) and each one is a meaningful build commitment.
+
+### Equipment System Juice (`equipment_system.gd`)
+- **Equipment craft** — `craft_piece()` now triggers 0.15 camera trauma + golden sparkle on the player alongside the existing `SFX_LEVEL_UP`. Previously crafting armor had audio but no physical feedback. The 0.15 trauma sits between skill purchase (0.12) and equipment upgrade (0.18) since crafting is a material commitment milestone.
+- **Equipment upgrade** — `upgrade_piece()` now triggers 0.18 camera trauma + golden sparkle. Upgrades are less frequent than crafting (require prior ownership + escalating rare material costs), so they get a slightly stronger kick. The existing `SFX_LEVEL_UP` already plays.
+- **Equipment equip/unequip** — `equip_piece()` and `unequip_slot()` now play `SFX_UI_CLICK` for tactile feedback. Previously equipping gear was completely silent — only a text message appeared. Both also trigger `_check_set_bonus_change()` for real-time set bonus detection.
+- **Material refinement** — `refine_material()` now plays `SFX_CRAFT` + spawns a color-matched particle burst (in the rare material's theme color) + a brief OmniLight3D flash + 0.08 camera trauma on the player. Previously refinement had only a text message — the player had no sensory feedback for converting materials.
+- **Consumable craft** — `craft_consumable()` upgraded from `SFX_PICKUP` (generic pickup blip) to `SFX_CRAFT` (dedicated forge sound) + 0.08 camera trauma + consumable-color-matched sparkle on the player. Previously consumable crafting sounded like picking up an item — now it has its own crafting identity.
+
+### Set Bonus Activation Juice (`equipment_system.gd`)
+- **Set bonus detection system** — new `_check_set_bonus_change()` helper compares active set bonus counts before and after every equip/unequip/craft/upgrade. When a set bonus crosses the 2-piece or 3-piece threshold for the first time, it fires a dedicated celebration:
+  - **2-piece activation** — `SFX_COMBO_MILESTONE` + 0.12 camera trauma + golden sparkle + \"✨ Set Bonus: [SetName] (2pc) activated!\" HUD message
+  - **3-piece activation (full set)** — `SFX_LEVEL_UP` + 0.20 camera trauma + golden sparkle + \"✨ Set Bonus: [SetName] (3pc) — Full Set!\" HUD message
+- Previously set bonuses were completely silent — the player had no feedback when their build came online. The `_previous_set_counts` dictionary tracks state between changes so only newly-activated thresholds trigger the celebration (not every re-equip).
+
+### Weapon Mod Crafting Juice (`weapon_mod_system.gd`)
+- **New mod discovery** — first-time crafting of a weapon mod now plays `SFX_LEVEL_UP` + 0.18 camera trauma + mod-colored sparkle burst + \"✨ New mod discovered: [Name]!\" HUD message. Previously discovering a new mod had no feedback at all — no SFX, no particles, just auto-equip.
+- **Re-crafting known mod** — re-crafting an already-discovered mod now plays `SFX_CRAFT` + 0.08 camera trauma + mod-colored sparkle. Previously re-crafting was completely silent. Both cases get a particle burst in the mod's theme color so the player sees the weapon's color identity at the moment of creation.
+
+### Weapon Mod Fusion Juice (`weapon_mod_fusion.gd`)
+- **Fusion creation** — `fuse_mods()` now plays `SFX_LEVEL_UP` + 0.20 camera trauma + particle burst in the fused mod's blended color. Previously weapon mod fusion (a significant late-game event costing 15 Space Gloop + a PRISM_HEART) had only a text message. The blended-color sparkle shows the player the new mod's color identity at the moment of creation.
+
+### Pet Accessory Craft Juice (`pet_accessory_system.gd`)
+- **Accessory craft** — `craft_accessory()` upgraded from `SFX_UI_CLICK` (plain click) to `SFX_CRAFT` (dedicated forge sound) + 0.10 camera trauma + pink sparkle on the companion pet. Previously crafting a pet accessory had only a quiet click sound. The sparkle targets the pet's position so the player sees the accessory \"appear\" on their companion.
+
+### Pet Training Stat Upgrade Juice (`pet_training_system.gd`)
+- **Stat upgrade** — `spend_tp()` upgraded from `SFX_UI_CLICK` (plain click) to `SFX_CRAFT` (forged feel) + 0.08 camera trauma + cyan sparkle on the companion pet. Previously training a pet stat had only a quiet click and a text message. The cyan sparkle on the pet gives the stat upgrade a \"physical enhancement\" feel.

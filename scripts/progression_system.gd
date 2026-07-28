@@ -209,6 +209,20 @@ func purchase_skill(skill_key: String) -> bool:
 	skill_points_changed.emit(_skill_points)
 	_save()
 	GameManager.add_message("⬆ Skill upgraded: %s → Rank %d" % [def["name"], _skill_ranks[skill_key]])
+	# ── Juice: SFX + camera trauma + particle burst on the player ──
+	# Skill purchases are infrequent (1 SP per level) so each one deserves
+	# a celebration moment. The ascending combo-milestone arpeggio pairs
+	# with a gentle 0.12 camera trauma (matching quest-completion weight)
+	# and a golden sparkle burst at the player's position so the upgrade
+	# feels physical even when the skill tree panel covers the viewport.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(0.12)
+	var player: Node3D = GameManager.player
+	if player and is_instance_valid(player) and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(player.get_parent(), player.global_position + Vector3(0, 1.0, 0), Color(1.0, 0.85, 0.3))
 	return true
 
 func _branch_skill_index(skill_key: String) -> int:

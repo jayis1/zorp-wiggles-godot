@@ -55,6 +55,11 @@ var _equipped: Array[int] = [-1, -1, -1]
 # Only one effect of each type active at a time (refreshing extends duration).
 var _active_effects: Dictionary = {}
 
+# Previous set bonus counts — used by _check_set_bonus_change() to detect
+# when a set bonus is newly activated (2-piece or 3-piece threshold crossed).
+# Updated after every equip/unequip/craft/upgrade.
+var _previous_set_counts: Dictionary = {}
+
 # Whether the equipment menu is currently open
 var _menu_open: bool = false
 
@@ -304,6 +309,12 @@ func equip_piece(piece_id: int) -> bool:
 	equipment_changed.emit()
 	if old != piece_id and old >= 0:
 		GameManager.add_message("👕 Equipped %s" % GameConstants.EQUIP_PIECE_NAMES[piece_id])
+		# ── Juice: SFX + set bonus check ──
+		# Equipping gear gets a UI click sound and a set-bonus re-check
+		# so the player gets immediate feedback when a set bonus activates.
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+		_check_set_bonus_change()
 	return true
 
 ## Unequip whatever is in the given slot.
@@ -317,6 +328,10 @@ func unequip_slot(slot: int) -> void:
 	piece_unequipped.emit(slot)
 	equipment_changed.emit()
 	GameManager.add_message("👕 Unequipped %s" % GameConstants.EQUIP_PIECE_NAMES[old])
+	# ── Juice: SFX + set bonus re-check ──
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+	_check_set_bonus_change()
 
 ## Craft an equipment piece. Consumes materials from both inventories.
 ## Returns true on success.
@@ -349,6 +364,19 @@ func craft_piece(piece_id: int) -> bool:
 	GameManager.add_message("✨ Crafted %s!" % GameConstants.EQUIP_PIECE_NAMES[piece_id])
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# ── Juice: camera trauma + particle burst on the player ──
+	# Crafting a piece of armor is a meaningful milestone — the player
+	# gathered rare materials and committed them. The 0.15 camera trauma
+	# (between skill purchase 0.12 and quest completion 0.12) gives it a
+	# celebratory kick. A warm golden sparkle burst on the player makes
+	# the craft feel physical even though the menu covers the viewport.
+	_check_set_bonus_change()
+	var cam_rig_craft: Node3D = GameManager.camera_rig
+	if cam_rig_craft and cam_rig_craft.has_method("add_trauma"):
+		cam_rig_craft.add_trauma(0.15)
+	var player_craft: Node3D = GameManager.player
+	if player_craft and is_instance_valid(player_craft) and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(player_craft.get_parent(), player_craft.global_position + Vector3(0, 1.0, 0), Color(1.0, 0.85, 0.3))
 	# ── Phase 29: Statistics tracking ──
 	if Statistics and Statistics.has_method("record_equipment_crafted"):
 		Statistics.record_equipment_crafted(piece_id)
@@ -424,6 +452,18 @@ func upgrade_piece(piece_id: int) -> bool:
 	GameManager.add_message("⬆ %s upgraded to +%d!" % [GameConstants.EQUIP_PIECE_NAMES[piece_id], current_level + 1])
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# ── Juice: camera trauma + particle burst ──
+	# Upgrading equipment is less frequent than crafting (needs prior
+	# ownership + rarer materials at higher levels), so it gets a slightly
+	# stronger 0.18 camera trauma + a warm gold sparkle. The ascending
+	# SFX_LEVEL_UP already plays; this adds the physical punch.
+	_check_set_bonus_change()
+	var cam_rig_up: Node3D = GameManager.camera_rig
+	if cam_rig_up and cam_rig_up.has_method("add_trauma"):
+		cam_rig_up.add_trauma(0.18)
+	var player_up: Node3D = GameManager.player
+	if player_up and is_instance_valid(player_up) and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(player_up.get_parent(), player_up.global_position + Vector3(0, 1.0, 0), Color(1.0, 0.85, 0.3))
 	return true
 
 ## Get the "theme" material type for a piece (used for upgrade costs).
@@ -461,6 +501,10 @@ func refine_material(rare_id: int) -> bool:
 			count, GameConstants.COLLECTIBLE_TYPE_NAMES.get(mat_type, "material"),
 			GameConstants.RARE_MATERIAL_NAMES[rare_id]
 		])
+		# ── Juice: SFX + particle burst ──
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT)
+		_spawn_refinement_juice(rare_id)
 		return true
 	# Check dual-input recipes
 	if GameConstants.REFINEMENT_RECIPES_DUAL.has(rare_id):
@@ -490,6 +534,10 @@ func refine_material(rare_id: int) -> bool:
 			count, GameConstants.COLLECTIBLE_TYPE_NAMES.get(mat_types[1], "mat2"),
 			GameConstants.RARE_MATERIAL_NAMES[rare_id]
 		])
+		# ── Juice: SFX + particle burst ──
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT)
+		_spawn_refinement_juice(rare_id)
 		return true
 	GameManager.add_message("⚠ No refinement recipe for %s" % GameConstants.RARE_MATERIAL_NAMES[rare_id])
 	return false
@@ -516,9 +564,90 @@ func craft_consumable(consumable_id: int) -> bool:
 		return false
 	add_consumable(consumable_id, 1)
 	GameManager.add_message("🧪 Crafted %s!" % GameConstants.CONSUMABLE_NAMES[consumable_id])
+	# ── Juice: SFX + camera trauma + particle burst ──
+	# Consumable crafting is quick and frequent, so it gets the dedicated
+	# craft SFX (a satisfying forge sound) + a light 0.08 camera trauma
+	# (lighter than equipment craft's 0.15) + a color-matched sparkle.
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_PICKUP)
+		AudioManager.play_sfx(AudioManager.SFX_CRAFT)
+	var cam_rig_cc: Node3D = GameManager.camera_rig
+	if cam_rig_cc and cam_rig_cc.has_method("add_trauma"):
+		cam_rig_cc.add_trauma(0.08)
+	var player_cc: Node3D = GameManager.player
+	if player_cc and is_instance_valid(player_cc) and ParticleEffects:
+		var cc_color: Color = GameConstants.CONSUMABLE_COLORS[consumable_id]
+		ParticleEffects.spawn_pickup_sparkle(player_cc.get_parent(), player_cc.global_position + Vector3(0, 0.8, 0), cc_color)
 	return true
+
+# ─── Juice Helpers ─────────────────────────────────────────────────────────────
+
+# Spawn a color-matched particle burst + light flash on the player when
+# a rare material is refined. Uses the rare material's theme color so
+# the player sees what they created even while the menu is open.
+func _spawn_refinement_juice(rare_id: int) -> void:
+	var player: Node3D = GameManager.player
+	if not player or not is_instance_valid(player):
+		return
+	var color: Color = Color(0.8, 0.6, 1.0)
+	if rare_id >= 0 and rare_id < GameConstants.RARE_MATERIAL_COLORS.size():
+		color = GameConstants.RARE_MATERIAL_COLORS[rare_id]
+	var parent: Node = player.get_parent()
+	if parent and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(parent, player.global_position + Vector3(0, 1.0, 0), color)
+	# Light flash in the rare material's color
+	var light := OmniLight3D.new()
+	light.light_color = color
+	light.light_energy = 4.0
+	light.omni_range = 5.0
+	light.omni_attenuation = 1.2
+	parent.add_child(light)
+	var tween := create_tween()
+	tween.tween_property(light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT)
+	tween.tween_callback(light.queue_free)
+	# Small camera trauma — refinement is a minor event
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(0.08)
+
+# Check whether a set bonus was newly activated or upgraded by comparing
+# the active set state before and after an equipment change. Emits a HUD
+# message + SFX + particle burst when a set bonus crosses the 2-piece or
+# 3-piece threshold for the first time. Called from equip/unequip/craft/upgrade.
+func _check_set_bonus_change() -> void:
+	var new_bonuses: Dictionary = _get_active_set_bonuses()
+	for set_id in new_bonuses:
+		var new_count: int = new_bonuses[set_id]
+		var old_count: int = _previous_set_counts.get(set_id, 0)
+		if new_count > old_count:
+			# A set bonus was newly activated or strengthened
+			var set_name: String = "Unknown"
+			if set_id >= 0 and set_id < GameConstants.EQUIP_SET_NAMES.size():
+				set_name = GameConstants.EQUIP_SET_NAMES[set_id]
+			if new_count >= 3 and old_count < 3:
+				# 3-piece bonus — bigger celebration
+				GameManager.add_message("✨ Set Bonus: %s (3pc) — Full Set!" % set_name)
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+				_spawn_set_bonus_juice(0.2)
+			elif new_count >= 2 and old_count < 2:
+				# 2-piece bonus — first activation
+				GameManager.add_message("✨ Set Bonus: %s (2pc) activated!" % set_name)
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+				_spawn_set_bonus_juice(0.12)
+	# Store current state for next comparison
+	_previous_set_counts = new_bonuses.duplicate()
+
+# Spawn visual juice for a set bonus activation — camera trauma + golden
+# sparkle burst on the player. The burst uses a warm gold color to signal
+# "bonus unlocked" regardless of which set triggered it.
+func _spawn_set_bonus_juice(trauma: float) -> void:
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(trauma)
+	var player: Node3D = GameManager.player
+	if player and is_instance_valid(player) and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(player.get_parent(), player.global_position + Vector3(0, 1.2, 0), Color(1.0, 0.85, 0.3))
 
 # ─── Public API: Stat Bonuses ─────────────────────────────────────────────────
 ## These are queried by player.gd, game_manager.gd, and projectile.gd to apply
