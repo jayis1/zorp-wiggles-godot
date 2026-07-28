@@ -296,6 +296,9 @@ func _on_game_restarted_player() -> void:
 	_muzzle_light = null
 	_muzzle_tween = null
 	_shoot_pulse_tween = null
+	# Clean up pickup pulse tweens so they don't reference freed nodes.
+	_pickup_pulse_tween = null
+	_pickup_emit_tween = null
 
 func _on_player_levelup_pet_emote(_level: int) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
@@ -903,6 +906,56 @@ func _on_player_healed_visual(amount: int) -> void:
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		emit_tween.parallel().tween_property(_player_material, "emission",
 			base_color * 0.4, 0.40) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+# ── Pickup feedback pulse ── When the player collects an item, Zorp's mesh
+#    does a tiny "absorb" pop — a quick grow + emission flash in the
+#    collectible's color — so pickups feel tactile. Rare items get a slightly
+#    bigger pop. Skipped during dash/slide (their tweens own mesh.scale) and
+#    when dead. Uses a tracked tween so rapid pickups (magnet chain) don't
+#    stack into a vibrating mess — each new pickup restarts the tween cleanly.
+#    The pop is smaller than the heal pop (1.06x vs 1.10x) because pickups
+#    are frequent and a big pop on every XP orb would be visual noise. The
+#    emission flash is brief (0.15s) and uses the collectible's color so the
+#    player sees what they caught — a green flash for Space Gloop, blue for
+#    XP orbs, gold for Star Fruit, etc.
+var _pickup_pulse_tween: Tween = null
+var _pickup_emit_tween: Tween = null
+func _play_pickup_pulse(item_color: Color, is_rare: bool) -> void:
+	if is_dashing or is_sliding:
+		return
+	if not GameManager.player_is_alive:
+		return
+	if not mesh:
+		return
+	# Kill any in-progress pickup tween so rapid magnet-chain pickups restart
+	# cleanly instead of stacking (5 orbs in 0.3s would otherwise pile up).
+	if _pickup_pulse_tween and _pickup_pulse_tween.is_valid():
+		_pickup_pulse_tween.kill()
+	# Scale pop: rare items get 1.08x, common items get 1.04x. Very subtle
+	# so frequent pickups don't become visual noise.
+	var pop_scale: float = 1.08 if is_rare else 1.04
+	_pickup_pulse_tween = create_tween()
+	_pickup_pulse_tween.tween_property(mesh, "scale", Vector3.ONE * pop_scale, 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_pickup_pulse_tween.tween_property(mesh, "scale", Vector3.ONE, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Emission flash in the item's color — brief and small so it reads as
+	# a "taste" of the pickup, not a full color swap. Only the emission
+	# ENERGY spikes; the color is set directly and eased back to base.
+	if _player_material:
+		# Blend the item color toward the base emission for a colored flash
+		var flash_emission: Color = item_color * 0.4
+		_player_material.emission = flash_emission
+		_player_material.emission_energy_multiplier = 2.0 if is_rare else 1.5
+		if _pickup_emit_tween and _pickup_emit_tween.is_valid():
+			_pickup_emit_tween.kill()
+		_pickup_emit_tween = create_tween()
+		_pickup_emit_tween.tween_property(_player_material, "emission_energy_multiplier",
+			1.0, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		_pickup_emit_tween.parallel().tween_property(_player_material, "emission",
+			base_color * 0.4, 0.18) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 func _handle_movement(delta: float) -> void:
@@ -1887,15 +1940,9 @@ func _use_pulse_wave() -> void:
 	# sells the pulse wave as a weighty "moment" rather than a button press.
 	# Lighter than the crit hit-stop (45ms @ 0.08x) and the boss-kill hit-stop
 	# (90ms @ 0.04x) — this is an ability cast, not a kill blow, so the freeze
-	# is perceptible but doesn't disrupt flow. The restore is scheduled on the
-	# scene tree with ignore_time_scale=true (matching the projectile hit-stop
-	# pattern) so the timer counts real-time seconds and the freeze lasts
-	# exactly 60ms regardless of the current time scale. Restores to 1.0 because
-	# DimensionSystem uses per-node _time_scale multipliers, so the global
-	# Engine.time_scale should always be 1.0 at rest.
-	Engine.time_scale = 0.25
-	var restore_timer := get_tree().create_timer(0.06, true, false, true)
-	restore_timer.timeout.connect(func(): Engine.time_scale = 1.0)
+	# is perceptible but doesn't disrupt flow. Routed through HitStopCoordinator
+	# so it composes correctly with any simultaneous freezes.
+	HitStopCoordinator.request_freeze(0.25, 0.06)
 	# Phase 20: Audio — pulse wave SFX
 	AudioManager.play_sfx(AudioManager.SFX_PULSE_WAVE)
 	# ── Player body squash on cast ── The dash has a squash-and-stretch

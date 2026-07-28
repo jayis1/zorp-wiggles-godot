@@ -917,7 +917,13 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	hp -= amount
 	enemy_hit.emit(self, amount)
 	# Phase 20: Audio — enemy hit SFX
-	AudioManager.play_sfx(AudioManager.SFX_ENEMY_HIT)
+	# ── Size-based pitch: larger enemies get deeper hit sounds so a
+	#    Sentinel's hit reads as a heavy thud while a Blob's reads as
+	#    a light pop. base_scale ~0.8 (small) → pitch 1.15, ~1.0
+	#    (normal) → pitch 1.0, ~2.0+ (boss) → pitch 0.7. The mapping
+	#    is a simple inverse scale with clamping.
+	var hit_pitch: float = clampf(1.3 - base_scale * 0.2, 0.6, 1.3)
+	AudioManager.play_sfx_pitched(AudioManager.SFX_ENEMY_HIT, hit_pitch)
 
 	# Hit flash — white albedo + emission spike for a punchy combat read.
 	# The albedo snaps to white and the emission energy kicks up, then both
@@ -1016,7 +1022,16 @@ func _die() -> void:
 		EndgameManager.notify_gauntlet_kill()
 	enemy_died.emit(self)
 	# Phase 20: Audio — enemy death SFX
-	AudioManager.play_sfx(AudioManager.SFX_ENEMY_DEATH)
+	# ── Size-based pitch: larger enemies get deeper death sounds so a
+	#    Drake's death is a weighty boom while a Blob's is a light pop.
+	#    Bosses (base_scale >= 2.0) get an even deeper pitch (0.55) so
+	#    their death sounds like a major event, not just another kill.
+	#    The mapping mirrors the hit SFX but with a wider range so the
+	#    death pitch drop is more dramatic than the hit pitch drop —
+	#    deaths are lower stakes per-hit but the pitch shift makes
+	#    the audio hierarchy clear (small = ping, large = BOOM).
+	var death_pitch: float = clampf(1.35 - base_scale * 0.25, 0.5, 1.35)
+	AudioManager.play_sfx_pitched(AudioManager.SFX_ENEMY_DEATH, death_pitch)
 	# ── Phase 18: Boss Arena — emit boss_defeated for arena-promoted bosses ──
 	if is_arena_boss:
 		GameManager.boss_defeated.emit(self)
@@ -1047,13 +1062,8 @@ func _die() -> void:
 		# add_trauma() accumulates so we just add the boss delta on top.
 		_trigger_camera_trauma(0.6)
 		# Boss-kill hit-stop — 90ms near-stop freeze for weighty kill blow.
-		# Scene-tree timer with ignore_time_scale=true so the restore fires
-		# in real-time seconds regardless of the freeze scale.
-		Engine.time_scale = 0.04
-		var hs_tree := get_tree()
-		if hs_tree:
-			var hs_timer := hs_tree.create_timer(0.09, true, false, true)
-			hs_timer.timeout.connect(func(): Engine.time_scale = 1.0)
+		# Routed through HitStopCoordinator for correct overlap composition.
+		HitStopCoordinator.request_freeze(0.04, 0.09)
 	# Remove from GameManager's enemy list to prevent the array from growing
 	# with invalid references over time (performance leak).
 	GameManager.enemies.erase(self)

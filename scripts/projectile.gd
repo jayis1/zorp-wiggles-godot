@@ -240,15 +240,10 @@ func _trigger_hitstop(is_boss_kill: bool = false) -> void:
 	_hitstop_cooldown = HITSTOP_COOLDOWN
 	var freeze_duration: float = HITSTOP_BOSS_DURATION if is_boss_kill else HITSTOP_DURATION
 	var freeze_scale: float = HITSTOP_BOSS_TIME_SCALE if is_boss_kill else HITSTOP_TIME_SCALE
-	Engine.time_scale = freeze_scale
-	# Schedule restore on the scene tree — survives self queue_free().
-	# `ignore_time_scale=true` is critical: without it the restore timer
-	# ticks at the freeze speed, so the "brief" freeze would last many
-	# times longer than intended (e.g. 0.09s / 0.04 = 2.25s for a boss kill).
-	var timer := get_tree().create_timer(freeze_duration, true, false, true)
-	timer.timeout.connect(func():
-		Engine.time_scale = 1.0
-	)
+	# Routed through HitStopCoordinator so overlapping freezes (e.g. a crit
+	# and a player-damage on the same frame) compose correctly — the strongest
+	# wins and the world stays frozen until the longest freeze expires.
+	HitStopCoordinator.request_freeze(freeze_scale, freeze_duration)
 
 ## Elite kill hit-stop: a lighter freeze for large-but-not-boss enemies. Shares
 ## the normal hit-stop cooldown so rapid elite clears don't stack into a long
@@ -259,11 +254,7 @@ func _trigger_elite_hitstop() -> void:
 	if _hitstop_cooldown > 0.0:
 		return
 	_hitstop_cooldown = HITSTOP_COOLDOWN
-	Engine.time_scale = HITSTOP_ELITE_TIME_SCALE
-	var timer := get_tree().create_timer(HITSTOP_ELITE_DURATION, true, false, true)
-	timer.timeout.connect(func():
-		Engine.time_scale = 1.0
-	)
+	HitStopCoordinator.request_freeze(HITSTOP_ELITE_TIME_SCALE, HITSTOP_ELITE_DURATION)
 
 ## Normal kill hit-stop: the lightest freeze tier, fires on non-crit, non-
 ## elite, non-boss kills so even common mook deaths get a micro-punch.
@@ -274,11 +265,7 @@ func _trigger_kill_hitstop() -> void:
 	if _hitstop_cooldown > 0.0:
 		return
 	_hitstop_cooldown = HITSTOP_COOLDOWN
-	Engine.time_scale = HITSTOP_KILL_TIME_SCALE
-	var timer := get_tree().create_timer(HITSTOP_KILL_DURATION, true, false, true)
-	timer.timeout.connect(func():
-		Engine.time_scale = 1.0
-	)
+	HitStopCoordinator.request_freeze(HITSTOP_KILL_TIME_SCALE, HITSTOP_KILL_DURATION)
 
 ## Add camera shake trauma via the camera rig. Centralized so all weapon mod
 ## effects (AoE, shrapnel, black hole, etc.) can trigger shake without

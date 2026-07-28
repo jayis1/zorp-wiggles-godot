@@ -458,16 +458,15 @@ func take_damage(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	#    scale) when the player takes a hit. Lighter than the crit hit-stop
 	#    (45ms @ 0.08x) because the player is the victim, not the attacker —
 	#    the freeze should register as a "ouch" beat without disrupting flow
-	#    or making the player feel sluggish. The restore timer uses
-	#    ignore_time_scale=true so the freeze lasts exactly 55ms of real time
-	#    regardless of the current DimensionSystem time scale. Restores to 1.0
-	#    because per-node _time_scale multipliers handle dimension slow-down.
+	#    or making the player feel sluggish. Routed through HitStopCoordinator
+	#    so overlapping freezes (e.g. crit + player-damage on the same frame)
+	#    compose correctly — the strongest wins and the world stays frozen
+	#    until the longest freeze expires, instead of the first timer firing
+	#    and snapping the game back mid-impact.
 	#    Skipped on the killing blow — _die() owns the death moment and a
 	#    freeze here would delay the death screen's fade-in.
 	if player_hp > 0:
-		Engine.time_scale = 0.35
-		var hs_timer := get_tree().create_timer(0.055, true, false, true)
-		hs_timer.timeout.connect(func(): Engine.time_scale = 1.0)
+		HitStopCoordinator.request_freeze(0.35, 0.055)
 	# Phase 5: Emit damage direction signal (if source_pos is non-zero)
 	if source_pos != Vector3.ZERO:
 		damage_taken_from.emit(source_pos)
@@ -590,13 +589,8 @@ func _level_up() -> void:
 	#    hit-stop language. The freeze is slightly longer than the crit hit-stop
 	#    (45ms @ 0.08x) because leveling is a rarer, more celebratory beat —
 	#    the player should have time to register the golden flash + shockwave.
-	#    The restore timer uses ignore_time_scale=true so the freeze lasts
-	#    exactly 80ms of real time regardless of DimensionSystem time scale.
-	#    Restores to 1.0 because per-node _time_scale multipliers handle
-	#    dimension slow-down (same pattern as all other hit-stops).
-	Engine.time_scale = 0.15
-	var lv_timer := get_tree().create_timer(0.08, true, false, true)
-	lv_timer.timeout.connect(func(): Engine.time_scale = 1.0)
+	#    Routed through HitStopCoordinator for correct overlap composition.
+	HitStopCoordinator.request_freeze(0.15, 0.08)
 
 func add_score(amount: int) -> void:
 	player_score += amount
@@ -657,8 +651,9 @@ func restart_game() -> void:
 	# ── Phase 35: Safety reset — ensure Engine.time_scale is always 1.0 ──
 	# If a hit-stop, death replay, or co-op mega-pulse was interrupted by this
 	# restart, Engine.time_scale could be stuck at a non-1.0 value, making the
-	# new run play in slow-motion or fast-forward. Force it back to normal.
-	Engine.time_scale = 1.0
+	# new run play in slow-motion or fast-forward. Force it back to normal
+	# via the HitStopCoordinator (which also clears its active freeze list).
+	HitStopCoordinator.reset()
 	# Clear enemies, collectibles, projectiles
 	for enemy in enemies:
 		if is_instance_valid(enemy):

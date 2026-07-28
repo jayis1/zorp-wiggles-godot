@@ -316,6 +316,28 @@ func play_sfx(sfx_name: String) -> void:
 		player.pitch_scale = 1.0
 	player.play()
 
+## Play a one-shot SFX with an explicit pitch scale override. This is used
+## for size-based audio hierarchy: larger enemies get deeper (lower pitch)
+## death/hit sounds so a Drake's death sounds weightier than a Blob's.
+## The pitch is computed by the caller and passed in directly. The random
+## ±6% variation is still applied ON TOP of the base pitch so the size-
+## scaled sounds still have natural micro-detuning.
+##   pitch_base = 1.0 (normal), 0.7 (deep/large), 1.3 (small/high)
+func play_sfx_pitched(sfx_name: String, pitch_base: float) -> void:
+	if not _initialized:
+		return
+	if not _sfx_streams.has(sfx_name):
+		return
+	var player = _next_sfx_player()
+	player.stream = _sfx_streams[sfx_name]
+	player.volume_db = linear_to_db(maxf(sfx_volume * master_volume, 0.0001))
+	# Apply the base pitch, then add random variation on top for natural detuning
+	var variation: float = 0.0
+	if sfx_name in _PITCH_VARIATION_SFX:
+		variation = randf_range(-_PITCH_VARIATION_AMOUNT, _PITCH_VARIATION_AMOUNT)
+	player.pitch_scale = clampf(pitch_base + variation, 0.1, 4.0)
+	player.play()
+
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 ## Play the shoot SFX appropriate for the equipped weapon mod. If mod_id is
 ## NONE (or the mod has no mapping), falls back to the standard laser SFX.

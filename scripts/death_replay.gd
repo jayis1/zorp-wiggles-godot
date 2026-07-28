@@ -136,6 +136,9 @@ func start_replay(player: CharacterBody3D) -> void:
 	_saved_mesh_rot = m.rotation if (m and is_instance_valid(m)) else Vector3.ZERO
 	_saved_yaw = player.camera_yaw
 	_saved_pitch = player.camera_pitch
+	# Reset any active hit-stops before starting the replay's own time scale,
+	# so the replay slow-mo is the sole owner of Engine.time_scale.
+	HitStopCoordinator.reset()
 	Engine.time_scale = REPLAY_TIME_SCALE
 	replay_started.emit()
 	print("[DeathReplay] Starting slow-mo replay (%d samples)" % _samples.size())
@@ -174,6 +177,9 @@ func _finish_replay() -> void:
 	_playing = false
 	# Always restore to 1.0 — never inherit a hit-stop time scale from before
 	# the replay started, or the death screen would render in slow-motion.
+	# Also reset the coordinator so any freezes that were active before the
+	# replay don't resume after the replay ends.
+	HitStopCoordinator.reset()
 	Engine.time_scale = 1.0
 	# Restore the player's pre-replay transform (safety net — restart will
 	# reset everything anyway, but this prevents a one-frame visual glitch if

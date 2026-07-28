@@ -512,6 +512,16 @@ func _collect() -> void:
 	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
 	ParticleEffects.spawn_pickup_sparkle(get_parent(), global_position, config["color"])
 
+	# ── Player pickup feedback pulse ── A subtle scale pop on the player
+	#    mesh when collecting an item, so pickups feel tactile — Zorp
+	#    briefly "absorbs" the item with a small grow + emission flash
+	#    in the collectible's color. Rare items get a slightly bigger
+	#    pop. This is skipped during dash/slide (their tweens own
+	#    mesh.scale) and when the player is dead. The player reference
+	#    is cached (_cached_player) so we don't need a group lookup.
+	if _cached_player and is_instance_valid(_cached_player) and _cached_player.has_method("_play_pickup_pulse"):
+		_cached_player._play_pickup_pulse(config["color"], _is_rare())
+
 	# ── Pickup light flash ── A brief OmniLight3D at the pickup point that
 	# flashes the collectible's color and fades over 0.25s. Gives pickups
 	# extra punch in dark biomes where the sparkle particles alone can be

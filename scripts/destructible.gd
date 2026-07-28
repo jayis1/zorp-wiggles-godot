@@ -154,20 +154,10 @@ func _shatter() -> void:
 		cam_rig.add_trauma(0.15)
 
 	# ── Hit-stop: brief global time-scale dip so the shatter lands with
-	# weight. Uses the same Engine.time_scale technique as projectile
-	# hit-stop. A scene-tree Timer restores the scale so the freeze is
-	# independent of this node's lifetime (we queue_free below).
-	Engine.time_scale = SHATTER_HITSTOP_TIME_SCALE
-	# IMPORTANT: ignore_time_scale=true (4th arg) so the restore fires in
-	# real-time seconds. Without it, the timer respects Engine.time_scale
-	# (0.1 here), making the 0.05s freeze actually last ~0.5s — 10x too long
-	# and a noticeable stutter instead of a snappy hit-stop beat. This
-	# matches the pattern used by projectile.gd, player.gd, and co_op_manager.gd.
-	# CRITICAL: Use a lambda (not self._restore_time_scale) because self is
-	# queue_free'd below. A method reference on self would be disconnected when
-	# the node is freed, leaving Engine.time_scale stuck at 0.1 forever.
-	var restore_timer := get_tree().create_timer(SHATTER_HITSTOP_DURATION, true, false, true)
-	restore_timer.timeout.connect(func(): Engine.time_scale = 1.0)
+	# weight. Routed through HitStopCoordinator (which is an autoload and
+	# survives this node's queue_free) so the freeze is independent of this
+	# node's lifetime and composes correctly with simultaneous freezes.
+	HitStopCoordinator.request_freeze(SHATTER_HITSTOP_TIME_SCALE, SHATTER_HITSTOP_DURATION)
 
 	# Hide self and free after a tiny delay (so signal completes)
 	mesh_instance.visible = false
