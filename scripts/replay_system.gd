@@ -138,7 +138,7 @@ func record_frame(player: CharacterBody3D) -> void:
 		"yaw": player.camera_yaw if "camera_yaw" in player else 0.0,
 		"pitch": player.camera_pitch if "camera_pitch" in player else 0.0,
 		"mrot": mesh_rot_y,
-		"dash": bool(player.get("player_is_dashing")) if player.has_method("get") else false,
+		"dash": player.get("is_dashing") == true,
 		"biome": int(GameManager.current_biome) if GameManager else 0,
 	}
 	_samples.append(sample)
