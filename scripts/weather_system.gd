@@ -761,6 +761,8 @@ func _tick_gravity_anomaly(delta: float) -> void:
 			_gravity_shift_active = false
 			_gravity_anomaly_force = 0.0
 			gravity_shift_ended.emit()
+			# Audio — settling chime as gravity returns to normal.
+			AudioManager.play_sfx_pitched(AudioManager.SFX_MUTATION, 0.6)
 			GameManager.add_message("🌀 Gravity normalizes.")
 	else:
 		_gravity_shift_timer -= delta
@@ -820,6 +822,8 @@ func _tick_dimensional_storm(delta: float) -> void:
 			var target_dim: int = dimensions[randi() % dimensions.size()]
 			if DimensionSystem.has_method("enter_dimension"):
 				DimensionSystem.enter_dimension(target_dim)
+			# Audio — reality-tearing rift sound for the forced dimension shift.
+			AudioManager.play_sfx(AudioManager.SFX_RIFT)
 			GameManager.add_message("💫 Dimensional instability! Reality shifts!")
 
 # Weather combo tick — handles the overlapping combo weather's own passive
@@ -866,6 +870,8 @@ func _try_start_weather_combo(primary_weather: int) -> void:
 	var combo_name: String = combo_info.get("name", "Unknown")
 	var primary_info: Dictionary = GameConstants.WEATHER_INFO.get(primary_weather, {})
 	var primary_name: String = primary_info.get("name", "Unknown")
+	# Audio — celebratory chime for the rare weather combo activation.
+	AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
 	GameManager.add_message("🌟 Weather combo! %s + %s!" % [primary_name, combo_name])
 
 ## Phase 28: End the active weather combo.

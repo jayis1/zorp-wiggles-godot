@@ -1331,6 +1331,10 @@ func _die() -> void:
 	# Death poof
 	ParticleEffects.spawn_death_poof(get_parent(), global_position, _stage_color(), 1.0)
 	ParticleEffects.spawn_explosion(get_parent(), global_position, _stage_color(), 30, 0.6)
+	# Death SFX + camera trauma — pet death is a significant gameplay event.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_PET, 0.7)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.12)
 	GameManager.add_message("🐾 Pet was defeated! It will respawn in 10s...")
 	# ── Phase 27: Clean up path ability effects on death ──
 	_cleanup_path_effects()
@@ -1398,6 +1402,8 @@ func _respawn() -> void:
 	if _cached_player and is_instance_valid(_cached_player):
 		global_position = _cached_player.global_position + GameConstants.PET_SPAWN_OFFSET
 	ParticleEffects.spawn_materialization(get_parent(), global_position, _stage_color())
+	# Respawn SFX — celebrate the pet's return.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_PET, 1.2)
 	GameManager.add_message("🐾 Pet respawned!")
 
 

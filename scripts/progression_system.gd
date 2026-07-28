@@ -175,6 +175,8 @@ func _on_level_up(level: int) -> void:
 	_total_skill_points_earned += sp_gain
 	skill_points_changed.emit(_skill_points)
 	_save()
+	# Audio — subtle chime for skill point gain (lighter than level-up).
+	AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.3)
 	GameManager.add_message("⭐ Skill Point gained! (%d available — press K)" % _skill_points)
 
 func _on_game_restarted() -> void:
@@ -372,6 +374,10 @@ func try_auto_revive() -> bool:
 		GameManager.player_hp = int(GameManager.player_max_hp * 0.5)
 		GameManager.player_invuln_timer = 3.0
 		GameManager.hp_changed.emit(GameManager.player_hp, GameManager.player_max_hp)
+		# Audio — triumphant revive fanfare for the auto-revive.
+		AudioManager.play_sfx(AudioManager.SFX_REVIVE)
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.3)
 		GameManager.add_message("🔄 Second Wind! Auto-revive activated (%d/%d remaining)" % [
 			charges - _revives_used_this_run, charges
 		])

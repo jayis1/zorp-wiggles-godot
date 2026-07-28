@@ -193,6 +193,8 @@ func start_dialogue() -> void:
 		return
 	_is_talking = true
 	_prompt_label.visible = false
+	# Audio — soft chime when a conversation starts.
+	AudioManager.play_sfx(AudioManager.SFX_DIALOGUE)
 	# Visual acknowledgment: quick upward bob + glow flash on the body.
 	if _body_mesh:
 		var bob_tween := create_tween()
@@ -217,6 +219,8 @@ func start_dialogue() -> void:
 
 func end_dialogue() -> void:
 	_is_talking = false
+	# Audio — softer chime on dialogue end.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_DIALOGUE, 0.85)
 	if not _has_met:
 		_has_met = true
 		# First-meeting XP reward.

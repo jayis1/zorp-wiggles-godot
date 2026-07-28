@@ -467,6 +467,8 @@ func _enter_enrage() -> void:
 	# Keep current_color in sync with base_color so systems that save/restore
 	# it (mind control, variant tinting) use the enraged color.
 	current_color = base_color
+	# Audio — ancient mechanical roar for the enrage phase.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_BOSS_SPAWN, 0.5)
 	GameManager.add_message("Ancient Sentinel awakens — ENRAGE!")
 	ParticleEffects.spawn_mega_explosion(get_parent(), global_position,
 		GameConstants.ANCIENT_SENTINEL_ENRAGE_COLOR)

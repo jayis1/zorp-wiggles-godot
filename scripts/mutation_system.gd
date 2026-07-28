@@ -178,6 +178,8 @@ func _deactivate_mutation(mutation: int) -> void:
 	_active_mutations.erase(mutation)
 	mutation_deactivated.emit(mutation)
 	var name: String = MUTATION_NAMES.get(mutation, "Unknown")
+	# Audio — descending softer chime for mutation fade-out.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_MUTATION, 0.7)
 	GameManager.add_message("✦ Mutation faded: %s" % name)
 
 	# Remove visual changes

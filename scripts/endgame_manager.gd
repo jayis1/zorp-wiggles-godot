@@ -335,6 +335,8 @@ func _update_boss_gauntlet(delta: float) -> void:
 			_finish_boss_gauntlet()
 			return
 		_boss_gauntlet_intermission = GameConstants.BOSS_GAUNTLET_INTERMISSION
+		# Audio — brief reprieve chime between boss gauntlet rounds.
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.8)
 		GameManager.add_message("✦ Boss down! Next in %.0fs..." % _boss_gauntlet_intermission)
 
 func _spawn_boss_gauntlet_next() -> void:
@@ -728,6 +730,8 @@ func try_open_vault(root: Node) -> void:
 		if v != null:
 			lore_count = int(v)
 	if lore_count < GameConstants.ANCIENT_VAULT_LORE_STONES_REQUIRED:
+		# Audio — locked-door thunk for the sealed vault.
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.5)
 		GameManager.add_message("🔒 The vault is sealed. Read %d more lore stones to unlock." % (GameConstants.ANCIENT_VAULT_LORE_STONES_REQUIRED - lore_count))
 		return
 	# Unlock the vault.
@@ -772,6 +776,8 @@ func _spawn_vault_puzzle(root: Node) -> void:
 	order.shuffle()
 	_ancient_vault["puzzle_order"] = order
 	_ancient_vault["puzzle_progress"] = 0
+	# Audio — magical chime for the puzzle start.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_MUTATION, 1.2)
 	GameManager.add_message("Touch the glowing runes in order.")
 
 func notify_puzzle_rune_touched(rune: Node) -> void:

@@ -131,6 +131,8 @@ func drop_in_p2() -> void:
 	p2_joined.emit()
 	p2_hp_changed.emit(p2_hp, p2_max_hp)
 	p2_score_changed.emit(p2_score)
+	# Audio — welcoming chime for P2 joining the adventure.
+	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
 	GameManager.add_message("🎮 %s joined the adventure! [Arrows] move, [/] shoot, [Enter] dash, [RShift] pulse, [.] revive" % GameConstants.P2_NAME)
 	print("[CoOp] Player 2 (%s) dropped in" % GameConstants.P2_NAME)
 
@@ -278,6 +280,10 @@ func p2_enter_downed() -> void:
 	p2_downed_timer = GameConstants.COOP_DOWNED_TIMER_MAX
 	p2_revive_progress = 0.0
 	p2_downed.emit()
+	# Audio — alarm-like damage sound for the downed state.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_DAMAGE, 0.8)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.2)
 	GameManager.add_message("💔 %s is down! Get close and hold [.] to revive!" % GameConstants.P2_NAME)
 
 ## Called when P1's HP reaches 0 and P2 is active — P1 enters downed state.
@@ -344,6 +350,10 @@ func _revive_p2() -> void:
 func _p2_die_for_real() -> void:
 	p2_is_downed = false
 	p2_died.emit()
+	# Audio — death sound for P2 bleeding out.
+	AudioManager.play_sfx(AudioManager.SFX_DEATH)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.35)
 	GameManager.add_message("☠ %s bled out..." % GameConstants.P2_NAME)
 	if p2_node and is_instance_valid(p2_node):
 		ParticleEffects.spawn_death_poof(p2_node.get_parent(), p2_node.global_position, GameConstants.P2_BASE_COLOR, 1.0)
@@ -492,6 +502,10 @@ func _check_coop_milestones() -> void:
 func _unlock_milestone(id: int, desc: String) -> void:
 	_coop_milestones_unlocked[id] = true
 	co_op_milestone.emit(id, desc)
+	# Audio — celebratory chime for co-op milestone unlock.
+	AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.12)
 	GameManager.add_message("🏆 CO-OP: %s" % desc)
 
 # ─── Reset (on game restart) ─────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: ALL PHASES COMPLETE (1-20, 22-35) + Mind Control Dart + Biome Enemy Variants + P2 Visual Feedback — Phases 1-20, 22-35 complete. All 36 weapon mods now implemented (including Mind Control Dart). Phase 22 biome-specific enemy variants for all 7 new biomes implemented. Phase 35 (Final Polish) 10/10 items complete. Daily Challenge, Weekly Challenge, and offline Spectator Mode implemented. P2 co-op visual feedback parity: damage squash/flash, level-up celebration, heal pop, downed slumped+blinking state, trail customization (mesh shape/lifetime/jitter from CosmeticManager), revive mesh restore — all matching P1's juice patterns.
+## Status: ALL PHASES COMPLETE (1-20, 22-35) + Mind Control Dart + Biome Enemy Variants + P2 Visual Feedback + Enhancement Pack 9 (Missing Event SFX) — Phases 1-20, 22-35 complete. All 36 weapon mods now implemented (including Mind Control Dart). Phase 22 biome-specific enemy variants for all 7 new biomes implemented. Phase 35 (Final Polish) 10/10 items complete. Daily Challenge, Weekly Challenge, and offline Spectator Mode implemented. P2 co-op visual feedback parity. Enhancement Pack 9: 20+ gameplay events that previously had only text messages now have SFX and/or camera trauma — Shadow Clone death, pet death/respawn, dialogue start/end, boss enrage (Drake/Leviathan/Sentinel), world boss materialize/despawn, dimension rift/clone/mirror/rewards, weather gravity/dimensional/combo, co-op join/downed/bleed-out/milestone, skill point gain, Second Wind auto-revive, new mission, boss gauntlet intermission, vault locked/puzzle start, mutation fade.
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -776,4 +776,58 @@ Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy cor
 - **Accessory craft** — `craft_accessory()` upgraded from `SFX_UI_CLICK` (plain click) to `SFX_CRAFT` (dedicated forge sound) + 0.10 camera trauma + pink sparkle on the companion pet. Previously crafting a pet accessory had only a quiet click sound. The sparkle targets the pet's position so the player sees the accessory \"appear\" on their companion.
 
 ### Pet Training Stat Upgrade Juice (`pet_training_system.gd`)
-- **Stat upgrade** — `spend_tp()` upgraded from `SFX_UI_CLICK` (plain click) to `SFX_CRAFT` (forged feel) + 0.08 camera trauma + cyan sparkle on the companion pet. Previously training a pet stat had only a quiet click and a text message. The cyan sparkle on the pet gives the stat upgrade a \"physical enhancement\" feel.
+- **Stat upgrade** — `spend_tp()` upgraded from `SFX_UI_CLICK` (plain click) to `SFX_CRAFT` (forged feel) + 0.08 camera trauma + cyan sparkle on the companion pet. Previously training a pet stat had only a quiet click and a text message. The cyan sparkle on the pet gives the stat upgrade a "physical enhancement" feel.
+
+## Enhancement Pack 9 — Missing Event SFX & Camera Feedback Pass
+
+### Shadow Clone Death Juice (`shadow_clone.gd`)
+- **Death SFX + camera trauma** — `_die()` now plays `SFX_BOSS_DEFEATED` + 0.4 camera trauma. Previously the Void Shadow Clone mini-boss (80 HP, spawned in the Void dimension) had a boss death spectacle (particles) and a text message but NO audio and NO camera shake. Unlike all other bosses which call `super._die()` (inheriting `enemy_base.gd`'s death SFX + trauma), the Shadow Clone extends `CharacterBody3D` directly and had its own silent `_die()`. Now it gets the same multi-sensory death feedback as every other boss.
+
+### Companion Pet Death & Respawn SFX (`companion_pet.gd`)
+- **Pet death SFX + camera trauma** — `_die()` now plays `SFX_PET` at 0.7× pitch (lowered, somber) + 0.12 camera trauma. Previously pet death had particles and a text message but no audio — the player's companion fell silently. The lowered pitch conveys loss.
+- **Pet respawn SFX** — `_respawn()` now plays `SFX_PET` at 1.2× pitch (raised, cheerful) + materialization particles. Previously the pet reappeared silently after the 10s respawn timer. The raised pitch conveys return.
+
+### Dialogue NPC Start & End SFX (`dialogue_npc.gd`)
+- **Dialogue start SFX** — `start_dialogue()` now plays `SFX_DIALOGUE` alongside the existing visual bob + glow flash. Previously starting a conversation with a villager/elder/hologram had visual feedback but no audio — the NPC bobbed and glowed silently.
+- **Dialogue end SFX** — `end_dialogue()` now plays `SFX_DIALOGUE` at 0.85× pitch (slightly lower, concluding). Previously ending a conversation had no feedback at all — the panel just closed.
+
+### Boss Enrage SFX (Drake, Void Leviathan, Ancient Sentinel)
+- **Drake enrage** (`enemy_drake.gd`) — `_enrage()` now plays `SFX_BOSS_SPAWN` (deep rumble). Previously the Drake's enrage at <30% HP had a color shift + text message but no audio.
+- **Void Leviathan stage transitions** (`enemy_void_leviathan.gd`) — Stage 2 entry now plays `SFX_BOSS_SPAWN` (deep rumble for the awakening). Stage 3 enrage now plays `SFX_BOSS_SPAWN` at 0.7× pitch (even deeper, more menacing). Vacuum pull now plays `SFX_RIFT` at 0.6× pitch (ominous inhale). Previously all three major Void Leviathan events had camera trauma but no audio.
+- **Ancient Sentinel enrage** (`enemy_ancient_sentinel.gd`) — Enrage at <25% HP now plays `SFX_BOSS_SPAWN` at 0.5× pitch (lowest, most colossal). Previously the Sentinel's enrage had camera trauma (0.5) but no audio.
+
+### World Boss Materialization & Despawn SFX (`world_boss_manager.gd`)
+- **Materialization SFX** — `_materialize_world_boss()` now plays `SFX_BOSS_SPAWN` alongside the existing camera trauma (0.5) and materialization particles. Previously the world boss's actual emergence had visual feedback but no audio — the initial telegraph warning at line 109 had `SFX_WORLD_BOSS`, but the moment the boss actually appeared was silent.
+- **Despawn SFX** — `_despawn_world_boss()` now plays `SFX_RIFT` at 0.5× pitch (somber fade). Previously the world boss's departure (player fled or timer expired) had only a text message.
+
+### Dimension System Event SFX (`dimension_system.gd`)
+- **Rift opened SFX** — `_spawn_rift()` now plays `SFX_RIFT` (whoosh). Previously dimensional rifts appeared with visual effects (swirling vortex, shader) but no audio.
+- **Shadow clone emergence SFX** — `_spawn_void_shadow_clone()` now plays `SFX_RIFT` at 0.7× pitch (eerie void whisper). Previously the shadow clone appeared silently.
+- **Mirror dimension SFX** — `_swap_entity_roles()` now plays `SFX_MUTATION` at 0.8× pitch (disorienting shimmer). Previously the reality-flipping mirror dimension had only a text message.
+- **Rift rewards SFX** — `_spawn_exit_collectibles()` now plays `SFX_PICKUP_RARE` (shimmering reward chime). Previously the rare collectibles spawned on dimension exit appeared silently.
+
+### Weather System Event SFX (`weather_system.gd`)
+- **Gravity normalize SFX** — `_tick_gravity_anomaly()` now plays `SFX_MUTATION` at 0.6× pitch (settling) when gravity returns to normal. Previously the end of a gravity anomaly had only a text message.
+- **Dimensional instability SFX** — `_tick_dimensional_storm()` now plays `SFX_RIFT` (reality-tearing) on forced dimension shifts. Previously the dimensional storm's forced dimension change had only a text message.
+- **Weather combo SFX** — `_try_start_weather_combo()` now plays `SFX_COMBO_MILESTONE` (celebratory arpeggio) when a weather combo activates. Previously the rare weather combo (18% chance) had only a text message.
+
+### Co-op Event SFX & Camera Trauma (`co_op_manager.gd`)
+- **P2 join SFX** — `drop_in_p2()` now plays `SFX_LEVEL_UP` (welcoming chime). Previously P2 joining the adventure had only a text message.
+- **P2 downed SFX + trauma** — `p2_enter_downed()` now plays `SFX_DAMAGE` at 0.8× pitch (alarm) + 0.2 camera trauma. Previously P2 entering the downed state had only a text message — no sensory urgency.
+- **P2 bleed out SFX + trauma** — `_p2_die_for_real()` now plays `SFX_DEATH` + 0.35 camera trauma. Previously P2 bleeding out had only a text message and a death poof.
+- **Co-op milestone SFX + trauma** — `_unlock_milestone()` now plays `SFX_COMBO_MILESTONE` + 0.12 camera trauma. Previously co-op milestone unlocks (first kill, 50 kills, first revive, 5 revives, first mega pulse, 3 mega pulses) had only a text message.
+
+### Progression System SFX (`progression_system.gd`)
+- **Skill point gain SFX** — `_on_level_up()` now plays `SFX_UI_CLICK` at 1.3× pitch (light, high chime) when a skill point is awarded. Previously skill point gain had only a text message — the player had no audio cue that they earned a build choice.
+- **Second Wind auto-revive SFX + trauma** — `try_auto_revive()` now plays `SFX_REVIVE` (triumphant fanfare) + 0.3 camera trauma. Previously the Second Wind skill's auto-revive (a critical survival moment) had particles but no audio and no camera feedback.
+
+### Mission System SFX (`mission_system.gd`)
+- **New mission SFX** — `_generate_mission()` now plays `SFX_UI_CLICK` at 1.2× pitch (soft chime) when a new mission is assigned. Previously new mission assignments had only a text message — the player had no audio cue that a new objective was available.
+
+### Endgame Manager SFX (`endgame_manager.gd`)
+- **Boss gauntlet intermission SFX** — `_update_boss_gauntlet()` now plays `SFX_UI_CLICK` at 0.8× pitch (brief reprieve chime) between bosses. Previously the "Boss down! Next in Xs..." message had no audio.
+- **Ancient vault locked SFX** — `try_open_vault()` now plays `SFX_UI_CLICK` at 0.5× pitch (locked-door thunk) when the player approaches the vault without enough lore stones. Previously the rejection had only a text message.
+- **Ancient vault puzzle start SFX** — `_spawn_vault_puzzle()` now plays `SFX_MUTATION` at 1.2× pitch (magical chime) when the rune puzzle begins. Previously the puzzle's start had only a text message.
+
+### Mutation Fade SFX (`mutation_system.gd`)
+- **Mutation deactivation SFX** — `_deactivate_mutation()` now plays `SFX_MUTATION` at 0.7× pitch (descending, fading) when a mutation expires. Previously mutation acquisition had a chime (SFX_MUTATION at 1.0×) but mutation fading was completely silent — the player lost a buff with no audio cue.

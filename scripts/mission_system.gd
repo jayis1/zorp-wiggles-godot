@@ -246,6 +246,8 @@ func _generate_random_mission() -> void:
 		m.reward_score = 300 + target_time * 2
 
 	_active_missions.append(m)
+	# Audio — soft chime for new mission assignment.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.2)
 	GameManager.add_message("✦ New Mission: %s" % m.title)
 
 # ─── Signal Handlers ──────────────────────────────────────────────────────────

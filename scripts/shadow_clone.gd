@@ -195,6 +195,12 @@ func _die() -> void:
 	# Big death effect
 	ParticleEffects.spawn_boss_death_spectacle(get_parent(), global_position, Color(0.3, 0.0, 0.5))
 
+	# Death SFX + camera trauma — this mini-boss doesn't call super._die(),
+	# so it needs its own audio/visual feedback like all other bosses get.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_DEFEATED)
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.4)
+
 	# Boss defeated signal
 	GameManager.boss_defeated.emit(self)
 	GameManager.clear_current_boss()

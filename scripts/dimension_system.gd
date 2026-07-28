@@ -171,6 +171,8 @@ func _spawn_rift(pos: Vector3, target_dim: int) -> void:
 	rift_spawned.emit(pos, target_dim)
 
 	var dim_name: String = GameConstants.DIMENSION_NAMES.get(target_dim, "Unknown")
+	# Audio — rift whoosh for the dimensional tear opening.
+	AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	GameManager.add_message("🌀 Dimensional rift opened nearby! → %s" % dim_name)
 
 func _update_active_rifts(delta: float) -> void:
@@ -379,6 +381,8 @@ func _spawn_void_shadow_clone() -> void:
 	world.add_child(clone)
 	GameManager.enemies.append(clone)
 
+	# Audio — eerie void whisper for the shadow clone emergence.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_RIFT, 0.7)
 	GameManager.add_message("🌑 A shadow clone emerges from the void!")
 
 func _despawn_void_shadow_clone() -> void:
@@ -398,6 +402,8 @@ func _swap_entity_roles() -> void:
 	# In Mirror dimension, collectibles become "hostile"
 	# (handled by collectible.gd checking DimensionSystem.collectibles_hostile())
 	# Enemies become passive (handled by enemy_base.gd checking DimensionSystem.enemies_passive())
+	# Audio — disorienting shimmer for the mirror dimension shift.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_MUTATION, 0.8)
 	GameManager.add_message("🪐 Mirror dimension: enemies friendly, items treacherous!")
 
 func _restore_entity_roles() -> void:
@@ -442,6 +448,8 @@ func _spawn_exit_collectibles() -> void:
 		if not coll.is_in_group("collectibles"):
 			coll.add_to_group("collectibles")
 
+	# Audio — shimmering reward chime for the rift's bounty.
+	AudioManager.play_sfx(AudioManager.SFX_PICKUP_RARE)
 	GameManager.add_message("✨ Rift rewards materialized!")
 
 # ─── Reset ────────────────────────────────────────────────────────────────────

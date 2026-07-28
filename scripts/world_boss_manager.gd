@@ -152,6 +152,9 @@ func _materialize_world_boss(boss_type: int, spawn_pos: Vector3, display_name: S
 	# Emit the boss_spawned signal so the HUD boss bar appears.
 	GameManager.boss_spawned.emit(boss)
 	world_boss_spawned.emit(boss, display_name)
+	# Audio — second boss spawn SFX for the actual materialization
+	# (the first SFX_WORLD_BOSS plays during the telegraph warning).
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
 	GameManager.add_message("⚔ %s has emerged!" % display_name)
 
 func _despawn_world_boss(reason: String) -> void:
@@ -159,6 +162,8 @@ func _despawn_world_boss(reason: String) -> void:
 		_active_world_boss = null
 		_active_display_name = ""
 		return
+	# Audio — somber fade-out for the departing world boss.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_RIFT, 0.5)
 	GameManager.add_message("⚠ %s — %s" % [_active_display_name, reason])
 	var boss: Node = _active_world_boss
 	_active_world_boss = null

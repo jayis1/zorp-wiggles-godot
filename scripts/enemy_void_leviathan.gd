@@ -214,6 +214,8 @@ func _enter_stage_2() -> void:
 	# Particle burst to telegraph the stage change
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.VOID_LEVIATHAN_COLOR, 30, 0.6)
+	# Audio — deep rumble for stage transition.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.3)
 
@@ -231,6 +233,8 @@ func _enter_stage_3() -> void:
 	# Keep current_color in sync with base_color so systems that save/restore
 	# it (mind control, variant tinting) use the enraged color.
 	current_color = base_color
+	# Audio — colossal roar for the final enrage phase.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_BOSS_SPAWN, 0.7)
 	GameManager.add_message("Void Leviathan is ENRAGED!")
 	ParticleEffects.spawn_mega_explosion(get_parent(), global_position,
 		GameConstants.VOID_LEVIATHAN_ENRAGE_COLOR)
@@ -330,6 +334,8 @@ func _summon_wisps() -> void:
 func _start_vacuum_pull() -> void:
 	_is_vacuuming = true
 	_vacuum_duration_left = GameConstants.VOID_LEVIATHAN_VACUUM_DURATION
+	# Audio — ominous inhale sound for the vacuum attack.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_RIFT, 0.6)
 	GameManager.add_message("Void Leviathan inhales — RUN!")
 	# Visual: growing dark vortex at the maw
 	ParticleEffects.spawn_explosion(get_parent(), global_position,

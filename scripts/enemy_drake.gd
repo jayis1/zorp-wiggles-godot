@@ -88,6 +88,8 @@ func _enter_enrage() -> void:
 	# it (mind control, variant tinting) use the enraged color, not the
 	# pre-enrage color that current_color was initialised with.
 	current_color = base_color
+	# Audio — threatening roar on enrage.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
 	GameManager.add_message("Plasma Drake is enraged!")
 
 func _update_boss_attacks(delta: float) -> void:
