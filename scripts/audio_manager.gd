@@ -147,6 +147,22 @@ const SFX_VARIANT_PROMOTE: String = "variant_promote"
 # "elite down" cue, distinct from the normal enemy death sound.
 const SFX_VARIANT_DEFEAT: String = "variant_defeat"
 
+# ── Buff expiration SFX ── A short descending chime that plays when a monolith
+#    buff (Speed Surge, Power Surge, Wisdom Aura) expires. The descending pitch
+#    conveys loss — the player's power is fading — paired with the existing
+#    shield-break shatter particles. Quiet (0.18) so it doesn't feel punishing.
+const SFX_BUFF_EXPIRE: String = "buff_expire"
+# ── Craft failure SFX ── A short low-pitched buzz that plays when a crafting
+#    attempt fails (invalid recipe or insufficient materials). The dissonant
+#    low tone immediately communicates "that didn't work" without being harsh.
+#    Used in both the weapon mod crafting menu and the equipment crafting menu.
+const SFX_CRAFT_FAIL: String = "craft_fail"
+# ── Pulse wave ready SFX ── Same bright two-note chime as SFX_DASH_READY but at
+#    a higher pitch (C6→E6) so the player can distinguish "pulse ready" from
+#    "dash ready" by ear alone. Both abilities have cooldowns and the player
+#    should know when each is available without looking at the HUD.
+const SFX_PULSE_READY: String = "pulse_ready"
+
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 # Per-weapon-mod shoot sound variants. Each mod gets a distinct SFX so the
 # player hears the weapon change — a standard laser zaps, a black hole
@@ -823,6 +839,18 @@ func _generate_all_sfx() -> void:
 	# that rewards the player for taking down a tough variant. Reversed from
 	# the promotion arpeggio so it sounds like "victory over the elite."
 	_sfx_streams[SFX_VARIANT_DEFEAT] = _gen_arpeggio([1047.0, 784.0, 659.0, 523.0], 0.06, 0.35)
+	# ── Buff expire SFX ── A short descending chime (E5→C5→G4) that conveys
+	# loss — the player's monolith buff is fading. Quiet (0.18) so it's
+	# noticeable but not punishing. Paired with the existing shatter particles.
+	_sfx_streams[SFX_BUFF_EXPIRE] = _gen_chime([659.0, 523.0, 392.0], 0.12, 0.18)
+	# ── Craft fail SFX ── A low dissonant buzz (150 Hz → 100 Hz) that
+	# immediately communicates "that didn't work." Short (0.15s) so it
+	# doesn't linger. Used in both weapon mod and equipment crafting menus.
+	_sfx_streams[SFX_CRAFT_FAIL] = _gen_descending(150.0, 100.0, 0.15, 0.25)
+	# ── Pulse wave ready SFX ── A bright two-note chime (C6→E6, 1047→1319 Hz)
+	# higher than SFX_DASH_READY (G5→C6, 784→1047) so the player can tell
+	# the two cooldown-ready cues apart by pitch alone.
+	_sfx_streams[SFX_PULSE_READY] = _gen_chime([1047.0, 1319.0], 0.10, 0.15)
 
 
 func _generate_all_music() -> void:

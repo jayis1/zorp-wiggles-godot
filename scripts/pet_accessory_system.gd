@@ -71,6 +71,8 @@ func craft_accessory(id: int) -> bool:
 		return false
 	if not WeaponModSystem.remove_materials(cost):
 		GameManager.add_message("Not enough materials to craft %s!" % GameConstants.PET_ACCESSORY_NAMES[id])
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return false
 	_owned[id] = true
 	accessory_crafted.emit(id)

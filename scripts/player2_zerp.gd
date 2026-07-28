@@ -170,6 +170,11 @@ func _physics_process(delta: float) -> void:
 		shoot_cooldown_timer -= delta
 	if pulse_wave_cooldown_timer > 0:
 		pulse_wave_cooldown_timer -= delta
+		if pulse_wave_cooldown_timer <= 0:
+			# ── Pulse wave ready SFX ── Same higher-pitched chime as P1
+			# so P2 also gets an audio cue when the pulse wave is available.
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX_PULSE_READY)
 	if invuln_timer > 0:
 		invuln_timer -= delta
 		is_invuln = invuln_timer > 0

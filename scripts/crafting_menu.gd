@@ -505,6 +505,12 @@ func _on_craft_pressed() -> void:
 	else:
 		_result_label.text = "✗ Invalid combination! Try another mix."
 		_result_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+		# ── Craft failure SFX ── A low dissonant buzz so the player gets
+		# immediate audio feedback that the combination didn't work.
+		# Previously the only feedback was a red text message — easy to
+		# miss during fast-paced crafting experimentation.
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 	_update_inventory_display()
 
 func _on_clear_pressed() -> void:

@@ -92,17 +92,25 @@ func fuse_mods(parent_a: int, parent_b: int) -> int:
 	# Validate parents
 	if parent_a == parent_b:
 		push_warning("[WeaponModFusion] Cannot fuse a mod with itself.")
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return -1
 	if not _is_valid_base_mod(parent_a) or not _is_valid_base_mod(parent_b):
 		push_warning("[WeaponModFusion] Invalid parent mod id.")
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return -1
 	# Both parents must be discovered
 	if not WeaponModSystem.is_mod_discovered(parent_a) or not WeaponModSystem.is_mod_discovered(parent_b):
 		push_warning("[WeaponModFusion] Both parents must be discovered.")
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return -1
 	# Check material cost
 	if not _can_afford_fusion():
 		push_warning("[WeaponModFusion] Insufficient materials for fusion.")
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return -1
 	# Consume materials
 	if not _pay_fusion_cost():

@@ -343,11 +343,15 @@ func craft_piece(piece_id: int) -> bool:
 	var common_cost: Dictionary = recipe.get("common", {})
 	if not _check_common_materials(common_cost):
 		GameManager.add_message("⚠ Not enough common materials for %s" % GameConstants.EQUIP_PIECE_NAMES[piece_id])
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return false
 	# Check rare materials (this system's inventory)
 	var rare_cost: Dictionary = recipe.get("rare", {})
 	if not _check_rare_materials(rare_cost):
 		GameManager.add_message("⚠ Not enough rare materials for %s" % GameConstants.EQUIP_PIECE_NAMES[piece_id])
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return false
 	# Consume common materials
 	if not _consume_common_materials(common_cost):
@@ -489,6 +493,8 @@ func refine_material(rare_id: int) -> bool:
 			GameManager.add_message("⚠ Need %d %s to refine" % [
 				count, GameConstants.COLLECTIBLE_TYPE_NAMES.get(mat_type, "material")
 			])
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 			return false
 		var types: Array = []
 		for i in range(count):
@@ -519,6 +525,8 @@ func refine_material(rare_id: int) -> bool:
 					GameConstants.COLLECTIBLE_TYPE_NAMES.get(mat_types[0], "mat1"),
 					GameConstants.COLLECTIBLE_TYPE_NAMES.get(mat_types[1], "mat2")
 				])
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 				return false
 		# Consume both
 		var types: Array = []
@@ -553,9 +561,13 @@ func craft_consumable(consumable_id: int) -> bool:
 	var rare_cost: Dictionary = recipe.get("rare", {})
 	if not _check_common_materials(common_cost):
 		GameManager.add_message("⚠ Not enough materials for %s" % GameConstants.CONSUMABLE_NAMES[consumable_id])
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return false
 	if not _check_rare_materials(rare_cost):
 		GameManager.add_message("⚠ Not enough rare materials for %s" % GameConstants.CONSUMABLE_NAMES[consumable_id])
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return false
 	if not _consume_common_materials(common_cost):
 		return false

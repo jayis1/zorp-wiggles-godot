@@ -232,6 +232,12 @@ func _update_timers(delta: float) -> void:
 				"damage": break_color = Color(1.0, 100.0 / 255.0, 50.0 / 255.0)
 				"xp": break_color = Color(100.0 / 255.0, 200.0 / 255.0, 1.0)
 			ParticleEffects.spawn_shield_break_shatter(player.get_parent(), player.global_position, break_color)
+		# ── Buff expiration SFX ── A short descending chime so the player
+		# knows their buff just wore off. Paired with the shatter particles
+		# and the HUD message. Previously buffs expired with visual feedback
+		# only — no audio cue that the player's power was gone.
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_BUFF_EXPIRE)
 
 func _update_biome_tracking() -> void:
 	# Phase 5: Detect biome changes and emit signal for biome indicator

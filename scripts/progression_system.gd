@@ -203,6 +203,11 @@ func can_purchase_skill(skill_key: String) -> bool:
 
 func purchase_skill(skill_key: String) -> bool:
 	if not can_purchase_skill(skill_key):
+		# ── Skill purchase failure SFX ── Give the player audio feedback
+		# when they click a skill they can't afford or have maxed out.
+		# Previously the click was silently ignored with no feedback.
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return false
 	_skill_ranks[skill_key] = get_skill_rank(skill_key) + 1
 	_skill_points -= 1

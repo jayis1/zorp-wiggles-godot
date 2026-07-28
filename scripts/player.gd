@@ -447,6 +447,13 @@ func _physics_process(delta: float) -> void:
 		shoot_cooldown_timer -= delta
 	if pulse_wave_cooldown_timer > 0:
 		pulse_wave_cooldown_timer -= delta
+		if pulse_wave_cooldown_timer <= 0:
+			# ── Pulse wave ready SFX ── A bright higher-pitched chime (C6→E6)
+			# distinct from the dash ready chime (G5→C6) so the player can
+			# tell which ability just came off cooldown by ear alone.
+			# Previously the pulse wave cooldown completed silently.
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX_PULSE_READY)
 
 	# ── Coyote time: track the brief window after dash cooldown expires.
 	#    While _dash_coyote_timer > 0, a dash press fires even if the cooldown
@@ -457,6 +464,12 @@ func _physics_process(delta: float) -> void:
 		if GameManager.player_dash_cooldown_timer <= 0:
 			# Cooldown just expired — start the coyote grace window
 			_dash_coyote_timer = DASH_COYOTE_WINDOW
+			# ── Dash ready SFX ── Play a bright two-note chime so the player
+			# knows the dash is available again without looking at the HUD
+			# cooldown ring. Previously the cooldown completed silently —
+			# the player had no audio cue that they could dash again.
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX_DASH_READY)
 	elif _dash_coyote_timer > 0:
 		_dash_coyote_timer -= delta
 

@@ -87,10 +87,14 @@ func spend_tp(stat_id: int) -> bool:
 		return false
 	if _stat_levels[stat_id] >= GameConstants.PET_TRAINING_MAX_POINTS_PER_STAT:
 		GameManager.add_message("Stat already maxed!")
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return false
 	var cost: int = GameConstants.PET_TRAINING_STAT_COSTS[stat_id]
 	if _tp < cost:
 		GameManager.add_message("Need %d TP to upgrade %s!" % [cost, GameConstants.PET_TRAINING_STAT_NAMES[stat_id]])
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 		return false
 	_tp -= cost
 	_stat_levels[stat_id] += 1
