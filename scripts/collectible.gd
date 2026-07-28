@@ -11,6 +11,12 @@ var collectible_type: int = GameConstants.CollectibleType.XP_ORB
 var xp_value: int = 10
 var is_magnetic: bool = false
 var is_popping: bool = false  # Pickup lift animation
+# ── Magnetic pull sparkle trail ── While being magnetically pulled, the
+#    collectible spawns tiny sparkle particles at intervals, leaving a trail
+#    of light that makes the pull feel dynamic and visually satisfying. The
+#    trail timer controls how often a sparkle spawns (every ~0.06s).
+var _pull_trail_timer: float = 0.0
+const PULL_TRAIL_INTERVAL: float = 0.06
 # ── Magnet activation flash ── When the collectible first enters the
 #    magnetic pull radius, the emission briefly spikes. This gives the
 #    player a visual "the item noticed me" signal — the collectible
@@ -391,6 +397,11 @@ func _physics_process(delta: float) -> void:
 				var pull_speed := GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_SPEED * (1.0 - dist / GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS)
 				var dir := (player.global_position - global_position).normalized()
 				global_position += dir * pull_speed * delta
+				# Sparkle trail for emergency magnet too
+				_pull_trail_timer -= delta
+				if _pull_trail_timer <= 0.0:
+					_pull_trail_timer = PULL_TRAIL_INTERVAL
+					_spawn_pull_sparkle()
 
 	# Normal pull radius (skip if emergency magnet already handled)
 	if not is_emergency_magnet and dist < GameConstants.COLLECT_PULL_RADIUS and not is_popping:
@@ -406,6 +417,14 @@ func _physics_process(delta: float) -> void:
 		var pull_speed: float = GameConstants.COLLECT_PULL_SPEED * (0.3 + 0.7 * accel_curve)
 		var dir := (player.global_position - global_position).normalized()
 		global_position += dir * pull_speed * delta
+		# ── Sparkle trail while being pulled ── Spawn tiny sparkle particles
+		# at intervals along the pull path, leaving a light trail that makes
+		# the magnetic pull visually dynamic. The sparkles are very small and
+		# short-lived so they don't clutter the screen during mass pickups.
+		_pull_trail_timer -= delta
+		if _pull_trail_timer <= 0.0:
+			_pull_trail_timer = PULL_TRAIL_INTERVAL
+			_spawn_pull_sparkle()
 	elif not is_popping and not is_magnetic:
 		# Not being pulled — apply gentle X/Z wobble for an organic float.
 		# Items feel suspended in alien gravity rather than on a rail.
@@ -652,6 +671,59 @@ func _collect() -> void:
 			GameManager.camera_rig.kick_fov(3.0)
 	else:
 		AudioManager.play_sfx(AudioManager.SFX_PICKUP)
+
+## Spawn a tiny sparkle particle at the collectible's current position for the
+## magnetic pull trail. Very lightweight — a single small sphere with quick
+## fade-out, pooled via GPUParticles3D one-shot + auto-free. The color matches
+## the collectible's type color so the trail reads as "energy flowing toward
+## the player" in the right hue. Rare items get slightly brighter sparkles.
+func _spawn_pull_sparkle() -> void:
+	var parent_node: Node = get_parent()
+	if not parent_node:
+		return
+	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
+	var col: Color = config["color"]
+	var p := GPUParticles3D.new()
+	p.amount = 3
+	p.lifetime = 0.25
+	p.one_shot = true
+	p.emitting = true
+	p.explosiveness = 1.0
+	p.local_coords = false
+	var pmat := ParticleProcessMaterial.new()
+	pmat.direction = Vector3(0, 0, 0)
+	pmat.spread = 180.0
+	pmat.gravity = Vector3.ZERO
+	pmat.initial_velocity_min = 0.3
+	pmat.initial_velocity_max = 1.0
+	pmat.scale_min = 0.04
+	pmat.scale_max = 0.08
+	pmat.color = col
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(col.r, col.g, col.b, 0.8))
+	ramp.set_color(1, Color(col.r, col.g, col.b, 0.0))
+	var ramp_tex := GradientTexture1D.new()
+	ramp_tex.gradient = ramp
+	pmat.color_ramp = ramp_tex
+	p.process_material = pmat
+	var spheremesh := SphereMesh.new()
+	spheremesh.radius = 0.06
+	spheremesh.height = 0.12
+	spheremesh.radial_segments = 4
+	spheremesh.rings = 2
+	var smat := StandardMaterial3D.new()
+	smat.albedo_color = col
+	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	smat.emission_enabled = true
+	smat.emission = col * 0.5
+	spheremesh.material = smat
+	p.draw_pass_1 = spheremesh
+	parent_node.add_child(p)
+	p.global_position = global_position
+	# Auto-free after the particles finish
+	var t := get_tree()
+	if t:
+		t.create_timer(0.5).timeout.connect(p.queue_free)
 
 func _spawn_xp_popup(amount: int) -> void:
 	var parent: Node = get_parent()

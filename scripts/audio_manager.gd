@@ -162,6 +162,12 @@ const SFX_CRAFT_FAIL: String = "craft_fail"
 #    "dash ready" by ear alone. Both abilities have cooldowns and the player
 #    should know when each is available without looking at the HUD.
 const SFX_PULSE_READY: String = "pulse_ready"
+# ── Enemy alert SFX ── A short ascending blip (440→880 Hz over 0.08s) that
+#    plays when an enemy first detects the player. Gives off-screen detection
+#    an audio presence so the player knows they've been spotted even when the
+#    "!" indicator isn't visible. Quiet (0.10) so simultaneous detections from
+#    a pack don't overwhelm. Pitch-rises so it reads as "noticed you!"
+const SFX_ENEMY_ALERT: String = "enemy_alert"
 
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 # Per-weapon-mod shoot sound variants. Each mod gets a distinct SFX so the
@@ -851,6 +857,11 @@ func _generate_all_sfx() -> void:
 	# higher than SFX_DASH_READY (G5→C6, 784→1047) so the player can tell
 	# the two cooldown-ready cues apart by pitch alone.
 	_sfx_streams[SFX_PULSE_READY] = _gen_chime([1047.0, 1319.0], 0.10, 0.15)
+	# ── Enemy alert SFX ── A short ascending blip (440→880 Hz, 0.08s) that
+	# reads as "spotted you!" — quiet (0.10) so pack detections don't stack
+	# into noise. Uses the descending generator with reversed freqs to get
+	# an ascending pitch sweep.
+	_sfx_streams[SFX_ENEMY_ALERT] = _gen_descending(440.0, 880.0, 0.08, 0.10)
 
 
 func _generate_all_music() -> void:

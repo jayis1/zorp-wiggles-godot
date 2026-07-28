@@ -73,6 +73,17 @@ var _walk_phase: float = 0.0
 var _walk_freq: float = 6.0   # Bob frequency (rad/s)
 var _walk_amp: float = 0.08   # Bob amplitude (meters)
 
+# ── Idle breathing ── When stationary, enemies have no animation and look
+#    frozen/dead. A subtle breathing scale pulse + vertical bob gives them
+#    life, mirroring the player's idle breathing. Each enemy gets a random
+#    phase so groups don't pulse in sync. The amplitude is small (±4% scale,
+#    ±0.02m bob) so it reads as organic life, not a mechanical throb. Skipped
+#    during windup/attacking/hit-flash (those own mesh.scale) and death.
+var _idle_breath_phase: float = 0.0
+const _IDLE_BREATH_SPEED: float = 2.5  # Breaths per second (rad/s)
+const _IDLE_BREATH_SCALE_AMP: float = 0.04  # ±4% scale pulse
+const _IDLE_BREATH_Y_AMP: float = 0.02  # ±2cm vertical bob
+
 # ─── Movement Smoothing ──────────────────────────────────────────────────────
 ## Higher = snappier velocity changes. ~8 = smooth organic, ~20 = tight.
 @export var velocity_smoothing: float = 8.0
@@ -129,6 +140,8 @@ func _ready() -> void:
 	_walk_phase = randf_range(0.0, TAU)
 	_walk_freq = randf_range(4.0, 8.0)
 	_walk_amp = randf_range(0.05, 0.12) * base_scale
+	# Random idle breath phase so groups don't pulse in sync
+	_idle_breath_phase = randf_range(0.0, TAU)
 
 	# Spawn grace period — enemy can't detect player for a bit
 	spawn_grace_timer = GameConstants.ENEMY_SPAWN_GRACE_PERIOD
@@ -320,6 +333,7 @@ func _update_ai(delta: float) -> void:
 			if not is_alerted:
 				is_alerted = true
 				alert_indicator_timer = GameConstants.ENEMY_ALERT_INDICATOR_DURATION
+				AudioManager.play_sfx(AudioManager.SFX_ENEMY_ALERT)
 				if alert_indicator:
 					# Kill any in-progress exit fade so the pop-in doesn't fight it
 					if alert_indicator.has_meta("_alert_exit_tween") and is_instance_valid(alert_indicator.get_meta("_alert_exit_tween") as Tween):
@@ -357,6 +371,7 @@ func _update_ai(delta: float) -> void:
 	if not is_alerted and dist_to_player < effective_detect_range:
 		is_alerted = true
 		alert_indicator_timer = GameConstants.ENEMY_ALERT_INDICATOR_DURATION
+		AudioManager.play_sfx(AudioManager.SFX_ENEMY_ALERT)
 		if alert_indicator:
 			# Kill any in-progress exit fade so the pop-in doesn't fight it
 			if alert_indicator.has_meta("_alert_exit_tween") and is_instance_valid(alert_indicator.get_meta("_alert_exit_tween") as Tween):
@@ -1378,6 +1393,21 @@ func _update_visuals(delta: float) -> void:
 		body_mesh.rotation.z = lerpf(body_mesh.rotation.z, 0.0, settle_w)
 		body_mesh.rotation.x = lerpf(body_mesh.rotation.x, 0.0, settle_w)
 		body_mesh.rotation.y = lerpf(body_mesh.rotation.y, 0.0, settle_w)
+		# ── Idle breathing ── When stationary, add a subtle breathing
+		#    scale pulse + Y bob so the enemy feels alive rather than
+		#    frozen. Skipped during hit-flash (tween controls albedo),
+		#    death, and attacking (those own mesh.scale). The pulse is
+		#    tiny (±4% scale, ±2cm bob) so it reads as organic life.
+		if not is_dead and not is_attacking and _hit_flash_timer <= 0:
+			_idle_breath_phase += delta * _IDLE_BREATH_SPEED
+			var breath_y: float = sin(_idle_breath_phase) * _IDLE_BREATH_Y_AMP
+			body_mesh.position.y = 0.5 + breath_y
+			var breath_scale: float = 1.0 + sin(_idle_breath_phase) * _IDLE_BREATH_SCALE_AMP
+			# Only apply if no external tween is controlling scale (avoid
+			# fighting the spawn-in scale tween, which runs during the
+			# grace period and sets self.scale, not body_mesh.scale).
+			if spawn_grace_timer <= 0:
+				body_mesh.scale = Vector3.ONE * base_scale * breath_scale
 
 	# Low-HP warning pulse — only when not currently being hit-flashed
 	# (hit flash tween controls _material.albedo_color during its 0.15s duration)
