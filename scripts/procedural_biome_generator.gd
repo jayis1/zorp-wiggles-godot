@@ -148,6 +148,16 @@ func _process(delta: float) -> void:
 				var old_zone: Dictionary = _zones[_player_in_zone]
 				if GameConstants.ProcBiomeTrait.ECHO_CHAMBER in old_zone.traits:
 					AudioManager._music_player.pitch_scale = 1.0
+			# Audio + camera feedback on zone exit — a soft descending chime
+			# at 0.7× pitch conveys the anomalous energy fading. Entry has
+			# a full-pitch SFX_MUTATION + 0.15 trauma; exit gets a gentler
+			# 0.08 trauma so leaving feels like settling, not a new event.
+			GameManager.add_message("✦ Leaving %s" % z.name)
+			if AudioManager:
+				AudioManager.play_sfx_pitched(AudioManager.SFX_MUTATION, 0.7)
+			var exit_cam: Node3D = GameManager.camera_rig
+			if exit_cam and exit_cam.has_method("add_trauma"):
+				exit_cam.add_trauma(0.08)
 		_player_in_zone = new_zone
 		if new_zone >= 0:
 			var z2: Dictionary = _zones[new_zone]

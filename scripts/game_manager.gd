@@ -171,6 +171,9 @@ func _revive_p1() -> void:
 	p1_revive_progress = 0.0
 	hp_changed.emit(player_hp, player_max_hp)
 	add_message("✨ Zorp revived by %s! Back in action!" % GameConstants.P2_NAME)
+	# Audio feedback — revive fanfare, matching P2's revive in co_op_manager.
+	# Previously P1 revive had particles + text but no audio (P2 had SFX_REVIVE).
+	AudioManager.play_sfx(AudioManager.SFX_REVIVE)
 	# Reset player mesh visibility/position
 	if player and is_instance_valid(player):
 		var mesh_node: MeshInstance3D = player.get_node_or_null("BodyMesh")
@@ -645,6 +648,12 @@ func _die() -> void:
 		p1_revive_progress = 0.0
 		p1_downed.emit()
 		add_message("💔 Zorp is down! %s can revive with [.] key!" % GameConstants.P2_NAME)
+		# Audio + camera feedback for P1 downed — matches P2's downed feedback
+		# from Enhancement Pack 9 (SFX_DAMAGE at 0.8× pitch + 0.2 trauma).
+		# Previously P1 going down had only a text message while P2 had full feedback.
+		AudioManager.play_sfx_pitched(AudioManager.SFX_DAMAGE, 0.8)
+		if camera_rig and camera_rig.has_method("add_trauma"):
+			camera_rig.add_trauma(0.2)
 		print("[GameManager] P1 downed in co-op — awaiting revive")
 		return
 	# If already downed and bleed-out timer expired, or no co-op partner → actual death

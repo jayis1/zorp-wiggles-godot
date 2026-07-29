@@ -973,6 +973,18 @@ func _check_loot_cave_clear() -> void:
 			cave.cleared = true
 			GameManager.add_message("💎 Loot Cave cleared! Bonus +200 score.")
 			GameManager.player_score += 200
+			# Audio + camera juice for clearing a loot cave — previously only
+			# a text message. Uses SFX_CHEST_OPEN (treasure celebration) and
+			# a moderate 0.3 camera trauma to match dungeon-clear weight.
+			AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
+			var lc_cam: Node3D = GameManager.camera_rig
+			if lc_cam and lc_cam.has_method("add_trauma"):
+				lc_cam.add_trauma(0.3)
+			# Golden sparkle burst on the player for a celebratory feel.
+			var lc_player: Node3D = get_tree().get_first_node_in_group("player")
+			var lc_parent: Node = get_tree().current_scene
+			if lc_parent and ParticleEffects and lc_player and is_instance_valid(lc_player):
+				ParticleEffects.spawn_combo_fireworks(lc_parent, lc_player.global_position + Vector3(0, 1, 0), 2)
 
 # ─── Persistence ─────────────────────────────────────────────────────────────────
 

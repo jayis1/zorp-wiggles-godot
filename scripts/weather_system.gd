@@ -883,6 +883,15 @@ func _end_weather_combo() -> void:
 	_combo_weather = GameConstants.Weather.CLEAR
 	_combo_timer = 0.0
 	weather_combo_ended.emit(old_combo)
+	# HUD message + audio feedback for combo weather ending — the combo
+	# start got SFX_COMBO_MILESTONE (Enhancement Pack 9) but the end had
+	# no feedback. A soft SFX_MUTATION at 0.7× pitch conveys the combo
+	# fading, paired with a HUD message so the player knows the bonus
+	# XP/loot multiplier has ended.
+	var combo_name: String = GameConstants.WEATHER_INFO.get(old_combo, {}).get("name", "Combo")
+	GameManager.add_message("✦ Weather combo ended: %s" % combo_name)
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_MUTATION, 0.7)
 
 ## Phase 28: Apply the combo weather's visual effects (particles, lights, fog).
 ## These run alongside the primary weather's effects.

@@ -249,6 +249,17 @@ func exit_dungeon() -> void:
 	_active_root = null
 	_active_dungeon_id = -1
 	GameManager.add_message("▲ Returning to the surface...")
+	# Audio feedback — ascending teleport sound for the surface return.
+	# Matches the enter_dungeon() SFX_FAST_TRAVEL for a cohesive in/out pair.
+	AudioManager.play_sfx(AudioManager.SFX_FAST_TRAVEL)
+	# Camera shake for tactile ascent feel.
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(0.25)
+	# Particle burst at the surface exit point for visual confirmation.
+	var parent: Node = get_tree().current_scene
+	if parent and ParticleEffects and player and is_instance_valid(player):
+		ParticleEffects.spawn_pickup_sparkle(parent, player.global_position, GameConstants.DUNGEON_THEME_COLORS[dungeon.theme])
 
 # ─── Interior Construction ─────────────────────────────────────────────────────
 

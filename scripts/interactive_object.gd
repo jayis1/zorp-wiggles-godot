@@ -277,6 +277,18 @@ func set_state(new_state: bool) -> void:
 		return
 	_is_active = new_state
 	_apply_state_visual()
+	# Audio feedback for door/passage state change — the switch click sound
+	# only plays on the switch itself, so the linked door opening or hidden
+	# passage revealing was completely silent. A mechanical sound gives the
+	# door a physical presence and the passage reveal a mystical feel.
+	if object_type == "door":
+		AudioManager.play_sfx(AudioManager.SFX_SWITCH)
+	elif object_type == "hidden_passage":
+		AudioManager.play_sfx(AudioManager.SFX_MUTATION)
+	# Small camera shake for tactile feedback on the state change.
+	var cam: Node3D = GameManager.camera_rig
+	if cam and cam.has_method("add_trauma"):
+		cam.add_trauma(0.06)
 
 # ─── Damage (for breakable walls) ─────────────────────────────────────────────
 

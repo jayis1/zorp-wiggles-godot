@@ -814,6 +814,11 @@ func _process(delta: float) -> void:
 			_active_effects.erase(consumable_id)
 			consumable_effect_ended.emit(consumable_id)
 			GameManager.add_message("%s effect ended" % GameConstants.CONSUMABLE_NAMES[consumable_id])
+			# Audio feedback — reuses SFX_BUFF_EXPIRE (descending chime) to
+			# convey loss, matching the monolith buff expiration sound.
+			# Previously consumable buffs wore off with only a text message.
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX_BUFF_EXPIRE)
 
 # ─── Reset (on game restart) ───────────────────────────────────────────────────
 
