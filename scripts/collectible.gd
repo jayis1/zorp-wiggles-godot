@@ -729,7 +729,9 @@ func _spawn_xp_popup(amount: int) -> void:
 	var parent: Node = get_parent()
 	if not parent:
 		return
-	var dn := DamageNumber.new()
+	# Use the static free-list pool to avoid per-pickup Label3D allocation.
+	var dn := DamageNumber._acquire()
+	dn.request_ready()
 	parent.add_child(dn)
 	dn.global_position = global_position + Vector3(0, 1.5, 0)
 	dn.configure_xp(amount)
@@ -738,7 +740,8 @@ func _spawn_heal_popup(amount: int) -> void:
 	var parent: Node = get_parent()
 	if not parent:
 		return
-	var dn := DamageNumber.new()
+	var dn := DamageNumber._acquire()
+	dn.request_ready()
 	parent.add_child(dn)
 	dn.global_position = global_position + Vector3(0, 1.5, 0)
 	dn.configure_heal(amount)

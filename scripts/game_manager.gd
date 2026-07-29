@@ -717,6 +717,9 @@ func restart_game() -> void:
 	p1_downed_timer = 0.0
 	p1_revive_progress = 0.0
 	CoOpManager.reset()
+	# ── Clear the DamageNumber free-list pool so stale instances from the
+	#    previous run don't linger in the static pool between scene loads. ─
+	DamageNumber.clear_pool()
 	_start_game()
 	game_restarted.emit()
 

@@ -24,6 +24,11 @@ var _light: OmniLight3D = null
 # Shockwaves are fired repeatedly by Sentinels. Share the mesh geometry
 # to avoid per-shot allocation. Material is per-instance (alpha/emission tween).
 static var _shared_mesh: CylinderMesh = null
+# Shared base material — duplicated per instance so each ring can tween its
+# alpha/emission independently without creating a full StandardMaterial3D
+# from scratch every spawn. Duplicate is cheaper than new+configure because
+# it copies the property block in one shot instead of setting each property.
+static var _shared_material_base: StandardMaterial3D = null
 
 static func _ensure_shared_mesh() -> void:
 	if _shared_mesh == null:
@@ -36,22 +41,26 @@ static func _ensure_shared_mesh() -> void:
 		_shared_mesh.height = 0.1
 		_shared_mesh.radial_segments = 24
 		_shared_mesh.rings = 2
+	if _shared_material_base == null:
+		_shared_material_base = StandardMaterial3D.new()
+		_shared_material_base.albedo_color = Color(1.0, 200.0 / 255.0, 50.0 / 255.0, 0.6)
+		_shared_material_base.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_shared_material_base.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_shared_material_base.emission_enabled = true
+		_shared_material_base.emission = Color(1.0, 0.8, 0.2) * 0.5
+		_shared_material_base.emission_energy_multiplier = 1.5
 
 ## The base mesh radius — used to compute the correct scale factor.
 const _BASE_MESH_RADIUS: float = 0.5
 
 func _ready() -> void:
-	# Set up material
+	# Set up material — duplicate the shared base so each instance can tween
+	# its alpha/emission independently. Cheaper than creating a new
+	# StandardMaterial3D and setting every property from scratch per spawn.
+	_ensure_shared_mesh()
 	if mesh:
-		_ensure_shared_mesh()
 		mesh.mesh = _shared_mesh
-		_material = StandardMaterial3D.new()
-		_material.albedo_color = Color(1.0, 200.0 / 255.0, 50.0 / 255.0, 0.6)
-		_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_material.emission_enabled = true
-		_material.emission = Color(1.0, 0.8, 0.2) * 0.5
-		_material.emission_energy_multiplier = 1.5
+		_material = _shared_material_base.duplicate() as StandardMaterial3D
 		mesh.material_override = _material
 
 	# Center light flash — illuminates the Sentinel's area as the shockwave

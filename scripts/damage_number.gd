@@ -7,6 +7,49 @@ extends Label3D
 
 class_name DamageNumber
 
+# ── Lightweight free-list pool ──────────────────────────────────────────────
+# Damage numbers are spawned on every hit (~9/sec during combat, more with
+# multi-bolt mods). Each `DamageNumber.new()` allocates a Label3D + configures
+# its material/outline from scratch. A static free-list reuses recycled
+# instances instead of allocating new ones, eliminating per-hit allocation
+# churn. The pool is capped to prevent unbounded memory growth. Instances
+# are released back to the pool when their lifetime expires (instead of
+# queue_free), and re-acquired on spawn. The pool self-heals: if the free
+# list is empty, a new instance is created (fallback to the old path).
+static var _pool: Array[DamageNumber] = []
+const POOL_MAX_SIZE: int = 40  # Cap — prevents unbounded growth
+
+static func _acquire() -> DamageNumber:
+	if _pool.size() > 0:
+		return _pool.pop_back()
+	return DamageNumber.new()
+
+func _release_to_pool() -> void:
+	# Hide + detach from tree, return to the free list for reuse.
+	# Only pool if the tree still exists (avoid issues during scene teardown).
+	if not get_tree():
+		queue_free()
+		return
+	visible = false
+	if get_parent():
+		get_parent().remove_child(self)
+	if _pool.size() < POOL_MAX_SIZE:
+		process_mode = Node.PROCESS_MODE_DISABLED
+		_pool.append(self)
+	else:
+		# Pool full — let it actually free to avoid memory growth.
+		queue_free()
+
+## Clear the entire pool (scene change / game restart). Frees all dormant
+## pooled instances so memory is released between runs. Called by
+## GameManager on game_restart to prevent stale instances from a previous
+## scene lingering in the static pool.
+static func clear_pool() -> void:
+	for dn in _pool:
+		if is_instance_valid(dn):
+			dn.queue_free()
+	_pool.clear()
+
 # ─── Configuration ────────────────────────────────────────────────────────────
 var lifetime: float = GameConstants.DMG_NUMBER_LIFETIME
 var max_lifetime: float = GameConstants.DMG_NUMBER_LIFETIME
@@ -21,7 +64,10 @@ var _drift_z: float = 0.0
 var _start_y: float = 0.0
 
 func _ready() -> void:
-	# Configure Label3D for crisp readability
+	# Configure Label3D for crisp readability.
+	# These properties persist on the node across pool cycles, so they only
+	# need to be set once (first _ready). On pooled re-entry, they're already
+	# configured and we just reset the per-spawn runtime state below.
 	billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	no_depth_test = true
 	shaded = false
@@ -31,6 +77,7 @@ func _ready() -> void:
 	outline_size = 8
 	pixel_size = 0.008
 
+	# ── Per-spawn reset (runs on every _ready, including pool re-entry) ──
 	_start_y = global_position.y
 
 	# Random horizontal drift so multiple numbers don't overlap
@@ -39,6 +86,13 @@ func _ready() -> void:
 
 	# Start small for pop-in
 	scale = Vector3.ONE * GameConstants.DMG_NUMBER_POPIN_START_SCALE
+
+	# Reset modulate alpha to full (pooled instances may have faded to 0)
+	modulate.a = 1.0
+
+	# Re-enable processing (pool disables it on release)
+	process_mode = Node.PROCESS_MODE_INHERIT
+	visible = true
 
 func _process(delta: float) -> void:
 	lifetime -= delta
@@ -98,7 +152,7 @@ func _process(delta: float) -> void:
 		modulate.a = clampf(fade_alpha, 0.0, 1.0)
 
 	if lifetime <= 0:
-		queue_free()
+		_release_to_pool()
 
 func _update_popin() -> void:
 	# Pop-in: start_scale → peak_scale → settle_scale using proper easing curves.
@@ -200,8 +254,13 @@ func configure_heal(amount: int) -> void:
 	modulate = GameConstants.DMG_NUMBER_HEAL_COLOR
 
 ## Static factory: create and spawn a damage number in the world.
+## Uses the static free-list pool to reuse recycled instances when available,
+## avoiding per-hit Label3D allocation during combat.
 static func spawn(parent: Node, pos: Vector3, amount: int, is_crit: bool = false, is_kill: bool = false, is_boss: bool = false) -> void:
-	var dn := DamageNumber.new()
+	var dn := _acquire()
+	# Request _ready() to fire on re-entry for pooled instances so per-spawn
+	# runtime state (drift, scale, modulate) resets cleanly.
+	dn.request_ready()
 	parent.add_child(dn)
 	# Add jitter so overlapping numbers spread out
 	var jitter_x := randf_range(-GameConstants.DMG_NUMBER_JITTER_X, GameConstants.DMG_NUMBER_JITTER_X)

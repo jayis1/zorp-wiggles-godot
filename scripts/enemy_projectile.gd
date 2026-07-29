@@ -96,6 +96,13 @@ func _physics_process(delta: float) -> void:
 			up_vec = Vector3.FORWARD
 		mesh.look_at(global_position + direction * 2.0, up_vec)
 		mesh.scale = Vector3(0.7, 0.7, 2.2)
+		# ── Rifled spin ── Add a constant roll around the travel axis so the
+		# bolt reads as spinning energy rather than a static stretched sphere.
+		# Matches the player projectile's rifled spin for visual consistency.
+		# Uses wall-clock time so the spin rate is consistent regardless of
+		# time-scale (hit-stop, Time-Slow). Visual-only — the collider is on
+		# the parent Area3D, not the mesh, so this doesn't affect hit detection.
+		mesh.rotation.z = Time.get_ticks_msec() * 0.015
 
 	# Energy flicker — the point light pulses so the bolt feels like crackling
 	# energy. Uses wall-clock time so flicker is consistent regardless of
