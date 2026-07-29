@@ -500,7 +500,7 @@ func _spawn_dungeon_boss(room: Dictionary, theme: int, dungeon_id: int) -> void:
 	GameManager.boss_spawned.emit(boss)
 	# Connect to boss death to clear dungeon.
 	if boss is EnemyBase:
-		boss.connect("enemy_died", _on_dungeon_boss_died.bind(dungeon_id))
+		(boss as EnemyBase).enemy_died.connect(_on_dungeon_boss_died.bind(dungeon_id))
 
 func _on_dungeon_boss_died(enemy: Node, _dungeon_id: int) -> void:
 	# The bind() arg comes AFTER the signal's own args. enemy_died emits the
@@ -523,7 +523,7 @@ func _spawn_reward_chest(room: Dictionary, dungeon_id: int) -> void:
 	# Mark as dungeon reward so opening it clears the dungeon.
 	chest.set_meta("dungeon_reward", dungeon_id)
 	if chest.has_signal("chest_opened"):
-		chest.connect("chest_opened", _on_reward_chest_opened.bind(dungeon_id))
+		chest.chest_opened.connect(_on_reward_chest_opened.bind(dungeon_id))
 
 func _on_reward_chest_opened(_chest: Node, _trapped: bool, dungeon_id: int) -> void:
 	if dungeon_id < 0 or dungeon_id >= _dungeons.size():
