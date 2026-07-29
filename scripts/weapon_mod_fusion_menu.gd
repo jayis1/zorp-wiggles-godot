@@ -361,13 +361,13 @@ func _refresh_cost_label() -> void:
 		gloop_count = WeaponModSystem.get_material_count(GameConstants.CollectibleType.SPACE_GLOOP)
 	var rare_count: int = 0
 	if EquipmentSystem:
-		rare_count = EquipmentSystem.get_rare_material_count(cost.rare_mat_id)
+		rare_count = EquipmentSystem.get_rare_material_count(cost["rare_mat_id"])
 	var rare_name: String = "Rare Material"
-	if GameConstants.RARE_MATERIAL_NAMES.size() > cost.rare_mat_id:
-		rare_name = GameConstants.RARE_MATERIAL_NAMES[cost.rare_mat_id]
+	if GameConstants.RARE_MATERIAL_NAMES.size() > cost["rare_mat_id"]:
+		rare_name = GameConstants.RARE_MATERIAL_NAMES[cost["rare_mat_id"]]
 	_cost_label.text = "Cost: %d Space Gloop (have %d) + %d %s (have %d)  |  Fused: %d/%d" % [
-		cost.space_gloop, gloop_count,
-		cost.rare_mat_count, rare_name, rare_count,
+		cost["space_gloop"], gloop_count,
+		cost["rare_mat_count"], rare_name, rare_count,
 		WeaponModFusion.get_fused_count(), WeaponModFusion.MAX_FUSED_MODS,
 	]
 

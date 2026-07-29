@@ -431,9 +431,9 @@ func generate_loot_caves() -> void:
 
 func _build_loot_cave_entrance(cave: Dictionary) -> void:
 	var root := Node3D.new()
-	root.name = "LootCaveEntrance_%d" % cave.id
-	root.position = cave.position
-	root.set_meta("loot_cave_id", cave.id)
+	root.name = "LootCaveEntrance_%d" % cave["id"]
+	root.position = cave["position"]
+	root.set_meta("loot_cave_id", cave["id"])
 	root.add_to_group("loot_cave_entrance")
 	# Glowing golden entrance.
 	var ring := MeshInstance3D.new()
@@ -475,7 +475,7 @@ func _build_loot_cave_entrance(cave: Dictionary) -> void:
 	shape.height = 4.0
 	col.shape = shape
 	area.add_child(col)
-	area.body_entered.connect(_on_loot_cave_entered.bind(cave.id))
+	area.body_entered.connect(_on_loot_cave_entered.bind(cave["id"]))
 	root.add_child(area)
 	# Attach to the scene.
 	get_tree().current_scene.add_child(root)
@@ -503,11 +503,11 @@ func enter_loot_cave(cave_id: int) -> void:
 	if cave_id < 0 or cave_id >= _loot_caves.size():
 		return
 	var cave: Dictionary = _loot_caves[cave_id]
-	if cave.cleared:
+	if cave["cleared"]:
 		GameManager.add_message("This loot cave has already been cleared.")
 		return
-	if not cave.discovered:
-		cave.discovered = true
+	if not cave["discovered"]:
+		cave["discovered"] = true
 		loot_cave_discovered.emit(cave_id)
 		GameManager.add_message("💎 Discovered a Loot Cave!")
 		AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
@@ -520,8 +520,8 @@ func enter_loot_cave(cave_id: int) -> void:
 func _spawn_loot_cave_interior(cave: Dictionary) -> void:
 	# Build a small interior below the surface — a single round room.
 	var root := Node3D.new()
-	root.name = "LootCaveInterior_%d" % cave.id
-	root.position = Vector3(cave.position.x, GameConstants.LOOT_CAVE_DEPTH, cave.position.z)
+	root.name = "LootCaveInterior_%d" % cave["id"]
+	root.position = Vector3(cave["position"].x, GameConstants.LOOT_CAVE_DEPTH, cave["position"].z)
 	get_tree().current_scene.add_child(root)
 	# Floor.
 	var floor_mesh := MeshInstance3D.new()
@@ -654,7 +654,7 @@ func generate_ancient_vault() -> void:
 func _build_vault_entrance() -> void:
 	var root := Node3D.new()
 	root.name = "AncientVaultEntrance"
-	root.position = _ancient_vault.position
+	root.position = _ancient_vault["position"]
 	root.set_meta("ancient_vault", true)
 	root.add_to_group("ancient_vault_entrance")
 	# Large stone archway.
@@ -735,7 +735,7 @@ func try_open_vault(root: Node) -> void:
 		GameManager.add_message("🔒 The vault is sealed. Read %d more lore stones to unlock." % (GameConstants.ANCIENT_VAULT_LORE_STONES_REQUIRED - lore_count))
 		return
 	# Unlock the vault.
-	_ancient_vault.unlocked = true
+	_ancient_vault["unlocked"] = true
 	_ancient_vault_unlocked = true
 	ancient_vault_unlocked.emit()
 	# Solve the puzzle (procedural: walk to N glowing runes in order).
@@ -828,7 +828,7 @@ func _spawn_vault_guardian() -> void:
 	if not scene:
 		return
 	var guardian := scene.instantiate()
-	var pos: Vector3 = _ancient_vault.position + Vector3(0, 1.5, 0)
+	var pos: Vector3 = _ancient_vault["position"] + Vector3(0, 1.5, 0)
 	guardian.position = pos
 	get_tree().current_scene.add_child(guardian)
 	if "enemies" in GameManager:
@@ -871,7 +871,7 @@ func _on_vault_guardian_died(_enemy: Node) -> void:
 		var type: int = legendary_types[i % legendary_types.size()]
 		var item := collectible_scene.instantiate()
 		var angle: float = (float(i) / GameConstants.ANCIENT_VAULT_LEGENDARY_ITEM_COUNT) * TAU
-		item.position = _ancient_vault.position + Vector3(cos(angle) * 3.0, 0.5, sin(angle) * 3.0)
+		item.position = _ancient_vault["position"] + Vector3(cos(angle) * 3.0, 0.5, sin(angle) * 3.0)
 		get_tree().current_scene.add_child(item)
 		if item.has_method("set_type"):
 			item.set_type(type)
@@ -901,21 +901,21 @@ func update(delta: float) -> void:
 	# Pulse entrance visuals — loot caves + ancient vault.
 	var t: float = Time.get_ticks_msec() * 0.001
 	for entry in _loot_cave_entrance_visuals:
-		var phase: float = t + entry.time_offset
+		var phase: float = t + entry["time_offset"]
 		var pulse: float = 0.7 + 0.3 * sin(phase * 2.5)
-		var rm: StandardMaterial3D = entry.ring_mat
+		var rm: StandardMaterial3D = entry["ring_mat"]
 		if rm:
 			rm.emission_energy_multiplier = 1.5 + 1.5 * pulse
-		var lt: OmniLight3D = entry.light
+		var lt: OmniLight3D = entry["light"]
 		if lt:
 			lt.light_energy = 2.5 + 2.0 * pulse
 	if not _vault_entrance_visuals.is_empty():
-		var vphase: float = t + _vault_entrance_visuals.time_offset
+		var vphase: float = t + _vault_entrance_visuals["time_offset"]
 		var vpulse: float = 0.6 + 0.4 * sin(vphase * 1.8)
-		var vam: StandardMaterial3D = _vault_entrance_visuals.arch_mat
+		var vam: StandardMaterial3D = _vault_entrance_visuals["arch_mat"]
 		if vam:
 			vam.emission_energy_multiplier = 0.4 + 0.6 * vpulse
-		var vlt: OmniLight3D = _vault_entrance_visuals.light
+		var vlt: OmniLight3D = _vault_entrance_visuals["light"]
 		if vlt:
 			vlt.light_energy = 2.5 + 2.0 * vpulse
 
@@ -957,12 +957,12 @@ func _on_boss_spawned(_boss: Node) -> void:
 
 func _check_loot_cave_clear() -> void:
 	for cave in _loot_caves:
-		if cave.cleared:
+		if cave["cleared"]:
 			continue
-		if not cave.discovered:
+		if not cave["discovered"]:
 			continue
 		# Count remaining enemies near the cave.
-		var cave_pos: Vector3 = cave.position
+		var cave_pos: Vector3 = cave["position"]
 		var remaining: int = 0
 		for e in get_tree().get_nodes_in_group("enemies"):
 			if not is_instance_valid(e) or e.is_dead:
@@ -970,7 +970,7 @@ func _check_loot_cave_clear() -> void:
 			if e.global_position.distance_to(Vector3(cave_pos.x, GameConstants.LOOT_CAVE_DEPTH, cave_pos.z)) < 25.0:
 				remaining += 1
 		if remaining == 0:
-			cave.cleared = true
+			cave["cleared"] = true
 			GameManager.add_message("💎 Loot Cave cleared! Bonus +200 score.")
 			GameManager.player_score += 200
 			# Audio + camera juice for clearing a loot cave — previously only

@@ -148,7 +148,7 @@ func _apply_darkness(delta: float) -> void:
 	# over the biome darkness — don't fight ProceduralBiomeGenerator's glow lerp.
 	if ProceduralBiomeGenerator and ProceduralBiomeGenerator.is_in_anomalous_zone():
 		var zone: Dictionary = ProceduralBiomeGenerator.get_active_zone()
-		if zone.size() > 0 and GameConstants.ProcBiomeTrait.GLOWING in zone.traits:
+		if zone.size() > 0 and GameConstants.ProcBiomeTrait.GLOWING in zone["traits"]:
 			return  # Let ProceduralBiomeGenerator handle ambient light while in the glowing zone
 	# Find the WorldEnvironment and adjust its ambient light.
 	var env_node: WorldEnvironment = get_tree().current_scene.get_node_or_null("WorldEnvironment")

@@ -133,26 +133,26 @@ func _process(delta: float) -> void:
 	for i in _zones.size():
 		var zone: Dictionary = _zones[i]
 		var dist: float = Vector2(ppos.x, ppos.z).distance_to(
-			Vector2(zone.center.x, zone.center.z)
+			Vector2(zone["center"].x, zone["center"].z)
 		)
-		if dist <= zone.radius:
+		if dist <= zone["radius"]:
 			new_zone = i
 			break
 	if new_zone != _player_in_zone:
 		if _player_in_zone >= 0:
 			anomalous_zone_left.emit(_player_in_zone)
 			var z: Dictionary = _zones[_player_in_zone]
-			z.entered = false
+			z["entered"] = false
 			# Restore music pitch if we were in an Echo Chamber zone.
 			if AudioManager and AudioManager._music_player:
 				var old_zone: Dictionary = _zones[_player_in_zone]
-				if GameConstants.ProcBiomeTrait.ECHO_CHAMBER in old_zone.traits:
+				if GameConstants.ProcBiomeTrait.ECHO_CHAMBER in old_zone["traits"]:
 					AudioManager._music_player.pitch_scale = 1.0
 			# Audio + camera feedback on zone exit — a soft descending chime
 			# at 0.7× pitch conveys the anomalous energy fading. Entry has
 			# a full-pitch SFX_MUTATION + 0.15 trauma; exit gets a gentler
 			# 0.08 trauma so leaving feels like settling, not a new event.
-			GameManager.add_message("✦ Leaving %s" % z.name)
+			GameManager.add_message("✦ Leaving %s" % z["name"])
 			if AudioManager:
 				AudioManager.play_sfx_pitched(AudioManager.SFX_MUTATION, 0.7)
 			var exit_cam: Node3D = GameManager.camera_rig
@@ -161,9 +161,9 @@ func _process(delta: float) -> void:
 		_player_in_zone = new_zone
 		if new_zone >= 0:
 			var z2: Dictionary = _zones[new_zone]
-			z2.entered = true
-			anomalous_zone_entered.emit(new_zone, z2.traits)
-			GameManager.add_message("✦ Entering %s" % z2.name)
+			z2["entered"] = true
+			anomalous_zone_entered.emit(new_zone, z2["traits"])
+			GameManager.add_message("✦ Entering %s" % z2["name"])
 			# Audio + camera juice for zone entry — a distinctive chime + shake.
 			if AudioManager:
 				AudioManager.play_sfx(AudioManager.SFX_MUTATION)
@@ -184,7 +184,7 @@ func get_glowing_mult() -> float:
 	if _player_in_zone < 0:
 		return 1.0
 	var zone: Dictionary = _zones[_player_in_zone]
-	if GameConstants.ProcBiomeTrait.GLOWING in zone.traits:
+	if GameConstants.ProcBiomeTrait.GLOWING in zone["traits"]:
 		return 1.8
 	return 1.0
 
@@ -192,25 +192,25 @@ func get_toxic_haze_active() -> bool:
 	if _player_in_zone < 0:
 		return false
 	var zone: Dictionary = _zones[_player_in_zone]
-	return GameConstants.ProcBiomeTrait.TOXIC_HAZE in zone.traits
+	return GameConstants.ProcBiomeTrait.TOXIC_HAZE in zone["traits"]
 
 func get_gravity_well_active() -> bool:
 	if _player_in_zone < 0:
 		return false
 	var zone: Dictionary = _zones[_player_in_zone]
-	return GameConstants.ProcBiomeTrait.GRAVITY_WELL in zone.traits
+	return GameConstants.ProcBiomeTrait.GRAVITY_WELL in zone["traits"]
 
 func get_echo_chamber_active() -> bool:
 	if _player_in_zone < 0:
 		return false
 	var zone: Dictionary = _zones[_player_in_zone]
-	return GameConstants.ProcBiomeTrait.ECHO_CHAMBER in zone.traits
+	return GameConstants.ProcBiomeTrait.ECHO_CHAMBER in zone["traits"]
 
 func get_magma_fissures_active() -> bool:
 	if _player_in_zone < 0:
 		return false
 	var zone: Dictionary = _zones[_player_in_zone]
-	return GameConstants.ProcBiomeTrait.MAGMA_FISSURES in zone.traits
+	return GameConstants.ProcBiomeTrait.MAGMA_FISSURES in zone["traits"]
 
 # ─── Trait Effect Ticking ─────────────────────────────────────────────────────
 # Applies per-frame gameplay effects for active anomalous zone traits.
@@ -265,14 +265,14 @@ func _tick_gravity_well(delta: float, player: Node3D) -> void:
 	if _player_in_zone < 0:
 		return
 	var zone: Dictionary = _zones[_player_in_zone]
-	var center: Vector3 = Vector3(zone.center.x, player.global_position.y, zone.center.z)
+	var center: Vector3 = Vector3(zone["center"].x, player.global_position.y, zone["center"].z)
 	var to_center: Vector3 = (center - player.global_position)
 	var dist: float = to_center.length()
 	if dist < 1.0:
 		return  # Already at center, no pull needed.
 	to_center = to_center.normalized()
 	# Pull strength scales with proximity (stronger near the edge, weaker at center).
-	var strength: float = GameConstants.PROC_BIOME_GRAVITY_WELL_FORCE * (dist / float(zone.radius))
+	var strength: float = GameConstants.PROC_BIOME_GRAVITY_WELL_FORCE * (dist / float(zone["radius"]))
 	var cb: CharacterBody3D = player as CharacterBody3D
 	if cb:
 		cb.velocity.x += to_center.x * strength * delta
@@ -283,7 +283,7 @@ func _tick_glowing(_delta: float) -> void:
 	if _player_in_zone < 0:
 		return
 	var zone: Dictionary = _zones[_player_in_zone]
-	if not (GameConstants.ProcBiomeTrait.GLOWING in zone.traits):
+	if not (GameConstants.ProcBiomeTrait.GLOWING in zone["traits"]):
 		return
 	# Boost the WorldEnvironment ambient light energy for better visibility.
 	var env_node: WorldEnvironment = get_tree().current_scene.get_node_or_null("WorldEnvironment")
@@ -316,7 +316,7 @@ func _tick_crystal_shard(delta: float, player: Node3D) -> void:
 	if _player_in_zone < 0:
 		return
 	var zone: Dictionary = _zones[_player_in_zone]
-	if not (GameConstants.ProcBiomeTrait.CRYSTAL_SHARD in zone.traits):
+	if not (GameConstants.ProcBiomeTrait.CRYSTAL_SHARD in zone["traits"]):
 		return
 	# Spawn periodic sparkle particles around the player.
 	_crystal_shard_timer += delta
@@ -334,7 +334,7 @@ func get_crystal_shard_loot_bonus() -> float:
 	if _player_in_zone < 0:
 		return 0.0
 	var zone: Dictionary = _zones[_player_in_zone]
-	if GameConstants.ProcBiomeTrait.CRYSTAL_SHARD in zone.traits:
+	if GameConstants.ProcBiomeTrait.CRYSTAL_SHARD in zone["traits"]:
 		return 0.25  # +25% loot chance in crystal shard zones
 	return 0.0
 
@@ -350,7 +350,7 @@ func is_mirror_surface_active() -> bool:
 	if _player_in_zone < 0:
 		return false
 	var zone: Dictionary = _zones[_player_in_zone]
-	return GameConstants.ProcBiomeTrait.MIRROR_SURFACE in zone.traits
+	return GameConstants.ProcBiomeTrait.MIRROR_SURFACE in zone["traits"]
 
 # Rain Indoor: spawns ambient rain particles within the zone.
 var _rain_indoor_particles: GPUParticles3D = null
@@ -360,7 +360,7 @@ func _tick_rain_indoor(_delta: float, player: Node3D) -> void:
 		_clear_rain_indoor()
 		return
 	var zone: Dictionary = _zones[_player_in_zone]
-	if not (GameConstants.ProcBiomeTrait.RAIN_INDOOR in zone.traits):
+	if not (GameConstants.ProcBiomeTrait.RAIN_INDOOR in zone["traits"]):
 		_clear_rain_indoor()
 		return
 	# Spawn rain particles following the player if not already active.

@@ -243,7 +243,7 @@ func _get_iso_week_string() -> String:
 	var month: int = datetime.get("month", 1)
 	var day: int = datetime.get("day", 1)
 	var iso: Dictionary = _date_to_iso_week(year, month, day)
-	return "%d-W%02d" % [iso.year, iso.week]
+	return "%d-W%02d" % [iso["year"], iso["week"]]
 
 ## Converts a (year, month, day) to an ISO 8601 (year, week) tuple.
 ## Uses the standard algorithm: find the day of year, adjust for ISO week

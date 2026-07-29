@@ -109,12 +109,12 @@ func _generate_room_layout(dungeon_id: int, _theme: int) -> Array[Dictionary]:
 func _build_entrance(dungeon: Dictionary) -> void:
 	# Surface entrance — a glowing ring + pillar structure marking the dungeon.
 	var root := Node3D.new()
-	root.name = "DungeonEntrance_%d" % dungeon.id
-	root.position = dungeon.position
+	root.name = "DungeonEntrance_%d" % dungeon["id"]
+	root.position = dungeon["position"]
 	add_child(root)
 	# Mark with meta so interaction system can find it.
-	root.set_meta("dungeon_id", dungeon.id)
-	root.set_meta("dungeon_theme", dungeon.theme)
+	root.set_meta("dungeon_id", dungeon["id"])
+	root.set_meta("dungeon_theme", dungeon["theme"])
 	root.add_to_group("dungeon_entrance")
 	# Glowing ring on the ground.
 	var ring := MeshInstance3D.new()
@@ -141,9 +141,9 @@ func _build_entrance(dungeon: Dictionary) -> void:
 	beam_mesh.height = GameConstants.DUNGEON_ENTRANCE_HEIGHT
 	beam.mesh = beam_mesh
 	var beam_mat := StandardMaterial3D.new()
-	beam_mat.albedo_color = GameConstants.DUNGEON_THEME_EMISSIVE[dungeon.theme]
+	beam_mat.albedo_color = GameConstants.DUNGEON_THEME_EMISSIVE[dungeon["theme"]]
 	beam_mat.emission_enabled = true
-	beam_mat.emission = GameConstants.DUNGEON_THEME_EMISSIVE[dungeon.theme]
+	beam_mat.emission = GameConstants.DUNGEON_THEME_EMISSIVE[dungeon["theme"]]
 	beam_mat.emission_energy_multiplier = 1.2
 	beam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	beam_mat.no_depth_test = true
@@ -154,7 +154,7 @@ func _build_entrance(dungeon: Dictionary) -> void:
 	root.add_child(beam)
 	# Pulsing light.
 	var light := OmniLight3D.new()
-	light.light_color = GameConstants.DUNGEON_THEME_EMISSIVE[dungeon.theme]
+	light.light_color = GameConstants.DUNGEON_THEME_EMISSIVE[dungeon["theme"]]
 	light.light_energy = 2.5
 	light.omni_range = 12.0
 	light.position = Vector3(0, 1.5, 0)
@@ -167,14 +167,14 @@ func _build_entrance(dungeon: Dictionary) -> void:
 	shape.height = 4.0
 	col.shape = shape
 	area.add_child(col)
-	area.body_entered.connect(_on_entrance_body_entered.bind(dungeon.id))
+	area.body_entered.connect(_on_entrance_body_entered.bind(dungeon["id"]))
 	root.add_child(area)
 	# Floating label.
 	var label := Label3D.new()
-	label.text = "▼ %s" % GameConstants.DUNGEON_THEME_NAMES[dungeon.theme]
+	label.text = "▼ %s" % GameConstants.DUNGEON_THEME_NAMES[dungeon["theme"]]
 	label.font_size = 28
 	label.position = Vector3(0, 4.5, 0)
-	label.modulate = GameConstants.DUNGEON_THEME_EMISSIVE[dungeon.theme]
+	label.modulate = GameConstants.DUNGEON_THEME_EMISSIVE[dungeon["theme"]]
 	label.outline_size = 8
 	label.outline_modulate = Color(0, 0, 0, 0.8)
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -211,18 +211,18 @@ func enter_dungeon(dungeon_id: int) -> void:
 	if _active_dungeon_id >= 0:
 		return  # Already in a dungeon
 	var dungeon: Dictionary = _dungeons[dungeon_id]
-	if dungeon.cleared:
+	if dungeon["cleared"]:
 		GameManager.add_message("This dungeon has already been cleared.")
 		return
 	_active_dungeon_id = dungeon_id
 	_active_root = Node3D.new()
 	_active_root.name = "DungeonInterior_%d" % dungeon_id
 	# Place interior below the surface at the dungeon's XZ position.
-	_active_root.position = Vector3(dungeon.position.x, GameConstants.DUNGEON_FLOOR_Y, dungeon.position.z)
+	_active_root.position = Vector3(dungeon["position"].x, GameConstants.DUNGEON_FLOOR_Y, dungeon["position"].z)
 	get_tree().current_scene.add_child(_active_root)
 	_build_interior(dungeon)
-	dungeon_entered.emit(dungeon_id, dungeon.theme)
-	GameManager.add_message("▼ Descending into %s..." % GameConstants.DUNGEON_THEME_NAMES[dungeon.theme])
+	dungeon_entered.emit(dungeon_id, dungeon["theme"])
+	GameManager.add_message("▼ Descending into %s..." % GameConstants.DUNGEON_THEME_NAMES[dungeon["theme"]])
 	AudioManager.play_sfx(AudioManager.SFX_FAST_TRAVEL)
 	# Camera shake for tactile descent feel.
 	var cam_rig: Node3D = GameManager.camera_rig
@@ -231,10 +231,10 @@ func enter_dungeon(dungeon_id: int) -> void:
 	# Move player into the first room.
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if player and is_instance_valid(player):
-		var first_room: Dictionary = dungeon.rooms[0]
+		var first_room: Dictionary = dungeon["rooms"][0]
 		# Interior is offset to (dungeon_pos.x, FLOOR_Y, dungeon_pos.z).
 		# Room centers are relative to interior root.
-		player.global_position = _active_root.global_position + first_room.center + Vector3(0, 1.5, 0)
+		player.global_position = _active_root.global_position + first_room["center"] + Vector3(0, 1.5, 0)
 
 func exit_dungeon() -> void:
 	if _active_dungeon_id < 0:
@@ -243,7 +243,7 @@ func exit_dungeon() -> void:
 	# Move player back to the surface entrance.
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if player and is_instance_valid(player):
-		player.global_position = dungeon.position + Vector3(0, 1.5, 0)
+		player.global_position = dungeon["position"] + Vector3(0, 1.5, 0)
 	if _active_root and is_instance_valid(_active_root):
 		_active_root.queue_free()
 	_active_root = null
@@ -259,34 +259,34 @@ func exit_dungeon() -> void:
 	# Particle burst at the surface exit point for visual confirmation.
 	var parent: Node = get_tree().current_scene
 	if parent and ParticleEffects and player and is_instance_valid(player):
-		ParticleEffects.spawn_pickup_sparkle(parent, player.global_position, GameConstants.DUNGEON_THEME_COLORS[dungeon.theme])
+		ParticleEffects.spawn_pickup_sparkle(parent, player.global_position, GameConstants.DUNGEON_THEME_COLORS[dungeon["theme"]])
 
 # ─── Interior Construction ─────────────────────────────────────────────────────
 
 func _build_interior(dungeon: Dictionary) -> void:
-	var theme: int = dungeon.theme
+	var theme: int = dungeon["theme"]
 	var floor_color := GameConstants.DUNGEON_THEME_COLORS[theme]
 	var wall_color := floor_color * 0.7
 	var emissive := GameConstants.DUNGEON_THEME_EMISSIVE[theme]
 	# Build each room.
-	for i in dungeon.rooms.size():
-		var room: Dictionary = dungeon.rooms[i]
-		_build_room(room, floor_color, wall_color, emissive, i == dungeon.rooms.size() - 1)
+	for i in dungeon["rooms"].size():
+		var room: Dictionary = dungeon["rooms"][i]
+		_build_room(room, floor_color, wall_color, emissive, i == dungeon["rooms"].size() - 1)
 	# Spawn enemies for each room (deferred so the geometry exists first).
-	for i in dungeon.rooms.size():
-		var room: Dictionary = dungeon.rooms[i]
-		if not room.enemies_spawned:
-			_spawn_room_enemies(room, theme, dungeon.id)
-			room.enemies_spawned = true
+	for i in dungeon["rooms"].size():
+		var room: Dictionary = dungeon["rooms"][i]
+		if not room["enemies_spawned"]:
+			_spawn_room_enemies(room, theme, dungeon["id"])
+			room["enemies_spawned"] = true
 	# Spawn the boss in the last room.
-	var boss_room: Dictionary = dungeon.rooms[dungeon.rooms.size() - 1]
-	_spawn_dungeon_boss(boss_room, theme, dungeon.id)
+	var boss_room: Dictionary = dungeon["rooms"][dungeon["rooms"].size() - 1]
+	_spawn_dungeon_boss(boss_room, theme, dungeon["id"])
 	# Reward chest at the very end.
-	_spawn_reward_chest(boss_room, dungeon.id)
+	_spawn_reward_chest(boss_room, dungeon["id"])
 
 func _build_room(room: Dictionary, floor_color: Color, wall_color: Color, emissive: Color, is_boss_room: bool) -> void:
-	var he: Vector3 = room.half_extents
-	var center: Vector3 = room.center
+	var he: Vector3 = room["half_extents"]
+	var center: Vector3 = room["center"]
 	# Floor.
 	var floor_mesh := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
@@ -366,16 +366,16 @@ func _spawn_room_enemies(room: Dictionary, theme: int, _dungeon_id: int) -> void
 		GameConstants.DUNGEON_MIN_ENEMIES_PER_ROOM,
 		GameConstants.DUNGEON_MAX_ENEMIES_PER_ROOM
 	)
-	if room.is_boss_room:
+	if room["is_boss_room"]:
 		count = 0  # Boss room only has the boss
 	for i in count:
 		var enemy_type: int = pool[_rng.randi() % pool.size()]
 		var offset := Vector3(
-			_rng.randf_range(-room.half_extents.x * 0.6, room.half_extents.x * 0.6),
+			_rng.randf_range(-room["half_extents"].x * 0.6, room["half_extents"].x * 0.6),
 			1.0,
-			_rng.randf_range(-room.half_extents.z * 0.6, room.half_extents.z * 0.6)
+			_rng.randf_range(-room["half_extents"].z * 0.6, room["half_extents"].z * 0.6)
 		)
-		_spawn_enemy_at(enemy_type, _active_root.global_position + room.center + offset)
+		_spawn_enemy_at(enemy_type, _active_root.global_position + room["center"] + offset)
 
 func _theme_enemy_pool(theme: int) -> Array[int]:
 	# Reuse existing enemy types — theme affects which pool is drawn from.
@@ -478,7 +478,7 @@ func _spawn_dungeon_boss(room: Dictionary, theme: int, dungeon_id: int) -> void:
 	if not scene:
 		return
 	var boss := scene.instantiate()
-	boss.position = _active_root.global_position + room.center + Vector3(0, 1.5, 0)
+	boss.position = _active_root.global_position + room["center"] + Vector3(0, 1.5, 0)
 	get_tree().current_scene.add_child(boss)
 	if "enemies" in GameManager:
 		GameManager.enemies.append(boss)
@@ -518,7 +518,7 @@ func _spawn_reward_chest(room: Dictionary, dungeon_id: int) -> void:
 	if not chest_scene:
 		return
 	var chest := chest_scene.instantiate()
-	chest.position = _active_root.global_position + room.center + Vector3(0, 0.5, 4.0)
+	chest.position = _active_root.global_position + room["center"] + Vector3(0, 0.5, 4.0)
 	get_tree().current_scene.add_child(chest)
 	# Mark as dungeon reward so opening it clears the dungeon.
 	chest.set_meta("dungeon_reward", dungeon_id)

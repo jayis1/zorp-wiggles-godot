@@ -174,7 +174,7 @@ func stop_recording(metadata: Dictionary) -> String:
 	_samples.clear()
 	_update_manifest(replay_id, metadata, replay_data)
 	recording_stopped.emit(replay_id)
-	print("[ReplaySystem] Saved replay %s (%d samples, %.1fs)" % [replay_id, replay_data.sample_count, replay_data.duration])
+	print("[ReplaySystem] Saved replay %s (%d samples, %.1fs)" % [replay_id, replay_data["sample_count"], replay_data["duration"]])
 	_prune_old_replays()
 	return replay_id
 
