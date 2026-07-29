@@ -25,6 +25,10 @@ extends Node3D
 ## eases gently when stopping.
 @export var look_ahead_strength: float = 3.0  # Max offset in meters
 @export var look_ahead_smoothing: float = 4.0  # How fast the offset eases
+## Dash look-ahead multiplier — when the player is dashing, the look-ahead
+## strength is multiplied by this value so the camera surges further ahead,
+## amplifying the sense of speed. 1.0 = no boost, 2.0 = double the lead.
+@export var dash_look_ahead_mult: float = 2.0
 var _look_ahead_offset: Vector3 = Vector3.ZERO
 
 ## Smoothing weight (higher = snappier follow). ~5 = smooth, ~15 = tight.
@@ -192,9 +196,20 @@ func _process(delta: float) -> void:
 		player_vel = (_target_node as CharacterBody3D).velocity
 	var horiz_vel := Vector2(player_vel.x, player_vel.z)
 	var speed_frac: float = clampf(horiz_vel.length() / GameConstants.PLAYER_SPEED, 0.0, 1.0)
+	# ── Dash look-ahead boost ── During a dash the player moves at DASH_SPEED
+	# (2.5× normal), but the look-ahead was capped to the normal speed_frac
+	# (≤1.0), so the camera didn't lead any further during the fastest
+	# movement. We detect the dash state via GameManager.player_is_dashing
+	# and boost the look-ahead strength by dash_look_ahead_mult so the
+	# camera surges ahead during the dash, amplifying the speed sensation.
+	# The boost eases in/out via the existing look_ahead_smoothing lerp, so
+	# the transition into and out of the dash lead is seamless.
+	var effective_look_ahead: float = look_ahead_strength
+	if GameManager.player_is_dashing:
+		effective_look_ahead *= dash_look_ahead_mult
 	var desired_lookahead := Vector3.ZERO
 	if horiz_vel.length() > 0.1:
-		desired_lookahead = Vector3(player_vel.x, 0, player_vel.z).normalized() * look_ahead_strength * speed_frac
+		desired_lookahead = Vector3(player_vel.x, 0, player_vel.z).normalized() * effective_look_ahead * speed_frac
 	var la_weight: float = 1.0 - exp(-look_ahead_smoothing * delta)
 	_look_ahead_offset = _look_ahead_offset.lerp(desired_lookahead, la_weight)
 	target_pos += _look_ahead_offset

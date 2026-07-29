@@ -53,11 +53,21 @@ var message_timer: float = 0.0
 var level_up_display_timer: float = 0.0
 var boss_ref: Node3D = null
 
-# ─── Smooth Bar Animation ─────────────────────────────────────────────────────
+# ── Smooth Bar Animation ─────────────────────────────────────────────────────
 var _hp_bar_target_ratio: float = 1.0
 var _xp_bar_target_ratio: float = 0.0
 var _boss_bar_target_ratio: float = 0.0
 var _bar_smoothing: float = 10.0  # Higher = snappier bar transitions
+
+# ── Floating score increment ── When the player gains score, a small "+N"
+#    label spawns at the score text's position and floats upward while fading
+#    out, giving each score gain a tactile "+reward" read. The label is
+#    created lazily and pooled (reused) so rapid kills don't allocate a new
+#    Label per gain. The float distance and duration are tuned to feel like
+#    a satisfying upward drift, not a long animation that clutters the HUD.
+var _score_float_label: Label = null
+var _score_float_tween: Tween = null
+var _prev_score: int = 0
 
 # ── Smooth bar color animation ──
 # The bar *size* lerps smoothly, but the color was snapping instantly on
@@ -908,6 +918,17 @@ func _on_combo_changed(count: int) -> void:
 func _on_score_changed(new_score: int) -> void:
 	score_text.text = "Score: %d" % new_score
 	kills_text.text = "Kills: %d" % GameManager.player_kills
+	# ── Floating score increment ── Spawn a "+N" label that floats upward
+	# from the score text, showing exactly how much score was gained. This
+	# gives each kill/pickup a tangible "+reward" read beyond the bare
+	# number change. Skipped on the initial _update_all_displays() call
+	# (where _prev_score == new_score, i.e. score 0 → 0) and on score loss
+	# (negative delta — we only celebrate gains). The label is pooled so
+	# rapid kills reuse the same Label node instead of allocating new ones.
+	var delta: int = new_score - _prev_score
+	if delta > 0 and _prev_score > 0:
+		_show_score_increment(delta)
+	_prev_score = new_score
 	# ── Score pop animation ── A quick scale punch on the score label so
 	# gaining score feels rewarding, mirroring the combo text "thwack".
 	# Skipped on the initial _update_all_displays() call (score 0 → 0 is
@@ -934,6 +955,56 @@ func _on_score_changed(new_score: int) -> void:
 		kills_tween.tween_property(kills_text, "scale", Vector2.ONE, 0.15) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 		kills_text.set_meta("_kills_tween", kills_tween)
+
+## Spawn a floating "+N" label near the score text that drifts upward and
+## fades out. The label is pooled — created once and reused — so rapid kills
+## don't allocate a new Label per gain. The float uses ease-out quad for the
+## vertical drift (decelerating rise) and ease-in quad for the alpha (gentle
+## fade), giving a satisfying "score pop" that reads as a reward without
+## cluttering the HUD. Color shifts from gold (small gains) to orange (big
+## gains like boss kills) so large rewards feel more exciting.
+func _show_score_increment(amount: int) -> void:
+	if not score_text:
+		return
+	# Lazily create the pooled floating label
+	if not _score_float_label:
+		_score_float_label = Label.new()
+		_score_float_label.name = "ScoreFloatLabel"
+		_score_float_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		_score_float_label.add_theme_font_size_override("font_size", 16)
+		_score_float_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Anchor to the same top-left area as the score text
+		_score_float_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		add_child(_score_float_label)
+	# Position just to the right of the score text
+	_score_float_label.position = score_text.position + Vector2(score_text.size.x + 8.0, -4.0)
+	# Color: gold for small gains, orange for large gains (boss kills, combos)
+	var t: float = clampf(float(amount) / 500.0, 0.0, 1.0)
+	var float_color: Color = Color(1.0, 0.85, 0.2).lerp(Color(1.0, 0.5, 0.1), t)
+	_score_float_label.text = "+%d" % amount
+	_score_float_label.add_theme_color_override("font_color", float_color)
+	_score_float_label.modulate.a = 1.0
+	_score_float_label.scale = Vector2.ONE * 1.2
+	_score_float_label.visible = true
+	# Kill any in-progress float tween so rapid gains restart cleanly
+	if _score_float_tween and _score_float_tween.is_valid():
+		_score_float_tween.kill()
+	_score_float_tween = create_tween()
+	# Quick scale pop-in (ease-out back for a slight overshoot)
+	_score_float_tween.tween_property(_score_float_label, "scale",
+		Vector2.ONE, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	# Float upward while fading out (parallel)
+	_score_float_tween.parallel().tween_property(_score_float_label, "position:y",
+		_score_float_label.position.y - 28.0, 0.7) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_score_float_tween.parallel().tween_property(_score_float_label, "modulate:a",
+		0.0, 0.7) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	# Hide after the float completes
+	_score_float_tween.chain().tween_callback(func():
+		_score_float_label.visible = false
+	)
 
 func _on_player_died() -> void:
 	show_message("Zorp has fallen!", 5.0)
@@ -971,6 +1042,16 @@ func _on_game_restarted() -> void:
 	_xp_bar_prev_ratio = 0.0
 	if xp_bar:
 		xp_bar.color = GameConstants.C_XP_PURPLE
+	# Reset floating score increment state so a fresh game doesn't carry a
+	# stale "+N" label or a previous-score baseline from the last run.
+	_prev_score = 0
+	if _score_float_label:
+		_score_float_label.visible = false
+		_score_float_label.modulate.a = 1.0
+		_score_float_label.scale = Vector2.ONE
+	if _score_float_tween and _score_float_tween.is_valid():
+		_score_float_tween.kill()
+		_score_float_tween = null
 	# Reset the auto-fire indicator — the player's _auto_fire_pinned flag is
 	# reset on respawn (see Player._on_game_restarted_player), but the HUD
 	# indicator also needs to clear so a stale [AUTO] badge doesn't persist
