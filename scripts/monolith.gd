@@ -36,6 +36,16 @@ var _cap: MeshInstance3D
 var _ring: MeshInstance3D
 var _ground_glow: MeshInstance3D
 var _runes: Array[MeshInstance3D] = []
+# Cached material references — _process previously called .material_override
+# 6+ times per frame to set albedo_color. Each call is a property lookup that
+# creates a temporary Variant. Caching the StandardMaterial3D references at
+# build time lets us write directly to the material, eliminating the per-frame
+# property lookups (a micro-optimization that matters because monoliths are
+# persistent world objects that run _process every frame for the glow pulse).
+var _body_mat: StandardMaterial3D = null
+var _cap_mat: StandardMaterial3D = null
+var _ring_mat: StandardMaterial3D = null
+var _ground_glow_mat: StandardMaterial3D = null
 
 func _ready() -> void:
 	_bob_offset = randf() * TAU
@@ -90,6 +100,15 @@ func _build_visuals() -> void:
 		rune.rotate_y(rad)
 		_runes.append(rune)
 		add_child(rune)
+	
+	# Cache material references for _process — the _create_* helpers create
+	# StandardMaterial3D internally and assign them to material_override. We
+	# grab the references here so _process can write directly to the material
+	# without per-frame .material_override property lookups.
+	_body_mat = _body.material_override as StandardMaterial3D
+	_cap_mat = _cap.material_override as StandardMaterial3D
+	_ring_mat = _ring.material_override as StandardMaterial3D
+	_ground_glow_mat = _ground_glow.material_override as StandardMaterial3D
 
 func _process(delta: float) -> void:
 	_time += delta
@@ -103,72 +122,49 @@ func _process(delta: float) -> void:
 	if _ring:
 		_ring.rotate_y(deg_to_rad(90.0 * delta))
 
-	# Update cooldown and visuals
+	# Update cooldown and visuals — uses cached material references instead
+	# of per-frame .material_override lookups (6+ lookups → 0 per frame).
 	if cooldown > 0.0:
 		cooldown -= delta
 		# Dimmed state
 		var dim_alpha: float = (40.0 + 20.0 * sin(_time * 2.0)) / 255.0
-		if _cap:
-			var mat: StandardMaterial3D = _cap.material_override
-			if mat:
-				mat.albedo_color = Color(80.0 / 255.0, 60.0 / 255.0, 100.0 / 255.0)
-		if _ring:
-			var mat2: StandardMaterial3D = _ring.material_override
-			if mat2:
-				mat2.albedo_color = Color(80.0 / 255.0, 60.0 / 255.0, 100.0 / 255.0, dim_alpha)
-		if _ground_glow:
-			var mat3: StandardMaterial3D = _ground_glow.material_override
-			if mat3:
-				mat3.albedo_color = Color(80.0 / 255.0, 60.0 / 255.0, 100.0 / 255.0, 15.0 / 255.0)
+		if _cap_mat:
+			_cap_mat.albedo_color = Color(80.0 / 255.0, 60.0 / 255.0, 100.0 / 255.0)
+		if _ring_mat:
+			_ring_mat.albedo_color = Color(80.0 / 255.0, 60.0 / 255.0, 100.0 / 255.0, dim_alpha)
+		if _ground_glow_mat:
+			_ground_glow_mat.albedo_color = Color(80.0 / 255.0, 60.0 / 255.0, 100.0 / 255.0, 15.0 / 255.0)
 		# If we have an active buff, blend body color toward buff color (dimmed)
 		if _active_buff >= 0:
 			var bc: Color = BUFF_COLORS.get(_active_buff, GameConstants.MONOLITH_BODY_COLOR)
 			var dim_bc: Color = Color(bc.r * 0.4, bc.g * 0.4, bc.b * 0.4)
-			if _body:
-				var mat4: StandardMaterial3D = _body.material_override
-				if mat4:
-					mat4.albedo_color = dim_bc
+			if _body_mat:
+				_body_mat.albedo_color = dim_bc
 		else:
-			if _body:
-				var mat5: StandardMaterial3D = _body.material_override
-				if mat5:
-					mat5.albedo_color = Color(60.0 / 255.0, 45.0 / 255.0, 80.0 / 255.0)
+			if _body_mat:
+				_body_mat.albedo_color = Color(60.0 / 255.0, 45.0 / 255.0, 80.0 / 255.0)
 	else:
 		# Active/ready state — glowing
 		if _active_buff >= 0:
 			var bc: Color = BUFF_COLORS.get(_active_buff, GameConstants.MONOLITH_CAP_COLOR)
 			var glow_a: float = (100.0 + 50.0 * sin(_time * 4.0)) / 255.0
-			if _cap:
-				var mat: StandardMaterial3D = _cap.material_override
-				if mat:
-					mat.albedo_color = bc
-			if _ring:
-				var mat2: StandardMaterial3D = _ring.material_override
-				if mat2:
-					mat2.albedo_color = Color(bc.r, bc.g, bc.b, glow_a)
-			if _ground_glow:
-				var mat3: StandardMaterial3D = _ground_glow.material_override
-				if mat3:
-					mat3.albedo_color = Color(bc.r, bc.g, bc.b, 40.0 / 255.0)
+			if _cap_mat:
+				_cap_mat.albedo_color = bc
+			if _ring_mat:
+				_ring_mat.albedo_color = Color(bc.r, bc.g, bc.b, glow_a)
+			if _ground_glow_mat:
+				_ground_glow_mat.albedo_color = Color(bc.r, bc.g, bc.b, 40.0 / 255.0)
 		else:
 			# Default purple glow
 			var bright_a: float = (80.0 + 40.0 * sin(_time * 3.0)) / 255.0
-			if _cap:
-				var mat: StandardMaterial3D = _cap.material_override
-				if mat:
-					mat.albedo_color = Color(180.0 / 255.0, 140.0 / 255.0, 1.0)
-			if _ring:
-				var mat2: StandardMaterial3D = _ring.material_override
-				if mat2:
-					mat2.albedo_color = Color(150.0 / 255.0, 100.0 / 255.0, 1.0, bright_a)
-			if _ground_glow:
-				var mat3: StandardMaterial3D = _ground_glow.material_override
-				if mat3:
-					mat3.albedo_color = Color(150.0 / 255.0, 100.0 / 255.0, 1.0, 30.0 / 255.0)
-			if _body:
-				var mat4: StandardMaterial3D = _body.material_override
-				if mat4:
-					mat4.albedo_color = GameConstants.MONOLITH_BODY_COLOR
+			if _cap_mat:
+				_cap_mat.albedo_color = Color(180.0 / 255.0, 140.0 / 255.0, 1.0)
+			if _ring_mat:
+				_ring_mat.albedo_color = Color(150.0 / 255.0, 100.0 / 255.0, 1.0, bright_a)
+			if _ground_glow_mat:
+				_ground_glow_mat.albedo_color = Color(150.0 / 255.0, 100.0 / 255.0, 1.0, 30.0 / 255.0)
+			if _body_mat:
+				_body_mat.albedo_color = GameConstants.MONOLITH_BODY_COLOR
 
 func _on_body_entered(body: Node3D) -> void:
 	if not body.is_in_group("player"):
@@ -200,10 +196,8 @@ func _on_body_entered(body: Node3D) -> void:
 	GameManager.active_buffs[buff_key] = GameConstants.MONOLITH_BUFF_DURATION
 
 	# Flash body with buff color
-	if _body:
-		var mat: StandardMaterial3D = _body.material_override
-		if mat:
-			mat.albedo_color = buff_color
+	if _body_mat:
+		_body_mat.albedo_color = buff_color
 
 	# ── Phase 7: Buff activation visual effect ──
 	# Spawn an upward beam of particles in the buff color + light flash

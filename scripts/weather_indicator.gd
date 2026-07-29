@@ -19,6 +19,12 @@ var _transition_timer: float = 0.0
 var _current_color: Color = Color(1, 1, 0.5)
 # ── Phase 28: Weather combo indicator ──
 var _combo_label: Label = null
+# Tracked tween for the combo label entrance/exit so rapid combo changes don't
+# stack overlapping tweens. The label slides in from below + fades in when a
+# combo starts, and slides back down + fades out when it ends — matching the
+# dimension indicator's entrance/exit language.
+var _combo_tween: Tween = null
+const _COMBO_SLIDE_OFFSET: float = -16.0  # Start 16px above resting position
 
 # ── Icon pop animation ── When the weather changes, the icon used to just
 #    snap-swap its text and color. Now it does a quick scale-pop (shrink to
@@ -109,6 +115,10 @@ func _ready() -> void:
 	_combo_label.add_theme_font_size_override("font_size", 11)
 	_combo_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 0.9))
 	_combo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_combo_label.visible = false
+	_combo_label.modulate.a = 0.0
+	_combo_label.scale = Vector2.ONE
+	_combo_label.pivot_offset = Vector2(80.0, 9.0)  # Center of the 160x18 label
 	add_child(_combo_label)
 
 	# Connect to WeatherSystem signals
@@ -206,15 +216,53 @@ func _play_icon_pop() -> void:
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 # ── Phase 28: Weather combo indicator handlers ──
-func _on_combo_started(combo_weather: int, primary_weather: int) -> void:
+func _on_combo_started(combo_weather: int, _primary_weather: int) -> void:
 	if not _combo_label:
 		return
 	var info: Dictionary = GameConstants.WEATHER_INFO.get(combo_weather, {"name": "?"})
 	var combo_name: String = info.get("name", "?")
 	_combo_label.text = "✦ + %s" % combo_name
-	# Use a golden color for the combo indicator
 	_combo_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 0.9))
+	# ── Entrance animation: slide down from above + fade in ── The combo
+	#    label used to appear instantly, which felt flat for a combo — a
+	#    layered weather event is dramatic and the UI should match. Now the
+	#    label slides in from 16px above with an ease-out-back overshoot and
+	#    fades in modulate.a, matching the dimension indicator's entrance
+	#    language. A tracked tween ensures a re-combo mid-exit doesn't stack.
+	if _combo_tween and _combo_tween.is_valid():
+		_combo_tween.kill()
+	var rest_top: float = 56.0
+	_combo_label.visible = true
+	_combo_label.modulate.a = 0.0
+	_combo_label.offset_top = rest_top + _COMBO_SLIDE_OFFSET
+	_combo_tween = create_tween()
+	_combo_tween.set_parallel(true)
+	_combo_tween.tween_property(_combo_label, "modulate:a", 1.0, 0.30) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_combo_tween.tween_property(_combo_label, "offset_top", rest_top, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
-func _on_combo_ended(combo_weather: int) -> void:
-	if _combo_label:
-		_combo_label.text = ""
+func _on_combo_ended(_combo_weather: int) -> void:
+	if not _combo_label:
+		return
+	# ── Exit animation: slide back up + fade out ── The combo label slides
+	#    back up and fades out over 0.25s, then hides. This is the reverse of
+	#    the entrance — a clean, smooth departure rather than a hard cut.
+	if _combo_tween and _combo_tween.is_valid():
+		_combo_tween.kill()
+	# If already hidden (e.g. combo ended twice rapidly), nothing to do.
+	if not _combo_label.visible:
+		return
+	var rest_top: float = 56.0
+	_combo_tween = create_tween()
+	_combo_tween.set_parallel(true)
+	_combo_tween.tween_property(_combo_label, "modulate:a", 0.0, 0.25) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_combo_tween.tween_property(_combo_label, "offset_top",
+		rest_top + _COMBO_SLIDE_OFFSET, 0.25) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	_combo_tween.chain().tween_callback(func():
+		_combo_label.visible = false
+		_combo_label.modulate.a = 1.0
+		_combo_label.offset_top = rest_top
+	)

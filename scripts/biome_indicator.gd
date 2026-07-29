@@ -43,12 +43,18 @@ func _on_biome_changed(biome_id: int) -> void:
 	_display_alpha = 1.0
 
 func _process(delta: float) -> void:
+	# Frame-rate-independent exponential lerp (1 - exp(-k*delta)) instead of
+	# the old `lerpf(a, b, speed * delta)` which decayed at different rates
+	# depending on FPS. At 144 FPS the old lerp converged ~2.4x faster than at
+	# 60 FPS, making the biome indicator name flash too briefly on high-refresh
+	# displays. The exponential form converges at the same real-time rate
+	# regardless of refresh rate, matching the pattern used in player.gd,
+	# camera_rig.gd, and the HUD bars.
+	var weight: float = 1.0 - exp(-GameConstants.BIOME_INDICATOR_FADE_SPEED * delta)
 	# Fade the display brightness down after it's been shown for a while
-	_display_alpha = lerpf(_display_alpha, 0.4, GameConstants.BIOME_INDICATOR_FADE_SPEED * delta)
+	_display_alpha = lerpf(_display_alpha, 0.4, weight)
 	# Lerp color toward target
-	_current_color = _current_color.lerp(_target_color, GameConstants.BIOME_INDICATOR_FADE_SPEED * delta)
-	# Apply display brightness to alpha
-	var draw_alpha: float = _current_color.a * _display_alpha
+	_current_color = _current_color.lerp(_target_color, weight)
 	# Update actual modulate-like via custom draw
 	queue_redraw()
 
