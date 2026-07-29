@@ -156,8 +156,13 @@ func _spawn_shard(parent_node: Node) -> void:
 	reform_timer.autostart = true
 	shard.add_child(reform_timer)
 
-	# Capture the shard reference in the closure (avoid late-access issues)
+	# Capture the shard reference and parent node in the closure.
+	# We must capture parent_node because self (the wraith) will have been
+	# freed by the time this callback fires (super._die() schedules
+	# queue_free after 0.1s, but the reform delay is 0.9s). Calling
+	# get_parent() on a freed node would fail, so we pass the parent explicitly.
 	var shard_ref: RigidBody3D = shard
+	var scene_root: Node = parent_node
 	reform_timer.timeout.connect(func() -> void:
 		if not is_instance_valid(shard_ref):
 			return
@@ -170,15 +175,19 @@ func _spawn_shard(parent_node: Node) -> void:
 			fade_tween.tween_callback(shard_ref.queue_free)
 		else:
 			shard_ref.queue_free()
-		# Spawn the mini-wraith at the shard's position
-		_spawn_mini_wraith(spawn_pos)
+		# Spawn the mini-wraith at the shard's position.
+		# Use the captured scene_root instead of get_parent() — self is freed.
+		_spawn_mini_wraith(spawn_pos, scene_root)
 	)
 
 ## Spawn a mini-wraith enemy at the given position. The mini-wraith is a
 ## blob-scene enemy with overridden stats: low HP, fast, low damage, small
 ## scale, ice-blue color. It's a full enemy in the "enemies" group, tracked by
 ## GameManager, and uses the base AI.
-func _spawn_mini_wraith(pos: Vector3) -> void:
+## `spawn_parent` is the scene node to add the mini-wraith to — passed explicitly
+## because self (the wraith) may have been freed by the time this is called
+## from the shard reform timer callback.
+func _spawn_mini_wraith(pos: Vector3, spawn_parent: Node) -> void:
 	var mini: CharacterBody3D = MINI_WRAITH_SCENE.instantiate()
 	# Configure BEFORE adding to scene tree so _ready() picks up overrides
 	mini.set("max_hp", GameConstants.CRYSTAL_WRAITH_MINI_HP)
@@ -192,12 +201,12 @@ func _spawn_mini_wraith(pos: Vector3) -> void:
 	mini.set("score_reward", GameConstants.CRYSTAL_WRAITH_MINI_SCORE)
 	mini.set("base_color", GameConstants.CRYSTAL_WRAITH_MINI_COLOR)
 	mini.set("use_smart_ai", false)  # Mini-wraiths are simple rushers
-	get_parent().add_child(mini)
+	spawn_parent.add_child(mini)
 	mini.global_position = pos
 	# Track the mini-wraith so it's cleaned up on restart and counted by the spawner
 	GameManager.enemies.append(mini)
 	# Materialization particle burst for the "reform" effect
-	ParticleEffects.spawn_materialization(get_parent(), pos,
+	ParticleEffects.spawn_materialization(spawn_parent, pos,
 		GameConstants.CRYSTAL_WRAITH_MINI_COLOR)
 	# Audio cue — dedicated materialization sound for the shard reforming
 	AudioManager.play_sfx(AudioManager.SFX_SPAWN_IN)
