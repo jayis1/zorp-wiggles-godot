@@ -221,6 +221,18 @@ func _physics_process(delta: float) -> void:
 		elif not _is_consumed and _weapon_mod == GameConstants.WeaponMod.POISON_NOVA:
 			_spawn_poison_nova(damage)
 			_is_consumed = true
+		else:
+			# ── Enhancement Pack 12: Projectile fizzle on lifetime expiry ──
+			# Projectiles that run out of lifetime used to just queue_free()
+			# silently — they'd vanish mid-air with no visual cue, which looks
+			# like a bug (especially for slow projectiles like Magnet Mine
+			# or Black Hole Launcher that travel far). Now they get a tiny
+			# impact burst tinted to the projectile's own color, so the
+			# "fizzle out" reads as the bolt's energy dissipating rather
+			# than the game deleting it. This is a common game-feel pattern
+			# (Halo, Destiny, etc.) — tracers that end in a small spark
+			# rather than popping out of existence.
+			_impact_effect(_mod_color)
 		queue_free()
 
 ## Hit-stop: briefly dip `Engine.time_scale` to make heavy hits feel weighty.

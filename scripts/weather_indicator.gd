@@ -261,8 +261,10 @@ func _on_combo_ended(_combo_weather: int) -> void:
 	_combo_tween.tween_property(_combo_label, "offset_top",
 		rest_top + _COMBO_SLIDE_OFFSET, 0.25) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	_combo_tween.chain().tween_callback(func():
+	_combo_tween.chain().tween_callback(_hide_combo_label)
+
+func _hide_combo_label() -> void:
+	if _combo_label:
 		_combo_label.visible = false
 		_combo_label.modulate.a = 1.0
-		_combo_label.offset_top = rest_top
-	)
+		_combo_label.offset_top = 56.0

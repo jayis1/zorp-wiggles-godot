@@ -215,6 +215,12 @@ func equip_fused(fused_id: int) -> bool:
 	if WeaponModSystem:
 		WeaponModSystem.unequip_mod()
 	_equipped_fused_id = fused_id
+	# ── Enhancement Pack 12: Fused mod equip SFX ──
+	# A slightly different click (1.15× pitch) to distinguish fused mod
+	# equip from base mod equip — the higher pitch hints at the "special"
+	# nature of a fused mod (two mods combined into one).
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.15)
 	fusion_equipped.emit(fused_id)
 	if GameManager:
 		GameManager.add_message("✦ Equipped: %s" % _fused_mods[fused_id].name)
@@ -223,6 +229,9 @@ func equip_fused(fused_id: int) -> bool:
 func unequip_fused() -> void:
 	if _equipped_fused_id >= 0:
 		_equipped_fused_id = -1
+		# ── Enhancement Pack 12: Fused mod unequip SFX ──
+		if AudioManager:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
 		if WeaponModSystem:
 			WeaponModSystem.mod_unequipped.emit()
 

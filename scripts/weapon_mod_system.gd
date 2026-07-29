@@ -80,6 +80,14 @@ func equip_mod(mod_id: int) -> bool:
 	var old_mod: int = _equipped_mod
 	_equipped_mod = mod_id
 	if old_mod != mod_id:
+		# ── Enhancement Pack 12: Weapon mod equip SFX ──
+		# Equipping a weapon mod (swapping to a different one in the
+		# crafting menu) now plays a quick UI click — previously it was
+		# completely silent, the player had no audio cue that their loadout
+		# changed. The click is the same SFX_UI_CLICK used for other menu
+		# equip actions (equipment equip/unequip) for consistent "gear
+		# changed" audio language.
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 		mod_equipped.emit(mod_id)
 	return true
 
@@ -87,6 +95,8 @@ func equip_mod(mod_id: int) -> bool:
 func unequip_mod() -> void:
 	if _equipped_mod != GameConstants.WeaponMod.NONE:
 		_equipped_mod = GameConstants.WeaponMod.NONE
+		# ── Enhancement Pack 12: Weapon mod unequip SFX ──
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 		mod_unequipped.emit()
 
 ## Has the player discovered this mod?

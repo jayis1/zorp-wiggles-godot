@@ -198,6 +198,17 @@ func _update_timers(delta: float) -> void:
 	if player_combo_timer > 0:
 		player_combo_timer -= delta
 		if player_combo_timer <= 0:
+			# ── Enhancement Pack 12: Combo break feedback ──
+			# Only fire SFX + camera shake for meaningful streaks (≥5 kills).
+			# Trivial 2-3 kill combo timeouts happen constantly in normal play
+			# and would be annoying if every one played a "streak lost" sound.
+			# The 0.08 camera trauma is gentle — a small "aw, it's gone" nudge,
+			# matching the weight of a buff expiring (0.03-0.06) but slightly
+			# stronger because a kill streak is more directly player-driven.
+			if player_combo >= 5:
+				AudioManager.play_sfx(AudioManager.SFX_COMBO_BREAK)
+				if camera_rig and is_instance_valid(camera_rig) and camera_rig.has_method("add_trauma"):
+					camera_rig.add_trauma(0.08)
 			player_combo = 0
 			player_last_combo_milestone = 0
 			combo_changed.emit(player_combo)
@@ -206,6 +217,13 @@ func _update_timers(delta: float) -> void:
 	if player_pickup_streak_timer > 0:
 		player_pickup_streak_timer -= delta
 		if player_pickup_streak_timer <= 0:
+			# ── Enhancement Pack 12: Pickup streak break feedback ──
+			# Same threshold logic as the kill combo — only fire for streaks
+			# that were meaningful (≥5 pickups). No camera shake for pickup
+			# streaks — they're less combat-critical than kill combos, so
+			# only the SFX plays (gentler feedback for a gentler event).
+			if player_pickup_streak >= 5:
+				AudioManager.play_sfx(AudioManager.SFX_COMBO_BREAK)
 			player_pickup_streak = 0
 			player_last_pickup_milestone = 0
 	
@@ -213,6 +231,14 @@ func _update_timers(delta: float) -> void:
 	if player_crit_chain_timer > 0:
 		player_crit_chain_timer -= delta
 		if player_crit_chain_timer <= 0:
+			# ── Enhancement Pack 12: Crit chain break feedback ──
+			# Crit chains are rarer and more skill-dependent than kill combos,
+			# so the threshold is lower (≥3 crits). The SFX is the same combo
+			# break chime — consistent "streak lost" audio language across
+			# all three streak types. No camera shake (crit chains are a
+			# precision achievement, not a physical event).
+			if player_crit_chain >= 3:
+				AudioManager.play_sfx(AudioManager.SFX_COMBO_BREAK)
 			player_crit_chain = 0
 	
 	# Active buff timers (monolith buffs)

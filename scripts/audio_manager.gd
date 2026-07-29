@@ -168,6 +168,13 @@ const SFX_PULSE_READY: String = "pulse_ready"
 #    "!" indicator isn't visible. Quiet (0.10) so simultaneous detections from
 #    a pack don't overwhelm. Pitch-rises so it reads as "noticed you!"
 const SFX_ENEMY_ALERT: String = "enemy_alert"
+# ── Enhancement Pack 12: Combo break SFX ── A descending "streak lost" tone
+# (G4→D4→A3, 392→294→220 Hz) that conveys a streak ending. Short (0.14s) and
+# quiet (0.15) so it's noticeable but not punishing. Only fires when a
+# meaningful streak (≥5 kills / ≥5 pickups / ≥3 crits) expires — not on
+# every trivial 2-kill combo timeout. The descending minor interval reads as
+# "something good just ended" without being harsh like the damage sound.
+const SFX_COMBO_BREAK: String = "combo_break"
 
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 # Per-weapon-mod shoot sound variants. Each mod gets a distinct SFX so the
@@ -862,6 +869,12 @@ func _generate_all_sfx() -> void:
 	# into noise. Uses the descending generator with reversed freqs to get
 	# an ascending pitch sweep.
 	_sfx_streams[SFX_ENEMY_ALERT] = _gen_descending(440.0, 880.0, 0.08, 0.10)
+	# ── Enhancement Pack 12: Combo break SFX ── A descending "streak lost"
+	# chime (G4→D4→A3, 392→294→220 Hz, 0.14s). The descending minor interval
+	# conveys "something good just ended" without being harsh. Quiet (0.15)
+	# so it's noticeable but not punishing — the player should feel the
+	# streak end, not be annoyed by it. Only fires for meaningful streaks.
+	_sfx_streams[SFX_COMBO_BREAK] = _gen_chime([392.0, 294.0, 220.0], 0.14, 0.15)
 
 
 func _generate_all_music() -> void:
