@@ -188,6 +188,10 @@ func enter_photo_mode() -> void:
 		_hud_panel.visible = true
 	if GameManager:
 		GameManager.add_message("📷 Photo Mode — F9 to exit, F to capture, C cycle filter, WASD/Space/Shift move, drag to orbit, scroll to zoom")
+	# ── Enhancement Pack 13: Photo mode toggle SFX ── a soft UI click
+	# confirms entering photo mode, pairing with the HUD message.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 	print("[PhotoMode] Entered — free camera at %s" % _free_camera.global_position)
 
 
@@ -211,6 +215,10 @@ func exit_photo_mode() -> void:
 		_hud_panel.visible = false
 	if GameManager:
 		GameManager.add_message("📷 Photo Mode exited")
+	# ── Enhancement Pack 13: Photo mode exit SFX ── softer click (lower pitch)
+	# for exiting, mirroring the enter sound but concluding.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
 	print("[PhotoMode] Exited")
 
 
@@ -257,6 +265,10 @@ func _capture_screenshot() -> void:
 	if err == OK:
 		GameManager.add_message("📷 Screenshot saved: %s" % filepath)
 		print("[PhotoMode] Screenshot saved: %s" % filepath)
+		# ── Enhancement Pack 13: Shutter SFX ── a camera shutter click
+		# confirms the capture alongside the existing visual white flash.
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_SHUTTER)
 		# Flash the screen briefly as capture feedback
 		_flash_capture()
 	else:

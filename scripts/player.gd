@@ -2178,11 +2178,25 @@ func _use_pet_stone() -> void:
 		return
 	# Feed it to the pet — this locks in the path and grants evolution points
 	pet.feed(stone_type)
-	# Phase 20: Audio — pet summon SFX (reused as a "stone use" chime)
-	AudioManager.play_sfx(AudioManager.SFX_PET)
+	# ── Enhancement Pack 13: Camera trauma + dedicated fanfare for stone use ──
+	# Using an evolution stone is a significant build commitment moment — it
+	# locks in the pet's elemental path. The _set_path() call inside feed()
+	# already plays SFX_PET_EVOLVE + particles + scale punch if the path
+	# changes, but the player manually pressing B to use a stone deserves its
+	# own camera feedback regardless of whether the path actually changes
+	# (the stone still grants 60 evolution points even if the path was
+	# already set). The 0.15 trauma matches equipment-craft weight.
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(0.15)
+	# If the path didn't change (pet already on this path), _set_path() is
+	# skipped inside feed() so no fanfare plays. Play a softer chime so the
+	# player still gets audio confirmation that the stone was consumed.
 	var path_idx: int = GameConstants.PET_STONE_TO_PATH[stone_type]
+	if pet.evolution_path == path_idx:
+		AudioManager.play_sfx(AudioManager.SFX_PET)
 	var stone_name: String = GameConstants.PET_STONE_NAMES[path_idx]
-	print("[Player] Used %s on pet (path=%s)" % [stone_name, GameConstants.PET_PATH_NAMES[path_idx]])
+	GameManager.add_message("🪨 Used %s on your pet! (+60 EP)" % stone_name)
 	# ── Phase 27: Pet Questline — track stone usage ──
 	if PetQuestline:
 		PetQuestline.notify_stone_used()

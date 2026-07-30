@@ -511,6 +511,13 @@ func _collect() -> void:
 	if GameConstants.PET_STONE_TO_PATH.has(collectible_type):
 		if PetStoneInventory:
 			PetStoneInventory.add_stone(collectible_type, 1)
+		# Dedicated HUD message announcing the stone type — evolution stones
+		# are rare drops (1.5% normal, 100% boss) and the player should know
+		# exactly which elemental stone they found. Previously the pickup was
+		# silent beyond the generic rare-pickup SFX.
+		var stone_path: int = GameConstants.PET_STONE_TO_PATH[collectible_type]
+		var stone_name: String = GameConstants.PET_STONE_NAMES[stone_path]
+		GameManager.add_message("🪨 %s acquired! Press [B] to feed it to your pet!" % stone_name)
 		# Stones also feed the active pet automatically (if one exists)
 		var pet: Node = get_tree().get_first_node_in_group("companion_pet")
 		if pet and is_instance_valid(pet) and pet.has_method("feed"):

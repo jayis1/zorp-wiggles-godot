@@ -161,6 +161,7 @@ func _find_biome_for_mutation(mutation: int) -> int:
 	return -1
 
 func _activate_mutation(mutation: int) -> void:
+	var was_combo: bool = _active_mutations.size() >= 1
 	_active_mutations[mutation] = {
 		"time_left": MUTATION_DECAY_TIME,
 		"strength": 1.0,
@@ -170,6 +171,21 @@ func _activate_mutation(mutation: int) -> void:
 	GameManager.add_message("✦ Mutation acquired: %s" % name)
 	# Phase 20: Audio — mutation SFX
 	AudioManager.play_sfx(AudioManager.SFX_MUTATION)
+	# ── Enhancement Pack 13: Mutation combo announcement ──
+	# When 2+ mutations are active simultaneously, the mutation combo
+	# silently boosts effects (fire resistance 0.3→0.5, damage reduction
+	# 0.2→0.3, etc.). The player had no indication this was happening.
+	# Now the 2nd+ mutation activation plays a triumphant arpeggio + a
+	# dedicated "COMBO" HUD message so the player knows their dual-biome
+	# exposure is paying off with enhanced effects.
+	if was_combo:
+		AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+		var combo_count: int = _active_mutations.size()
+		GameManager.add_message("✦✦ MUTATION COMBO x%d! Enhanced effects active!" % combo_count)
+		# Gentle camera trauma — a positive buzz, not a combat shake.
+		var cam_rig: Node3D = GameManager.camera_rig
+		if cam_rig and cam_rig.has_method("add_trauma"):
+			cam_rig.add_trauma(0.12)
 
 	# Apply visual changes to player
 	_apply_mutation_visuals(mutation)

@@ -193,6 +193,13 @@ const SFX_SHOOT_LIGHTNING: String = "shoot_lightning" # Electric zap
 const SFX_SHOOT_HEAVY: String = "shoot_heavy"     # Heavy cannon (mega blast, meteor strike, black hole launcher)
 const SFX_SHOOT_UTILITY: String = "shoot_utility" # Shrink/deployables — soft chime
 const SFX_SHOOT_VAMPIRE: String = "shoot_vampire" # Crimson drain hum
+
+# ── Enhancement Pack 13: Camera shutter SFX ── A short mechanical click-clack
+#    for the photo mode screenshot capture. Two rapid noise bursts (~0.02s
+#    each, 0.02s gap) mimic a camera shutter — the universal audio shorthand
+#    for "photo taken" (every smartphone and camera uses a variant of this).
+#    Low volume (0.15) so it's a subtle confirmation, not a distraction.
+const SFX_SHUTTER: String = "shutter"
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -712,6 +719,15 @@ func _on_pickup_streak_milestone(_streak: int, _xp: int) -> void:
 
 func _on_biome_changed(biome_id: int) -> void:
 	play_music_biome(biome_id)
+	# ── Enhancement Pack 13: Biome change chime ──
+	# Entering a new biome is a significant moment in an exploration game.
+	# The music already cross-fades, but there was no short SFX cue. A soft
+	# mutation chime (already used for mutations, which are biome-linked)
+	# provides an audio "you've arrived" without competing with the music.
+	# Pitched at 1.0 (standard) — the mutation system uses the same sound
+	# at 1.0 for activation and 0.7 for deactivation, so biome entry reads
+	# as "new biome" not "mutation faded".
+	play_sfx(SFX_MUTATION)
 
 
 func _on_player_died() -> void:
@@ -875,6 +891,10 @@ func _generate_all_sfx() -> void:
 	# so it's noticeable but not punishing — the player should feel the
 	# streak end, not be annoyed by it. Only fires for meaningful streaks.
 	_sfx_streams[SFX_COMBO_BREAK] = _gen_chime([392.0, 294.0, 220.0], 0.14, 0.15)
+	# ── Enhancement Pack 13: Camera shutter ── two rapid noise clicks mimicking
+	# a mechanical camera shutter. Uses _gen_noise_sweep with very short
+	# duration for a crisp click rather than a whoosh.
+	_sfx_streams[SFX_SHUTTER] = _gen_noise_sweep(0.04, 0.15)
 
 
 func _generate_all_music() -> void:
