@@ -14,6 +14,16 @@ class KillEntry:
 	var alpha: float
 	var y_offset: float
 	var entrance_t: float  # 0..1 eased entrance progress
+	# ── Exit slide ── When an entry is about to expire (last 0.35s), it
+	#    slides right off-screen with an accelerating ease-in curve, mirroring
+	#    the entrance slide-down in reverse. This reads as the kill "leaving"
+	#    the feed rather than just fading to nothing. The exit slide_x goes
+	#    from 0 (resting) to +120px (fully off the right edge). Combined with
+	#    the alpha fade, the exit feels like a deliberate "dismiss" rather
+	#    than a passive fadeout.
+	var exit_slide_x: float = 0.0
+	const EXIT_SLIDE_DISTANCE: float = 120.0
+	const EXIT_SLIDE_DURATION: float = 0.35
 
 # ─── Internal State ───────────────────────────────────────────────────────────
 var _entries: Array[KillEntry] = []
@@ -59,6 +69,18 @@ func _process(delta: float) -> void:
 		# Fade out in the last second (overrides the entrance alpha)
 		if entry.timer < 1.0:
 			entry.alpha = clampf(entry.timer, 0.0, 1.0)
+		# ── Exit slide: in the final EXIT_SLIDE_DURATION, accelerate the
+		#    entry rightward off-screen. Uses ease-in cubic (t³) so the
+		#    slide starts slow (still readable) and accelerates out, giving
+		#    the exit a "whoosh" feel that mirrors the entrance's soft
+		#    slide-down. The slide is applied as an x-offset in _draw.
+		if entry.timer < entry.EXIT_SLIDE_DURATION:
+			var exit_t: float = 1.0 - (entry.timer / entry.EXIT_SLIDE_DURATION)
+			exit_t = clampf(exit_t, 0.0, 1.0)
+			var eased_exit: float = exit_t * exit_t * exit_t  # ease-in cubic
+			entry.exit_slide_x = entry.EXIT_SLIDE_DISTANCE * eased_exit
+		else:
+			entry.exit_slide_x = 0.0
 		# Slide down to position (frame-rate-independent exponential decay)
 		entry.y_offset = lerpf(entry.y_offset, 0.0, 1.0 - exp(-8.0 * delta))
 		needs_redraw = true
@@ -87,8 +109,14 @@ func _draw() -> void:
 		var entry: KillEntry = _entries[i]
 		var text_size := font.get_string_size(entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 
-		# Right-align the text
-		var x: float = size.x - text_size.x - 10
+		# Right-align the text, offset by the exit slide so the entry
+		# accelerates off the right edge as it expires.
+		var x: float = size.x - text_size.x - 10 + entry.exit_slide_x
+
+		# Skip drawing if the entry has fully slid off-screen
+		if entry.exit_slide_x >= entry.EXIT_SLIDE_DISTANCE and entry.alpha < 0.01:
+			y += line_height
+			continue
 
 		# Draw shadow
 		var shadow_color := Color(0, 0, 0, entry.alpha * 0.5)

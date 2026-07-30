@@ -27,6 +27,14 @@ class PopupEntry:
 	var timer: float
 	var slide_x: float  # X offset for slide animation
 	var alpha: float
+	# ── Progress bar ── For progress-based achievements (target > 0 with a
+	#    progress_key), the popup shows a thin progress bar at the bottom of
+	#    the panel and a "current/target" text. This gives the player visual
+	#    feedback on how close they are to the goal, turning the popup from
+	#    a simple notification into a mini-progress display. One-shot
+	#    achievements have progress_frac = -1.0 (no bar drawn).
+	var progress_frac: float = -1.0  # -1 = no bar, 0..1 = bar fill
+	var progress_text: String = ""   # e.g. "85/100"
 
 # ─── Internal State ───────────────────────────────────────────────────────────
 var _popups: Array[PopupEntry] = []
@@ -334,6 +342,23 @@ func _unlock(achievement_id: String) -> void:
 	entry.timer = 4.0
 	entry.slide_x = 360.0  # Start off-screen right
 	entry.alpha = 0.0
+	# ── Progress bar data ── For progress-based achievements, query the
+	#    current progress so the popup can draw a progress bar showing
+	#    how close the player is to the goal. One-shot achievements
+	#    (target <= 0) have progress_frac = -1.0 (no bar drawn).
+	if ach.target > 0 and not ach.progress_key.is_empty():
+		var raw_prog: Variant = null
+		if Statistics:
+			raw_prog = Statistics.get_lifetime_stat(ach.progress_key)
+		var current_val: float = 0.0
+		if typeof(raw_prog) == TYPE_FLOAT or typeof(raw_prog) == TYPE_INT:
+			current_val = float(raw_prog)
+		entry.progress_frac = clampf(current_val / ach.target, 0.0, 1.0)
+		# Format the current value for the progress text (e.g. "85/100")
+		if ach.target >= 1000:
+			entry.progress_text = "%d/%d" % [int(current_val), int(ach.target)]
+		else:
+			entry.progress_text = "%d/%d" % [int(current_val), int(ach.target)]
 	_popups.append(entry)
 	# Cap at 3 simultaneous popups
 	while _popups.size() > 3:
@@ -405,15 +430,18 @@ func _draw() -> void:
 	var y: float = 0
 
 	for entry in _popups:
+		# Progress-based achievements get a taller panel to fit the bar
+		var has_bar: bool = entry.progress_frac >= 0.0
+		var this_height: float = panel_height + (16.0 if has_bar else 0.0)
 		var panel_x: float = size.x - panel_width + entry.slide_x
 
 		# Draw panel background
 		var bg := Color(0.05, 0.05, 0.12, 0.85 * entry.alpha)
-		draw_rect(Rect2(panel_x, y, panel_width, panel_height), bg, true)
+		draw_rect(Rect2(panel_x, y, panel_width, this_height), bg, true)
 
 		# Draw gold border
 		var border := Color(1.0, 215.0 / 255.0, 0.0, 0.7 * entry.alpha)
-		draw_rect(Rect2(panel_x, y, panel_width, panel_height), border, false, 2.0)
+		draw_rect(Rect2(panel_x, y, panel_width, this_height), border, false, 2.0)
 
 		# Draw icon (large, left side)
 		var icon_size: int = 28
@@ -444,4 +472,29 @@ func _draw() -> void:
 			"ACHIEVEMENT UNLOCKED", HORIZONTAL_ALIGNMENT_LEFT, -1, label_size,
 			Color(1.0, 215.0 / 255.0, 0.0, 0.6 * entry.alpha))
 
-		y += panel_height + 8
+		# ── Progress bar ── For progress-based achievements, draw a thin
+		#    bar at the bottom of the panel showing progress toward the goal.
+		#    The bar track is dark, the fill is gold (matching the border),
+		#    and the "current/target" text is right-aligned next to it.
+		#    This transforms the popup from a bare notification into a
+		#    mini-progress display so the player sees how close they are.
+		if has_bar:
+			var bar_x: float = panel_x + 10
+			var bar_y: float = y + panel_height + 2
+			var bar_w: float = panel_width - 80
+			var bar_h: float = 8.0
+			# Track (dark background)
+			var track_col := Color(0.15, 0.15, 0.2, 0.8 * entry.alpha)
+			draw_rect(Rect2(bar_x, bar_y, bar_w, bar_h), track_col, true)
+			# Fill (gold, width = frac * bar_w)
+			var fill_w: float = bar_w * entry.progress_frac
+			var fill_col := Color(1.0, 215.0 / 255.0, 0.0, 0.9 * entry.alpha)
+			draw_rect(Rect2(bar_x, bar_y, fill_w, bar_h), fill_col, true)
+			# Progress text (right-aligned in the remaining space)
+			var pt_size: int = 10
+			font.draw_string(get_canvas_item(),
+				Vector2(panel_x + panel_width - 65, bar_y + 8),
+				entry.progress_text, HORIZONTAL_ALIGNMENT_LEFT, -1, pt_size,
+				Color(0.8, 0.8, 0.85, 0.85 * entry.alpha))
+
+		y += this_height + 8
