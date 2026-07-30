@@ -684,12 +684,38 @@ func _collect() -> void:
 ## fade-out, pooled via GPUParticles3D one-shot + auto-free. The color matches
 ## the collectible's type color so the trail reads as "energy flowing toward
 ## the player" in the right hue. Rare items get slightly brighter sparkles.
+##
+## PERFORMANCE: This fires every 0.06s during magnetic pull (many collectibles
+## simultaneously). Previously each call allocated 6 objects: GPUParticles3D,
+## ParticleProcessMaterial, Gradient, GradientTexture1D, SphereMesh, and
+## StandardMaterial3D. Now the SphereMesh and StandardMaterial3D template are
+## shared statics (duplicated per call — cheaper than new + configure), and the
+## fade ramp uses ParticleEffects' cached _create_fade_ramp. The GPUParticles3D
+## and ParticleProcessMaterial must still be per-call (one-shot node + per-color
+## process material), but the 4-object reduction eliminates the bulk of the
+## allocation churn during mass pickups.
+static var _shared_sparkle_mesh: SphereMesh = null
+static var _shared_sparkle_draw_mat_template: StandardMaterial3D = null
+
+static func _ensure_sparkle_shared_resources() -> void:
+	if _shared_sparkle_mesh == null:
+		_shared_sparkle_mesh = SphereMesh.new()
+		_shared_sparkle_mesh.radius = 0.06
+		_shared_sparkle_mesh.height = 0.12
+		_shared_sparkle_mesh.radial_segments = 4
+		_shared_sparkle_mesh.rings = 2
+	if _shared_sparkle_draw_mat_template == null:
+		_shared_sparkle_draw_mat_template = StandardMaterial3D.new()
+		_shared_sparkle_draw_mat_template.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_shared_sparkle_draw_mat_template.emission_enabled = true
+
 func _spawn_pull_sparkle() -> void:
 	var parent_node: Node = get_parent()
 	if not parent_node:
 		return
 	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
 	var col: Color = config["color"]
+	_ensure_sparkle_shared_resources()
 	var p := GPUParticles3D.new()
 	p.amount = 3
 	p.lifetime = 0.25
@@ -706,25 +732,20 @@ func _spawn_pull_sparkle() -> void:
 	pmat.scale_min = 0.04
 	pmat.scale_max = 0.08
 	pmat.color = col
-	var ramp := Gradient.new()
-	ramp.set_color(0, Color(col.r, col.g, col.b, 0.8))
-	ramp.set_color(1, Color(col.r, col.g, col.b, 0.0))
-	var ramp_tex := GradientTexture1D.new()
-	ramp_tex.gradient = ramp
-	pmat.color_ramp = ramp_tex
+	# Use the cached fade ramp from ParticleEffects (shared across all
+	# collectibles of the same type — the color pair is identical).
+	pmat.color_ramp = ParticleEffects._create_fade_ramp(
+		Color(col.r, col.g, col.b, 0.8),
+		Color(col.r, col.g, col.b, 0.0))
 	p.process_material = pmat
-	var spheremesh := SphereMesh.new()
-	spheremesh.radius = 0.06
-	spheremesh.height = 0.12
-	spheremesh.radial_segments = 4
-	spheremesh.rings = 2
-	var smat := StandardMaterial3D.new()
+	# Duplicate the shared mesh so each sparkle gets its own material
+	# (geometry arrays are shared via Resource ref-counting).
+	var mesh := _shared_sparkle_mesh.duplicate() as SphereMesh
+	var smat := _shared_sparkle_draw_mat_template.duplicate() as StandardMaterial3D
 	smat.albedo_color = col
-	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	smat.emission_enabled = true
 	smat.emission = col * 0.5
-	spheremesh.material = smat
-	p.draw_pass_1 = spheremesh
+	mesh.material = smat
+	p.draw_pass_1 = mesh
 	parent_node.add_child(p)
 	p.global_position = global_position
 	# Auto-free after the particles finish

@@ -9,12 +9,75 @@ extends Node
 
 class_name ParticleEffects
 
+# ─── Shared Resources ──────────────────────────────────────────────────────────
+# Explosion particles are spawned at ~9/sec during combat (79 call sites across
+# the codebase). Each spawn previously allocated a new SphereMesh +
+# StandardMaterial3D + ParticleProcessMaterial + Gradient + GradientTexture1D.
+# The SphereMesh geometry is identical every call — sharing it eliminates the
+# per-explosion mesh allocation, the single most frequent GPU resource churn in
+# the game. The template materials are duplicated per-call (cheaper than
+# new+configure) so each explosion can tween its color independently.
+static var _shared_explosion_mesh: SphereMesh = null
+static var _shared_explosion_proc_mat_template: ParticleProcessMaterial = null
+static var _shared_explosion_draw_mat_template: StandardMaterial3D = null
+
+# Shared sparkle mesh for spawn_pickup_sparkle (called from ~14 sites, often
+# during mass pickups). Same geometry every call — sharing eliminates per-spark
+# SphereMesh allocation. The draw material is duplicated from the explosion
+# template (same unshaded + emission setup, just recolored).
+static var _shared_sparkle_mesh: SphereMesh = null
+
+# ── Fade-ramp cache ── _create_fade_ramp is called from every spawn_* method
+#    and creates a Gradient + GradientTexture1D each time. Many calls use the
+#    same color pair (e.g. explosion fade always uses color → color*0.3 for a
+#    given enemy type), so caching by a color-pair key eliminates the vast
+#    majority of Gradient/GradientTexture1D allocations during combat.
+#    The cache is keyed by a string built from the rounded color components;
+#    rounding to 2 decimal places avoids floating-point key misses while still
+#    deduplicating the common cases. The cache is capped to prevent unbounded
+#    growth from unique colors (e.g. randomly tinted effects).
+static var _fade_ramp_cache: Dictionary = {}  # key_string -> GradientTexture1D
+const FADE_RAMP_CACHE_MAX: int = 64
+
+static func _ensure_shared_explosion_resources() -> void:
+	if _shared_explosion_mesh == null:
+		_shared_explosion_mesh = SphereMesh.new()
+		_shared_explosion_mesh.radius = 0.15
+		_shared_explosion_mesh.height = 0.3
+		_shared_explosion_mesh.radial_segments = 6
+		_shared_explosion_mesh.rings = 3
+	if _shared_explosion_proc_mat_template == null:
+		_shared_explosion_proc_mat_template = ParticleProcessMaterial.new()
+		_shared_explosion_proc_mat_template.direction = Vector3(0, 1, 0)
+		_shared_explosion_proc_mat_template.spread = 35.0
+		_shared_explosion_proc_mat_template.gravity = Vector3(0, -5, 0)
+		_shared_explosion_proc_mat_template.initial_velocity_min = 5.0
+		_shared_explosion_proc_mat_template.initial_velocity_max = 15.0
+		_shared_explosion_proc_mat_template.scale_min = 0.3
+		_shared_explosion_proc_mat_template.scale_max = 1.0
+	if _shared_explosion_draw_mat_template == null:
+		_shared_explosion_draw_mat_template = StandardMaterial3D.new()
+		_shared_explosion_draw_mat_template.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_shared_explosion_draw_mat_template.emission_enabled = true
+		_shared_explosion_draw_mat_template.emission_energy_multiplier = 1.5
+
+static func _ensure_shared_sparkle_mesh() -> void:
+	if _shared_sparkle_mesh == null:
+		_shared_sparkle_mesh = SphereMesh.new()
+		_shared_sparkle_mesh.radius = 0.08
+		_shared_sparkle_mesh.height = 0.16
+		_shared_sparkle_mesh.radial_segments = 4
+		_shared_sparkle_mesh.rings = 2
+	# The draw material template is needed for the per-call material duplicate.
+	_ensure_shared_explosion_resources()
+
 # ─── Particle Presets ─────────────────────────────────────────────────────────
 
 ## Spawn an explosion particle burst at the given position.
 ## Uses GPUParticles3D with a sphere emission shape and gravity.
 static func spawn_explosion(parent: Node, pos: Vector3, color: Color = Color(1.0, 0.5, 0.1),
 		particle_count: int = 30, lifetime: float = 0.8) -> GPUParticles3D:
+	_ensure_shared_explosion_resources()
 	var particles := GPUParticles3D.new()
 	particles.amount = particle_count
 	particles.lifetime = lifetime
@@ -24,32 +87,23 @@ static func spawn_explosion(parent: Node, pos: Vector3, color: Color = Color(1.0
 	particles.randomness = 0.3
 	particles.local_coords = false  # World space so particles stay after free
 
-	# Process material — explosion with gravity
-	var mat := ParticleProcessMaterial.new()
-	mat.direction = Vector3(0, 1, 0)
-	mat.spread = 35.0
-	mat.gravity = Vector3(0, -5, 0)
-	mat.initial_velocity_min = 5.0
-	mat.initial_velocity_max = 15.0
-	mat.scale_min = 0.3
-	mat.scale_max = 1.0
+	# Process material — duplicate the shared template (cheaper than new +
+	# configure 8 properties) and set the per-call color + ramp.
+	var mat := _shared_explosion_proc_mat_template.duplicate() as ParticleProcessMaterial
 	mat.color = color
-	# Fade out over lifetime
 	mat.color_ramp = _create_fade_ramp(color, color * 0.3)
 	particles.process_material = mat
 
-	# Mesh — small spheres
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.15
-	mesh.height = 0.3
-	mesh.radial_segments = 6
-	mesh.rings = 3
-	var mat3d := StandardMaterial3D.new()
+	# Mesh — duplicate the shared SphereMesh so each explosion gets its own
+	# mesh instance (the geometry arrays are shared via Resource reference-
+	# counting, but the material property is per-clone). This is cheaper than
+	# creating a new SphereMesh + setting 4 geometry properties from scratch.
+	# The draw-pass material is duplicated from the template (cheaper than
+	# new + configure) and tinted to the explosion color.
+	var mesh := _shared_explosion_mesh.duplicate() as SphereMesh
+	var mat3d := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	mat3d.albedo_color = color
-	mat3d.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat3d.emission_enabled = true
 	mat3d.emission = color * 0.8
-	mat3d.emission_energy_multiplier = 1.5
 	mesh.material = mat3d
 	particles.draw_pass_1 = mesh
 
@@ -201,15 +255,14 @@ static func spawn_pickup_sparkle(parent: Node, pos: Vector3, color: Color = Colo
 	pmat.color_ramp = _create_fade_ramp(color, Color(color.r * 0.3, color.g * 0.3, color.b * 0.3))
 	particles.process_material = pmat
 
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.08
-	mesh.height = 0.16
-	mesh.radial_segments = 4
-	mesh.rings = 2
-	var smat := StandardMaterial3D.new()
+	# Reuse a dedicated shared sparkle SphereMesh (same geometry every call).
+	# Duplicate so the per-call draw material is isolated. The draw material
+	# is duplicated from the explosion template (same unshaded + emission
+	# setup) and recolored to the sparkle color.
+	_ensure_shared_sparkle_mesh()
+	var mesh := _shared_sparkle_mesh.duplicate() as SphereMesh
+	var smat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	smat.albedo_color = color
-	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	smat.emission_enabled = true
 	smat.emission = color * 0.6
 	mesh.material = smat
 	particles.draw_pass_1 = mesh
@@ -504,12 +557,30 @@ static func create_ambient_particles(pos: Vector3, type: String) -> GPUParticles
 
 ## Create a GradientTexture1D for particle color ramp (fade from start to end).
 ## ParticleProcessMaterial.color_ramp expects a Texture2D, not a bare Gradient.
+## Results are cached by color pair — many spawn_* calls use the same fade
+## colors (e.g. every explosion of the same enemy type), so the cache avoids
+## redundant Gradient + GradientTexture1D allocation during sustained combat.
 static func _create_fade_ramp(start_color: Color, end_color: Color) -> GradientTexture1D:
+	# Build a cache key from the rounded color components. Rounding to 2
+	# decimal places avoids FP key misses while deduplicating common pairs.
+	var key: String = "%.2f,%.2f,%.2f,%.2f|%.2f,%.2f,%.2f,%.2f" % [
+		start_color.r, start_color.g, start_color.b, start_color.a,
+		end_color.r, end_color.g, end_color.b, end_color.a,
+	]
+	if _fade_ramp_cache.has(key):
+		return _fade_ramp_cache[key]
 	var ramp := Gradient.new()
 	ramp.set_color(0, start_color)
 	ramp.set_color(1, end_color)
 	var tex := GradientTexture1D.new()
 	tex.gradient = ramp
+	# Cap the cache to prevent unbounded growth from unique color pairs.
+	if _fade_ramp_cache.size() >= FADE_RAMP_CACHE_MAX:
+		# Evict the first inserted entry (FIFO eviction — simple and
+		# predictable; the common pairs will be re-cached quickly).
+		var first_key: Variant = _fade_ramp_cache.keys()[0]
+		_fade_ramp_cache.erase(first_key)
+	_fade_ramp_cache[key] = tex
 	return tex
 
 ## Auto-free a node after a delay (using a timer).
