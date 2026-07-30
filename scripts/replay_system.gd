@@ -418,5 +418,6 @@ func _biome_ghost_color(biome_id: int) -> Color:
 	# Use biome fog colors as a quick tint reference
 	if GameConstants.BIOME_FOG and biome_id >= 0 and biome_id < GameConstants.BIOME_FOG.size():
 		var fog: Dictionary = GameConstants.BIOME_FOG[biome_id]
-		return Color(float(fog.get("r", 0.5)), float(fog.get("g", 0.7)), float(fog.get("b", 1.0)))
+		var fog_color: Color = fog.get("color", Color(0.5, 0.7, 1.0))
+		return Color(fog_color.r, fog_color.g, fog_color.b)
 	return GHOST_COLOR
