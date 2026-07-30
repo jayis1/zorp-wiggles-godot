@@ -78,6 +78,15 @@ func _ready() -> void:
 	pixel_size = 0.008
 
 	# ── Per-spawn reset (runs on every _ready, including pool re-entry) ──
+	# Reset lifetime + popin timer — pooled instances have stale (≤0) values
+	# from their previous use. Without this reset, a reused damage number
+	# would immediately expire (lifetime ≤ 0 → instant re-pool) and skip the
+	# pop-in animation (popin_timer ≤ 0). configure() may override lifetime/
+	# max_lifetime for boss kills, but the baseline reset here ensures all
+	# non-boss hits and the popin timer are correct for every spawn.
+	lifetime = GameConstants.DMG_NUMBER_LIFETIME
+	max_lifetime = GameConstants.DMG_NUMBER_LIFETIME
+	popin_timer = GameConstants.DMG_NUMBER_POPIN_DURATION
 	_start_y = global_position.y
 
 	# Random horizontal drift so multiple numbers don't overlap

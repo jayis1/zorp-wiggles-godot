@@ -2189,12 +2189,11 @@ func _use_pet_stone() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.15)
-	# If the path didn't change (pet already on this path), _set_path() is
-	# skipped inside feed() so no fanfare plays. Play a softer chime so the
-	# player still gets audio confirmation that the stone was consumed.
+	# Note: feed() already plays SFX_PET as a soft confirmation, and
+	# _set_path() plays SFX_PET_EVOLVE when the path actually changes, so no
+	# additional fallback SFX is needed here — the camera trauma above is the
+	# sole new feedback from the manual stone-use action.
 	var path_idx: int = GameConstants.PET_STONE_TO_PATH[stone_type]
-	if pet.evolution_path == path_idx:
-		AudioManager.play_sfx(AudioManager.SFX_PET)
 	var stone_name: String = GameConstants.PET_STONE_NAMES[path_idx]
 	GameManager.add_message("🪨 Used %s on your pet! (+60 EP)" % stone_name)
 	# ── Phase 27: Pet Questline — track stone usage ──

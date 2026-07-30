@@ -355,10 +355,7 @@ func _unlock(achievement_id: String) -> void:
 			current_val = float(raw_prog)
 		entry.progress_frac = clampf(current_val / ach.target, 0.0, 1.0)
 		# Format the current value for the progress text (e.g. "85/100")
-		if ach.target >= 1000:
-			entry.progress_text = "%d/%d" % [int(current_val), int(ach.target)]
-		else:
-			entry.progress_text = "%d/%d" % [int(current_val), int(ach.target)]
+		entry.progress_text = "%d/%d" % [int(current_val), int(ach.target)]
 	_popups.append(entry)
 	# Cap at 3 simultaneous popups
 	while _popups.size() > 3:
