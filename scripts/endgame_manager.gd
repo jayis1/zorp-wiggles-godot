@@ -85,6 +85,22 @@ func set_ng_tier(tier: int) -> void:
 	_ng_tier = tier
 	ng_tier_changed.emit(tier)
 	print("[Endgame] NG tier set to: %s" % GameConstants.NG_TIER_NAMES[tier])
+	# ── Enhancement: NG tier change juice ── SFX + camera trauma + HUD
+	# message so the player gets sensory feedback when cycling difficulty
+	# tiers (Shift+N). Previously the tier change was a silent console
+	# print + signal — the player had no in-game indication it worked.
+	# Normal tier uses a lighter chime; NG+/NG++ use heavier sounds.
+	if tier == GameConstants.NGTier.NORMAL:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+		GameManager.add_message("NG tier: Normal")
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.1)
+	else:
+		AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
+		var tier_name: String = GameConstants.NG_TIER_NAMES[tier]
+		GameManager.add_message("🔥 NG tier set to: %s!" % tier_name)
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.3)
 
 func cycle_ng_tier() -> void:
 	# Cycle to the next unlocked tier (wraps to NORMAL).
@@ -127,10 +143,23 @@ func _check_unlocks() -> void:
 		if GameManager.player_level >= GameConstants.NG_TIER_UNLOCK_LEVEL:
 			_ng_unlocked[GameConstants.NGTier.NG_PLUS] = true
 			GameManager.add_message("🔥 NG+ UNLOCKED! Tougher enemies, rare-only loot.")
+			# ── Enhancement: NG unlock juice ── celebratory SFX + camera
+			# trauma for the endgame unlock milestone. Previously the
+			# biggest difficulty unlock had only a text message.
+			AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+				GameManager.camera_rig.add_trauma(0.35)
+			_save_unlocks()
 	if not _ng_unlocked[GameConstants.NGTier.NG_PLUS_PLUS]:
 		if GameManager.player_level >= GameConstants.NG_PLUS_PLUS_UNLOCK_LEVEL:
 			_ng_unlocked[GameConstants.NGTier.NG_PLUS_PLUS] = true
 			GameManager.add_message("💀 NG++ UNLOCKED! All bosses roam, no minimap, permadeath option.")
+			# Heavier feedback for NG++ — it's the hardest tier unlock.
+			AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
+			AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+				GameManager.camera_rig.add_trauma(0.5)
+			_save_unlocks()
 
 # ─── Survival Mode ──────────────────────────────────────────────────────────────
 
@@ -569,6 +598,17 @@ func _spawn_loot_cave_interior(cave: Dictionary) -> void:
 	if player and is_instance_valid(player):
 		player.global_position = root.global_position + Vector3(0, 1.5, 0)
 	GameManager.add_message("💎 Loot Cave entered — defeat the elite guardians!")
+	# ── Enhancement: Loot cave entry juice ── SFX + camera trauma for the
+	# teleport into the cave interior. The discovery moment (above) has
+	# SFX_CHEST_OPEN + 0.2 trauma, but the actual descent into the cave
+	# was silent. The player teleports 6m underground with no sensory
+	# feedback — the cave feels like a menu transition rather than a
+	# physical descent. Matches the dungeon enter feedback (SFX_FAST_TRAVEL
+	# + 0.3 trauma) for a consistent "entering a dangerous place" language.
+	AudioManager.play_sfx(AudioManager.SFX_FAST_TRAVEL)
+	var lc_cam_rig: Node3D = GameManager.camera_rig
+	if lc_cam_rig and lc_cam_rig.has_method("add_trauma"):
+		lc_cam_rig.add_trauma(0.25)
 
 func _spawn_loot_cave_elites(root: Node3D, _cave: Dictionary) -> void:
 	var elite_pool: Array[int] = [
@@ -796,6 +836,17 @@ func notify_puzzle_rune_touched(rune: Node) -> void:
 		progress += 1
 		_ancient_vault["puzzle_progress"] = progress
 		AudioManager.play_sfx(AudioManager.SFX_DIALOGUE)
+		# ── Enhancement: Correct-rune juice ── small camera trauma + sparkle
+		# burst at the rune position so each correct step has tactile weight.
+		# Previously each correct rune only brightened + played a dialogue blip
+		# — the puzzle felt weightless. The 0.08 trauma is light (matching
+		# craft-fail / buff-expire weight) so 4 rapid touches don't shake the
+		# screen excessively.
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			GameManager.camera_rig.add_trauma(0.08)
+		var rune_parent: Node = rune.get_parent()
+		if rune_parent and ParticleEffects:
+			ParticleEffects.spawn_pickup_sparkle(rune_parent, rune.global_position + Vector3(0, 0.5, 0), Color(0.9, 0.7, 0.3))
 		if progress >= order.size():
 			_complete_vault_puzzle()
 		else:
@@ -822,6 +873,13 @@ func _complete_vault_puzzle() -> void:
 	# Spawn legendary loot (only after the guardian is defeated — see _on_boss_defeated).
 	GameManager.add_message("🏆 Puzzle solved! The Vault Guardian awakens...")
 	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
+	# ── Enhancement: Vault puzzle completion juice ── heavy camera trauma
+	# for the guardian awakening moment. This is one of the most dramatic
+	# events in the endgame — the puzzle is solved and a 800-HP boss erupts
+	# from the ground. The 0.5 trauma matches boss-gauntlet-completion weight.
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(0.5)
 
 func _spawn_vault_guardian() -> void:
 	var scene: PackedScene = load("res://scenes/entities/enemy_drake.tscn")
@@ -882,6 +940,19 @@ func _on_vault_guardian_died(_enemy: Node) -> void:
 	GameManager.add_message("🏆 Ancient Vault Guardian defeated! Legendary loot claimed!")
 	AudioManager.play_sfx(AudioManager.SFX_BOSS_DEFEATED)
 	AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
+	# ── Enhancement: Vault guardian death juice ── camera trauma + fireworks
+	# for the ultimate endgame victory. Clearing the Ancient Vault is one of
+	# the hardest achievements in the game (requires 10 lore stones + a
+	# Simon-says puzzle + an 800-HP Drake boss). The 0.5 trauma matches
+	# boss-gauntlet-completion weight; the fireworks burst is a 3-color
+	# cascade matching the loot-cave-clear celebration but with an extra
+	# color for the legendary-tier significance.
+	var cam_rig2: Node3D = GameManager.camera_rig
+	if cam_rig2 and cam_rig2.has_method("add_trauma"):
+		cam_rig2.add_trauma(0.5)
+	var vault_parent: Node = get_tree().current_scene
+	if vault_parent and ParticleEffects:
+		ParticleEffects.spawn_combo_fireworks(vault_parent, _ancient_vault["position"] + Vector3(0, 1, 0), 3)
 	GameManager.gain_xp(500)
 	GameManager.player_score += 2000
 	if Statistics:

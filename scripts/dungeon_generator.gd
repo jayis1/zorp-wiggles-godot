@@ -509,6 +509,18 @@ func _on_dungeon_boss_died(enemy: Node, _dungeon_id: int) -> void:
 	dungeon_boss_defeated.emit(dungeon_id)
 	GameManager.add_message("✦ Dungeon boss defeated! Claim your reward.")
 	AudioManager.play_sfx(AudioManager.SFX_BOSS_DEFEATED)
+	# ── Enhancement: Dungeon boss death juice ── camera trauma + particle
+	# burst so the dungeon boss kill has the same multi-sensory weight as
+	# arena/world bosses. The boss_scene's own _die() already plays the
+	# death spectacle, but this is the dungeon-specific celebration moment.
+	var cam_rig: Node3D = GameManager.camera_rig
+	if cam_rig and cam_rig.has_method("add_trauma"):
+		cam_rig.add_trauma(0.4)
+	# Sparkle burst in the dungeon theme color at the boss position.
+	var parent: Node = get_tree().current_scene
+	if parent and ParticleEffects and enemy and is_instance_valid(enemy):
+		var theme: int = _dungeons[dungeon_id].get("theme", 0)
+		ParticleEffects.spawn_pickup_sparkle(parent, enemy.global_position + Vector3(0, 1, 0), GameConstants.DUNGEON_THEME_COLORS[theme])
 
 # ─── Reward Chest ──────────────────────────────────────────────────────────────
 
