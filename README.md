@@ -34,7 +34,9 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 - 12 per-biome ambient music tracks + boss fight music
 - Dynamic music intensity — 5 tiers (Calm/Engaged/Heated/Intense/Frenzied) that scale with the combo counter (pitch + volume)
 - Trauma-based screen shake, input buffering, hit-stop freeze frames
-- Pause menu, settings menu, death screen with stats and "Try Again"
+- Pause menu, settings menu, death screen with stats (score, kills, combo, streak, time, level, biome, game mode) and "Try Again"
+- **Score Milestone Celebrations** — at 1K/5K/10K/25K/50K/100K/250K/500K/1M cumulative score, the game fires a HUD message + scaled camera trauma + golden sparkle burst, giving long runs a sense of cumulative achievement
+- **Low-HP Heal Pulse** — healing from below 25% HP spawns a green expanding ring + rising sparkles + light flash at the player's position, giving emergency heals a visible "life saved" moment
 - Smooth camera follow with deadzone, FOV kick on dash, look-ahead offset
 - **Color Filters** — 4 cosmetic modes (sepia, noir, thermal, x-ray) + 4 colorblind correction modes (protanopia, deuteranopia, tritanopia, achromatopsia), F6/F7 to cycle, persists to disk
 - **UI Scaling** — F8/Shift+F8 to scale HUD elements for different screen resolutions (75%-150%)

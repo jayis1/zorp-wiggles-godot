@@ -1149,3 +1149,96 @@ static func spawn_shield_break_shatter(parent: Node, pos: Vector3, color: Color 
 	tween.tween_property(light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT)
 	tween.parallel().tween_property(light, "omni_range", 1.0, 0.4).set_ease(Tween.EASE_IN)
 	tween.tween_callback(light.queue_free)
+
+# ── Enhancement: Low-HP heal pulse ──
+# A green expanding ring + rising sparkles that plays when the player heals
+# from critical HP (below 25%). This gives healing a visible "emergency save"
+# feel — the player sees a green pulse radiate outward, reinforcing that they
+# were in danger and just escaped. Distinct from the level-up shockwave (gold)
+# and the combo fireworks (multi-color) so the player can identify the event
+# by color alone. The ring uses ease-out expansion (fast burst, gentle
+# deceleration) matching the pulse wave and shockwave visual language.
+static func spawn_heal_pulse(parent: Node, pos: Vector3) -> void:
+	# Green expanding ring
+	var ring := GPUParticles3D.new()
+	ring.amount = 60
+	ring.lifetime = 0.6
+	ring.one_shot = true
+	ring.emitting = true
+	ring.explosiveness = 1.0
+	ring.local_coords = false
+	var ring_mat := ParticleProcessMaterial.new()
+	ring_mat.direction = Vector3(1, 0, 1)
+	ring_mat.spread = 0.0
+	ring_mat.gravity = Vector3.ZERO
+	ring_mat.initial_velocity_min = 8.0
+	ring_mat.initial_velocity_max = 12.0
+	ring_mat.scale_min = 0.8
+	ring_mat.scale_max = 1.5
+	ring_mat.color = Color(0.3, 1.0, 0.4)
+	ring_mat.color_ramp = _create_fade_ramp(
+		Color(0.3, 1.0, 0.4), Color(0.1, 0.6, 0.2, 0.0))
+	ring.process_material = ring_mat
+	var ring_mesh := SphereMesh.new()
+	ring_mesh.radius = 0.25
+	ring_mesh.height = 0.1
+	ring_mesh.radial_segments = 6
+	ring_mesh.rings = 2
+	var ring_mat3d := StandardMaterial3D.new()
+	ring_mat3d.albedo_color = Color(0.3, 1.0, 0.4)
+	ring_mat3d.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring_mat3d.emission_enabled = true
+	ring_mat3d.emission = Color(0.2, 0.9, 0.3)
+	ring_mat3d.emission_energy_multiplier = 2.0
+	ring_mesh.material = ring_mat3d
+	ring.draw_pass_1 = ring_mesh
+	parent.add_child(ring)
+	ring.global_position = pos
+	_free_after_lifetime(ring, 0.8)
+
+	# Rising green sparkles
+	var sparkles := GPUParticles3D.new()
+	sparkles.amount = 40
+	sparkles.lifetime = 0.8
+	sparkles.one_shot = true
+	sparkles.emitting = true
+	sparkles.explosiveness = 0.8
+	sparkles.local_coords = false
+	var sp_mat := ParticleProcessMaterial.new()
+	sp_mat.direction = Vector3(0, 1, 0)
+	sp_mat.spread = 25.0
+	sp_mat.gravity = Vector3(0, -3, 0)
+	sp_mat.initial_velocity_min = 5.0
+	sp_mat.initial_velocity_max = 12.0
+	sp_mat.scale_min = 0.1
+	sp_mat.scale_max = 0.25
+	sp_mat.color = Color(0.4, 1.0, 0.5)
+	sp_mat.color_ramp = _create_fade_ramp(
+		Color(0.4, 1.0, 0.5), Color(0.1, 0.5, 0.2, 0.0))
+	sparkles.process_material = sp_mat
+	var sp_mesh := SphereMesh.new()
+	sp_mesh.radius = 0.08
+	sp_mesh.height = 0.16
+	var sp_mat3d := StandardMaterial3D.new()
+	sp_mat3d.albedo_color = Color(0.4, 1.0, 0.5)
+	sp_mat3d.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sp_mat3d.emission_enabled = true
+	sp_mat3d.emission = Color(0.3, 0.9, 0.4)
+	sp_mat3d.emission_energy_multiplier = 1.5
+	sp_mesh.material = sp_mat3d
+	sparkles.draw_pass_1 = sp_mesh
+	parent.add_child(sparkles)
+	sparkles.global_position = pos
+	_free_after_lifetime(sparkles, 1.0)
+
+	# Soft green light flash
+	var light := OmniLight3D.new()
+	light.light_color = Color(0.3, 1.0, 0.4)
+	light.light_energy = 3.0
+	light.omni_range = 6.0
+	parent.add_child(light)
+	light.global_position = pos
+	var light_tween := light.create_tween()
+	light_tween.tween_property(light, "light_energy", 0.0, 0.3).set_ease(Tween.EASE_OUT)
+	light_tween.parallel().tween_property(light, "omni_range", 1.0, 0.3).set_ease(Tween.EASE_IN)
+	light_tween.tween_callback(light.queue_free)

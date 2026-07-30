@@ -270,8 +270,8 @@ func _draw() -> void:
 			GameConstants.DEATH_SCREEN_STAT_LABEL_COLOR.b,
 			_stats_alpha)
 
-		var stat_y: float = center.y - 40
-		var line_height: float = 30
+		var stat_y: float = center.y - 70
+		var line_height: float = 28
 
 		_draw_stat_line("Final Score", str(_displayed_score), center.x, stat_y, label_color, stat_color)
 		stat_y += line_height
@@ -284,6 +284,23 @@ func _draw() -> void:
 		var mins: int = int(_time_survived) / 60
 		var secs: int = int(_time_survived) % 60
 		_draw_stat_line("Time Survived", "%d:%02d" % [mins, secs], center.x, stat_y, label_color, stat_color)
+		stat_y += line_height
+		# ── Enhancement: show level reached, biome, and game mode ──
+		# These stats are already tracked by GameManager but were never shown on
+		# the death screen, leaving the player without context about their run's
+		# progression. Level shows how far the skill tree progressed, biome shows
+		# where the player died, and game mode shows what they were playing.
+		_draw_stat_line("Level Reached", str(GameManager.player_level), center.x, stat_y, label_color, stat_color)
+		stat_y += line_height
+		var biome_name: String = "Unknown"
+		if GameConstants.BIOME_NAMES.has(GameManager.current_biome):
+			biome_name = GameConstants.BIOME_NAMES[GameManager.current_biome]
+		_draw_stat_line("Final Biome", biome_name, center.x, stat_y, label_color, stat_color)
+		stat_y += line_height
+		var mode_name: String = "Normal"
+		if GameModeManager:
+			mode_name = GameModeManager.get_mode_name()
+		_draw_stat_line("Game Mode", mode_name, center.x, stat_y, label_color, stat_color)
 
 	# Draw restart prompt
 	if _prompt_alpha > 0.01:

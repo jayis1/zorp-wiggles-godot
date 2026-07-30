@@ -28,6 +28,9 @@ var player_xp: int = 0
 var player_xp_to_next: int = GameConstants.PLAYER_START_XP
 var player_level: int = 1
 var player_score: int = 0
+# ── Enhancement: Score milestone tracking ──
+# Tracks the last score milestone reached so each threshold fires once per run.
+var _last_score_milestone: int = 0
 var player_kills: int = 0
 var player_combo: int = 0
 var player_combo_timer: float = 0.0
@@ -313,6 +316,7 @@ func _start_game() -> void:
 	player_xp_to_next = GameConstants.PLAYER_START_XP
 	player_level = 1
 	player_score = 0
+	_last_score_milestone = 0  # Reset score milestone tracker for new run
 	player_kills = 0
 	player_combo = 0
 	player_combo_timer = 0.0
@@ -536,6 +540,17 @@ func heal(amount: int) -> void:
 	player_healed.emit(actual_heal)
 	# Phase 20: Audio — heal SFX
 	AudioManager.play_sfx(AudioManager.SFX_HEAL)
+	# ── Enhancement: Low-HP heal pulse ──
+	# If the player was below 25% HP before healing, spawn a green expanding
+	# ring + sparkles at their position. This gives emergency heals (health
+	# fragment pickup at critical HP, healing shrine) a visible "life saved"
+	# pulse that reinforces the danger the player was in. The threshold
+	# matches the low-HP warning shader + heartbeat intensity threshold so
+	# the heal pulse only fires when the player was in the "danger zone"
+	# they can see and hear.
+	var _hp_before_heal: int = player_hp - actual_heal
+	if _hp_before_heal <= int(float(player_max_hp) * 0.25) and player and is_instance_valid(player):
+		ParticleEffects.spawn_heal_pulse(player.get_parent(), player.global_position)
 
 # Phase 34: Survival mode heal-suppression toggle. Set to true by healing
 # items/shrines when Survival mode is active so they no-op, but reset to
@@ -630,6 +645,12 @@ func _level_up() -> void:
 func add_score(amount: int) -> void:
 	player_score += amount
 	score_changed.emit(player_score)
+	# ── Enhancement: Score milestone celebrations ──
+	# Brief HUD message + light camera juice at score thresholds so the
+	# player feels their cumulative progress, not just per-kill increments.
+	# Milestones: 1K, 5K, 10K, 25K, 50K, 100K, 250K, 500K, 1M.
+	# Each milestone fires once per run (tracked via _last_score_milestone).
+	_check_score_milestone()
 
 func register_kill(enemy_name: String = "", killer_name: String = "Zorp") -> void:
 	player_kills += 1
@@ -766,6 +787,40 @@ func _check_combo_milestone(combo: int) -> void:
 	#    doesn't breathe during frequent early milestones.
 	if tier >= 3 and camera_rig and camera_rig.has_method("kick_fov"):
 		camera_rig.kick_fov(clampf(float(tier) * 1.5, 3.0, 5.0))
+
+# ── Enhancement: Score milestone celebrations ──
+# Fires a HUD message + light camera juice when the player's cumulative score
+# crosses defined thresholds. This gives long runs a sense of cumulative
+# achievement beyond per-kill score pops — reaching 10K or 50K feels like a
+# milestone, not just another number ticking up. Each threshold fires exactly
+# once per run (tracked via _last_score_milestone). The camera trauma scales
+# with the milestone tier so bigger thresholds feel more triumphant.
+const SCORE_MILESTONES: Array[int] = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000]
+func _check_score_milestone() -> void:
+	for i in range(SCORE_MILESTONES.size() - 1, -1, -1):
+		var threshold: int = SCORE_MILESTONES[i]
+		if player_score >= threshold and _last_score_milestone < threshold:
+			_last_score_milestone = threshold
+			# Format the threshold nicely (1K, 10K, 100K, 1M)
+			var label: String = ""
+			if threshold >= 1000000:
+				label = "%dM" % (threshold / 1000000)
+			elif threshold >= 1000:
+				label = "%dK" % (threshold / 1000)
+			else:
+				label = str(threshold)
+			add_message("🏆 SCORE MILESTONE: %s!" % label)
+			# Camera trauma scales with tier index (0.08 → 0.4 cap)
+			_trigger_camera_trauma(clampf(0.08 + float(i) * 0.04, 0.08, 0.4))
+			# FOV kick for higher-tier milestones (index 3+ = 25K+)
+			if i >= 3 and camera_rig and camera_rig.has_method("kick_fov"):
+				camera_rig.kick_fov(clampf(3.0 + float(i) * 0.5, 3.0, 6.0))
+			# Golden sparkle burst at the player's position
+			if player and is_instance_valid(player):
+				ParticleEffects.spawn_pickup_sparkle(
+					player.get_parent(), player.global_position,
+					Color(1.0, 0.85, 0.2))
+			break
 
 func add_pickup_streak() -> void:
 	player_pickup_streak += 1
