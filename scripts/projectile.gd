@@ -691,21 +691,38 @@ func _hit_enemy(enemy: Node3D) -> void:
 	# smaller than the death/crit shakes (which already exist) — just enough
 	# to give a tactile "I hit something" read on normal hits. Scaled by
 	# enemy size so a Sentinel hit kicks harder than a Blob hit, and skipped
-	# for crits/kills (those already get the bigger hit-stop + death shake, so
+	# for kills (those already get the bigger hit-stop + death shake, so
 	# adding this on top would double-dip). The bias direction points from the
 	# enemy toward the player so the camera nudges "backward" as if recoiling
 	# from the impact — reinforcing the shot's direction.
-	if not is_crit and not will_kill:
+	# ── Crit camera trauma ── Crits get a dedicated camera kick that's
+	# larger than the normal-hit micro-trauma (so a crit feels punchier
+	# than a regular hit, not less), but still smaller than a kill shake
+	# (so the hierarchy reads: normal hit < crit < kill < boss kill).
+	# Previously crits had hit-stop + gold flash + SFX but NO camera shake
+	# at all — the normal-hit trauma was explicitly skipped for crits to
+	# avoid "double-dipping," which left crits feeling less physically
+	# impactful than regular hits on the camera. The crit trauma is scaled
+	# by enemy size (bigger enemies = bigger kick) and uses the same
+	# backward-recoil bias as normal hits.
+	if not will_kill:
 		var e_scale: float = float(enemy.get("base_scale")) if "base_scale" in enemy else 1.0
-		var hit_trauma: float = clampf(0.03 + e_scale * 0.02, 0.03, 0.10)
 		var bias: Vector3 = Vector3.ZERO
 		if GameManager.player and is_instance_valid(GameManager.player):
 			bias = (GameManager.player.global_position - enemy.global_position)
 			bias.y = 0
 			if bias.length_squared() > 0.01:
 				bias = bias.normalized()
-		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
-			GameManager.camera_rig.add_trauma(hit_trauma, bias)
+		if is_crit:
+			# Crit: 0.06–0.16 trauma (bigger than normal hit, smaller than kill)
+			var crit_trauma: float = clampf(0.06 + e_scale * 0.04, 0.06, 0.16)
+			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+				GameManager.camera_rig.add_trauma(crit_trauma, bias)
+		else:
+			# Normal hit: 0.03–0.10 trauma (the existing micro-kick)
+			var hit_trauma: float = clampf(0.03 + e_scale * 0.02, 0.03, 0.10)
+			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+				GameManager.camera_rig.add_trauma(hit_trauma, bias)
 
 	# ── Phase 16: Weapon mod on-hit effects ──
 	_apply_mod_on_hit(enemy, total_damage)

@@ -1140,7 +1140,22 @@ func _die() -> void:
 		ai_controller = null
 
 	# Camera shake on enemy death (bigger for larger enemies)
-	_trigger_camera_trauma(clampf(base_scale * 0.15, 0.08, 0.35))
+	# ── Distance attenuation ── The shake is scaled by how far the enemy is
+	#    from the player. A point-blank kill shakes the camera fully; a kill
+	#    at 60+ meters barely registers. This prevents off-screen kills from
+	#    shaking the camera as hard as close-range ones, which felt
+	#    disorienting — the player sees the screen shake but doesn't see
+	#    what caused it. The attenuation uses a smoothstep so close kills
+	#    (≤15m) get full shake and far kills (≥60m) get ~10% shake.
+	var death_trauma_base: float = clampf(base_scale * 0.15, 0.08, 0.35)
+	var death_dist_mult: float = 1.0
+	if GameManager.player and is_instance_valid(GameManager.player):
+		var death_dist: float = global_position.distance_to(GameManager.player.global_position)
+		# Smoothstep: 15m → 1.0 (full), 60m → 0.1 (minimal), smooth S-curve
+		var dist_t: float = clampf((death_dist - 15.0) / 45.0, 0.0, 1.0)
+		dist_t = 1.0 - dist_t * dist_t * (3.0 - 2.0 * dist_t)  # Inverted smoothstep
+		death_dist_mult = lerpf(0.1, 1.0, dist_t)
+	_trigger_camera_trauma(death_trauma_base * death_dist_mult)
 
 	# Phase 6: Death poof particles
 	ParticleEffects.spawn_death_poof(get_parent(), global_position, base_color, base_scale)

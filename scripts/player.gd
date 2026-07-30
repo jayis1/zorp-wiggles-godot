@@ -36,7 +36,13 @@ var slide_velocity: Vector3 = Vector3.ZERO
 
 # ── Landing effect: tracks whether Zorp is airborne (reverse-gravity, bounce
 #    pad, etc.) so we can play a landing squash + dust puff on touchdown.
+# ── Fall-distance tracking: we record the peak Y while airborne so the landing
+#    effect can scale with how far Zorp fell. A 2m hop gets a gentle squash;
+#    a 20m reverse-gravity slam gets a dramatic flat squash + heavy camera
+#    shake. This makes high falls feel weighty and low hops feel light — the
+#    landing reads as proportional to the drop, not a one-size-fits-all pop.
 var _was_airborne: bool = false
+var _airborne_peak_y: float = 0.0  # Highest Y reached while airborne
 
 # ─── Input Buffering ──────────────────────────────────────────────────────────
 var _dash_buffer_timer: float = 0.0  # >0 means a dash press is buffered
@@ -428,7 +434,11 @@ func _physics_process(delta: float) -> void:
 		if mesh:
 			mesh.rotation.x = lerpf(mesh.rotation.x, deg_to_rad(180), 1.0 - exp(-5.0 * delta))
 		# Track that we're airborne so we can play a landing effect on return
-		_was_airborne = true
+		if not _was_airborne:
+			_was_airborne = true
+			_airborne_peak_y = global_position.y
+		# Track the highest point reached while airborne
+		_airborne_peak_y = maxf(_airborne_peak_y, global_position.y)
 	else:
 		# Return to ground level when not in reverse gravity
 		if mesh and abs(mesh.rotation.x) > 0.01:
@@ -436,9 +446,12 @@ func _physics_process(delta: float) -> void:
 		# Gravity pulls back to ground if we were on ceiling
 		if global_position.y > 2.0:
 			global_position.y = lerpf(global_position.y, 0.5, 1.0 - exp(-8.0 * delta))
-			_was_airborne = true
+			if not _was_airborne:
+				_was_airborne = true
+				_airborne_peak_y = global_position.y
+			_airborne_peak_y = maxf(_airborne_peak_y, global_position.y)
 		elif _was_airborne and global_position.y <= 0.8:
-			# Just landed — play landing squash + dust puff
+			# Just landed — play landing squash + dust puff scaled by fall distance
 			_was_airborne = false
 			_play_landing_effect()
 	
@@ -523,7 +536,10 @@ func _physics_process(delta: float) -> void:
 		velocity.y = grav_force
 		# Track airborne state for landing effect when gravity normalizes
 		if abs(global_position.y - 0.5) > 1.5:
-			_was_airborne = true
+			if not _was_airborne:
+				_was_airborne = true
+				_airborne_peak_y = global_position.y
+			_airborne_peak_y = maxf(_airborne_peak_y, global_position.y)
 	elif velocity.y != 0 and not DimensionSystem.gravity_reversed():
 		# No gravity anomaly — settle back to ground
 		velocity.y = 0
@@ -750,10 +766,28 @@ func _update_movement_lean(delta: float) -> void:
 func _play_landing_effect() -> void:
 	if is_dashing or is_sliding:
 		return
+	# ── Fall-distance scaling ── The squash intensity, dust size, and camera
+	#    shake all scale with how far Zorp fell. A 2m hop gets the baseline
+	#    gentle squash; a 20m reverse-gravity slam gets a dramatic flat
+	#    squash + heavy shake + bigger dust cloud. The fall distance is
+	#    mapped through a smoothstep so small falls don't over-react and
+	#    large falls plateau gracefully (no infinite squash at extreme
+	#    heights). The scaling factor is 0.6 (small hop) → 1.8 (big slam).
+	#    _airborne_peak_y was tracked during the airborne phase; we compute
+	#    the actual fall distance and reset it here.
+	var fall_dist: float = maxf(0.0, _airborne_peak_y - global_position.y)
+	_airborne_peak_y = 0.0
+	# Smoothstep mapping: 0m → 0.6, 10m+ → 1.8, smooth S-curve between
+	var fall_t: float = clampf(fall_dist / 10.0, 0.0, 1.0)
+	fall_t = fall_t * fall_t * (3.0 - 2.0 * fall_t)  # Smoothstep
+	var intensity_mult: float = lerpf(0.6, 1.8, fall_t)
 	if mesh:
 		var land_tween := create_tween()
-		# Squash flat: wide and short (impact frame)
-		land_tween.tween_property(mesh, "scale", Vector3(1.5, 0.4, 1.5), 0.08) \
+		# Squash flat: wide and short (impact frame) — scaled by fall intensity
+		var squash_xz: float = 1.5 * intensity_mult
+		var squash_y: float = lerpf(0.4, 0.15, fall_t)  # Flatter on big falls
+		land_tween.tween_property(mesh, "scale",
+			Vector3(squash_xz, squash_y, squash_xz), 0.08) \
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_CUBIC)
 		# Bounce back to normal with elastic overshoot for a juicy recovery
@@ -761,10 +795,11 @@ func _play_landing_effect() -> void:
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_ELASTIC)
 	# Dust puff at Zorp's feet — uses the death poof with a neutral dust color
+	# Scale the poof size with fall intensity for heavier landings
 	ParticleEffects.spawn_death_poof(get_parent(), global_position + Vector3(0, 0.1, 0),
-		Color(0.7, 0.65, 0.55), 0.6)
-	# Small camera shake on landing for weight
-	_trigger_camera_trauma(0.12)
+		Color(0.7, 0.65, 0.55), 0.6 * intensity_mult)
+	# Camera shake on landing for weight — scaled by fall distance
+	_trigger_camera_trauma(0.12 * intensity_mult)
 
 # ── Damage impact reaction ── When the player takes damage, Zorp's mesh
 #    squashes flat (compressed vertically, stretched horizontally) and the
