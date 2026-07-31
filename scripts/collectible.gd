@@ -667,7 +667,26 @@ func _collect() -> void:
 		GameConstants.CollectibleType.LEAF_STONE,
 	]
 	if is_rare:
-		AudioManager.play_sfx(AudioManager.SFX_PICKUP_RARE)
+		# ── Value-based pitch variation ── Rare pickups get a slightly higher
+		#    pitch for more valuable items (evolution stones > meteor shards),
+		#    so the player hears a subtle difference between a common rare drop
+		#    and a top-tier stone. The base ±6% random variation (from
+		#    _PITCH_VARIATION_SFX) still applies on top of this, keeping each
+		#    pickup organic. Pet evolution stones get the highest pitch (1.15)
+		#    since they're the most valuable drops in the game.
+		var rare_pitch: float = 1.0
+		var is_pet_stone: bool = collectible_type in [
+			GameConstants.CollectibleType.EMBER_STONE,
+			GameConstants.CollectibleType.FROST_STONE,
+			GameConstants.CollectibleType.SPARK_STONE,
+			GameConstants.CollectibleType.VOID_STONE,
+			GameConstants.CollectibleType.LEAF_STONE,
+		]
+		if is_pet_stone:
+			rare_pitch = 1.15
+		elif collectible_type == GameConstants.CollectibleType.METEOR_SHARD:
+			rare_pitch = 1.08
+		AudioManager.play_sfx_pitched(AudioManager.SFX_PICKUP_RARE, rare_pitch)
 		# ── FOV micro-kick on rare pickup ── A tiny, quick FOV widen (3°) that
 		#    eases back over ~0.8s. Much smaller than the level-up kick (8°)
 		#    so it reads as a subtle "ooh, shiny" pulse rather than a power
@@ -677,7 +696,17 @@ func _collect() -> void:
 		if GameManager.camera_rig and GameManager.camera_rig.has_method("kick_fov"):
 			GameManager.camera_rig.kick_fov(3.0)
 	else:
-		AudioManager.play_sfx(AudioManager.SFX_PICKUP)
+		# ── Value-based pitch for common pickups ── Higher-value common items
+		#    (star fruit, health fragments) get a slightly higher pitch than
+		#    base XP orbs, so the player subconsciously learns to associate
+		#    the brighter chime with better pickups. The pitch shift is small
+		#    (1.0 for XP orbs, 1.06 for star fruit / health fragments) so it
+		#    doesn't draw attention but adds subtle variety to mass pickups.
+		var common_pitch: float = 1.0
+		if collectible_type == GameConstants.CollectibleType.STAR_FRUIT \
+				or collectible_type == GameConstants.CollectibleType.HEALTH_FRAGMENT:
+			common_pitch = 1.06
+		AudioManager.play_sfx_pitched(AudioManager.SFX_PICKUP, common_pitch)
 
 ## Spawn a tiny sparkle particle at the collectible's current position for the
 ## magnetic pull trail. Very lightweight — a single small sphere with quick

@@ -288,6 +288,12 @@ func _try_spawn() -> void:
 		get_parent().add_child(warning)
 		warning.global_position = spawn_pos
 		warning.set("duration", GameConstants.ENEMY_SPAWN_WARNING_DURATION)
+		# ── Tier-colored warning ring ── Pass the enemy type so the ring
+		# can color-code the threat: yellow (easy) / orange (medium) /
+		# red (hard). This gives the player an instant visual cue about
+		# what's materializing before the enemy appears.
+		if warning.has_method("set_tier_color"):
+			warning.set_tier_color(enemy_type)
 
 func _materialize_enemy(spawn_data: Dictionary) -> void:
 	var enemy_type: int = spawn_data["type"]

@@ -69,6 +69,20 @@ var _score_float_label: Label = null
 var _score_float_tween: Tween = null
 var _prev_score: int = 0
 
+# ── Score count-up animation ── Instead of snapping the score text to the
+#    new value, animate the displayed number counting up over ~0.3s so
+#    score gains feel like a tangible reward rather than an instant number
+#    swap. The count-up uses an ease-out curve (fast at first, decelerates)
+#    so large gains (boss kills, big combos) feel weighty as the number
+#    races up and settles. The actual score (player_score) is updated
+#    immediately by add_score(); this only affects the DISPLAYED text,
+#    lerping toward the real value each frame. The count-up is skipped for
+#    tiny deltas (≤5 points) so micro-gains don't trigger a slow crawl.
+var _score_display: int = 0
+var _score_display_tween: Tween = null
+const SCORE_COUNTUP_DURATION: float = 0.3
+const SCORE_COUNTUP_MIN_DELTA: int = 6
+
 # ── Smooth bar color animation ──
 # The bar *size* lerps smoothly, but the color was snapping instantly on
 # hp_changed. Now we track a target color and lerp toward it in _process so
@@ -916,7 +930,6 @@ func _on_combo_changed(count: int) -> void:
 			combo_text.visible = false
 
 func _on_score_changed(new_score: int) -> void:
-	score_text.text = "Score: %d" % new_score
 	kills_text.text = "Kills: %d" % GameManager.player_kills
 	# ── Floating score increment ── Spawn a "+N" label that floats upward
 	# from the score text, showing exactly how much score was gained. This
@@ -929,6 +942,32 @@ func _on_score_changed(new_score: int) -> void:
 	if delta > 0 and _prev_score > 0:
 		_show_score_increment(delta)
 	_prev_score = new_score
+	# ── Score count-up animation ── Animate the displayed score counting
+	# up to the new value instead of snapping. Uses a tween_method on an
+	# int counter, eased with ease-out quartic for a rapid rise that
+	# decelerates into the final value. Skipped for tiny deltas (≤5) so
+	# micro-gains from trivial pickups don't trigger a visible crawl.
+	# On the initial _update_all_displays() call (_score_display == 0 and
+	# _prev_score == 0), we snap directly to avoid counting up from 0.
+	if delta >= SCORE_COUNTUP_MIN_DELTA and _score_display > 0:
+		if _score_display_tween and _score_display_tween.is_valid():
+			_score_display_tween.kill()
+		var start_val: int = _score_display
+		_score_display_tween = create_tween()
+		_score_display_tween.tween_method(
+			func(v: int):
+				_score_display = v
+				score_text.text = "Score: %d" % v,
+			start_val, new_score, SCORE_COUNTUP_DURATION
+		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUART)
+		# Ensure the final value is exactly correct (tween rounding)
+		_score_display_tween.tween_callback(func():
+			_score_display = new_score
+			score_text.text = "Score: %d" % new_score
+		)
+	else:
+		_score_display = new_score
+		score_text.text = "Score: %d" % new_score
 	# ── Score pop animation ── A quick scale punch on the score label so
 	# gaining score feels rewarding, mirroring the combo text "thwack".
 	# Skipped on the initial _update_all_displays() call (score 0 → 0 is
@@ -1045,6 +1084,10 @@ func _on_game_restarted() -> void:
 	# Reset floating score increment state so a fresh game doesn't carry a
 	# stale "+N" label or a previous-score baseline from the last run.
 	_prev_score = 0
+	_score_display = 0
+	if _score_display_tween and _score_display_tween.is_valid():
+		_score_display_tween.kill()
+		_score_display_tween = null
 	if _score_float_label:
 		_score_float_label.visible = false
 		_score_float_label.modulate.a = 1.0

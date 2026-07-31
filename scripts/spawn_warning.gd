@@ -28,9 +28,41 @@ var _material: StandardMaterial3D = null
 # Tracks whether the anticipation flash SFX has fired so we only play it once.
 var _flash_sfx_played: bool = false
 
+# Instance-level base colors — set by set_tier_color() based on the enemy
+# type that's about to spawn. Default to hard (red) so rings without a
+# tier override still read as threats.
+var _base_color: Color = _BASE_COLOR_HARD
+var _base_emission: Color = _BASE_EMISSION_HARD
+
+## Set the warning ring color based on the enemy type's difficulty tier.
+## Called by EnemySpawner after instantiating the warning ring. The tier is
+## determined by the spawner's _pick_enemy_type distance-from-center logic:
+## easy (yellow) → medium (orange) → hard (red). This gives the player an
+## instant visual cue about what's materializing before the enemy appears.
+func set_tier_color(enemy_type: int) -> void:
+	if enemy_type in EnemySpawner.EASY_TYPES:
+		_base_color = _BASE_COLOR_EASY
+		_base_emission = _BASE_EMISSION_EASY
+	elif enemy_type in EnemySpawner.HARD_TYPES:
+		_base_color = _BASE_COLOR_HARD
+		_base_emission = _BASE_EMISSION_HARD
+	else:
+		_base_color = _BASE_COLOR_MEDIUM
+		_base_emission = _BASE_EMISSION_MEDIUM
+
 # Base colors — stored so the anticipation flash can swap to white and back.
-const _BASE_COLOR := Color(1.0, 0.3, 0.3)
-const _BASE_EMISSION := Color(1.0, 0.2, 0.2)
+# The default is overridden by set_tier_color() when the spawner passes the
+# enemy type, so the ring color communicates the threat tier:
+#   easy (yellow) → medium (orange) → hard (red).
+# This gives the player an instant visual cue about what's materializing
+# before the enemy even appears, matching the telegraph color language
+# used in bullet-hell games (yellow = safe, red = dangerous).
+const _BASE_COLOR_EASY := Color(1.0, 0.85, 0.2)     # Yellow — easy tier
+const _BASE_EMISSION_EASY := Color(0.9, 0.75, 0.15)
+const _BASE_COLOR_MEDIUM := Color(1.0, 0.5, 0.2)    # Orange — medium tier
+const _BASE_EMISSION_MEDIUM := Color(0.9, 0.4, 0.15)
+const _BASE_COLOR_HARD := Color(1.0, 0.3, 0.3)      # Red — hard tier (default)
+const _BASE_EMISSION_HARD := Color(1.0, 0.2, 0.2)
 const _FLASH_COLOR := Color(1.0, 1.0, 1.0)
 const _FLASH_EMISSION := Color(1.0, 0.9, 0.7)
 
@@ -49,10 +81,10 @@ var _glow_light: OmniLight3D = null
 func _ready() -> void:
 	if mesh:
 		_material = StandardMaterial3D.new()
-		_material.albedo_color = Color(_BASE_COLOR.r, _BASE_COLOR.g, _BASE_COLOR.b, 0.5)
+		_material.albedo_color = Color(_base_color.r, _base_color.g, _base_color.b, 0.5)
 		_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		_material.emission_enabled = true
-		_material.emission = _BASE_EMISSION * 0.5
+		_material.emission = _base_emission * 0.5
 		_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mesh.material_override = _material
 	# ── Ground glow ── A low OmniLight3D placed at ground level that grows
@@ -60,7 +92,7 @@ func _ready() -> void:
 	# The light color matches the warning red so it reads as a threat glow.
 	# It starts dim and ramps up so the glow "charges" alongside the ring.
 	_glow_light = OmniLight3D.new()
-	_glow_light.light_color = _BASE_EMISSION
+	_glow_light.light_color = _base_emission
 	_glow_light.light_energy = 0.3  # Starts dim
 	_glow_light.omni_range = 3.0
 	_glow_light.omni_attenuation = 1.5
@@ -89,7 +121,7 @@ func _process(delta: float) -> void:
 			# Charging phase — light grows with the ring
 			_glow_light.light_energy = 0.3 + eased * 1.2  # 0.3 → 1.5
 			_glow_light.omni_range = 3.0 + eased * 4.0  # 3.0 → 7.0
-			_glow_light.light_color = _BASE_EMISSION
+			_glow_light.light_color = _base_emission
 		else:
 			# Anticipation flash — light peaks at full intensity and shifts
 			# toward the warm white flash color, matching the ring
@@ -97,7 +129,7 @@ func _process(delta: float) -> void:
 			var glow_flash_intensity: float = glow_flash_t * glow_flash_t
 			_glow_light.light_energy = 1.5 + glow_flash_intensity * 2.5  # 1.5 → 4.0
 			_glow_light.omni_range = 7.0 + glow_flash_intensity * 3.0  # 7.0 → 10.0
-			_glow_light.light_color = _BASE_EMISSION.lerp(_FLASH_EMISSION, glow_flash_intensity)
+			_glow_light.light_color = _base_emission.lerp(_FLASH_EMISSION, glow_flash_intensity)
 
 	if _material:
 		# ── Anticipation flash: in the final 15% of the warning, snap to
@@ -108,9 +140,9 @@ func _process(delta: float) -> void:
 			var flash_t: float = (progress - _FLASH_FRAC) / (1.0 - _FLASH_FRAC)
 			# Ease-in quad so the flash accelerates into the spawn moment
 			var flash_intensity: float = flash_t * flash_t
-			_material.albedo_color = _BASE_COLOR.lerp(_FLASH_COLOR, flash_intensity)
+			_material.albedo_color = _base_color.lerp(_FLASH_COLOR, flash_intensity)
 			_material.albedo_color.a = 0.5 + 0.5 * flash_intensity
-			_material.emission = _BASE_EMISSION.lerp(_FLASH_EMISSION, flash_intensity) * (0.5 + flash_intensity)
+			_material.emission = _base_emission.lerp(_FLASH_EMISSION, flash_intensity) * (0.5 + flash_intensity)
 			# ── Play the warp SFX once at the start of the anticipation flash
 			#    so the player hears the spawn coming. This fires a single
 			#    time when the flash begins (progress == _FLASH_FRAC) and
@@ -125,8 +157,8 @@ func _process(delta: float) -> void:
 			# increases so the ring dims naturally toward the flash point.
 			var pulse: float = 0.5 + 0.5 * (sin(age * 15.0) * 0.7 + sin(age * 23.0) * 0.3)
 			var fade: float = 1.0 - (progress / _FLASH_FRAC) * 0.4  # Fade to 60% before flash
-			_material.albedo_color = Color(_BASE_COLOR.r, _BASE_COLOR.g, _BASE_COLOR.b, 0.5 * fade * pulse)
-			_material.emission = _BASE_EMISSION * (0.5 * fade * pulse)
+			_material.albedo_color = Color(_base_color.r, _base_color.g, _base_color.b, 0.5 * fade * pulse)
+			_material.emission = _base_emission * (0.5 * fade * pulse)
 
 	if age >= duration:
 		# ── Final pop: quick scale-up + fade-out so the ring doesn't just
