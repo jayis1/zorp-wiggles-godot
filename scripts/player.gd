@@ -1194,6 +1194,19 @@ func _start_dash() -> void:
 	# Camera shake on dash for punch
 	_trigger_camera_trauma(0.15)
 
+	# ── Dash launch dust kick ── A small ground-level dust burst at Zorp's
+	#    feet the moment the dash fires. The dash already has camera shake,
+	#    FOV kick, trail particles, and a mesh squash — but the *ground*
+	#    was missing a reaction. This dust poof sells the "launch" impulse:
+	#    Zorp kicks off the ground hard enough to kick up dust, reinforcing
+	#    the speed and weight of the dash start. The poof uses the same
+	#    spawn_death_poof helper as the landing effect, tinted to a neutral
+	#    dust color so it reads as kicked-up dirt rather than alien energy.
+	#    It's small (0.4 scale) so it doesn't compete with the dash trail.
+	ParticleEffects.spawn_death_poof(get_parent(),
+		global_position + Vector3(0, 0.1, 0),
+		Color(0.7, 0.65, 0.55), 0.4)
+
 	# FOV kick — briefly widen the camera FOV for a speed sensation. The camera
 	# eases the FOV back to default in _process, so this is a one-shot nudge.
 	var cam_rig: Node3D = GameManager.camera_rig

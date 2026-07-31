@@ -828,6 +828,17 @@ func _execute_attack(player: Node3D) -> void:
 	var attack_dir: Vector3 = (player.global_position - global_position).normalized()
 	attack_dir.y = 0
 	_trigger_camera_trauma(0.2, attack_dir)
+	# ── Enemy melee hit-stop ── A micro freeze (20ms @ 0.3x) when an enemy
+	#    melee attack lands on the player. The player's own damage squash,
+	#    the camera shake, and the invuln blink all fire — but without a
+	#    hit-stop the impact reads as a soft nudge rather than a real hit.
+	#    This tiny freeze gives enemy melee the same weighty "thud" language
+	#    as crits and boss kills, just at the lightest tier (same as the
+	#    normal-kill hit-stop). It's routed through HitStopCoordinator so
+	#    it composes correctly with any simultaneous projectile crit/kill
+	#    freezes — the strongest wins, no stacking. The freeze is short
+	#    enough (20ms) that rapid enemy swarms don't stutter the game.
+	HitStopCoordinator.request_freeze(0.3, 0.02)
 
 	# Forward lunge — set velocity so move_and_slide() handles the movement.
 	# Previously used a tween on global_position which fought the physics step
@@ -1447,6 +1458,16 @@ func _update_visuals(delta: float) -> void:
 			# Preserve the original alpha (e.g. Void Wisp is semi-transparent)
 			warning_color.a = _spawn_target_alpha
 			_material.albedo_color = warning_color
+			# ── Low-HP emission pulse ── The albedo was pulsing red-white but
+			#    the emission energy was flat, so in dark biomes the low-HP
+			#    warning was invisible — the enemy silhouette pulsed but
+			#    didn't *glow* danger. Now the emission energy pulses in sync
+			#    with the albedo (peaking at 2.5x baseline) so low-HP enemies
+			#    radiate a threatening red glow that's visible against any
+			#    background. The emission color shifts toward red on the
+			#    pulse peak, reinforcing the danger read even further.
+			_material.emission_energy_multiplier = 1.0 + pulse * 1.5
+			_material.emission = current_color.lerp(Color(1.0, 0.05, 0.05), pulse * 0.6) * 0.4
 
 func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
