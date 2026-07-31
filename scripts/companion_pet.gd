@@ -1105,6 +1105,24 @@ func _trigger_emote(emote_id: int) -> void:
 		_mat.emission_energy_multiplier = 3.0
 		var flash := create_tween()
 		flash.tween_property(_mat, "emission_energy_multiplier", old_emission, 0.3)
+	# ── Enhancement Pack 16: Per-emote SFX ── Each emotion gets a distinct
+	# pitch so the player can hear the pet's mood without looking at it.
+	# HAPPY is bright/high (1.3×), ANGRY is deep/growl (0.6×), LOVE is warm
+	# (1.1×), SCARED is trembling/low (0.8×), CURIOUS is questioning (1.2×),
+	# SLEEPY is very low (0.5×), HUNGRY is slightly low (0.9×). This gives
+	# the pet a sonic personality — the player recognizes their companion's
+	# emotional state by ear alone, reinforcing the bond.
+	var _emote_pitches: Dictionary = {
+		GameConstants.PetEmote.HAPPY: 1.3,
+		GameConstants.PetEmote.LOVE: 1.1,
+		GameConstants.PetEmote.ANGRY: 0.6,
+		GameConstants.PetEmote.SCARED: 0.8,
+		GameConstants.PetEmote.CURIOUS: 1.2,
+		GameConstants.PetEmote.SLEEPY: 0.5,
+		GameConstants.PetEmote.HUNGRY: 0.9,
+	}
+	AudioManager.play_sfx_pitched(AudioManager.SFX_PET_EMOTE,
+		_emote_pitches.get(emote_id, 1.0))
 	# Emit signal for HUD integration
 	pet_emote.emit(emote_id)
 

@@ -200,6 +200,27 @@ const SFX_SHOOT_VAMPIRE: String = "shoot_vampire" # Crimson drain hum
 #    for "photo taken" (every smartphone and camera uses a variant of this).
 #    Low volume (0.15) so it's a subtle confirmation, not a distraction.
 const SFX_SHUTTER: String = "shutter"
+# ── Enhancement Pack 16: World Life & Companion Event Feedback ──
+# Pet emote — a soft expressive blip whose pitch varies per emote type so
+# the player can hear the pet's mood (happy=high, angry=low, love=warm,
+# scared=trembling, curious=questioning, sleepy=low-long, hungry=pulsing).
+# The base sound is a gentle sine blip; pitch shifting via play_sfx_pitched
+# gives each emotion its own sonic identity without 7 separate streams.
+const SFX_PET_EMOTE: String = "pet_emote"
+# Merchant arrival — a welcoming melodic chime (ascending major triad) that
+# reads as \"a friend has arrived.\" Distinct from UI clicks and combat SFX
+# so the player notices the merchant even during combat.
+const SFX_MERCHANT: String = "merchant"
+# Enemy dodge — a quick lateral whoosh (short noise sweep) that conveys
+# \"your attack missed\" — the air-distortion sound of something narrowly
+# evading a projectile. Distinct from the shield hit (solid thunk) and the
+# enemy hit (blip) so the player can identify an Evasive variant by ear.
+const SFX_DODGE: String = "dodge"
+# Enemy near-death — a subtle metallic groan (low descending tone) that
+# plays when an enemy enters the near-death shudder state (<10% HP). Quiet
+# and short so it doesn't stack into noise when multiple enemies are dying.
+# Reads as \"this enemy is on its last legs\" — the audio cue for focus fire.
+const SFX_NEAR_DEATH: String = "near_death"
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -895,6 +916,32 @@ func _generate_all_sfx() -> void:
 	# a mechanical camera shutter. Uses _gen_noise_sweep with very short
 	# duration for a crisp click rather than a whoosh.
 	_sfx_streams[SFX_SHUTTER] = _gen_noise_sweep(0.04, 0.15)
+	# ── Enhancement Pack 16: World Life & Companion Event Feedback ──
+	# Pet emote — a gentle sine blip (880 Hz, 0.08s, soft volume). The base
+	# sound is neutral; per-emote pitch shifting in companion_pet.gd gives
+	# each emotion its own identity: HAPPY=1.3× (bright), LOVE=1.1× (warm),
+	# CURIOUS=1.2× (questioning), SCARED=0.8× (low/trembling), ANGRY=0.6×
+	# (deep/growl), SLEEPY=0.5× (low-long), HUNGRY=0.9× (pulsing).
+	_sfx_streams[SFX_PET_EMOTE] = _gen_blip(880.0, 0.08, 0.20)
+	# Merchant arrival — a welcoming ascending major triad (C5→E5→G5) that
+	# reads as "a friend has arrived." Longer note duration (0.07s each) and
+	# moderate volume (0.28) so it's noticeable over ambient biome music
+	# without being startling. Distinct from SFX_LEVEL_UP (arpeggio, faster,
+	# 4 notes) and SFX_COMBO_MILESTONE (3 notes, shorter) so the player
+	# recognizes "merchant" specifically.
+	_sfx_streams[SFX_MERCHANT] = _gen_arpeggio([523.0, 659.0, 784.0], 0.07, 0.28)
+	# Enemy dodge — a quick lateral whoosh (0.08s noise sweep, low volume).
+	# Shorter than SFX_DASH (0.18s) and quieter than SFX_DASH_BUMP so it
+	# reads as a subtle "missed" cue, not a combat impact. The noise sweep
+	# timbre conveys air disturbance — something slipping past — matching
+	# the visual of an enemy sidestepping a projectile.
+	_sfx_streams[SFX_DODGE] = _gen_noise_sweep(0.08, 0.18)
+	# Enemy near-death — a subtle metallic groan: low descending tone
+	# (140→100 Hz over 0.12s, quiet 0.10). Low enough to sit under combat
+	# without being annoying when multiple enemies are shuddering. The
+	# descending pitch conveys "weakening / about to break" — the audio
+	# equivalent of the visual tremor.
+	_sfx_streams[SFX_NEAR_DEATH] = _gen_descending(140.0, 100.0, 0.12, 0.10)
 
 
 func _generate_all_music() -> void:

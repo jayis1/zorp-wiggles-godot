@@ -208,6 +208,12 @@ func _physics_process(delta: float) -> void:
 			t.tween_property(_prompt_label, "scale", Vector3.ONE, 0.25) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 			GameManager.add_message("🛍 %s has arrived! Rare goods for sale nearby." % merchant_name)
+		# ── Enhancement Pack 16: Proximity chime ── a softer, closer-range
+		# merchant chime at 0.8× pitch (slightly lower than the spawn chime
+		# so the two events sound different: spawn = "someone arrived nearby",
+		# proximity = "they're right here, ready to trade"). Previously the
+		# proximity prompt was purely visual (glow + prompt label pop-in).
+		AudioManager.play_sfx_pitched(AudioManager.SFX_MERCHANT, 0.8)
 	else:
 		_glow_light.light_energy = 0.0
 		if _prompt_shown:
@@ -263,6 +269,12 @@ func _despawn(reason: String) -> void:
 		return
 	_is_despawning = true
 	GameManager.add_message("🛍 %s — %s" % [merchant_name, reason])
+	# ── Enhancement Pack 16: Merchant despawn SFX ── a descending version
+	# of the arrival chime (0.6× pitch, lower = leaving/fading) so the
+	# player hears the merchant departing. Previously the merchant's
+	# departure — whether by wandering away or despawning — was silent,
+	# and the player might keep looking for a trader that's already gone.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_MERCHANT, 0.6)
 	merchant_despawned.emit(self)
 	# Fade out + shrink, then queue_free.
 	var t := create_tween()

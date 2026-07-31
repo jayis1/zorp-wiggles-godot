@@ -53,6 +53,7 @@ var _enrage_aura: MeshInstance3D = null
 # Near-death shudder
 var _shudder_timer: float = 0.0
 var _shudder_active: float = 0.0
+var _near_death_sfx_played: bool = false  # Enhancement Pack 16: one-shot SFX flag
 
 # ─── Configuration (set by EnemyBase in _ready) ───────────────────────────────
 var enable_los: bool = true
@@ -246,8 +247,20 @@ func _update_shudder(delta: float, enemy: EnemyBase) -> void:
 	if hp_ratio > GameConstants.AI_SHUDDER_HP_THRESHOLD or hp_ratio <= 0:
 		if _shudder_active > 0:
 			_shudder_active = 0
+			# Reset the one-shot flag so the SFX can play again if the enemy
+			# heals above the threshold and then drops back below it.
+			_near_death_sfx_played = false
 			# Reset scale to base (the enemy's update loop handles this normally)
 		return
+
+	# ── Enhancement Pack 16: Near-death SFX ── play a subtle metallic groan
+	# once when the enemy first crosses into the near-death shudder state
+	# (<10% HP). The _near_death_sfx_played flag ensures it only fires once
+	# per near-death entry, not on every periodic shudder burst. Reset when
+	# the enemy recovers above the threshold (healing/enrage exit).
+	if not _near_death_sfx_played:
+		_near_death_sfx_played = true
+		AudioManager.play_sfx(AudioManager.SFX_NEAR_DEATH)
 
 	if _shudder_active > 0:
 		_shudder_active -= delta

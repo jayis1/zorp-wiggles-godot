@@ -71,3 +71,8 @@ func _spawn_merchant() -> void:
 	# Arrival particles + message.
 	ParticleEffects.spawn_materialization(get_tree().current_scene, spawn_pos, GameConstants.WANDERING_MERCHANT_BODY_COLOR)
 	GameManager.add_message("🛍 A wandering merchant has arrived nearby! Look for the magenta canopy.")
+	# ── Enhancement Pack 16: Merchant arrival SFX ── a welcoming chime so
+	# the player hears the merchant's arrival even during combat. Previously
+	# the merchant appeared with materialization particles + a text message
+	# but no audio — easy to miss the opportunity to trade.
+	AudioManager.play_sfx(AudioManager.SFX_MERCHANT)

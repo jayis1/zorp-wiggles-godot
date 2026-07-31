@@ -928,6 +928,12 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 				var dodge_tween := create_tween()
 				dodge_tween.tween_property(alert, "modulate:a", 0.0, 0.4)
 				dodge_tween.tween_callback(func(): alert.visible = false)
+			# ── Enhancement Pack 16: Dodge whoosh SFX ── a quick lateral
+			# air-distortion sound so the player HEARS the dodge, not just
+			# sees the "DODGE" text. Without this, an Evasive variant's
+			# dodge reads as "my shot vanished" rather than "the enemy
+			# sidestepped it" — the audio communicates the evasion.
+			AudioManager.play_sfx(AudioManager.SFX_DODGE)
 			return
 		amount = int(result.get("damage", amount))
 		# ── Shielded variant: blue shield flash on hit ── When a SHIELDED
