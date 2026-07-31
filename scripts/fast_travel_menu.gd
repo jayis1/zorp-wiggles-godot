@@ -34,6 +34,9 @@ func open() -> void:
 	_is_open = true
 	GameManager.is_paused = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	# Open SFX — confirming click for menu opening.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 
 func close() -> void:
 	if not _is_open:
@@ -42,6 +45,10 @@ func close() -> void:
 	GameManager.is_paused = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hovered_item = -1  # Clear hover so reopening doesn't start with a stale highlight
+	# Close SFX — slightly lower pitch matching the open/close audio
+	# language used across all UI panels.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
 
 # Public accessor so the player toggle can check state without touching the
 # private _is_open variable directly.

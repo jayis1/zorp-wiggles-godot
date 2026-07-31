@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: ALL PHASES COMPLETE (1-20, 22-35) + Mind Control Dart + Biome Enemy Variants + P2 Visual Feedback + Enhancement Pack 10 (Cooldown-Ready & Failure SFX) + Enhancement Pack 11 (Missing Event SFX & Camera Feedback) + Enhancement Pack 12 (Combo Break Feedback & Weapon Equip SFX & Projectile Fizzle) + Enhancement Pack 13 (Pet Stone Juice + Mutation Combo Announcement + Biome Chime + Photo Mode Audio) + Enhancement Pack 14 (Endgame & Dungeon Event Feedback Polish) + Enhancement Pack 15 (Death Screen Stats + Score Milestones + Low-HP Heal Pulse) + Enhancement Pack 16 (World Life & Companion Event Feedback Polish) — Phases 1-20, 22-35 complete. All 36 weapon mods now implemented (including Mind Control Dart). Phase 22 biome-specific enemy variants for all 7 new biomes implemented. Phase 35 (Final Polish) 10/10 items complete. Daily Challenge, Weekly Challenge, and offline Spectator Mode implemented. P2 co-op visual feedback parity. Enhancement Pack 10: Cooldown-ready chimes (dash ready SFX + pulse wave ready SFX with distinct pitches), buff expiration SFX, and comprehensive craft-fail SFX across all 6 crafting/upgrade systems (weapon mod crafting menu, equipment system, weapon mod fusion, pet accessory system, pet training system, skill tree). Enhancement Pack 11: Dungeon exit SFX + camera shake + particle burst, loot cave cleared SFX + camera shake + fireworks, door open/close + hidden passage reveal SFX + camera shake, consumable buff expiration SFX, anomalous zone exit SFX + camera shake + HUD message, P1 downed SFX + camera trauma (parity with P2), P1 revive SFX (parity with P2), weather combo end SFX + HUD message. Enhancement Pack 12: Combo streak break SFX (new SFX_COMBO_BREAK) + camera trauma for kill combo (≥5), pickup streak (≥5), and crit chain (≥3) expiry — all three streak types now share consistent "streak lost" audio language; weapon mod equip/unequip SFX (base + fused) for loadout-change feedback; player projectile lifetime fizzle (impact burst in mod color) bringing parity with enemy projectile fizzle. Enhancement ... [truncated]
+## Status: ALL PHASES COMPLETE (1-20, 22-35) + Mind Control Dart + Biome Enemy Variants + P2 Visual Feedback + Enhancement Pack 10 (Cooldown-Ready & Failure SFX) + Enhancement Pack 11 (Missing Event SFX & Camera Feedback) + Enhancement Pack 12 (Combo Break Feedback & Weapon Equip SFX & Projectile Fizzle) + Enhancement Pack 13 (Pet Stone Juice + Mutation Combo Announcement + Biome Chime + Photo Mode Audio) + Enhancement Pack 14 (Endgame & Dungeon Event Feedback Polish) + Enhancement Pack 15 (Death Screen Stats + Score Milestones + Low-HP Heal Pulse) + Enhancement Pack 16 (World Life & Companion Event Feedback Polish) + Enhancement Pack 17 (UI Panel Toggle & Interaction SFX Polish) — Phases 1-20, 22-35 complete. All 36 weapon mods now implemented (including Mind Control Dart). Phase 22 biome-specific enemy variants for all 7 new biomes implemented. Phase 35 (Final Polish) 10/10 items complete. Daily Challenge, Weekly Challenge, and offline Spectator Mode implemented. P2 co-op visual feedback parity. Enhancement Pack 10: Cooldown-ready chimes (dash ready SFX + pulse wave ready SFX with distinct pitches), buff expiration SFX, and comprehensive craft-fail SFX across all 6 crafting/upgrade systems (weapon mod crafting menu, equipment system, weapon mod fusion, pet accessory system, pet training system, skill tree). Enhancement Pack 11: Dungeon exit SFX + camera shake + particle burst, loot cave cleared SFX + camera shake + fireworks, door open/close + hidden passage reveal SFX + camera shake, consumable buff expiration SFX, anomalous zone exit SFX + camera shake + HUD message, P1 downed SFX + camera trauma (parity with P2), P1 revive SFX (parity with P2), weather combo end SFX + HUD message. Enhancement Pack 12: Combo streak break SFX (new SFX_COMBO_BREAK) + camera trauma for kill combo (≥5), pickup streak (≥5), and crit chain (≥3) expiry — all three streak types now share consistent "streak lost" audio language; weapon mod equip/unequip SFX (base + fused) for loadout-change feedback; player projectile lifetime fizzle (impact burst in mod color) bringing parity with enemy projectile fizzle. Enhancement ... [truncated]
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -967,4 +967,58 @@ Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy cor
 - **Dodge air-distortion SFX** — when an EVASIVE variant dodges incoming damage, `SFX_DODGE` (a quick 0.08s noise sweep at 0.18 volume) now plays alongside the existing "DODGE" Label3D text. Previously the dodge had only visual feedback — a grey "DODGE" text appeared above the enemy but the player's shot appeared to silently vanish. The whoosh timbre conveys air disturbance (something narrowly slipping past a projectile), distinct from the enemy hit blip (solid impact) and the shielded variant's blue shield flash (solid deflector thunk). The player can now identify an Evasive variant by ear after the first dodged shot.
 
 ### Enemy Near-Death Shudder SFX (`enemy_ai_controller.gd` + `audio_manager.gd`)
+
+## Enhancement Pack 17 — UI Panel Toggle & Interaction SFX Polish
+
+### Quest Log Toggle SFX (`quest_log.gd`)
+- **Open/close SFX** — pressing Tab to toggle the mission board now plays `SFX_UI_CLICK` at 1.0× pitch (open) or 0.85× pitch (close). Previously the mission board appeared and disappeared silently — the player had no audio cue that the panel toggled. Matches the open/close audio language used across all UI panels (pause menu, photo mode, death screen).
+
+### Leaderboards Tab Switch & Seed Action SFX (`leaderboards_page.gd`)
+- **Close SFX** — pressing F12 to close the leaderboards now plays `SFX_UI_CLICK` at 0.85× pitch. Previously only the open had a click sound; closing was silent.
+- **Tab switch SFX** — switching between the 6 leaderboard tabs (keys 1-6) now plays `SFX_UI_CLICK` at an ascending pitch per tab index (1.0× + 0.05× per tab), giving rapid tab cycling a gentle arpeggio feel. Previously tab switching was completely silent — the player pressed a number key and the content changed with no audio confirmation.
+- **Seed apply success SFX** — successfully applying a challenge seed now plays `SFX_UI_CLICK` at 1.2× pitch (bright, positive confirmation). Previously the seed was applied with only a text message.
+- **Seed apply failure SFX** — entering an invalid seed now plays `SFX_CRAFT_FAIL` (the descending dissonant buzz used across all 6 crafting systems), for consistent negative-feedback language. Previously the invalid seed had only a text warning.
+- **Seed copy SFX** — pressing S to copy the current seed to clipboard now plays `SFX_UI_CLICK`, confirming the clipboard action. Previously the seed was copied silently with only a text message.
+
+### Statistics Page Tab Switch & Close SFX (`statistics_page.gd`)
+- **Close SFX** — pressing F2 to close the statistics page now plays `SFX_UI_CLICK` at 0.85× pitch. Previously only the open had a click sound; closing was silent.
+- **Tab switch SFX** — switching between the 4 statistics tabs (keys 1-4) now plays `SFX_UI_CLICK` at an ascending pitch per tab index, matching the leaderboards tab-switch audio language. Previously tab switching was completely silent.
+
+### Mode Selector Hover SFX (`mode_selector.gd`)
+- **Card hover SFX** — moving the mouse over a mode card now plays `SFX_UI_HOVER` (subtle blip) when entering a card. Previously the mode selector tracked hover state for visual highlighting but had no audio feedback — the player's cursor crossed card boundaries in silence. Only plays when entering a card (not when leaving to empty space) to avoid noise on every motion boundary crossing. Matches the Button-based menus' hover feedback.
+
+### Skill Tree Hover & Close SFX (`skill_tree.gd`)
+- **Close SFX** — pressing K to close the skill tree now plays `SFX_UI_CLICK` at 0.85× pitch. Previously only the open had a click sound; closing with the key was silent (the close button click had SFX but the keyboard toggle didn't).
+- **Node hover SFX** — moving the mouse over a skill node now plays `SFX_UI_HOVER` when entering a node. Previously the skill tree tracked hover for visual highlighting but had no audio feedback. Matches the Button-based menus' hover feedback.
+
+### Equipment Menu Tab Hover SFX (`equipment_menu.gd`)
+- **Tab header hover SFX** — moving the mouse over a tab header (Equipment/Consumables/Refine/Materials) now plays `SFX_UI_HOVER`. Previously the equipment menu tracked hover state for all elements (tabs, pieces, consumables, refine recipes) but had no hover audio. Only tab headers get the SFX (not every list item) to avoid excessive noise when scrolling through the equipment list.
+
+### Replay Browser Navigation & Action SFX (`replay_browser.gd`)
+- **Close SFX** — pressing F11 to close the replay browser now plays `SFX_UI_CLICK` at 0.85× pitch. Previously only the open had a click sound; closing was silent.
+- **List navigation SFX** — pressing Up/Down arrows to scroll through replays now plays `SFX_UI_HOVER` (soft blip), giving the list a responsive feel. Previously navigating the replay list was completely silent.
+- **Play SFX** — pressing Enter to play a replay now plays `SFX_UI_CLICK` (confirming action). Previously the replay started with only a text message.
+- **Spectate SFX** — pressing S to spectate a replay now plays `SFX_UI_CLICK`. Previously spectating started silently.
+- **Delete SFX** — pressing Delete to remove a replay now plays `SFX_CRAFT_FAIL` (the negative-action buzz), for consistent destructive-action feedback language. Previously the replay was deleted with only a text message.
+
+### Fast Travel Menu Open/Close SFX (`fast_travel_menu.gd`)
+- **Open SFX** — `open()` now plays `SFX_UI_CLICK`. Previously the fast travel menu opened silently despite having hover SFX for waypoint items.
+- **Close SFX** — `close()` now plays `SFX_UI_CLICK` at 0.85× pitch. Previously the menu closed silently whether via close button, Esc, or Tab.
+
+### Trade Menu Open/Close SFX (`trade_menu.gd`)
+- **Open SFX** — `open()` now plays `SFX_UI_CLICK`. Previously the trade menu opened silently when the player pressed E near a trader — the player had no audio cue that the menu opened (only the visual fade-in).
+- **Close SFX** — `close()` now plays `SFX_UI_CLICK` at 0.85× pitch. Previously the trade menu closed silently.
+
+### Crafting Menu Toggle SFX (`crafting_menu.gd`)
+- **Open/close SFX** — `_on_menu_toggled()` now plays `SFX_UI_CLICK` at 1.0× (open) or 0.85× (close) pitch. Previously the crafting menu toggled silently when pressing C — it had an entrance animation (scale + fade) but no audio, and the close was completely silent.
+
+### Weapon Mod Fusion Menu Open/Close SFX (`weapon_mod_fusion_menu.gd`)
+- **Open SFX** — `show_menu()` now plays `SFX_UI_CLICK`. Previously opening the fusion submenu from the crafting menu was silent.
+- **Close SFX** — `hide_menu()` now plays `SFX_UI_CLICK` at 0.85× pitch. Previously closing the fusion submenu was silent.
+
+### Pet Accessory Menu Close Pitch Differentiation (`pet_accessory_menu.gd`)
+- **Open/close pitch differentiation** — the toggle SFX now uses 1.0× pitch for open and 0.85× for close (previously both used the same 1.0× pitch, so opening and closing sounded identical). Esc-close now also plays the close SFX (previously Esc-close was silent).
+
+### Pet Training Menu Close Pitch Differentiation (`pet_training_menu.gd`)
+- **Open/close pitch differentiation** — the toggle SFX now uses 1.0× pitch for open and 0.85× for close (previously both used the same 1.0× pitch). Esc-close now also plays the close SFX (previously Esc-close was silent).
 - **One-shot metallic groan on near-death entry** — when an enemy first crosses below 10% HP (the `AI_SHUDDER_HP_THRESHOLD`), `SFX_NEAR_DEATH` (a subtle 140→100 Hz descending tone, 0.12s, quiet 0.10 volume) plays once. A `_near_death_sfx_played` flag ensures the SFX fires only once per near-death entry, not on every periodic shudder burst (which repeats every 1-3 seconds). The flag resets if the enemy heals above the threshold, allowing the SFX to fire again if it drops back below. Previously the near-death shudder was purely visual (X/Z scale jitter) — the player had no audio cue that an enemy was on its last legs. The low, quiet descending tone reads as "weakening / about to break," the audio equivalent of the visual tremor, without stacking into noise when multiple enemies are dying simultaneously.

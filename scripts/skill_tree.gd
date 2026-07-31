@@ -43,6 +43,10 @@ func _process(delta: float) -> void:
 		_visible_flag = not _visible_flag
 		if _visible_flag:
 			AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+		else:
+			# Close SFX — slightly lower pitch matching the open/close
+			# audio language used across all UI panels.
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
 	# Smooth fade
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
@@ -82,6 +86,11 @@ func _gui_input(event: InputEvent) -> void:
 				new_hover = skill_key
 				break
 		if new_hover != _hovered_skill:
+			# Hover SFX — subtle blip when the player's cursor enters a
+			# skill node, matching the Button-based menus' hover feedback.
+			if new_hover != "":
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 			_hovered_skill = new_hover
 			queue_redraw()
 

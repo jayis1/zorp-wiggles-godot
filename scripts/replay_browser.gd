@@ -28,6 +28,10 @@ func _process(delta: float) -> void:
 		if _visible_flag:
 			AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 			_refresh_replays()
+		else:
+			# Close SFX — slightly lower pitch matching the open/close
+			# audio language used across all UI panels.
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
 	# Smooth fade
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
@@ -116,9 +120,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		match ke.keycode:
 			KEY_UP:
 				_selected_idx = max(0, _selected_idx - 1)
+				# Navigation SFX — soft hover blip for list scrolling.
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 				get_viewport().set_input_as_handled()
 			KEY_DOWN:
 				_selected_idx = min(max(0, _replays.size() - 1), _selected_idx + 1)
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 				get_viewport().set_input_as_handled()
 			KEY_ENTER:
 				if _selected_idx >= 0 and _selected_idx < _replays.size() and ReplaySystem:
@@ -127,6 +136,9 @@ func _unhandled_input(event: InputEvent) -> void:
 						ReplaySystem.play_replay(rid)
 						GameManager.add_message("🎬 Playing replay ghost...")
 						_visible_flag = false
+						# Play SFX — confirming click for replay playback start.
+						if AudioManager:
+							AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 				get_viewport().set_input_as_handled()
 			KEY_S:
 				# Phase 32: Spectate the selected replay with free-look camera
@@ -135,6 +147,8 @@ func _unhandled_input(event: InputEvent) -> void:
 					if not rid.is_empty():
 						_visible_flag = false
 						SpectatorMode.start_spectating(rid)
+						if AudioManager:
+							AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 				get_viewport().set_input_as_handled()
 			KEY_DELETE:
 				if _selected_idx >= 0 and _selected_idx < _replays.size() and ReplaySystem:
@@ -143,6 +157,10 @@ func _unhandled_input(event: InputEvent) -> void:
 						ReplaySystem.delete_replay(rid)
 						_refresh_replays()
 						GameManager.add_message("🗑 Replay deleted")
+						# Delete SFX — craft-fail buzz for consistent negative
+						# action feedback (deletion is a destructive action).
+						if AudioManager:
+							AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 				get_viewport().set_input_as_handled()
 
 

@@ -44,6 +44,11 @@ func _process(delta: float) -> void:
 	# Toggle visibility on Tab key
 	if Input.is_action_just_pressed("missions"):
 		_visible_flag = not _visible_flag
+		# UI toggle SFX — opening plays at 1.0× pitch, closing at 0.85×
+		# (slightly lower, concluding) mirroring the pause menu and
+		# photo mode open/close audio language.
+		if AudioManager:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0 if _visible_flag else 0.85)
 
 	# Smooth fade in/out
 	var target: float = 1.0 if _visible_flag else 0.0

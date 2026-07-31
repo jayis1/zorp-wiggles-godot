@@ -191,6 +191,9 @@ func show_menu() -> void:
 	_refresh_fused_list()
 	_refresh_selection_highlights()
 	_update_fuse_button_state()
+	# Open SFX — confirming click for menu opening.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 
 func hide_menu() -> void:
 	visible = false
@@ -198,6 +201,10 @@ func hide_menu() -> void:
 	if _fuse_button:
 		_fuse_button.disabled = true
 	_refresh_selection_highlights()
+	# Close SFX — slightly lower pitch matching the open/close
+	# audio language used across all UI panels.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
 
 # ─── Selection ───────────────────────────────────────────────────────────────
 

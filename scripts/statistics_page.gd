@@ -29,17 +29,30 @@ func _on_stats_updated() -> void:
 	if _fade_alpha > 0.01 or _visible_flag:
 		queue_redraw()
 
+var _prev_tab: int = 0  # Track tab changes for SFX
+
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("stats_page"):
 		_visible_flag = not _visible_flag
 		if _visible_flag:
 			AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+		else:
+			# Close SFX — slightly lower pitch matching the open/close
+			# audio language used across all UI panels.
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
 	# Tab switching with 1-4 keys when visible
 	if _visible_flag:
-		if Input.is_key_pressed(KEY_1): _current_tab = 0
-		elif Input.is_key_pressed(KEY_2): _current_tab = 1
-		elif Input.is_key_pressed(KEY_3): _current_tab = 2
-		elif Input.is_key_pressed(KEY_4): _current_tab = 3
+		var new_tab := _current_tab
+		if Input.is_key_pressed(KEY_1): new_tab = 0
+		elif Input.is_key_pressed(KEY_2): new_tab = 1
+		elif Input.is_key_pressed(KEY_3): new_tab = 2
+		elif Input.is_key_pressed(KEY_4): new_tab = 3
+		if new_tab != _prev_tab:
+			_current_tab = new_tab
+			_prev_tab = new_tab
+			# Tab switch SFX — subtle ascending pitch per tab index.
+			if AudioManager:
+				AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0 + new_tab * 0.05)
 	# Smooth fade
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)

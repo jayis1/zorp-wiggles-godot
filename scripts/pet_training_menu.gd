@@ -54,7 +54,9 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("pet_training"):
 		if GameManager and not GameManager.is_paused and GameManager.player_is_alive:
 			_visible_flag = not _visible_flag
-			AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
+			# Open at 1.0× pitch, close at 0.85× for the open/close
+			# audio language used across all UI panels.
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0 if _visible_flag else 0.85)
 			if not _visible_flag:
 				_hover_type = ""
 				_hover_id = -1
@@ -62,6 +64,7 @@ func _process(delta: float) -> void:
 		_visible_flag = false
 		_hover_type = ""  # Clear hover so reopening doesn't start with a stale highlight
 		_hover_id = -1
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
 	mouse_filter = Control.MOUSE_FILTER_STOP if _fade_alpha > 0.5 else Control.MOUSE_FILTER_IGNORE

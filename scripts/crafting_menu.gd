@@ -274,6 +274,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_menu_toggled(is_open: bool) -> void:
 	_is_open = is_open
 	visible = is_open
+	# Open/close SFX — open at 1.0× pitch, close at 0.85× matching
+	# the open/close audio language used across all UI panels.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0 if is_open else 0.85)
 	if is_open:
 		_update_inventory_display()
 		_update_discovered_list()

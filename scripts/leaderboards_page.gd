@@ -27,6 +27,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
+var _prev_tab: int = 0  # Track tab changes for SFX
+
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("leaderboards"):
 		_visible_flag = not _visible_flag
@@ -34,14 +36,27 @@ func _process(delta: float) -> void:
 			AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 			_seed_input = ""
 			_seed_input_active = false
-	# Tab switching with 1-5 keys when visible
+		else:
+			# Close SFX — slightly lower pitch to convey "closing",
+			# matching the open/close audio language used across UI panels.
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
+	# Tab switching with 1-6 keys when visible
 	if _visible_flag:
-		if Input.is_key_pressed(KEY_1): _current_tab = 0
-		elif Input.is_key_pressed(KEY_2): _current_tab = 1
-		elif Input.is_key_pressed(KEY_3): _current_tab = 2
-		elif Input.is_key_pressed(KEY_4): _current_tab = 3
-		elif Input.is_key_pressed(KEY_5): _current_tab = 4
-		elif Input.is_key_pressed(KEY_6): _current_tab = 5
+		var new_tab := _current_tab
+		if Input.is_key_pressed(KEY_1): new_tab = 0
+		elif Input.is_key_pressed(KEY_2): new_tab = 1
+		elif Input.is_key_pressed(KEY_3): new_tab = 2
+		elif Input.is_key_pressed(KEY_4): new_tab = 3
+		elif Input.is_key_pressed(KEY_5): new_tab = 4
+		elif Input.is_key_pressed(KEY_6): new_tab = 5
+		if new_tab != _prev_tab:
+			_current_tab = new_tab
+			_prev_tab = new_tab
+			# Tab switch SFX — subtle click so the player hears the tab change,
+			# matching the click-based menus. Pitch varies slightly per tab
+			# index so rapid tab cycling has a gentle ascending arpeggio feel.
+			if AudioManager:
+				AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0 + new_tab * 0.05)
 	# Smooth fade
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
@@ -187,8 +202,16 @@ func _unhandled_input(event: InputEvent) -> void:
 				if not _seed_input.is_empty() and Leaderboards:
 					if Leaderboards.apply_share_seed(_seed_input):
 						GameManager.add_message("🎯 Challenge seed applied!")
+						# Success SFX — bright chime at 1.2× pitch matching
+						# the mode-selector start confirmation sound.
+						if AudioManager:
+							AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.2)
 					else:
 						GameManager.add_message("⚠ Invalid seed — check the format")
+						# Error SFX — craft-fail buzz for consistent negative
+						# feedback language across all validation failures.
+						if AudioManager:
+							AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
 				_seed_input_active = false
 				_seed_input = ""
 			elif ke.keycode == KEY_BACKSPACE:
@@ -208,6 +231,9 @@ func _unhandled_input(event: InputEvent) -> void:
 					var seed: String = Leaderboards.get_share_seed()
 					DisplayServer.clipboard_set(seed)
 					GameManager.add_message("📋 Seed copied to clipboard: %s" % seed)
+					# Copy SFX — soft click confirming clipboard action.
+					if AudioManager:
+						AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 				get_viewport().set_input_as_handled()
 
 

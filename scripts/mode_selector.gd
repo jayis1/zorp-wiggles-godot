@@ -70,6 +70,13 @@ func _gui_input(event: InputEvent) -> void:
 				break
 		if new_hover != _hovered_mode:
 			_hovered_mode = new_hover
+			# Hover SFX — subtle blip when the player's cursor enters a new
+			# mode card, matching the Button-based menus' hover feedback.
+			# Only plays when entering a card (not when leaving to empty space)
+			# to avoid a click on every mouse motion boundary crossing.
+			if new_hover >= 0:
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 			queue_redraw()
 	elif event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ESCAPE:

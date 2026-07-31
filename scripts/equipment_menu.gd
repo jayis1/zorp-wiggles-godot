@@ -122,6 +122,12 @@ func _gui_input(event: InputEvent) -> void:
 				break
 		if new_hover_piece != _hovered_piece or new_hover_cons != _hovered_consumable \
 				or new_hover_refine != _hovered_refine or new_hover_tab != _hovered_tab:
+			# Hover SFX — play when entering a tab header (not on every item
+			# hover, which would be too noisy in the equipment list). Tabs
+			# are the primary navigation element and deserve audio feedback.
+			if new_hover_tab >= 0 and new_hover_tab != _hovered_tab:
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
 			_hovered_piece = new_hover_piece
 			_hovered_consumable = new_hover_cons
 			_hovered_refine = new_hover_refine
