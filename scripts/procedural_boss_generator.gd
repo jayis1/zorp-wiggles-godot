@@ -79,6 +79,10 @@ func generate_boss_at(player_level: int, pos: Vector3) -> Node:
 	GameManager.boss_spawned.emit(boss)
 	boss_generated.emit(boss, boss_name, patterns)
 	GameManager.add_message("☠ PROCEDURAL BOSS: %s has appeared!" % boss_name)
+	# Audio feedback for procedural boss spawn — matches all other boss
+	# spawn paths (arena, world boss, mode-driven) which play SFX_BOSS_SPAWN.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
 	return boss
 
 # ─── Name Generation ────────────────────────────────────────────────────────────

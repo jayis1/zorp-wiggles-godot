@@ -52,6 +52,11 @@ func add_stone(type: int, amount: int = 1) -> void:
 		return
 	_inventory[type] = int(_inventory.get(type, 0)) + amount
 	stone_added.emit(type, _inventory[type])
+	# Soft chime so the player hears the stone pickup — previously the
+	# stone was added silently (the collectible SFX covers the pickup,
+	# but a dedicated chime reinforces the "rare item" feel).
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_PET, 1.3)
 
 
 func get_stone_count(type: int) -> int:
@@ -75,6 +80,9 @@ func consume_stone(type: int) -> bool:
 		return false
 	_inventory[type] = count - 1
 	stone_consumed.emit(type, _inventory[type])
+	# Soft confirmation for stone consumption.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_PET, 0.9)
 	return true
 
 

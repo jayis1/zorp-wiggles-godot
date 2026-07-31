@@ -178,6 +178,11 @@ func _show() -> void:
 	_tooltip.visible = true
 	_is_visible = true
 	_position_at_cursor()
+	# Soft hover blip so the player notices the tooltip appeared —
+	# previously the tooltip faded in silently. Very quiet so it doesn't
+	# become annoying with frequent hover changes.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_HOVER, 0.7)
 
 
 func _update_content() -> void:

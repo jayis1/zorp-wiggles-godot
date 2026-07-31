@@ -260,9 +260,9 @@ func _update_timers(delta: float) -> void:
 		if player and is_instance_valid(player):
 			var break_color: Color = Color(0.5, 0.5, 0.5)
 			match key:
-				"speed": break_color = Color(50.0 / 255.0, 1.0, 50.0 / 255.0)
-				"damage": break_color = Color(1.0, 100.0 / 255.0, 50.0 / 255.0)
-				"xp": break_color = Color(100.0 / 255.0, 200.0 / 255.0, 1.0)
+				"speed": break_color = Color(0.196, 1.0, 0.196)
+				"damage": break_color = Color(1.0, 0.392, 0.196)
+				"xp": break_color = Color(0.392, 0.784, 1.0)
 			ParticleEffects.spawn_shield_break_shatter(player.get_parent(), player.global_position, break_color)
 		# ── Buff expiration SFX ── A short descending chime so the player
 		# knows their buff just wore off. Paired with the shatter particles

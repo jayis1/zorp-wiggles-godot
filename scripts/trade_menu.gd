@@ -211,7 +211,7 @@ func _draw() -> void:
 	draw_rect(Rect2(panel_x, panel_y, panel_w, panel_h), bg, true)
 
 	# ── Border (warm orange — trader color) ──
-	var border_col := Color(1.0, 200.0 / 255.0, 100.0 / 255.0, 0.6 * a)
+	var border_col := Color(1.0, 0.784, 0.392, 0.6 * a)
 	draw_rect(Rect2(panel_x, panel_y, panel_w, panel_h), border_col, false, 2.0)
 
 	# ── Title ──
@@ -243,7 +243,7 @@ func _draw() -> void:
 
 	# Divider
 	draw_line(Vector2(panel_x + 15, panel_y + 45), Vector2(panel_x + panel_w - 15, panel_y + 45),
-		Color(1.0, 200.0 / 255.0, 100.0 / 255.0, 0.3 * a), 1.0)
+		Color(1.0, 0.784, 0.392, 0.3 * a), 1.0)
 
 	# ── Items grid ──
 	_item_rects.clear()
@@ -285,12 +285,12 @@ func _draw() -> void:
 		draw_rect(rect, item_bg_col, true)
 
 		# Item border
-		var item_border := Color(1.0, 200.0 / 255.0, 100.0 / 255.0, 0.3 * a)
+		var item_border := Color(1.0, 0.784, 0.392, 0.3 * a)
 		if can_afford:
 			item_border = Color(0.4, 1.0, 0.5, 0.4 * a)
 		# Hover brightens the border toward full warm orange
 		if hover_glow > 0.01:
-			var hover_border := Color(1.0, 200.0 / 255.0, 100.0 / 255.0, 0.9 * a)
+			var hover_border := Color(1.0, 0.784, 0.392, 0.9 * a)
 			item_border = item_border.lerp(hover_border, hover_glow)
 		var border_width: float = 1.0 + hover_glow * 1.0  # 1px → 2px on hover
 		# Purchase flash: draw a bright pulsing border on the just-bought item

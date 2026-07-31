@@ -29,7 +29,7 @@ func _ready() -> void:
 	detect_range = 30.0
 	xp_reward = 40
 	score_reward = 150
-	base_color = Color(180.0 / 255.0, 0.0, 1.0)  # Purple
+	base_color = Color(0.706, 0.0, 1.0)  # Purple
 	super._ready()
 
 	cooldown_timer = randf_range(
@@ -45,7 +45,7 @@ func _ready() -> void:
 	pull_ring = MeshInstance3D.new()
 	pull_ring.mesh = ring_mesh
 	var ring_mat := StandardMaterial3D.new()
-	ring_mat.albedo_color = Color(180.0 / 255.0, 0.0, 1.0, 0.0)
+	ring_mat.albedo_color = Color(0.706, 0.0, 1.0, 0.0)
 	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	pull_ring.material_override = ring_mat
 	add_child(pull_ring)
@@ -141,7 +141,7 @@ func _physics_process(delta: float) -> void:
 				pull_ring.visible = true
 				var mat := pull_ring.material_override as StandardMaterial3D
 				if mat:
-					mat.albedo_color = Color(180.0 / 255.0, 0.0, 1.0, 0.15)
+					mat.albedo_color = Color(0.706, 0.0, 1.0, 0.15)
 
 		# Activate pull
 		if cooldown_timer <= 0 and is_alerted and dist_to_player < GameConstants.GRAVITON_PULL_RADIUS:
@@ -151,7 +151,7 @@ func _physics_process(delta: float) -> void:
 				pull_ring.visible = true
 				var mat := pull_ring.material_override as StandardMaterial3D
 				if mat:
-					mat.albedo_color = Color(180.0 / 255.0, 0.0, 1.0, 0.3)
+					mat.albedo_color = Color(0.706, 0.0, 1.0, 0.3)
 			# ── Phase 8: Enable the Area3D gravity well for RigidBody physics objects
 			if gravity_well:
 				gravity_well.gravity = GameConstants.GRAVITON_AREA_GRAVITY

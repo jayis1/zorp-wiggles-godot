@@ -159,6 +159,12 @@ func rebind_action(action_name: String, new_event: InputEvent) -> bool:
 	var display: String = get_event_display_name(new_event)
 	binding_rebound.emit(action_name, display)
 	bindings_changed.emit()
+	# Audio confirmation for successful rebind — a bright click so the
+	# player knows the new key was captured. Previously the rebind was
+	# silent (the rebind menu plays its own SFX, but the system itself
+	# had no confirmation).
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.2)
 	return true
 
 
@@ -183,6 +189,9 @@ func reset_to_defaults() -> void:
 	_save_overrides()
 	bindings_reset.emit()
 	bindings_changed.emit()
+	# Audio feedback for reset — a lower-pitched click conveys "reverted".
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.8)
 
 
 ## Get a human-readable name for the current primary binding of an action.

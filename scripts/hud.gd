@@ -574,7 +574,7 @@ func _process(delta: float) -> void:
 		# Ease-out cubic: 1-(1-t)^3 — sharp onset, gentle tail
 		var eased: float = 1.0 - pow(1.0 - flash_progress, 3.0)
 		if _combo_flash_rect:
-			var alpha: float = eased * (40.0 / 255.0)  # Max alpha = 40/255 (subtle)
+			var alpha: float = eased * 0.157  # Max alpha (subtle)
 			var c: Color = _combo_flash_rect.color
 			c.a = alpha
 			_combo_flash_rect.color = c
@@ -1233,7 +1233,7 @@ func _on_combo_milestone(combo: int, tier: int, flash_color: Color) -> void:
 	_combo_flash_timer = GameConstants.COMBO_MILESTONE_FLASH_DURATION
 	if _combo_flash_rect:
 		# Set the flash color with initial alpha
-		_combo_flash_rect.color = Color(flash_color.r, flash_color.g, flash_color.b, 40.0 / 255.0)
+		_combo_flash_rect.color = Color(flash_color.r, flash_color.g, flash_color.b, 0.157)
 
 # ─── Pickup Streak Milestone ──────────────────────────────────────────────────
 func _on_pickup_streak_milestone(streak: int, xp_bonus: int) -> void:

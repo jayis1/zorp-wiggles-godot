@@ -147,6 +147,11 @@ func change_scene(scene_path: String, fade_out: float = DEFAULT_FADE_OUT_TIME, f
 	_phase_duration = _fade_out_time
 	_overlay.color.a = 0.0
 	_shimmer.color.a = 0.0
+	# Play a soft whoosh so the scene change has an audio identity —
+	# previously the fade-to-black was completely silent, making the
+	# transition feel like a technical hitch rather than a stylized cut.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	transition_started.emit()
 	return true
 
@@ -165,6 +170,9 @@ func fade_callback(callback: Callable, fade_out: float = DEFAULT_FADE_OUT_TIME, 
 	_phase_duration = _fade_out_time
 	_overlay.color.a = 0.0
 	_shimmer.color.a = 0.0
+	# Audio feedback for non-scene transitions (mode switches, restarts)
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	# Connect a one-shot midpoint listener that fires the callback
 	transition_midpoint.connect(callback, CONNECT_ONE_SHOT)
 	transition_started.emit()

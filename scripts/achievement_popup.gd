@@ -437,7 +437,7 @@ func _draw() -> void:
 		draw_rect(Rect2(panel_x, y, panel_width, this_height), bg, true)
 
 		# Draw gold border
-		var border := Color(1.0, 215.0 / 255.0, 0.0, 0.7 * entry.alpha)
+		var border := Color(1.0, 0.843, 0.0, 0.7 * entry.alpha)
 		draw_rect(Rect2(panel_x, y, panel_width, this_height), border, false, 2.0)
 
 		# Draw icon (large, left side)
@@ -446,7 +446,7 @@ func _draw() -> void:
 		font.draw_string(get_canvas_item(),
 			Vector2(panel_x + 10, y + icon_ts.y + 8),
 			entry.achievement.icon, HORIZONTAL_ALIGNMENT_LEFT, -1, icon_size,
-			Color(1.0, 215.0 / 255.0, 0.0, entry.alpha))
+			Color(1.0, 0.843, 0.0, entry.alpha))
 
 		# Draw title (bold-looking, larger)
 		var title_size: int = 18
@@ -467,7 +467,7 @@ func _draw() -> void:
 		font.draw_string(get_canvas_item(),
 			Vector2(panel_x + 50, y + 12),
 			"ACHIEVEMENT UNLOCKED", HORIZONTAL_ALIGNMENT_LEFT, -1, label_size,
-			Color(1.0, 215.0 / 255.0, 0.0, 0.6 * entry.alpha))
+			Color(1.0, 0.843, 0.0, 0.6 * entry.alpha))
 
 		# ── Progress bar ── For progress-based achievements, draw a thin
 		#    bar at the bottom of the panel showing progress toward the goal.
@@ -485,7 +485,7 @@ func _draw() -> void:
 			draw_rect(Rect2(bar_x, bar_y, bar_w, bar_h), track_col, true)
 			# Fill (gold, width = frac * bar_w)
 			var fill_w: float = bar_w * entry.progress_frac
-			var fill_col := Color(1.0, 215.0 / 255.0, 0.0, 0.9 * entry.alpha)
+			var fill_col := Color(1.0, 0.843, 0.0, 0.9 * entry.alpha)
 			draw_rect(Rect2(bar_x, bar_y, fill_w, bar_h), fill_col, true)
 			# Progress text (right-aligned in the remaining space)
 			var pt_size: int = 10

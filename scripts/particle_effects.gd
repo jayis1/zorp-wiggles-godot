@@ -126,7 +126,7 @@ static func spawn_levelup_burst(parent: Node, pos: Vector3) -> void:
 	ring_mesh.rings = 2
 	ring.mesh = ring_mesh
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(1.0, 215.0 / 255.0, 0.0, 0.8)
+	mat.albedo_color = Color(1.0, 0.843, 0.0, 0.8)
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.emission_enabled = true
@@ -186,12 +186,12 @@ static func spawn_levelup_burst(parent: Node, pos: Vector3) -> void:
 ## Spawn combo milestone fireworks: 6-color particle burst.
 static func spawn_combo_fireworks(parent: Node, pos: Vector3, tier: int = 1) -> void:
 	var colors := [
-		Color(1.0, 60.0 / 255.0, 60.0 / 255.0),
-		Color(60.0 / 255.0, 200.0 / 255.0, 1.0),
-		Color(1.0, 215.0 / 255.0, 50.0 / 255.0),
-		Color(200.0 / 255.0, 80.0 / 255.0, 1.0),
-		Color(60.0 / 255.0, 1.0, 80.0 / 255.0),
-		Color(255.0 / 255.0, 150.0 / 255.0, 220.0 / 255.0),
+		Color(1.0, 0.235, 0.235),
+		Color(0.235, 0.784, 1.0),
+		Color(1.0, 0.843, 0.196),
+		Color(0.784, 0.314, 1.0),
+		Color(0.235, 1.0, 0.314),
+		Color(1.0, 0.588, 0.863),
 	]
 	var color: Color = colors[(tier - 1) % colors.size()]
 

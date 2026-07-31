@@ -32,6 +32,16 @@ var _ground_glow: MeshInstance3D
 var _corner_crystals: Array[MeshInstance3D] = []
 var _light: OmniLight3D
 
+# ── Dormant (cooldown) color palette — muted gray-green ──
+const _DORMANT_BASE := Color(0.235, 0.392, 0.275)       # ~60,100,70
+const _DORMANT_RING_ALPHA := Color(0.235, 0.392, 0.275, 0.078)  # ~20/255 alpha
+const _DORMANT_DISC_ALPHA := Color(0.235, 0.392, 0.275, 0.039)  # ~10/255 alpha
+
+# ── Active (ready) color palette — vibrant green ──
+const _ACTIVE_CRYSTAL := Color(0.392, 1.0, 0.588)       # ~100,255,150
+const _ACTIVE_DISC_ALPHA := Color(0.392, 1.0, 0.588, 0.118)  # ~30/255 alpha
+const _ACTIVE_RING_ALPHA_BASE := 0.314  # ~80/255 base glow alpha
+
 func _ready() -> void:
 	_bob_offset = randf() * TAU
 	_glow_phase = randf() * TAU
@@ -45,7 +55,7 @@ func _build_visuals() -> void:
 	_base = _create_box(
 		Vector3(0, 0.5, 0),
 		Vector3(2.0, 1.0, 2.0),
-		Color(60.0 / 255.0, 80.0 / 255.0, 60.0 / 255.0)
+		Color(0.235, 0.314, 0.235)
 	)
 	add_child(_base)
 
@@ -61,7 +71,7 @@ func _build_visuals() -> void:
 	_ring = _create_ring(
 		Vector3(0, 2.5, 0),
 		3.5,
-		Color(100.0 / 255.0, 1.0, 150.0 / 255.0, 60.0 / 255.0)
+		Color(0.392, 1.0, 0.588, 0.235)
 	)
 	add_child(_ring)
 
@@ -69,7 +79,7 @@ func _build_visuals() -> void:
 	_ground_glow = _create_ground_disc(
 		Vector3(0, 0.05, 0),
 		5.0,
-		Color(100.0 / 255.0, 1.0, 150.0 / 255.0, 30.0 / 255.0)
+		Color(0.392, 1.0, 0.588, 0.118)
 	)
 	add_child(_ground_glow)
 
@@ -79,7 +89,7 @@ func _build_visuals() -> void:
 		var cc := _create_sphere(
 			Vector3(cos(rad) * 1.5, 1.2, sin(rad) * 1.5),
 			0.6,
-			Color(120.0 / 255.0, 220.0 / 255.0, 160.0 / 255.0)
+			Color(0.471, 0.863, 0.627)
 		)
 		_corner_crystals.append(cc)
 		add_child(cc)
@@ -114,42 +124,43 @@ func _process(delta: float) -> void:
 		if _crystal:
 			var mat: StandardMaterial3D = _crystal.material_override
 			if mat:
-				mat.albedo_color = Color(60.0 / 255.0, 100.0 / 255.0, 70.0 / 255.0)
+				mat.albedo_color = _DORMANT_BASE
 				if mat.emission_enabled:
 					mat.emission_energy_multiplier = 0.2
 		if _ring:
 			var mat2: StandardMaterial3D = _ring.material_override
 			if mat2:
-				mat2.albedo_color = Color(60.0 / 255.0, 100.0 / 255.0, 70.0 / 255.0, 20.0 / 255.0)
+				mat2.albedo_color = _DORMANT_RING_ALPHA
 				if mat2.emission_enabled:
 					mat2.emission_energy_multiplier = 0.2
 		if _ground_glow:
 			var mat3: StandardMaterial3D = _ground_glow.material_override
 			if mat3:
-				mat3.albedo_color = Color(60.0 / 255.0, 100.0 / 255.0, 70.0 / 255.0, 10.0 / 255.0)
+				mat3.albedo_color = _DORMANT_DISC_ALPHA
 				if mat3.emission_enabled:
 					mat3.emission_energy_multiplier = 0.15
 		if _light:
 			_light.light_energy = 0.3 + _discharge_light_energy
 	else:
 		# Active/ready state — vibrant green glow
-		var glow_a: float = (80.0 + 40.0 * sin(_time * 3.0)) / 255.0
+		# Ring alpha breathes: 0.235 ± 0.157 (≈ 80±40 out of 255)
+		var glow_a: float = _ACTIVE_RING_ALPHA_BASE + 0.157 * sin(_time * 3.0)
 		if _crystal:
 			var mat: StandardMaterial3D = _crystal.material_override
 			if mat:
-				mat.albedo_color = Color(100.0 / 255.0, 1.0, 150.0 / 255.0)
+				mat.albedo_color = _ACTIVE_CRYSTAL
 				if mat.emission_enabled:
 					mat.emission_energy_multiplier = 1.0
 		if _ring:
 			var mat2: StandardMaterial3D = _ring.material_override
 			if mat2:
-				mat2.albedo_color = Color(100.0 / 255.0, 1.0, 150.0 / 255.0, glow_a)
+				mat2.albedo_color = Color(_ACTIVE_CRYSTAL.r, _ACTIVE_CRYSTAL.g, _ACTIVE_CRYSTAL.b, glow_a)
 				if mat2.emission_enabled:
 					mat2.emission_energy_multiplier = 0.8
 		if _ground_glow:
 			var mat3: StandardMaterial3D = _ground_glow.material_override
 			if mat3:
-				mat3.albedo_color = Color(100.0 / 255.0, 1.0, 150.0 / 255.0, 30.0 / 255.0)
+				mat3.albedo_color = _ACTIVE_DISC_ALPHA
 				if mat3.emission_enabled:
 					mat3.emission_energy_multiplier = 0.6
 		if _light:

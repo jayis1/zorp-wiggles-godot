@@ -131,6 +131,10 @@ func set_skin(skin_id: int) -> void:
 	_active_skin = skin_id
 	_save()
 	skin_changed.emit(_active_skin)
+	# Audio feedback so the player hears their skin change — previously
+	# cycling skins with F10 was completely silent.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 	print("[Cosmetics] Skin set to: %s" % GameConstants.SKIN_NAMES[_active_skin])
 
 
@@ -206,6 +210,9 @@ func set_trail_style(style_id: int) -> void:
 	_active_trail_style = style_id
 	_save()
 	trail_style_changed.emit(_active_trail_style)
+	# Audio feedback for trail style change.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.1)
 
 
 func cycle_trail_style() -> int:
@@ -226,6 +233,9 @@ func set_trail_color_index(idx: int) -> void:
 	_active_trail_color_index = idx
 	_save()
 	trail_color_changed.emit(_active_trail_color_index)
+	# Audio feedback for trail color change.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.2)
 
 
 func cycle_trail_color() -> int:
@@ -275,6 +285,9 @@ func refresh_unlocks() -> void:
 			print("[Cosmetics] Skin unlocked: %s" % GameConstants.SKIN_NAMES[skin_id])
 			if GameManager:
 				GameManager.add_message("🎨 Skin unlocked: %s!" % GameConstants.SKIN_NAMES[skin_id])
+			# Celebratory chime for skin unlock — a significant milestone.
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
 
 
 func _on_level_up(level: int) -> void:

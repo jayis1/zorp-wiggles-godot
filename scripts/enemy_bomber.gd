@@ -25,7 +25,7 @@ func _ready() -> void:
 	detect_range = 28.0
 	xp_reward = 25
 	score_reward = 100
-	base_color = Color(80.0 / 255.0, 0.0, 40.0 / 255.0)  # Dark purple-red
+	base_color = Color(0.314, 0.0, 0.157)  # Dark purple-red
 	super._ready()
 
 	# Create explosion warning ring

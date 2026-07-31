@@ -123,6 +123,10 @@ func start_daily_attempt() -> bool:
 	_last_attempt_date = get_today_date_string()
 	_save()
 	daily_attempt_started.emit(_today_seed)
+	# Audio cue for daily challenge start — a bright chime marks the
+	# beginning of a special, one-attempt-per-day run.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
 	print("[DailyChallenge] Attempt started — seed: %d, date: %s" % [_today_seed, _last_attempt_date])
 	return true
 

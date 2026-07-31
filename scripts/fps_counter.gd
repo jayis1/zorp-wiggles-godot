@@ -87,6 +87,10 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("fps_counter"):
 		_visible_flag = not _visible_flag
+		# Audio feedback for the FPS overlay toggle — a soft click so
+		# the player knows the key registered. Previously F3 was silent.
+		if AudioManager:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0 if _visible_flag else 0.85)
 		# Consume so it doesn't fall through (e.g. to other F-key handlers)
 		get_viewport().set_input_as_handled()
 

@@ -98,13 +98,13 @@ func _process(delta: float) -> void:
 		if _inner_ring:
 			var mat: StandardMaterial3D = _inner_ring.material_override
 			if mat:
-				mat.albedo_color = Color(0.0, 100.0 / 255.0, 100.0 / 255.0, 80.0 / 255.0)
+				mat.albedo_color = Color(0.0, 0.392, 0.392, 0.314)
 				if mat.emission_enabled:
 					mat.emission_energy_multiplier = 0.3
 		if _outer_ring:
 			var mat2: StandardMaterial3D = _outer_ring.material_override
 			if mat2:
-				mat2.albedo_color = Color(50.0 / 255.0, 0.0, 100.0 / 255.0, 30.0 / 255.0)
+				mat2.albedo_color = Color(0.196, 0.0, 0.392, 0.118)
 				if mat2.emission_enabled:
 					mat2.emission_energy_multiplier = 0.3
 	else:

@@ -213,6 +213,10 @@ func play_replay(replay_id: String) -> bool:
 	_spawn_ghost()
 	_playing = true
 	playback_started.emit(replay_id)
+	# Soft whoosh when a replay starts playing — gives the ghost a sonic
+	# entrance. Previously the ghost appeared silently.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	print("[ReplaySystem] Playing replay %s (%d samples)" % [replay_id, samples.size()])
 	return true
 
@@ -299,6 +303,9 @@ func _finish_playback() -> void:
 	_play_samples.clear()
 	_play_idx = 0
 	playback_finished.emit()
+	# Soft SFX when a replay finishes — a gentle click conveys "done".
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.8)
 	print("[ReplaySystem] Playback finished")
 
 

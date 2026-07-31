@@ -172,6 +172,9 @@ func start_spectating(replay_id: String) -> bool:
 	# Create the HUD overlay
 	_create_hud()
 	spectating_started.emit(replay_id)
+	# Audio feedback for entering spectator mode — a soft whoosh.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	print("[Spectator] Spectating replay: %s" % replay_id)
 	return true
 
@@ -200,6 +203,9 @@ func stop_spectating() -> void:
 	_replay_id = ""
 	_replay_info = {}
 	spectating_stopped.emit()
+	# Audio feedback for exiting spectator mode — a lower-pitched click.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.8)
 	print("[Spectator] Stopped spectating")
 
 func cycle_next_replay() -> void:

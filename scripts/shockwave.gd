@@ -43,7 +43,7 @@ static func _ensure_shared_mesh() -> void:
 		_shared_mesh.rings = 2
 	if _shared_material_base == null:
 		_shared_material_base = StandardMaterial3D.new()
-		_shared_material_base.albedo_color = Color(1.0, 200.0 / 255.0, 50.0 / 255.0, 0.6)
+		_shared_material_base.albedo_color = Color(1.0, 0.784, 0.196, 0.6)
 		_shared_material_base.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		_shared_material_base.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		_shared_material_base.emission_enabled = true

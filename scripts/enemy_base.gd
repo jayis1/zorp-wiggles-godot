@@ -656,16 +656,19 @@ func _execute_attack_on_enemy(target: Node3D) -> void:
 		target.take_damage_from(damage, global_position)
 	elif target.has_method("take_damage"):
 		target.take_damage(damage)
-	# Lunge animation toward the target
+	# Lunge toward the target — set velocity so move_and_slide() handles the
+	# movement. Previously this used a tween on global_position which fought
+	# move_and_slide() (the physics step moved the enemy by decaying velocity
+	# while the tween also set position, causing jerky/shortened lunges).
+	# Using velocity integrates cleanly with the physics system and the
+	# separation/knockback forces that also run in _physics_process.
 	var lunge_dir := (target.global_position - global_position).normalized()
 	lunge_dir.y = 0
 	var lunge_mult := clampf(base_scale / GameConstants.ENEMY_ATTACK_LUNGE_SIZE_BASE,
 		GameConstants.ENEMY_ATTACK_LUNGE_SIZE_MULT_MIN, 1.0)
 	var lunge_dist := GameConstants.ENEMY_ATTACK_LUNGE_DISTANCE * lunge_mult
-	var lunge_tween := create_tween()
-	lunge_tween.tween_property(self, "global_position",
-		global_position + lunge_dir * lunge_dist,
-		GameConstants.ENEMY_ATTACK_LUNGE_DURATION)
+	velocity = lunge_dir * (lunge_dist / GameConstants.ENEMY_ATTACK_LUNGE_DURATION)
+	velocity.y = 0
 	# Lunge stretch
 	if body_mesh:
 		var stretch_scale := Vector3(1.0 - 0.15, 1.0 + 0.3, 1.0 - 0.15)
@@ -785,16 +788,15 @@ func _execute_attack(player: Node3D) -> void:
 		elif player.has_method("take_damage"):
 			player.take_damage(damage)
 		# Skip player-damage routing and variant on-player-hit effects
-		# Lunge animation
+		# Lunge toward the target — set velocity so move_and_slide() handles
+		# the movement (avoids fighting the physics step's position writes).
 		var lunge_dir_mc := (player.global_position - global_position).normalized()
 		lunge_dir_mc.y = 0
 		var lunge_mult_mc := clampf(base_scale / GameConstants.ENEMY_ATTACK_LUNGE_SIZE_BASE,
 			GameConstants.ENEMY_ATTACK_LUNGE_SIZE_MULT_MIN, 1.0)
 		var lunge_dist_mc := GameConstants.ENEMY_ATTACK_LUNGE_DISTANCE * lunge_mult_mc
-		var lunge_tween_mc := create_tween()
-		lunge_tween_mc.tween_property(self, "global_position",
-			global_position + lunge_dir_mc * lunge_dist_mc,
-			GameConstants.ENEMY_ATTACK_LUNGE_DURATION)
+		velocity = lunge_dir_mc * (lunge_dist_mc / GameConstants.ENEMY_ATTACK_LUNGE_DURATION)
+		velocity.y = 0
 		if body_mesh:
 			var stretch_scale_mc := Vector3(1.0 - 0.15, 1.0 + 0.3, 1.0 - 0.15)
 			var lunge_stretch_mc := create_tween()
@@ -827,17 +829,18 @@ func _execute_attack(player: Node3D) -> void:
 	attack_dir.y = 0
 	_trigger_camera_trauma(0.2, attack_dir)
 
-	# Forward lunge
+	# Forward lunge — set velocity so move_and_slide() handles the movement.
+	# Previously used a tween on global_position which fought the physics step
+	# (move_and_slide moved the enemy by decaying velocity while the tween
+	# also set position, causing jerky/shortened lunges). Using velocity
+	# integrates cleanly with knockback, separation, and other physics forces.
 	var lunge_dir := (player.global_position - global_position).normalized()
 	lunge_dir.y = 0
 	var lunge_mult := clampf(base_scale / GameConstants.ENEMY_ATTACK_LUNGE_SIZE_BASE,
 		GameConstants.ENEMY_ATTACK_LUNGE_SIZE_MULT_MIN, 1.0)
 	var lunge_dist := GameConstants.ENEMY_ATTACK_LUNGE_DISTANCE * lunge_mult
-
-	var lunge_tween := create_tween()
-	lunge_tween.tween_property(self, "global_position",
-		global_position + lunge_dir * lunge_dist,
-		GameConstants.ENEMY_ATTACK_LUNGE_DURATION)
+	velocity = lunge_dir * (lunge_dist / GameConstants.ENEMY_ATTACK_LUNGE_DURATION)
+	velocity.y = 0
 
 	# ── Lunge stretch: stretch the body mesh along the lunge direction for a
 	# committed, forceful attack read. The windup compressed the enemy (squash);

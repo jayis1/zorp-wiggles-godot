@@ -132,10 +132,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.keycode == KEY_F6:
 		var mode: int = cycle_filter()
 		GameManager.add_message("🎨 Color Filter: " + FILTER_NAMES[mode])
+		# Audio feedback for filter cycling.
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 		get_viewport().set_input_as_handled()
 	elif event.keycode == KEY_F7:
 		var mode: int = cycle_colorblind_mode()
 		GameManager.add_message("👁 Colorblind: " + COLORBLIND_NAMES[mode])
+		# Audio feedback for colorblind mode cycling.
+		if AudioManager:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.9)
 		get_viewport().set_input_as_handled()
 	elif event.keycode == KEY_F8:
 		if event.shift_pressed:
@@ -144,6 +150,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			var s: float = increase_ui_scale()
 			GameManager.add_message("🔤 UI Scale: %.0f%%" % (s * 100.0))
+		# Audio feedback for UI scale change — pitch rises with scale up,
+		# falls with scale down so the player hears the direction.
+		if AudioManager:
+			var pitch: float = 1.1 if not event.shift_pressed else 0.9
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, pitch)
 		get_viewport().set_input_as_handled()
 
 

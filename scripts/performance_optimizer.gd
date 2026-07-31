@@ -420,6 +420,11 @@ func _evaluate_quality() -> void:
 		var names: Array = ["Low", "Medium", "High", "Ultra"]
 		var name: String = names[_current_quality_level]
 		quality_changed.emit(_current_quality_level, name)
+		# Soft SFX for quality downgrade — a lower-pitched click conveys
+		# "adjusting down" so the player subconsciously registers the
+		# visual quality change had a cause.
+		if AudioManager:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.7)
 		print("[PerformanceOptimizer] Quality downgraded to %s (avg %.1fms, p95 %.1fms)" % [name, avg, p95])
 	# Upgrade if consistently fast and headroom available
 	elif avg < FRAME_BUDGET_MS * 0.6 and p95 < FRAME_BUDGET_MS and _current_quality_level < 3:
@@ -428,6 +433,9 @@ func _evaluate_quality() -> void:
 		var names: Array = ["Low", "Medium", "High", "Ultra"]
 		var name: String = names[_current_quality_level]
 		quality_changed.emit(_current_quality_level, name)
+		# Higher-pitched click for quality upgrade.
+		if AudioManager:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.1)
 		print("[PerformanceOptimizer] Quality upgraded to %s (avg %.1fms, p95 %.1fms)" % [name, avg, p95])
 
 ## Apply a quality level by adjusting engine settings.

@@ -95,6 +95,11 @@ func _do_autosave() -> void:
 		# briefly and fade — unobtrusive during combat.
 		if GameManager and GameManager.has_method("add_message"):
 			GameManager.add_message("💾 Saved")
+		# Soft confirmation chime for the auto-save — a barely-audible
+		# click so the player subconsciously registers that progress was
+		# saved without being distracted from gameplay.
+		if AudioManager:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.7)
 
 
 # ── Public API ──────────────────────────────────────────────────────────────
@@ -156,6 +161,9 @@ func save_game() -> bool:
 	f.store_string(JSON.stringify(data, "  "))
 	f.close()
 	game_saved.emit()
+	# Confirmation chime for manual saves.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.8)
 	return true
 
 
@@ -182,6 +190,10 @@ func load_game() -> bool:
 		return false
 	_apply_state(data)
 	game_loaded.emit()
+	# Positive chime for successful load — higher pitch than save to
+	# distinguish "restored" from "saved".
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.2)
 	return true
 
 

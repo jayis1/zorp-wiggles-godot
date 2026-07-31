@@ -14,7 +14,7 @@ static var TYPES: Dictionary = {
 		"model": "sphere",  "decor": "none",   "detect": 32,
 	},
 	"Space Beetle": {
-		"color": Color(165.0 / 255.0, 42.0 / 255.0, 42.0 / 255.0),  # color.brown = rgb32(165,42,42)
+		"color": Color(0.647, 0.165, 0.165),  # Brown (RGB 165,42,42)
 		"hp": 45,   "speed": 4.5,  "damage": 12,  "scale": 1.2,
 		"model": "cube",    "decor": "wings",   "detect": 32,
 	},

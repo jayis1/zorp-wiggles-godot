@@ -195,7 +195,7 @@ func _update_enrage(delta: float, enemy: EnemyBase) -> void:
 		# Brief red rage burst particle
 		ParticleEffects.spawn_explosion(enemy.get_parent(),
 			enemy.global_position + Vector3(0, 1, 0),
-			Color(1.0, 40.0/255.0, 40.0/255.0), 8, 0.5)
+			Color(1.0, 0.157, 0.157), 8, 0.5)
 
 	# Smooth color transition
 	if is_enraged and _enrage_color_t > 0:
@@ -377,7 +377,7 @@ func _trigger_pack_frenzy(enemy: EnemyBase) -> void:
 		GameManager.add_message("⚠ %s pack frenzy! %d allies enraged!" % [enemy.enemy_name, frenzy_count])
 		ParticleEffects.spawn_explosion(enemy.get_parent(),
 			enemy.global_position + Vector3(0, 1, 0),
-			Color(1.0, 100.0/255.0, 50.0/255.0), 8, 0.5)
+			Color(1.0, 0.392, 0.196), 8, 0.5)
 
 # ─── Call for Help ────────────────────────────────────────────────────────────
 

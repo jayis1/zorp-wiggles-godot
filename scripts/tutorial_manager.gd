@@ -151,6 +151,11 @@ func _show_step(step: int) -> void:
 	_completed[step] = true
 	_save_progress()
 	step_shown.emit(step)
+	# Soft chime so the player has an audio cue that a new tutorial tip
+	# appeared — previously the tooltip faded in silently and was easy to
+	# miss during combat. The chime is gentle so it doesn't startle.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.15)
 	_display_tooltip(step)
 
 
@@ -161,6 +166,10 @@ func dismiss_current() -> void:
 	step_completed.emit(_current_step)
 	_current_step = -1
 	_hide_tooltip()
+	# Confirmation click so the player gets audio feedback for dismissing
+	# a tutorial tip — previously the "Got it!" button was silent.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
 	# Check if all steps are done
 	_check_tutorial_complete()
 

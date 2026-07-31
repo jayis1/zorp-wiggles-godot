@@ -21,7 +21,7 @@ func _ready() -> void:
 	attack_range = 15.0  # Ranged — keeps distance
 	xp_reward = 35
 	score_reward = 150
-	base_color = Color(200.0 / 255.0, 100.0 / 255.0, 0.0)  # Orange-brown
+	base_color = Color(0.784, 0.392, 0.0)  # Orange-brown
 	# ── Phase 10: Ranged kiter — disable flanking/ambush (it has its own kite logic)
 	super._ready()
 	if ai_controller:

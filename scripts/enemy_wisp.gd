@@ -20,7 +20,7 @@ func _ready() -> void:
 	detect_range = 26.0
 	xp_reward = 10
 	score_reward = 40
-	base_color = Color(100.0 / 255.0, 1.0, 200.0 / 255.0, 160.0 / 255.0)
+	base_color = Color(0.392, 1.0, 0.784, 0.627)
 	super._ready()
 
 	# Semi-transparent material

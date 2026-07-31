@@ -73,6 +73,9 @@ func submit_score(entry: Dictionary) -> bool:
 	# Check if it's a new top record
 	if rank == 1:
 		new_record.emit(mode, entry)
+		# Celebratory chime for a new #1 record — a significant milestone.
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
 	score_submitted.emit(mode, rank, entry)
 	print("[Leaderboards] Submitted %s score: rank %d/%d" % [mode, rank, entries.size()])
 	return true

@@ -248,14 +248,6 @@ func _build_arena() -> void:
 		box_mesh.size = box.size
 		mesh_inst.mesh = box_mesh
 		mesh_inst.material_override = wall_mat
-		# Add emission edge strip
-		var edge_mat := StandardMaterial3D.new()
-		edge_mat.albedo_color = glow_color
-		edge_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		edge_mat.emission_enabled = true
-		edge_mat.emission = glow_color
-		edge_mat.emission_energy_multiplier = 2.0
-		mesh_inst.material_override = wall_mat
 		wall.add_child(mesh_inst)
 
 		# Orient wall segment to face center

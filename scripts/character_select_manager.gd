@@ -111,6 +111,11 @@ func set_character(id: int) -> void:
 	_selected = id
 	_save()
 	character_changed.emit(_selected)
+	# Audio feedback for character selection — a confirmation click.
+	# Previously the character selection was silent (the character_select.gd
+	# UI plays its own SFX, but the system-level setter had no feedback).
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 	print("[CharacterSelect] Character set to: %s" % get_character_name(_selected))
 
 

@@ -1,6 +1,6 @@
 # Zorp Wiggles: Godot Conversion Tracker
 
-## Status: ALL PHASES COMPLETE (1-20, 22-35) + Mind Control Dart + Biome Enemy Variants + P2 Visual Feedback + Enhancement Pack 10 (Cooldown-Ready & Failure SFX) + Enhancement Pack 11 (Missing Event SFX & Camera Feedback) + Enhancement Pack 12 (Combo Break Feedback & Weapon Equip SFX & Projectile Fizzle) + Enhancement Pack 13 (Pet Stone Juice + Mutation Combo Announcement + Biome Chime + Photo Mode Audio) + Enhancement Pack 14 (Endgame & Dungeon Event Feedback Polish) + Enhancement Pack 15 (Death Screen Stats + Score Milestones + Low-HP Heal Pulse) + Enhancement Pack 16 (World Life & Companion Event Feedback Polish) + Enhancement Pack 17 (UI Panel Toggle & Interaction SFX Polish) — Phases 1-20, 22-35 complete. All 36 weapon mods now implemented (including Mind Control Dart). Phase 22 biome-specific enemy variants for all 7 new biomes implemented. Phase 35 (Final Polish) 10/10 items complete. Daily Challenge, Weekly Challenge, and offline Spectator Mode implemented. P2 co-op visual feedback parity. Enhancement Pack 10: Cooldown-ready chimes (dash ready SFX + pulse wave ready SFX with distinct pitches), buff expiration SFX, and comprehensive craft-fail SFX across all 6 crafting/upgrade systems (weapon mod crafting menu, equipment system, weapon mod fusion, pet accessory system, pet training system, skill tree). Enhancement Pack 11: Dungeon exit SFX + camera shake + particle burst, loot cave cleared SFX + camera shake + fireworks, door open/close + hidden passage reveal SFX + camera shake, consumable buff expiration SFX, anomalous zone exit SFX + camera shake + HUD message, P1 downed SFX + camera trauma (parity with P2), P1 revive SFX (parity with P2), weather combo end SFX + HUD message. Enhancement Pack 12: Combo streak break SFX (new SFX_COMBO_BREAK) + camera trauma for kill combo (≥5), pickup streak (≥5), and crit chain (≥3) expiry — all three streak types now share consistent "streak lost" audio language; weapon mod equip/unequip SFX (base + fused) for loadout-change feedback; player projectile lifetime fizzle (impact burst in mod color) bringing parity with enemy projectile fizzle. Enhancement ... [truncated]
+## Status: ALL PHASES COMPLETE (1-20, 22-35) + Mind Control Dart + Biome Enemy Variants + P2 Visual Feedback + Enhancement Pack 10 (Cooldown-Ready & Failure SFX) + Enhancement Pack 11 (Missing Event SFX & Camera Feedback) + Enhancement Pack 12 (Combo Break Feedback & Weapon Equip SFX & Projectile Fizzle) + Enhancement Pack 13 (Pet Stone Juice + Mutation Combo Announcement + Biome Chime + Photo Mode Audio) + Enhancement Pack 14 (Endgame & Dungeon Event Feedback Polish) + Enhancement Pack 15 (Death Screen Stats + Score Milestones + Low-HP Heal Pulse) + Enhancement Pack 16 (World Life & Companion Event Feedback Polish) + Enhancement Pack 17 (UI Panel Toggle & Interaction SFX Polish) + Enhancement Pack 18 (System-Level SFX Coverage) — Phases 1-20, 22-35 complete. All 36 weapon mods now implemented (including Mind Control Dart). Phase 22 biome-specific enemy variants for all 7 new biomes implemented. Phase 35 (Final Polish) 10/10 items complete. Daily Challenge, Weekly Challenge, and offline Spectator Mode implemented. P2 co-op visual feedback parity. Enhancement Pack 10: Cooldown-ready chimes (dash ready SFX + pulse wave ready SFX with distinct pitches), buff expiration SFX, and comprehensive craft-fail SFX across all 6 crafting/upgrade systems (weapon mod crafting menu, equipment system, weapon mod fusion, pet accessory system, pet training system, skill tree). Enhancement Pack 11: Dungeon exit SFX + camera shake + particle burst, loot cave cleared SFX + camera shake + fireworks, door open/close + hidden passage reveal SFX + camera shake, consumable buff expiration SFX, anomalous zone exit SFX + camera shake + HUD message, P1 downed SFX + camera trauma (parity with P2), P1 revive SFX (parity with P2), weather combo end SFX + HUD message. Enhancement Pack 12: Combo streak break SFX (new SFX_COMBO_BREAK) + camera trauma for kill combo (≥5), pickup streak (≥5), and crit chain (≥3) expiry — all three streak types now share consistent "streak lost" audio language; weapon mod equip/unequip SFX (base + fused) for loadout-cha... [truncated]
 
 Original: 21,927 lines of Ursina/Python in game.py
 Target: Godot 4.4 GDScript with full feature parity + 12 new features
@@ -1021,4 +1021,73 @@ Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy cor
 
 ### Pet Training Menu Close Pitch Differentiation (`pet_training_menu.gd`)
 - **Open/close pitch differentiation** — the toggle SFX now uses 1.0× pitch for open and 0.85× for close (previously both used the same 1.0× pitch). Esc-close now also plays the close SFX (previously Esc-close was silent).
-- **One-shot metallic groan on near-death entry** — when an enemy first crosses below 10% HP (the `AI_SHUDDER_HP_THRESHOLD`), `SFX_NEAR_DEATH` (a subtle 140→100 Hz descending tone, 0.12s, quiet 0.10 volume) plays once. A `_near_death_sfx_played` flag ensures the SFX fires only once per near-death entry, not on every periodic shudder burst (which repeats every 1-3 seconds). The flag resets if the enemy heals above the threshold, allowing the SFX to fire again if it drops back below. Previously the near-death shudder was purely visual (X/Z scale jitter) — the player had no audio cue that an enemy was on its last legs. The low, quiet descending tone reads as "weakening / about to break," the audio equivalent of the visual tremor, without stacking into noise when multiple enemies are dying simultaneously.
+
+## Enhancement Pack 18 — System-Level SFX Coverage
+
+### Scene Transition SFX (`scene_transition.gd`)
+- **Scene change whoosh** — `change_scene()` and `fade_callback()` now play `SFX_RIFT` (soft whoosh) when a transition begins. Previously the fade-to-black was completely silent, making the transition feel like a technical hitch rather than a stylized cut. The whoosh gives the fade an audio identity so the player subconsciously registers "scene changing" even while looking at a black screen.
+
+### Tutorial Step SFX (`tutorial_manager.gd`)
+- **Step appearance chime** — `_show_step()` now plays `SFX_UI_CLICK` at 1.15× pitch when a new tutorial tooltip appears. Previously the tooltip faded in silently and was easy to miss during combat. The gentle high chime draws the player's attention without being startling.
+- **Step dismiss SFX** — `dismiss_current()` now plays `SFX_UI_CLICK` at 0.85× pitch when the player clicks "Got it!" or "Skip Tutorial". Previously the "Got it!" button was completely silent — the player got no audio confirmation that their click registered.
+
+### Cosmetic Skin & Trail SFX (`cosmetic_manager.gd`)
+- **Skin change SFX** — `set_skin()` now plays `SFX_UI_CLICK` when the active skin changes. Previously cycling skins with F10 was completely silent — the player had no audio cue that their cosmetic changed.
+- **Trail style change SFX** — `set_trail_style()` now plays `SFX_UI_CLICK` at 1.1× pitch. Previously trail style changes were silent.
+- **Trail color change SFX** — `set_trail_color_index()` now plays `SFX_UI_CLICK` at 1.2× pitch (slightly higher to distinguish from style change). Previously trail color changes were silent.
+- **Skin unlock SFX** — `refresh_unlocks()` now plays `SFX_LEVEL_UP` (celebratory chime) when a skin's unlock criteria is met. Previously skin unlocks had only a HUD message — a significant milestone deserved a celebratory sound matching achievement unlocks.
+
+### Accessibility Keyboard Shortcut SFX (`accessibility_manager.gd`)
+- **Color filter cycle SFX** — F6 now plays `SFX_UI_CLICK` when cycling color filters. Previously the filter change had only a HUD message.
+- **Colorblind mode cycle SFX** — F7 now plays `SFX_UI_CLICK` at 0.9× pitch (slightly lower to distinguish from filter). Previously the colorblind mode change was silent.
+- **UI scale change SFX** — F8/Shift+F8 now plays `SFX_UI_CLICK` with pitch 1.1× (scale up) or 0.9× (scale down) so the player hears the direction of the change. Previously UI scale changes were silent.
+
+### Ghost Mode Toggle SFX (`ghost_mode.gd`)
+- **Toggle SFX** — `toggle_ghost()` now plays `SFX_UI_CLICK` at 1.0× (enable) or 0.85× (disable). Previously the ghost mode on/off was completely silent — the player had no audio cue that the toggle registered.
+
+### Save System SFX (`save_system.gd`)
+- **Auto-save chime** — `_do_autosave()` now plays `SFX_UI_CLICK` at 0.7× pitch (very quiet) alongside the existing "💾 Saved" HUD message. Previously the auto-save was silent beyond the text — a barely-audible click lets the player subconsciously register that progress was saved without being distracted from gameplay.
+- **Manual save SFX** — `save_game()` now plays `SFX_UI_CLICK` at 0.8× pitch on successful save. Previously manual saves were silent.
+- **Load SFX** — `load_game()` now plays `SFX_UI_CLICK` at 1.2× pitch (higher than save to distinguish "restored" from "saved"). Previously loading a save was silent.
+
+### Tooltip Appearance SFX (`tooltip_manager.gd`)
+- **Tooltip show blip** — `_show()` now plays `SFX_UI_HOVER` at 0.7× pitch (very quiet) when a tooltip appears after the delay. Previously the tooltip faded in silently — a soft hover blip lets the player know information is available without being annoying during frequent hover changes.
+
+### FPS Counter Toggle SFX (`fps_counter.gd`)
+- **Toggle SFX** — F3 now plays `SFX_UI_CLICK` at 1.0× (show) or 0.85× (hide). Previously the FPS overlay toggle was completely silent — the player had no audio cue that the key registered.
+
+### Pet Stone Inventory SFX (`pet_stone_inventory.gd`)
+- **Stone pickup SFX** — `add_stone()` now plays `SFX_PET` at 1.3× pitch (bright, rare-item feel) when a pet evolution stone is picked up. Previously the stone was added silently — the collectible SFX covers the pickup, but a dedicated chime reinforces the "rare item" feel.
+- **Stone consume SFX** — `consume_stone()` now plays `SFX_PET` at 0.9× pitch (lower, consuming). Previously stone consumption was silent.
+
+### World Modifier Roll SFX (`world_modifier_system.gd`)
+- **Modifier roll SFX** — `roll_modifiers()` now plays `SFX_MUTATION` when world modifiers are rolled for a new run. Previously the modifier roll was completely silent — only a HUD message appeared. The mutation chime (already thematically linked to gameplay-altering effects) gives the roll an audio identity so the player knows this run has special rules.
+
+### Control Rebind SFX (`control_rebind.gd`)
+- **Rebind confirmation SFX** — `rebind_action()` now plays `SFX_UI_CLICK` at 1.2× pitch (bright confirmation) when a new key is successfully bound. Previously the rebind was silent at the system level — the rebind menu plays its own SFX, but the system itself had no confirmation.
+- **Reset to defaults SFX** — `reset_to_defaults()` now plays `SFX_UI_CLICK` at 0.8× pitch (lower, reverting). Previously the reset was silent.
+
+### Character Select SFX (`character_select_manager.gd`)
+- **Character set SFX** — `set_character()` now plays `SFX_UI_CLICK` when the selected character changes. Previously the character selection was silent at the system level — the character_select.gd UI plays its own SFX, but the system-level setter had no feedback.
+
+### Performance Optimizer Quality Change SFX (`performance_optimizer.gd`)
+- **Quality downgrade SFX** — `_evaluate_quality()` now plays `SFX_UI_CLICK` at 0.7× pitch when auto-quality downgrades. Previously the visual quality change was silent — the player saw the game get blurmer without knowing why. The lower-pitched click conveys "adjusting down".
+- **Quality upgrade SFX** — auto-quality upgrade plays `SFX_UI_CLICK` at 1.1× pitch (higher, positive). Previously quality upgrades were silent.
+
+### Daily & Weekly Challenge Start SFX (`daily_challenge_system.gd` + `weekly_challenge_system.gd`)
+- **Daily challenge start SFX** — `start_daily_attempt()` now plays `SFX_LEVEL_UP` (bright chime) when a daily challenge attempt begins. Previously the start of a special, one-attempt-per-day run was silent.
+- **Weekly challenge start SFX** — `start_weekly_attempt()` now plays `SFX_LEVEL_UP` when a weekly challenge attempt begins. Previously the start of a limited-attempts-per-week run was silent.
+
+### Procedural Boss Spawn SFX (`procedural_boss_generator.gd`)
+- **Boss spawn SFX** — `generate_boss_at()` now plays `SFX_BOSS_SPAWN` when a procedural boss appears. Previously the procedural boss spawn had a HUD message but no audio — all other boss spawn paths (arena, world boss, mode-driven) already played `SFX_BOSS_SPAWN`, so this was an inconsistency.
+
+### Replay System SFX (`replay_system.gd`)
+- **Playback start SFX** — `play_replay()` now plays `SFX_RIFT` (soft whoosh) when a replay starts playing. Previously the ghost appeared silently.
+- **Playback finish SFX** — `_finish_playback()` now plays `SFX_UI_CLICK` at 0.8× pitch when a replay finishes. Previously the replay ended silently.
+
+### Spectator Mode SFX (`spectator_mode.gd`)
+- **Enter spectator SFX** — `start_spectating()` now plays `SFX_RIFT` (soft whoosh) when entering spectator mode. Previously entering spectator was silent.
+- **Exit spectator SFX** — `stop_spectating()` now plays `SFX_UI_CLICK` at 0.8× pitch when exiting spectator mode. Previously exiting was silent.
+
+### Leaderboard New Record SFX (`leaderboards.gd`)
+- **New #1 record SFX** — `submit_score()` now plays `SFX_LEVEL_UP` (celebratory chime) when a submitted score becomes the new #1 record for its mode. Previously achieving a new top score had only a signal emission — the player had no audio feedback for hitting the top of the leaderboard.

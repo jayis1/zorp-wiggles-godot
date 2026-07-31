@@ -257,6 +257,11 @@ func roll_modifiers(world_seed: int) -> void:
 		modifier_added.emit(mod_id)
 	modifiers_rolled.emit(_active_modifiers)
 	_is_initialized = true
+	# Play a distinctive arpeggio when world modifiers are rolled so the
+	# player has an audio cue that this run has special rules — previously
+	# the modifier roll was completely silent (only a HUD message appeared).
+	if AudioManager and _active_modifiers.size() > 0:
+		AudioManager.play_sfx(AudioManager.SFX_MUTATION)
 	# Print the rolled modifiers for debugging
 	print("[WorldModifiers] Rolled %d modifiers for seed %d:" % [_active_modifiers.size(), world_seed])
 	for mod_id in _active_modifiers:

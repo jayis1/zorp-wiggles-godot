@@ -20,7 +20,7 @@ func _ready() -> void:
 	attack_range = 0.0  # No melee — uses shockwaves
 	xp_reward = 35
 	score_reward = 150
-	base_color = Color(1.0, 200.0 / 255.0, 50.0 / 255.0)  # Gold-orange
+	base_color = Color(1.0, 0.784, 0.196)  # Gold-orange
 	# ── Phase 10: Stationary turret — disable movement-based AI behaviors
 	use_smart_ai = false  # Sentinel doesn't move, so AI behaviors are irrelevant
 	super._ready()

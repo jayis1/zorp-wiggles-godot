@@ -80,6 +80,10 @@ func toggle_ghost() -> bool:
 	ghost_enabled_changed.emit(_ghost_enabled)
 	if not _ghost_enabled:
 		stop_ghost()
+	# Audio feedback for ghost mode toggle — a soft click confirms the
+	# toggle. Previously the ghost on/off was completely silent.
+	if AudioManager:
+		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0 if _ghost_enabled else 0.85)
 	return _ghost_enabled
 
 

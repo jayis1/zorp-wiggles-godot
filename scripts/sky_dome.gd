@@ -126,7 +126,7 @@ func _build_nebula() -> void:
 		var nebula_size: float = randf_range(30.0, 80.0)
 		var nebula_color: Color = GameConstants.NEBULA_COLORS[i % GameConstants.NEBULA_COLORS.size()]
 		# Translucent
-		nebula_color.a = 25.0 / 255.0
+		nebula_color.a = 0.098
 
 		var cloud := _create_billboard_quad(
 			Vector3(nx, ny, nz),
@@ -153,7 +153,7 @@ func _build_horizon_glow() -> void:
 		var gy: float = randf_range(GameConstants.HORIZON_GLOW_HEIGHT_MIN, GameConstants.HORIZON_GLOW_HEIGHT_MAX)
 		var glow_size: float = randf_range(60.0, 120.0)
 		var glow_color: Color = horizon_palette[i % horizon_palette.size()]
-		glow_color.a = GameConstants.HORIZON_GLOW_ALPHA_BASE + randf_range(-10.0, 10.0) / 255.0
+		glow_color.a = GameConstants.HORIZON_GLOW_ALPHA_BASE + randf_range(-0.039, 0.039)
 
 		var glow := _create_billboard_quad(
 			Vector3(gx, gy, gz),

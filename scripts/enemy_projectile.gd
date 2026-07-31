@@ -11,7 +11,7 @@ class_name EnemyProjectile
 @export var speed: float = 20.0
 @export var damage: int = 12
 @export var lifetime: float = 3.0
-@export var projectile_color: Color = Color(1.0, 120.0 / 255.0, 20.0 / 255.0)
+@export var projectile_color: Color = Color(1.0, 0.471, 0.078)
 
 var direction: Vector3 = Vector3.FORWARD
 var age: float = 0.0

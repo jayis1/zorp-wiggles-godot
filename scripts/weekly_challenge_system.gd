@@ -134,6 +134,10 @@ func start_weekly_attempt() -> bool:
 	_attempts_used += 1
 	_save()
 	weekly_attempt_started.emit(_week_seed)
+	# Audio cue for weekly challenge start — a triumphant chime marks
+	# the beginning of a special, limited-attempts-per-week run.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
 	print("[WeeklyChallenge] Attempt %d/%d started — seed: %d, week: %s" % [_attempts_used, WEEKLY_MAX_ATTEMPTS, _week_seed, _last_attempt_week])
 	return true
 
