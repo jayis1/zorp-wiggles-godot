@@ -313,6 +313,62 @@ static func spawn_pickup_sparkle(parent: Node, pos: Vector3, color: Color = Colo
 	particles.global_position = pos
 	_free_after_lifetime(particles, 1.0)
 
+## Spawn a directional hit-spark burst at the impact point. Fires on every
+## enemy hit (~9/sec during combat) — a small, short-lived burst of tiny
+## sparks that shoot outward from the hit point, biased toward the source
+## direction (e.g. the player). This adds a classic Vlambeer-style "spark
+## spray" on impact that complements the existing hit-flash + squash, giving
+## each landed shot a tactile "I hit something" particle read.
+## Uses the shared sparkle mesh (tiny spheres) for zero per-hit geometry
+## allocation. The spark color matches the enemy's base color so the spray
+## reads as "bits of the enemy flying off" rather than a generic white flash.
+## `source_pos` biases the spray direction so sparks shoot back toward the
+## shooter (away from the enemy), reinforcing the shot's direction.
+static func spawn_hit_spark(parent: Node, pos: Vector3, color: Color = Color(1.0, 1.0, 0.8),
+		source_pos: Vector3 = Vector3.ZERO) -> void:
+	var particles := GPUParticles3D.new()
+	particles.amount = 8
+	particles.lifetime = 0.18
+	particles.one_shot = true
+	particles.emitting = true
+	particles.explosiveness = 1.0  # All at once — instant spark burst
+	particles.local_coords = false
+
+	var pmat := ParticleProcessMaterial.new()
+	# Default direction: upward. If a source position is provided, bias the
+	# direction toward the source so sparks shoot back toward the shooter.
+	var spark_dir := Vector3(0, 0.5, 0)  # Slight upward bias by default
+	if source_pos != Vector3.ZERO:
+		var bias := (source_pos - pos)
+		bias.y = 0.0
+		if bias.length_squared() > 0.01:
+			spark_dir = bias.normalized()
+			spark_dir.y = 0.3  # Slight upward component so sparks arc
+	pmat.direction = spark_dir
+	pmat.spread = 45.0  # Narrow-ish cone for a directional spray
+	pmat.gravity = Vector3(0, -8, 0)  # Strong gravity — sparks fall fast
+	pmat.initial_velocity_min = 4.0
+	pmat.initial_velocity_max = 10.0
+	pmat.scale_min = 0.05  # Very tiny sparks
+	pmat.scale_max = 0.12
+	pmat.color = color
+	# Quick fade to dark so sparks twinkle out fast (sharp, not lingering)
+	pmat.color_ramp = _create_fade_ramp(color, Color(color.r * 0.2, color.g * 0.2, color.b * 0.2, 0.0))
+	particles.process_material = pmat
+
+	# Reuse the shared sparkle mesh (tiny spheres) — same geometry every call.
+	_ensure_shared_sparkle_mesh()
+	var mesh := _shared_sparkle_mesh.duplicate() as SphereMesh
+	var smat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
+	smat.albedo_color = color
+	smat.emission = color * 0.8  # Bright emission so sparks glow
+	mesh.material = smat
+	particles.draw_pass_1 = mesh
+
+	parent.add_child(particles)
+	particles.global_position = pos
+	_free_after_lifetime(particles, 0.4)  # Short — sparks die fast
+
 ## Spawn enemy death poof — dark smoke that expands and fades.
 static func spawn_death_poof(parent: Node, pos: Vector3, color: Color = Color(0.8, 0.2, 0.2),
 		scale: float = 1.0) -> void:

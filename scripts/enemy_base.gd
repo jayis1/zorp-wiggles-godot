@@ -1051,6 +1051,21 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# Alert on hit
 	is_alerted = true
 
+	# ── Hit spark particle burst ── A small directional spray of sparks that
+	#    shoot from the hit point back toward the shooter, complementing the
+	#    hit flash + squash with a classic Vlambeer-style "spark spray".
+	#    The sparks are tinted to the enemy's base color so they read as
+	#    "bits of the enemy flying off". Skipped on kills — the death poof
+	#    and death light flash already provide the burst, and double-spawning
+	#    on the kill frame would clutter the death spectacle.
+	if hp > 0 and source_pos != Vector3.ZERO:
+		ParticleEffects.spawn_hit_spark(
+			get_parent(),
+			global_position + Vector3(0, 0.5, 0),
+			current_color,
+			source_pos
+		)
+
 	# ── Hit squash pulse — quick body_mesh scale pop on the hit frame for an
 	# extra layer of juicy feedback alongside the color flash. Skipped during
 	# windup (the windup tween controls scale and would conflict) and during
