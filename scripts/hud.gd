@@ -759,9 +759,10 @@ func _process(delta: float) -> void:
 	else:
 		# Yellow (1,1,0) → Red (1,0,0) as ratio goes 0.5 → 0.0
 		var t_red: float = ratio * 2.0  # 1→0 in this zone
-		# Smoothstep — invert so t goes 0→1 as we move toward red
-		var red_blend: float = 1.0 - t_red
-		red_blend = red_blend * red_blend * (3.0 - 2.0 * red_blend)
+		# Smoothstep the green-channel fade so the yellow→red transition
+		# eases through amber instead of snapping. t_red goes 1→0; applying
+		# smoothstep to it gives an S-curve fade rather than a linear drain.
+		t_red = t_red * t_red * (3.0 - 2.0 * t_red)
 		combo_timer_bar.color = Color(1.0, t_red, 0.0)
 	else:
 		combo_timer_bar.visible = false

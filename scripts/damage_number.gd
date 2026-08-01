@@ -286,19 +286,14 @@ static func spawn(parent: Node, pos: Vector3, amount: int, is_crit: bool = false
 	# Request _ready() to fire on re-entry for pooled instances so per-spawn
 	# runtime state (drift, scale, modulate) resets cleanly.
 	dn.request_ready()
-	parent.add_child(dn)
-	# Add jitter so overlapping numbers spread out
-	var jitter_x := randf_range(-GameConstants.DMG_NUMBER_JITTER_X, GameConstants.DMG_NUMBER_JITTER_X)
-	var jitter_z := randf_range(-GameConstants.DMG_NUMBER_JITTER_Z, GameConstants.DMG_NUMBER_JITTER_Z)
-	dn.global_position = pos + Vector3(jitter_x, 2.0, jitter_z)
 	# ── Directional drift bias ── If a source position is provided (e.g. the
 	#    player's position), compute a horizontal direction from source→hit
 	#    and bias the drift so the number pops outward, away from the source.
 	#    This makes hits feel directional — a shot from the player pushes the
 	#    damage number toward the player's view, reinforcing the impact line.
-	#    The bias is set BEFORE _ready fires (which reads it), so we set it
-	#    on the instance directly. Since request_ready() was called, _ready
-	#    will run on the next frame and read these values.
+	#    The bias MUST be set BEFORE add_child() so _ready() (which reads it
+	#    to compute the lerped drift) sees the fresh values — _ready fires
+	#    synchronously during add_child because request_ready() was called.
 	if source_pos != Vector3.ZERO:
 		var bias_dir: Vector3 = (pos - source_pos)
 		bias_dir.y = 0.0
@@ -313,4 +308,9 @@ static func spawn(parent: Node, pos: Vector3, amount: int, is_crit: bool = false
 	else:
 		dn._drift_bias_x = 0.0
 		dn._drift_bias_z = 0.0
+	parent.add_child(dn)
+	# Add jitter so overlapping numbers spread out
+	var jitter_x := randf_range(-GameConstants.DMG_NUMBER_JITTER_X, GameConstants.DMG_NUMBER_JITTER_X)
+	var jitter_z := randf_range(-GameConstants.DMG_NUMBER_JITTER_Z, GameConstants.DMG_NUMBER_JITTER_Z)
+	dn.global_position = pos + Vector3(jitter_x, 2.0, jitter_z)
 	dn.configure(amount, is_crit, is_kill, is_boss)

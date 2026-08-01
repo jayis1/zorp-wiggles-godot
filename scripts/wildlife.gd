@@ -104,11 +104,14 @@ func _physics_process(delta: float) -> void:
 		_cached_player = get_tree().get_first_node_in_group("player")
 
 	# Determine behavior: flee or wander.
+	# Track the previous-frame state so the flee-start SFX fires only on the
+	# wander → flee transition, not every frame the player is in range.
+	var was_fleeing: bool = _is_fleeing or _flee_timer > 0
 	_is_fleeing = false
 	if _cached_player:
 		var dist: float = global_position.distance_to(_cached_player.global_position)
 		if dist < GameConstants.WILDLIFE_FLEE_RANGE:
-			if not _is_fleeing:
+			if not was_fleeing:
 				# ── Enhancement Pack 21: Flee start SFX — plays once when the
 				# wildlife transitions from wandering to fleeing. The tiny
 				# startled chirp (1400 Hz, 0.05s) reads as a small animal's
