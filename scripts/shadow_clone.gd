@@ -159,11 +159,21 @@ func _shoot_dark_projectile(player: Node3D) -> void:
 			.set_ease(Tween.EASE_OUT)
 		pulse_tween.tween_property(_mesh, "scale", Vector3.ONE, 0.1) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Enhancement Pack 19: Shoot SFX — the shadow clone's dark projectile
+	# attack had a visual scale pulse but no audio. Uses SFX_SHOOT at 0.6×
+	# pitch for a deep, ominous void bolt launch (distinct from the
+	# player's higher-pitched shoot SFX).
+	AudioManager.play_sfx_pitched(AudioManager.SFX_SHOOT, 0.6)
 
-func take_damage_from(amount: int, source_pos: Vector3) -> void:
+func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	if is_dead:
 		return
 	hp -= amount
+	# Enhancement Pack 19: Hit SFX — the shadow clone is a boss-type enemy
+	# but extends CharacterBody3D directly, so it doesn't inherit the
+	# SFX_ENEMY_HIT from enemy_base.gd's take_damage_from. Uses a lower
+	# pitch (0.7×) for a heavier, more boss-like hit sound.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_ENEMY_HIT, 0.7)
 
 	# Hit flash — brighten to dark purple briefly
 	if _mat:
@@ -171,6 +181,14 @@ func take_damage_from(amount: int, source_pos: Vector3) -> void:
 		var tween := create_tween()
 		tween.tween_property(_mat, "emission_energy_multiplier", 0.5, 0.2) \
 			.set_ease(Tween.EASE_OUT)
+	# Enhancement Pack 19: Hit squash — quick body mesh scale pop matching
+	# the enemy_base.gd hit squash for combat feedback parity.
+	if _mesh:
+		var squash_tween := _mesh.create_tween()
+		squash_tween.tween_property(_mesh, "scale", Vector3.ONE * 1.25, 0.04) \
+			.set_ease(Tween.EASE_OUT)
+		squash_tween.tween_property(_mesh, "scale", Vector3.ONE, 0.12) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 	# Knockback
 	var push_dir: Vector3 = (global_position - source_pos).normalized()

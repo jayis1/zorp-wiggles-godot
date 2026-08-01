@@ -144,6 +144,19 @@ func _activate() -> void:
 	# Spawn activation particles + light
 	_spawn_activation_effect()
 
+	# Enhancement Pack 19: Activation SFX — distinct sound per hazard type
+	# matching the environmental_hazard audio language. Previously arena
+	# hazards had particles + camera shake on activation but no audio —
+	# the telegraph SFX (SFX_RIFT) was the only sound, and the actual
+	# eruption/impact was silent.
+	match hazard_type:
+		HazardType.LAVA_GEYSER:
+			AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
+		HazardType.FALLING_CRYSTAL:
+			AudioManager.play_sfx(AudioManager.SFX_BREAKABLE)
+		HazardType.VOID_SHOCKWAVE:
+			AudioManager.play_sfx(AudioManager.SFX_RIFT)
+
 	# Camera shake
 	var cam: Node3D = GameManager.camera_rig
 	if cam and cam.has_method("add_trauma"):

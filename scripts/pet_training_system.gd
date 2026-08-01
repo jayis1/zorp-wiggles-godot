@@ -368,6 +368,12 @@ func _update_dash_course(delta: float) -> void:
 		# Hit!
 		_waypoints_hit += 1
 		AudioManager.play_sfx(AudioManager.SFX_PICKUP)
+		# Enhancement Pack 19: Light camera trauma on waypoint hit — gives
+		# each ring a tactile "pop" feel. 0.04 is very gentle so hitting 5
+		# in quick succession doesn't shake the screen excessively.
+		var cam_rig_w: Node3D = GameManager.camera_rig
+		if cam_rig_w and cam_rig_w.has_method("add_trauma"):
+			cam_rig_w.add_trauma(0.04)
 		ParticleEffects.spawn_pickup_sparkle(_game_parent, wp.global_position, Color(0.2, 1.0, 0.6))
 		# Deactivate this waypoint visual
 		wp.set_meta("wp_active", false)
@@ -433,6 +439,11 @@ func _update_target_dodge(delta: float) -> void:
 func _fire_dummy_bolt(dummy: Node3D, player: Node3D) -> void:
 	if not is_instance_valid(dummy) or not is_instance_valid(player):
 		return
+	# Enhancement Pack 19: Subtle SFX when a dummy fires — gives the player
+	# an audio cue that a bolt is incoming, not just visual. Uses SFX_SHOOT
+	# at a lower pitch (0.7×) so it reads as a training bolt, not the
+	# player's weapon. Without this, the only warning was the visual bolt.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_SHOOT, 0.7)
 	var bolt := Area3D.new()
 	bolt.collision_layer = 0
 	bolt.collision_mask = 0
@@ -501,6 +512,26 @@ func _end_game(success: bool) -> void:
 	var msg: String = "🎓 Training complete! +%d TP" % tp_awarded if success else \
 		"🎓 Training failed. +%d TP" % tp_awarded
 	GameManager.add_message(msg)
+	# Enhancement Pack 19: SFX + camera trauma on training game completion.
+	# Success plays a triumphant arpeggio + 0.15 camera trauma (matching
+	# quest-completion weight); failure plays the craft-fail buzz + 0.08
+	# trauma (lighter, negative feedback). Previously training completion had
+	# only a text message — no audio or physical feedback.
+	if success:
+		AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+		var cam_rig_eg: Node3D = GameManager.camera_rig
+		if cam_rig_eg and cam_rig_eg.has_method("add_trauma"):
+			cam_rig_eg.add_trauma(0.15)
+		# Celebration sparkle on the player
+		var player_eg: Node3D = get_tree().get_first_node_in_group("player")
+		if player_eg and is_instance_valid(player_eg):
+			ParticleEffects.spawn_pickup_sparkle(player_eg.get_parent(),
+				player_eg.global_position, Color(0.2, 1.0, 0.6))
+	else:
+		AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
+		var cam_rig_ef: Node3D = GameManager.camera_rig
+		if cam_rig_ef and cam_rig_ef.has_method("add_trauma"):
+			cam_rig_ef.add_trauma(0.08)
 	game_completed.emit(gid, tp_awarded, success)
 
 
