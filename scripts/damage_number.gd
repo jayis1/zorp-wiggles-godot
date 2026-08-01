@@ -62,6 +62,18 @@ var _base_scale: float = 1.0
 var _drift_x: float = 0.0
 var _drift_z: float = 0.0
 var _start_y: float = 0.0
+# ── Directional drift bias ── When a source direction is provided (from the
+#    projectile to the enemy, or from the player to the enemy), the random
+#    horizontal drift is biased away from that direction so the damage
+#    number pops outward from the hit point — toward the player's view —
+#    rather than in a purely random direction. This makes hits feel
+#    directional: a shot from the left pushes the number to the right,
+#    reinforcing the impact direction. The bias is blended with the random
+#    drift (not replacing it) so numbers still spread organically on rapid
+#    multi-hits. 0.0 = fully random (old behavior), 1.0 = fully biased.
+var _drift_bias_x: float = 0.0
+var _drift_bias_z: float = 0.0
+const DRIFT_BIAS_STRENGTH: float = 0.6  # 60% biased, 40% random
 
 func _ready() -> void:
 	# Configure Label3D for crisp readability.
@@ -89,9 +101,11 @@ func _ready() -> void:
 	popin_timer = GameConstants.DMG_NUMBER_POPIN_DURATION
 	_start_y = global_position.y
 
-	# Random horizontal drift so multiple numbers don't overlap
-	_drift_x = randf_range(-0.5, 0.5)
-	_drift_z = randf_range(-0.3, 0.3)
+	# Random horizontal drift so multiple numbers don't overlap.
+	# The drift is blended with a directional bias (set by spawn_with_bias)
+	# so the number pops away from the source — 60% biased, 40% random.
+	_drift_x = lerpf(randf_range(-0.5, 0.5), _drift_bias_x, DRIFT_BIAS_STRENGTH)
+	_drift_z = lerpf(randf_range(-0.3, 0.3), _drift_bias_z, DRIFT_BIAS_STRENGTH)
 
 	# Start small for pop-in
 	scale = Vector3.ONE * GameConstants.DMG_NUMBER_POPIN_START_SCALE
@@ -265,7 +279,9 @@ func configure_heal(amount: int) -> void:
 ## Static factory: create and spawn a damage number in the world.
 ## Uses the static free-list pool to reuse recycled instances when available,
 ## avoiding per-hit Label3D allocation during combat.
-static func spawn(parent: Node, pos: Vector3, amount: int, is_crit: bool = false, is_kill: bool = false, is_boss: bool = false) -> void:
+## Optional `source_pos` biases the drift so the number pops away from the
+## source (e.g. the player's position), making hits feel directional.
+static func spawn(parent: Node, pos: Vector3, amount: int, is_crit: bool = false, is_kill: bool = false, is_boss: bool = false, source_pos: Vector3 = Vector3.ZERO) -> void:
 	var dn := _acquire()
 	# Request _ready() to fire on re-entry for pooled instances so per-spawn
 	# runtime state (drift, scale, modulate) resets cleanly.
@@ -275,4 +291,26 @@ static func spawn(parent: Node, pos: Vector3, amount: int, is_crit: bool = false
 	var jitter_x := randf_range(-GameConstants.DMG_NUMBER_JITTER_X, GameConstants.DMG_NUMBER_JITTER_X)
 	var jitter_z := randf_range(-GameConstants.DMG_NUMBER_JITTER_Z, GameConstants.DMG_NUMBER_JITTER_Z)
 	dn.global_position = pos + Vector3(jitter_x, 2.0, jitter_z)
+	# ── Directional drift bias ── If a source position is provided (e.g. the
+	#    player's position), compute a horizontal direction from source→hit
+	#    and bias the drift so the number pops outward, away from the source.
+	#    This makes hits feel directional — a shot from the player pushes the
+	#    damage number toward the player's view, reinforcing the impact line.
+	#    The bias is set BEFORE _ready fires (which reads it), so we set it
+	#    on the instance directly. Since request_ready() was called, _ready
+	#    will run on the next frame and read these values.
+	if source_pos != Vector3.ZERO:
+		var bias_dir: Vector3 = (pos - source_pos)
+		bias_dir.y = 0.0
+		if bias_dir.length_squared() > 0.01:
+			bias_dir = bias_dir.normalized()
+			# Scale to match the random drift range (~0.5 on X, ~0.3 on Z)
+			dn._drift_bias_x = bias_dir.x * 0.5
+			dn._drift_bias_z = bias_dir.z * 0.3
+		else:
+			dn._drift_bias_x = 0.0
+			dn._drift_bias_z = 0.0
+	else:
+		dn._drift_bias_x = 0.0
+		dn._drift_bias_z = 0.0
 	dn.configure(amount, is_crit, is_kill, is_boss)

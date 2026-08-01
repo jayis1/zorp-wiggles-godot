@@ -673,8 +673,14 @@ func _hit_enemy(enemy: Node3D) -> void:
 		else:
 			enemy.take_damage(total_damage)
 
-	# Damage number popup — boss kills get a distinct "BOSS SLAIN!" variant
-	DamageNumber.spawn(get_parent(), global_position, total_damage, is_crit, will_kill, is_boss_kill)
+	# Damage number popup — boss kills get a distinct "BOSS SLAIN!" variant.
+	# The player's position is passed as the source so the damage number drifts
+	# away from the player (toward the player's view), making hits feel
+	# directional — the number pops outward from the impact point.
+	var _dmg_source: Vector3 = global_position  # default: projectile pos (no bias)
+	if GameManager.player and is_instance_valid(GameManager.player):
+		_dmg_source = GameManager.player.global_position
+	DamageNumber.spawn(get_parent(), global_position, total_damage, is_crit, will_kill, is_boss_kill, _dmg_source)
 
 	# ── Crit SFX ── A distinct bright "ping" so the player *hears* the crit
 	# land, not just sees the gold flash + hit-stop. The enemy's own

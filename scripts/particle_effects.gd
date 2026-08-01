@@ -352,7 +352,45 @@ static func spawn_death_shockwave(parent: Node, pos: Vector3, color: Color = Col
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	ring_tween.chain().tween_callback(ring.queue_free)
 
-## Spawn a vertical sky beam — tall light column for rare pickups.
+## Spawn a flat expanding ring when an enemy finishes materializing (spawn
+## grace period ends). This is the spawn counterpart to the death shockwave —
+## a quick ground ring that expands outward from the enemy's position, selling
+## the "teleport-in complete, now active" moment. The ring uses the enemy's
+## color so it reads as an energy discharge from the enemy itself, not a
+## generic effect. Smaller and faster than the death shockwave (spawn is a
+## beginning, not a climax) — 0.35s expand vs 0.4s, max radius 3.0 vs 6.0.
+static func spawn_spawn_ring(parent: Node, pos: Vector3, color: Color = Color(0.5, 1.0, 0.8),
+		max_radius: float = 3.0) -> void:
+	var ring := MeshInstance3D.new()
+	var ring_mesh := CylinderMesh.new()
+	ring_mesh.top_radius = 1.0
+	ring_mesh.bottom_radius = 1.0
+	ring_mesh.height = 0.06
+	ring_mesh.radial_segments = 20
+	ring_mesh.rings = 2
+	ring.mesh = ring_mesh
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(color.r, color.g, color.b, 0.6)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.emission_enabled = true
+	mat.emission = color * 0.5
+	mat.emission_energy_multiplier = 1.8
+	ring.material_override = mat
+	parent.add_child(ring)
+	ring.global_position = pos + Vector3(0, 0.04, 0)
+	ring.scale = Vector3.ONE * 0.2
+	# Expand + fade — ease-out cubic for a sharp burst that decelerates.
+	# The ring snaps out fast (teleport energy discharge) then fades gently.
+	var ring_tween := ring.create_tween()
+	ring_tween.set_parallel(true)
+	ring_tween.tween_property(ring, "scale", Vector3(max_radius, 1.0, max_radius), 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	ring_tween.tween_property(mat, "albedo_color:a", 0.0, 0.35) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	ring_tween.tween_property(mat, "emission_energy_multiplier", 0.0, 0.35) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	ring_tween.chain().tween_callback(ring.queue_free)
 static func spawn_sky_beam(parent: Node, pos: Vector3, color: Color = Color(1.0, 0.9, 0.3),
 		height: float = 30.0) -> void:
 	var beam := MeshInstance3D.new()

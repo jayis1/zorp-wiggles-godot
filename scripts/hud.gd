@@ -716,13 +716,30 @@ func _process(delta: float) -> void:
 		# "just pressed" state was missing. Now a fresh combo reads as green
 		# and warms through yellow to red as it runs out, matching the HP bar
 		# color language and giving players a clear "time is running out" cue.
-		if ratio > 0.5:
-			# Green (0,1,0) → Yellow (1,1,0) as ratio goes 1.0 → 0.5
-			var t_green: float = (1.0 - ratio) * 2.0
-			combo_timer_bar.color = Color(t_green, 1.0, 0.0)
-		else:
-			# Yellow (1,1,0) → Red (1,0,0) as ratio goes 0.5 → 0.0
-			combo_timer_bar.color = Color(1.0, ratio * 2.0, 0.0)
+		# ── Smoothstep color transitions ── The combo timer bar previously used
+	#    a hard threshold at 0.5 ratio: green→yellow on one side, yellow→red
+	#    on the other, with an instant snap at the midpoint. This made the
+	#    color change feel mechanical — the bar was green, then suddenly
+	#    yellow at exactly 50%, then suddenly red. Now we use smoothstep
+	#    blending in both transition zones so the color eases through the
+	#    gradient. The green→yellow zone (1.0→0.5) and yellow→red zone
+	#    (0.5→0.0) each get a smoothstep S-curve, so the midpoint blends
+	#    through a warm amber rather than snapping from pure green to pure
+	#    yellow. This mirrors the HP bar's smooth color lerp and makes the
+	#    combo urgency ramp feel organic rather than digital.
+	if ratio > 0.5:
+		# Green (0,1,0) → Yellow (1,1,0) as ratio goes 1.0 → 0.5
+		var t_green: float = (1.0 - ratio) * 2.0  # 0→1 in this zone
+		# Smoothstep for a soft S-curve instead of linear
+		t_green = t_green * t_green * (3.0 - 2.0 * t_green)
+		combo_timer_bar.color = Color(t_green, 1.0, 0.0)
+	else:
+		# Yellow (1,1,0) → Red (1,0,0) as ratio goes 0.5 → 0.0
+		var t_red: float = ratio * 2.0  # 1→0 in this zone
+		# Smoothstep — invert so t goes 0→1 as we move toward red
+		var red_blend: float = 1.0 - t_red
+		red_blend = red_blend * red_blend * (3.0 - 2.0 * red_blend)
+		combo_timer_bar.color = Color(1.0, t_red, 0.0)
 	else:
 		combo_timer_bar.visible = false
 

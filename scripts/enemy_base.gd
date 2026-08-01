@@ -229,6 +229,19 @@ func _physics_process(delta: float) -> void:
 	if spawn_grace_timer > 0:
 		spawn_grace_timer -= delta
 		_update_spawn_visuals(delta)
+		# ── Spawn ground ring when materialize completes ── The frame the
+		#    grace timer expires is the moment the enemy becomes "active" —
+		#    it can now detect and chase the player. A flat expanding ground
+		#    ring (the spawn counterpart to the death shockwave) sells this
+		#    transition as a "teleport-in complete" energy discharge, giving
+		#    the player a clear audiovisual cue that the enemy is now a
+		#    threat. The ring uses the enemy's color and is sized to the
+		#    enemy's scale. We fire it on the exact transition frame (the
+		#    timer just hit ≤0) so it plays exactly once.
+		if spawn_grace_timer <= 0:
+			ParticleEffects.spawn_spawn_ring(
+				get_parent(), global_position, current_color,
+				2.5 + base_scale * 0.5)
 		return
 
 	# Check if player is alive
