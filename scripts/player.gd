@@ -800,6 +800,13 @@ func _play_landing_effect() -> void:
 		Color(0.7, 0.65, 0.55), 0.6 * intensity_mult)
 	# Camera shake on landing for weight — scaled by fall distance
 	_trigger_camera_trauma(0.12 * intensity_mult)
+	# ── Enhancement Pack 21: Landing SFX — the landing effect had squash +
+	# dust + camera shake but no audio. A low thud (SFX_LAND, 0.10s noise hit)
+	# gives the impact a physical audio identity. Pitch scales down with fall
+	# intensity so bigger falls sound deeper (heavier impact). Uses the
+	# pitched API so the fall-distance scaling is explicit.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_LAND, \
+		lerpf(1.2, 0.7, fall_t))
 
 # ── Damage impact reaction ── When the player takes damage, Zorp's mesh
 #    squashes flat (compressed vertically, stretched horizontally) and the

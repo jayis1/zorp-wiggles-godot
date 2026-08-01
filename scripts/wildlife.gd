@@ -108,6 +108,13 @@ func _physics_process(delta: float) -> void:
 	if _cached_player:
 		var dist: float = global_position.distance_to(_cached_player.global_position)
 		if dist < GameConstants.WILDLIFE_FLEE_RANGE:
+			if not _is_fleeing:
+				# ── Enhancement Pack 21: Flee start SFX — plays once when the
+				# wildlife transitions from wandering to fleeing. The tiny
+				# startled chirp (1400 Hz, 0.05s) reads as a small animal's
+				# reaction to spotting a predator. Only fires on the
+				# transition (not every frame while fleeing).
+				AudioManager.play_sfx(AudioManager.SFX_WILDLIFE_FLEE)
 			_is_fleeing = true
 			# Direction away from the player.
 			var flee_dir: Vector3 = (global_position - _cached_player.global_position)

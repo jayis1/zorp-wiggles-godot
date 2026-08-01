@@ -436,6 +436,8 @@ func _play_landing_effect() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.12)
+	# ── Enhancement Pack 21: Landing SFX — P2 parity with P1's landing thump.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_LAND, 1.0)
 
 # ── Low-HP heartbeat — P2 mesh throbs with a "lub-dub" pattern when HP < 25% ──
 func _update_low_hp_heartbeat(delta: float) -> void:

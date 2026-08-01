@@ -228,6 +228,41 @@ const SFX_NEAR_DEATH: String = "near_death"
 # SFX_DODGE (0.08s, 0.18) so it doesn't compete with combat sounds. The
 # noise-sweep timbre conveys air disturbance — the bolt's wake brushing past.
 const SFX_GRAZE: String = "graze"
+
+# ── Enhancement Pack 21: Environmental & combat action SFX ───────────────────
+# SFX_LAND — a muffled thud for when Zorp touches down after being airborne
+# (reverse-gravity exit, bounce pad, big fall). Scales in volume with fall
+# distance — a gentle hop is barely audible, a 20m slam is a solid thump.
+# Uses a low-frequency noise hit (80 Hz body, 0.10s, short decay) so it reads
+# as a physical impact on terrain rather than a tonal note. Pairs with the
+# existing landing squash + dust puff + camera shake.
+const SFX_LAND: String = "land"
+
+# SFX_BUFF_ACTIVATE — a warm ascending major arpeggio (C5→E5→G5→C6) distinct
+# from SFX_HEAL (two-note chime). Monolith buffs (Speed Surge, Power Surge,
+# Wisdom Aura) previously used the generic heal sound — now they get a
+# triumphant 4-note arpeggio that conveys "you just got powered up" rather
+# than "you just got healed." The ascending major triad is the universal audio
+# shorthand for a positive status change in games.
+const SFX_BUFF_ACTIVATE: String = "buff_activate"
+
+# SFX_PULL — a deep descending gravitational whomp (90→45 Hz, 0.30s) that
+# plays when the Graviton activates its gravity pull. The low-frequency sweep
+# conveys a massive force engaging — the sound of space being bent. Pairs
+# with the existing visual pull ring that appears on the ground. Previously
+# the Graviton's pull activation had a visual warning ring + emission change
+# but no audio, making it easy to miss the pull starting until the player was
+# already being dragged in.
+const SFX_PULL: String = "pull"
+
+# SFX_WILDLIFE_FLEE — a tiny startled chirp (0.05s, high-pitched 1400 Hz blip
+# at 0.10 volume) that plays when a wildlife creature begins fleeing. The
+# short, high sound reads as a small animal's startled reaction — the audio
+# cue for "it saw you and is running." Previously the flee state had only a
+# visual emission brightening but no audio, so the player could walk past
+# wildlife without realizing they'd scared it.
+const SFX_WILDLIFE_FLEE: String = "wildlife_flee"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -522,6 +557,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_SHOOT_STANDARD, SFX_SHOOT_HOMING, SFX_SHOOT_ENERGY, SFX_SHOOT_PIERCE,
 	SFX_SHOOT_FREEZE, SFX_SHOOT_POISON, SFX_SHOOT_FIRE, SFX_SHOOT_VOID,
 	SFX_SHOOT_LIGHTNING, SFX_SHOOT_HEAVY, SFX_SHOOT_UTILITY, SFX_SHOOT_VAMPIRE,
+	# Enhancement Pack 21: Environmental impact SFX get pitch variation
+	SFX_LAND, SFX_PULL,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -957,6 +994,19 @@ func _generate_all_sfx() -> void:
 	# noise. The noise-sweep timbre conveys air disturbance — the bolt's
 	# wake brushing past the player's body.
 	_sfx_streams[SFX_GRAZE] = _gen_noise_sweep(0.06, 0.12)
+
+	# ── Enhancement Pack 21: Environmental & combat action SFX ───────────────
+	# SFX_LAND — low thud for landing impact (80 Hz body, 0.10s, 0.25 vol)
+	_sfx_streams[SFX_LAND] = _gen_noise_hit(0.10, 0.25)
+
+	# SFX_BUFF_ACTIVATE — ascending C major arpeggio (C5→E5→G5→C6, 0.06s/note, 0.30 vol)
+	_sfx_streams[SFX_BUFF_ACTIVATE] = _gen_arpeggio([523.0, 659.0, 784.0, 1047.0], 0.06, 0.30)
+
+	# SFX_PULL — deep descending gravitational whomp (90→45 Hz, 0.30s, 0.40 vol)
+	_sfx_streams[SFX_PULL] = _gen_descending(90.0, 45.0, 0.30, 0.40)
+
+	# SFX_WILDLIFE_FLEE — tiny startled chirp (1400 Hz, 0.05s, 0.10 vol)
+	_sfx_streams[SFX_WILDLIFE_FLEE] = _gen_blip(1400.0, 0.05, 0.10)
 
 
 func _generate_all_music() -> void:

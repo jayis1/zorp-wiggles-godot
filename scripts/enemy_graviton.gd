@@ -147,6 +147,11 @@ func _physics_process(delta: float) -> void:
 		if cooldown_timer <= 0 and is_alerted and dist_to_player < GameConstants.GRAVITON_PULL_RADIUS:
 			pull_active = true
 			pull_timer = GameConstants.GRAVITON_PULL_DURATION
+			# ── Enhancement Pack 21: Pull activation SFX — the Graviton's gravity
+			# pull had a visual warning ring + emission brightening but no audio
+			# when the pull actually engaged. The deep descending whomp
+			# (SFX_PULL, 90→45 Hz, 0.30s) conveys a massive force engaging.
+			AudioManager.play_sfx(AudioManager.SFX_PULL)
 			if pull_ring:
 				pull_ring.visible = true
 				var mat := pull_ring.material_override as StandardMaterial3D

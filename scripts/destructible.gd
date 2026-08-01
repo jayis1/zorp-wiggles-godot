@@ -107,6 +107,13 @@ func _shatter() -> void:
 	# Particle burst
 	ParticleEffects.spawn_explosion(get_parent(), global_position, fragment_color, 25, 0.6)
 
+	# ── Enhancement Pack 21: Shatter SFX — the destructible crate shatter had
+	# particles + light flash + camera shake + hit-stop but no audio. The
+	# SFX_BREAKABLE noise hit (0.25s, 0.45 vol) gives the break a physical
+	# crack sound. Uses the pitched API so the SFX is audible over combat
+	# while reading as a solid break rather than a tonal effect.
+	AudioManager.play_sfx(AudioManager.SFX_BREAKABLE)
+
 	# ── Shatter light flash — a brief real-time light pop so the break
 	# reads in dark biomes even without looking directly at the crate.
 	# Matches the impact_burst light technique. Color is warm-tinted toward

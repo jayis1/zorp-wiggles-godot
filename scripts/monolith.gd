@@ -189,8 +189,13 @@ func _on_body_entered(body: Node3D) -> void:
 	var buff_color: Color = BUFF_COLORS[buff]
 	GameManager.add_message("🔮 Monolith activated: %s! (+%ds)" % [buff_name, int(GameConstants.MONOLITH_BUFF_DURATION)])
 
-	# Audio feedback — warm chime for buff activation.
-	AudioManager.play_sfx(AudioManager.SFX_HEAL)
+	# Audio feedback — dedicated buff activation arpeggio (Enhancement Pack 21).
+	# Previously used SFX_HEAL (generic two-note heal chime) — now uses a
+	# dedicated 4-note ascending C major arpeggio that conveys "powered up"
+	# rather than "healed." The distinction matters because monolith buffs
+	# (Speed Surge, Power Surge, Wisdom Aura) are offensive/utility buffs,
+	# not healing — the audio should match the intent.
+	AudioManager.play_sfx(AudioManager.SFX_BUFF_ACTIVATE)
 
 	# Apply buff to GameManager
 	GameManager.active_buffs[buff_key] = GameConstants.MONOLITH_BUFF_DURATION
