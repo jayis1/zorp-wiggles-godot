@@ -242,6 +242,17 @@ func _physics_process(delta: float) -> void:
 			ParticleEffects.spawn_spawn_ring(
 				get_parent(), global_position, current_color,
 				2.5 + base_scale * 0.5)
+			# ── Activation SFX ── A subtle materialization-complete cue
+			# when the enemy becomes active (grace period ends). The spawn
+			# SFX (descending 220→110 Hz) already plays at spawn time via
+			# the spawner, but the grace period lasts 2s — by the time it
+			# ends, the player has forgotten the spawn sound. A short
+			# reprise here (pitched by size) gives the ground-ring visual
+			# an audio partner that says "this enemy is NOW a threat."
+			# Pitch scales with enemy size: small = high chirp, large =
+			# deeper thrum. Low volume so mass spawns don't overwhelm.
+			var activate_pitch: float = clampf(1.5 - base_scale * 0.2, 0.7, 1.5)
+			AudioManager.play_sfx_pitched(AudioManager.SFX_SPAWN_IN, activate_pitch)
 		return
 
 	# Check if player is alive

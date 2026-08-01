@@ -39,6 +39,57 @@ static var _shared_sparkle_mesh: SphereMesh = null
 static var _fade_ramp_cache: Dictionary = {}  # key_string -> GradientTexture1D
 const FADE_RAMP_CACHE_MAX: int = 64
 
+# ── Shared mesh templates for high-frequency effects ──────────────────────────
+# These effects are called on every enemy death, level-up, shield break, and
+# dash. Each previously allocated a new SphereMesh/BoxMesh + StandardMaterial3D
+# per call. The geometry is identical every call — only the color differs, and
+# that's handled by duplicating the material template (cheaper than new +
+# configure). The templates are created once on first use and reused across
+# all subsequent calls, eliminating per-spawn geometry allocation for the most
+# frequent particle effects in the game.
+static var _shared_death_poof_mesh: SphereMesh = null
+static var _shared_fireworks_mesh: SphereMesh = null
+static var _shared_levelup_ring_mesh: CylinderMesh = null
+static var _shared_levelup_spark_mesh: SphereMesh = null
+static var _shared_shield_break_mesh: BoxMesh = null
+static var _shared_dash_trail_mesh: SphereMesh = null
+
+static func _ensure_shared_particle_meshes() -> void:
+	if _shared_death_poof_mesh == null:
+		_shared_death_poof_mesh = SphereMesh.new()
+		_shared_death_poof_mesh.radius = 0.2
+		_shared_death_poof_mesh.height = 0.4
+		_shared_death_poof_mesh.radial_segments = 6
+		_shared_death_poof_mesh.rings = 3
+	if _shared_fireworks_mesh == null:
+		_shared_fireworks_mesh = SphereMesh.new()
+		_shared_fireworks_mesh.radius = 0.12
+		_shared_fireworks_mesh.height = 0.24
+		_shared_fireworks_mesh.radial_segments = 4
+		_shared_fireworks_mesh.rings = 2
+	if _shared_levelup_ring_mesh == null:
+		_shared_levelup_ring_mesh = CylinderMesh.new()
+		_shared_levelup_ring_mesh.top_radius = 0.0
+		_shared_levelup_ring_mesh.bottom_radius = 1.0
+		_shared_levelup_ring_mesh.height = 0.1
+		_shared_levelup_ring_mesh.radial_segments = 32
+		_shared_levelup_ring_mesh.rings = 2
+	if _shared_levelup_spark_mesh == null:
+		_shared_levelup_spark_mesh = SphereMesh.new()
+		_shared_levelup_spark_mesh.radius = 0.1
+		_shared_levelup_spark_mesh.height = 0.2
+		_shared_levelup_spark_mesh.radial_segments = 4
+		_shared_levelup_spark_mesh.rings = 2
+	if _shared_shield_break_mesh == null:
+		_shared_shield_break_mesh = BoxMesh.new()
+		_shared_shield_break_mesh.size = Vector3(0.15, 0.15, 0.15)
+	if _shared_dash_trail_mesh == null:
+		_shared_dash_trail_mesh = SphereMesh.new()
+		_shared_dash_trail_mesh.radius = 0.3
+		_shared_dash_trail_mesh.height = 0.6
+		_shared_dash_trail_mesh.radial_segments = 6
+		_shared_dash_trail_mesh.rings = 3
+
 static func _ensure_shared_explosion_resources() -> void:
 	if _shared_explosion_mesh == null:
 		_shared_explosion_mesh = SphereMesh.new()
@@ -118,20 +169,18 @@ static func spawn_explosion(parent: Node, pos: Vector3, color: Color = Color(1.0
 static func spawn_levelup_burst(parent: Node, pos: Vector3) -> void:
 	# Expanding ring (tween-based)
 	var ring := MeshInstance3D.new()
-	var ring_mesh := CylinderMesh.new()
-	ring_mesh.top_radius = 0.0
-	ring_mesh.bottom_radius = 1.0
-	ring_mesh.height = 0.1
-	ring_mesh.radial_segments = 32
-	ring_mesh.rings = 2
-	ring.mesh = ring_mesh
-	var mat := StandardMaterial3D.new()
+	# Use shared level-up ring mesh template — eliminates per-level-up
+	# CylinderMesh allocation. The mesh is duplicated so the per-call material
+	# is isolated. The template already has the correct cone shape (top=0,
+	# bottom=1) and 32 radial segments for a smooth ring.
+	_ensure_shared_particle_meshes()
+	var ring_mesh := _shared_levelup_ring_mesh.duplicate() as CylinderMesh
+	var mat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	mat.albedo_color = Color(1.0, 0.843, 0.0, 0.8)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.emission_enabled = true
 	mat.emission = Color(1.0, 0.8, 0.0) * 0.5
-	ring.material_override = mat
+	ring_mesh.material = mat
+	ring.mesh = ring_mesh
 	# CylinderMesh axis is along Y; with height=0.1 it's already a flat disc
 	# lying on the XZ plane. No rotation needed.
 	parent.add_child(ring)
@@ -166,15 +215,11 @@ static func spawn_levelup_burst(parent: Node, pos: Vector3) -> void:
 	pmat.color_ramp = _create_fade_ramp(Color(1.0, 0.9, 0.3), Color(1.0, 0.4, 0.0))
 	particles.process_material = pmat
 
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.1
-	mesh.height = 0.2
-	mesh.radial_segments = 4
-	mesh.rings = 2
-	var smat := StandardMaterial3D.new()
+	# Use shared level-up spark mesh template — eliminates per-level-up
+	# SphereMesh allocation for the upward sparkle particles.
+	var mesh := _shared_levelup_spark_mesh.duplicate() as SphereMesh
+	var smat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	smat.albedo_color = Color(1.0, 0.9, 0.3)
-	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	smat.emission_enabled = true
 	smat.emission = Color(1.0, 0.9, 0.3) * 0.6
 	mesh.material = smat
 	particles.draw_pass_1 = mesh
@@ -216,15 +261,12 @@ static func spawn_combo_fireworks(parent: Node, pos: Vector3, tier: int = 1) -> 
 	pmat.color_ramp = _create_fade_ramp(color, Color(color.r * 0.2, color.g * 0.2, color.b * 0.2))
 	particles.process_material = pmat
 
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.12
-	mesh.height = 0.24
-	mesh.radial_segments = 4
-	mesh.rings = 2
-	var smat := StandardMaterial3D.new()
+	# Use shared fireworks mesh template — eliminates per-fireworks SphereMesh
+	# allocation. The mesh is duplicated so the per-call material is isolated.
+	_ensure_shared_particle_meshes()
+	var mesh := _shared_fireworks_mesh.duplicate() as SphereMesh
+	var smat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	smat.albedo_color = color
-	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	smat.emission_enabled = true
 	smat.emission = color * 0.8
 	mesh.material = smat
 	particles.draw_pass_1 = mesh
@@ -294,15 +336,18 @@ static func spawn_death_poof(parent: Node, pos: Vector3, color: Color = Color(0.
 	pmat.color_ramp = _create_fade_ramp(color, Color(0.1, 0.1, 0.1, 0.0))
 	particles.process_material = pmat
 
-	var mesh := SphereMesh.new()
+	# Use shared death-poof mesh template — eliminates per-death SphereMesh
+	# allocation. The mesh is duplicated (cheap reference-counted copy) so the
+	# per-call material is isolated. Geometry is identical across all deaths.
+	_ensure_shared_particle_meshes()
+	var mesh := _shared_death_poof_mesh.duplicate() as SphereMesh
+	# Scale the mesh radius/height for this enemy's size. duplicate() gives
+	# us our own copy so we can safely mutate radius/height without affecting
+	# the shared template.
 	mesh.radius = 0.2 * scale
 	mesh.height = 0.4 * scale
-	mesh.radial_segments = 6
-	mesh.rings = 3
-	var smat := StandardMaterial3D.new()
+	var smat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	smat.albedo_color = color
-	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	smat.emission_enabled = true
 	smat.emission = color * 0.4
 	mesh.material = smat
 	particles.draw_pass_1 = mesh
@@ -449,13 +494,12 @@ static func spawn_shield_break(parent: Node, pos: Vector3, color: Color = Color(
 	pmat.color_ramp = _create_fade_ramp(color, Color(0.1, 0.1, 0.2, 0.0))
 	particles.process_material = pmat
 
-	# Use box mesh for "shard" fragments
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(0.15, 0.15, 0.15)
-	var smat := StandardMaterial3D.new()
+	# Use shared shield-break mesh template — eliminates per-break BoxMesh
+	# allocation. The mesh is duplicated so the per-call material is isolated.
+	_ensure_shared_particle_meshes()
+	var mesh := _shared_shield_break_mesh.duplicate() as BoxMesh
+	var smat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	smat.albedo_color = color
-	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	smat.emission_enabled = true
 	smat.emission = color * 0.5
 	mesh.material = smat
 	particles.draw_pass_1 = mesh
@@ -487,16 +531,13 @@ static func spawn_dash_trail(parent: Node, pos: Vector3, color: Color = Color(0.
 		Color(color.r, color.g, color.b, 0.0))
 	particles.process_material = pmat
 
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.3
-	mesh.height = 0.6
-	mesh.radial_segments = 6
-	mesh.rings = 3
-	var smat := StandardMaterial3D.new()
+	# Use shared dash-trail mesh template — eliminates per-dash SphereMesh
+	# allocation. The mesh is duplicated so the per-call material is isolated.
+	_ensure_shared_particle_meshes()
+	var mesh := _shared_dash_trail_mesh.duplicate() as SphereMesh
+	var smat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	smat.albedo_color = Color(color.r, color.g, color.b, 0.5)
-	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	smat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	smat.emission_enabled = true
 	smat.emission = color * 0.4
 	mesh.material = smat
 	particles.draw_pass_1 = mesh
@@ -1160,13 +1201,13 @@ static func spawn_shield_break_shatter(parent: Node, pos: Vector3, color: Color 
 	pmat.color_ramp = ramp_tex
 	particles.process_material = pmat
 
-	# Sharp box fragments
-	var mesh := BoxMesh.new()
+	# Sharp box fragments — use shared shield-break mesh template
+	_ensure_shared_particle_meshes()
+	var mesh := _shared_shield_break_mesh.duplicate() as BoxMesh
+	# Scale up for the larger shatter fragments
 	mesh.size = Vector3(0.2, 0.2, 0.2)
-	var smat := StandardMaterial3D.new()
+	var smat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	smat.albedo_color = color
-	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	smat.emission_enabled = true
 	smat.emission = color * 0.8
 	smat.emission_energy_multiplier = 2.0
 	mesh.material = smat
