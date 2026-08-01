@@ -217,6 +217,12 @@ const SPORE_SPIT_RANGE: float = 25.0
 
 # ─── Enemy Projectile ─────────────────────────────────────────────────────────
 const ENEMY_PROJECTILE_HIT_RADIUS: float = 1.5
+# ── Enhancement Pack 20: Near-miss graze radius ── If an enemy projectile
+# passes within this distance of the player but outside HIT_RADIUS, it
+# "grazes" the player — a subtle whoosh SFX conveys "that was close."
+# 2.8m gives a ~1.3m band beyond the hit radius where a graze can trigger,
+# wide enough to be noticeable but not so wide that distant bolts set it off.
+const ENEMY_PROJECTILE_GRAZE_RADIUS: float = 2.8
 const ENEMY_PROJECTILE_AURA_PULSE_SPEED: float = 10.0
 
 # ─── Plasma Drake (Boss) ──────────────────────────────────────────────────────

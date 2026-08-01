@@ -58,6 +58,12 @@ var p1_revive_progress: float = 0.0
 signal combo_milestone(combo: int, tier: int, color: Color)
 signal pickup_streak_milestone(streak: int, xp_bonus: int)
 signal crit_chain_activated(chain: int)
+# ── Enhancement Pack 20: Critical hit signal ── Emitted by projectile.gd
+# when a crit lands. The crit_flash HUD overlay listens to this and plays
+# a brief gold-colored screen-edge glow so crits have a visual punch beyond
+# the damage number + hit-stop. The mod_color parameter lets the flash be
+# tinted to the weapon mod's color for thematic variety.
+signal critical_hit(mod_color: Color)
 signal enemy_spawned_near(pos: Vector3, enemy_type: int)
 signal damage_taken_from(source_pos: Vector3)  # Phase 5: damage direction indicator
 signal enemy_killed(enemy_name: String, killer_name: String)  # Phase 5: kill feed

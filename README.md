@@ -49,6 +49,9 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 - **Death Replay** — last 5 seconds of gameplay recorded at 60Hz; on death, plays back in slow-motion (0.25× time scale) as a "death cam" before the death screen appears
 - **Intro Cinematic** — procedural landing animation at run start: Zorp descends from y=40 in a glowing light column with particle trail, impacts with dust ring + camera shake + mesh squash, then the camera eases to gameplay angle as the HUD fades in; player input suppressed during the 3-second cinematic
 - **Performance Optimizer** — `PerformanceOptimizer` autoload with 4 subsystems: (1) object pooling API for recycling frequently spawned nodes, (2) 4-tier LOD for enemies (particle/light reduction by distance — Near/Mid/Far/Cull), (3) visibility culling for decorations beyond 180m, (4) auto-quality adjustment with 4 levels (Low/Medium/High/Ultra) that auto-adjust based on frame budget (adjusts shadow atlas, particle scale, LOD distances); AI throttling for distant enemies reduces CPU cost 30-50%; quality level shown in FPS counter overlay
+- **Near-Miss Graze SFX** — enemy projectiles passing close to the player without hitting play a subtle whoosh, adding tension and spatial awareness during projectile-heavy encounters
+- **Boss Intro Card** — dramatic full-screen boss name overlay that slides in when a boss spawns (gold text, dark panel, red border, "⚠ BOSS" / "☠ MEGA-BOSS" / "🌍 WORLD BOSS" subtitle), holds for ~2 seconds, then slides out — a cinematic "title card" moment for boss appearances
+- **Critical Hit Screen-Edge Flash** — a brief gold-colored screen-edge glow on critical hits, tinted to the weapon mod's color (fire=orange, ice=cyan, void=purple); adds a peripheral visual feedback layer beyond the damage number + hit-stop
 
 ### Missions & Progression
 - Mission system (collect, kill, explore, boss missions)
@@ -196,8 +199,8 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 
 ## 📊 Stats
 
-- **61,000+ lines** of GDScript across 159 scripts
-- **221 files** (159 scripts + 49 scenes + 13 shaders)
+- **64,000+ lines** of GDScript across 162 scripts
+- **224 files** (162 scripts + 49 scenes + 13 shaders)
 - **21 enemy types** with unique AI (including 10 Phase 23 bosses/elites)
 - **36 weapon mods** craftable (20 original + 2 Enhancement + 2 Enhancement Pack 2 + 12 Phase 24)
 - **20 biomes** with procedural generation (12 original + 7 Phase 22 + 1 Underground)

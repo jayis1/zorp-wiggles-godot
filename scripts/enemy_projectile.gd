@@ -24,6 +24,11 @@ var _cached_player: Node3D = null
 # flag, _on_hit_player would run twice (queue_free is deferred), dealing
 # double damage to the player from a single enemy projectile.
 var _has_already_hit: bool = false
+# ── Enhancement Pack 20: Near-miss graze ── Each projectile can only graze
+# the player once. When the projectile passes within GRAZE_RADIUS but outside
+# HIT_RADIUS, a subtle whoosh SFX plays. This flag prevents repeated graze
+# SFX from the same projectile lingering near the player.
+var _has_grazed: bool = false
 
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
@@ -124,6 +129,19 @@ func _physics_process(delta: float) -> void:
 		if dist < GameConstants.ENEMY_PROJECTILE_HIT_RADIUS:
 			_on_hit_player(_cached_player)
 			return  # _on_hit_player freed this projectile; stop processing
+		# ── Enhancement Pack 20: Near-miss graze ── If the projectile passes
+		# close to the player without hitting (between HIT_RADIUS and
+		# GRAZE_RADIUS), play a subtle whoosh SFX. This gives the player audio
+		# feedback that a bolt narrowly missed — "that was close!" — adding
+		# tension and awareness during projectile-heavy encounters (Spore
+		# Spitters, Crystal Guardians, Drakes, Mirror Mimics). Each projectile
+		# can only graze once (flagged via _has_grazed) so a bolt lingering
+		# near the player doesn't replay the SFX. The SFX is very quiet (0.12
+		# volume) so multiple simultaneous grazes don't stack into noise.
+		if not _has_grazed and dist < GameConstants.ENEMY_PROJECTILE_GRAZE_RADIUS:
+			_has_grazed = true
+			if AudioManager:
+				AudioManager.play_sfx(AudioManager.SFX_GRAZE)
 	# ── Phase 19: Co-op — also check P2 if active ──
 	# Only check P2 if we didn't already hit P1 (above returns on hit, so
 	# reaching here means P1 was not in range). Without the early return above,
@@ -137,6 +155,13 @@ func _physics_process(delta: float) -> void:
 			if p2_dist < GameConstants.ENEMY_PROJECTILE_HIT_RADIUS:
 				_on_hit_player(CoOpManager.p2_node)
 				return  # _on_hit_player freed this projectile
+			# ── Enhancement Pack 20: Near-miss graze for P2 ── Same graze
+			# detection for Player 2 in co-op, using the same _has_grazed
+			# flag so the projectile only grazes once total (either player).
+			if not _has_grazed and p2_dist < GameConstants.ENEMY_PROJECTILE_GRAZE_RADIUS:
+				_has_grazed = true
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_GRAZE)
 
 # ── Phase 14: Set time scale (called by DimensionSystem) ──
 func set_time_scale(scale: float) -> void:

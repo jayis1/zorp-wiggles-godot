@@ -627,6 +627,12 @@ func _hit_enemy(enemy: Node3D) -> void:
 		total_damage = int(total_damage * crit_mult)
 		# ── Hit-stop: briefly slow the world on a crit for a weighty impact ──
 		_trigger_hitstop()
+		# ── Enhancement Pack 20: Critical hit screen-edge flash ── Emit a
+		# signal so the crit_flash HUD overlay can play a brief gold-colored
+		# screen-edge glow. The mod_color is passed so the flash can be
+		# tinted to the weapon mod's color for thematic variety (e.g. fire
+		# mods flash orange, ice mods flash cyan, void mods flash purple).
+		GameManager.critical_hit.emit(_mod_color)
 
 	# Check if this will be a kill before applying damage
 	var will_kill: bool = false

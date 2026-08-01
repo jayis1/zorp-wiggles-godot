@@ -463,6 +463,29 @@ func _ready() -> void:
 	vs_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(vs_ctrl)
 
+	# ── Enhancement Pack 20: Boss Intro Card ── A dramatic full-screen boss
+	# name overlay that slides in when a boss spawns, holds for ~2 seconds,
+	# then slides out. Gives boss appearances a cinematic "title card" moment
+	# beyond the boss HP bar + HUD message. Purely visual — doesn't block
+	# input or pause the game.
+	var bic_script := load("res://scripts/boss_intro_card.gd")
+	var bic_ctrl := Control.new()
+	bic_ctrl.set_script(bic_script)
+	bic_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bic_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bic_ctrl)
+
+	# ── Enhancement Pack 20: Critical Hit Screen-Edge Flash ── A brief
+	# gold-colored screen-edge glow that flashes on critical hits, tinted
+	# to the weapon mod's color for thematic variety. Gives crits a visual
+	# punch beyond the gold damage number + hit-stop freeze.
+	var cf_script := load("res://scripts/crit_flash.gd")
+	var cf_ctrl := Control.new()
+	cf_ctrl.set_script(cf_script)
+	cf_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cf_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(cf_ctrl)
+
 	# ── Phase 30: Photo Mode (free-look camera + screenshots) ──
 	# PhotoMode is a Node (not a Control) — it manages its own Camera3D and HUD panel.
 	var pm_script := load("res://scripts/photo_mode.gd")

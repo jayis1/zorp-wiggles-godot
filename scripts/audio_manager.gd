@@ -221,6 +221,13 @@ const SFX_DODGE: String = "dodge"
 # and short so it doesn't stack into noise when multiple enemies are dying.
 # Reads as \"this enemy is on its last legs\" — the audio cue for focus fire.
 const SFX_NEAR_DEATH: String = "near_death"
+# ── Enhancement Pack 20: Near-miss graze ── A subtle, very short airy whoosh
+# (0.06s noise sweep at low volume 0.12) that plays when an enemy projectile
+# passes close to the player without hitting. It's the audio cue for "that
+# was close" — conveying danger narrowly avoided. Shorter and quieter than
+# SFX_DODGE (0.08s, 0.18) so it doesn't compete with combat sounds. The
+# noise-sweep timbre conveys air disturbance — the bolt's wake brushing past.
+const SFX_GRAZE: String = "graze"
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -943,6 +950,13 @@ func _generate_all_sfx() -> void:
 	# descending pitch conveys "weakening / about to break" — the audio
 	# equivalent of the visual tremor.
 	_sfx_streams[SFX_NEAR_DEATH] = _gen_descending(140.0, 100.0, 0.12, 0.10)
+	# ── Enhancement Pack 20: Near-miss graze ── A very short airy whoosh
+	# (0.06s noise sweep at 0.12 volume) that plays when an enemy projectile
+	# narrowly misses the player. Shorter and quieter than SFX_DODGE so
+	# multiple grazes during a projectile-heavy encounter don't stack into
+	# noise. The noise-sweep timbre conveys air disturbance — the bolt's
+	# wake brushing past the player's body.
+	_sfx_streams[SFX_GRAZE] = _gen_noise_sweep(0.06, 0.12)
 
 
 func _generate_all_music() -> void:
