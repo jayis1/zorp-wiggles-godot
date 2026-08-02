@@ -83,7 +83,7 @@ func _ready() -> void:
 	register_pool("res://scenes/entities/impact_burst.tscn", 10)
 	# Start at high quality (will auto-adjust down if needed)
 	_current_quality_level = 2
-	print("[PerformanceOptimizer] Initialized — auto-quality enabled")
+	print_verbose("[PerformanceOptimizer] Initialized — auto-quality enabled")
 
 func _process(delta: float) -> void:
 	# Track frame time
@@ -132,7 +132,7 @@ func register_pool(scene_path: String, pre_warm: int = POOL_DEFAULT_SIZE) -> voi
 		_pools[scene_path]["created"] += 1
 		# Keep dormant — not added to scene tree until acquired
 		_pools[scene_path]["free"].append(node)
-	print("[PerformanceOptimizer] Pool registered: %s (pre-warmed %d)" % [scene_path, pre_warm])
+	print_verbose("[PerformanceOptimizer] Pool registered: %s (pre-warmed %d)" % [scene_path, pre_warm])
 
 ## Acquire an instance from the pool. The instance is activated and added to
 ## the specified parent. Returns null if the pool is unregistered.
@@ -425,7 +425,7 @@ func _evaluate_quality() -> void:
 		# visual quality change had a cause.
 		if AudioManager:
 			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.7)
-		print("[PerformanceOptimizer] Quality downgraded to %s (avg %.1fms, p95 %.1fms)" % [name, avg, p95])
+		print_verbose("[PerformanceOptimizer] Quality downgraded to %s (avg %.1fms, p95 %.1fms)" % [name, avg, p95])
 	# Upgrade if consistently fast and headroom available
 	elif avg < FRAME_BUDGET_MS * 0.6 and p95 < FRAME_BUDGET_MS and _current_quality_level < 3:
 		_current_quality_level += 1
@@ -436,7 +436,7 @@ func _evaluate_quality() -> void:
 		# Higher-pitched click for quality upgrade.
 		if AudioManager:
 			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.1)
-		print("[PerformanceOptimizer] Quality upgraded to %s (avg %.1fms, p95 %.1fms)" % [name, avg, p95])
+		print_verbose("[PerformanceOptimizer] Quality upgraded to %s (avg %.1fms, p95 %.1fms)" % [name, avg, p95])
 
 ## Apply a quality level by adjusting engine settings.
 func _apply_quality_level(level: int) -> void:

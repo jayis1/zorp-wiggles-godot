@@ -127,7 +127,7 @@ func start_daily_attempt() -> bool:
 	# beginning of a special, one-attempt-per-day run.
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
-	print("[DailyChallenge] Attempt started — seed: %d, date: %s" % [_today_seed, _last_attempt_date])
+	print_verbose("[DailyChallenge] Attempt started — seed: %d, date: %s" % [_today_seed, _last_attempt_date])
 	return true
 
 ## Records the result of a daily challenge run. Called automatically on player
@@ -163,7 +163,7 @@ func record_daily_result(score: int, kills: int, time: float, level: int) -> voi
 	_save()
 	daily_attempt_finished.emit(score, kills, time)
 	daily_leaderboard_updated.emit()
-	print("[DailyChallenge] Attempt recorded — score: %d, kills: %d, time: %.1fs" % [score, kills, time])
+	print_verbose("[DailyChallenge] Attempt recorded — score: %d, kills: %d, time: %.1fs" % [score, kills, time])
 	# Grant XP bonus for next run via Statistics
 	if Statistics:
 		Statistics.add_lifetime("daily_challenges_completed", 1.0)
@@ -212,7 +212,7 @@ func _refresh_today_seed() -> void:
 		_today_best_kills = 0
 		_today_best_time = 0.0
 		_today_best_level = 0
-	print("[DailyChallenge] Today: %s — seed: %d — modifiers: %s" % [
+	print_verbose("[DailyChallenge] Today: %s — seed: %d — modifiers: %s" % [
 		date_str, _today_seed, str(_today_modifiers)
 	])
 

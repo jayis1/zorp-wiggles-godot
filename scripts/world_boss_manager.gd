@@ -115,11 +115,11 @@ func _materialize_world_boss(boss_type: int, spawn_pos: Vector3, display_name: S
 	# Look up the scene path from the EnemySpawner's ENEMY_SCENES table.
 	var scene_path: String = EnemySpawner.ENEMY_SCENES.get(boss_type, "")
 	if scene_path.is_empty():
-		print("[WorldBossManager] No scene for boss type %d" % boss_type)
+		print_verbose("[WorldBossManager] No scene for boss type %d" % boss_type)
 		return
 	var scene: PackedScene = load(scene_path)
 	if not scene:
-		print("[WorldBossManager] Failed to load boss scene: %s" % scene_path)
+		print_verbose("[WorldBossManager] Failed to load boss scene: %s" % scene_path)
 		return
 	var boss: CharacterBody3D = scene.instantiate()
 	boss.position = spawn_pos

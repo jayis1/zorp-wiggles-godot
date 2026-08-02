@@ -42,7 +42,7 @@ func _ready() -> void:
 	_generate_world()
 
 func _generate_world() -> void:
-	print("[WorldGenerator] Generating %dx%d world..." % [GRID_SIZE, GRID_SIZE])
+	print_verbose("[WorldGenerator] Generating %dx%d world..." % [GRID_SIZE, GRID_SIZE])
 	
 	# Generate biome grid using noise
 	_generate_biome_grid()
@@ -70,7 +70,7 @@ func _generate_world() -> void:
 	# obstacles (decorations, destructibles, monoliths, portals, etc.).
 	call_deferred("_build_nav_mesh")
 	
-	print("[WorldGenerator] World generation complete!")
+	print_verbose("[WorldGenerator] World generation complete!")
 
 # ── Phase 10: Build the navigation mesh after the world is fully populated ──
 # Uses call_deferred so all StaticBody3D colliders are in the scene tree first.
@@ -270,7 +270,7 @@ func _spawn_decorations() -> void:
 	deco_node.name = "Decorations"
 	deco_node.spawn_all_decorations(grid, GRID_SIZE, TILE_SIZE)
 	add_child(deco_node)
-	print("[WorldGenerator] Spawned %d decorations" % deco_node.get_decoration_count())
+	print_verbose("[WorldGenerator] Spawned %d decorations" % deco_node.get_decoration_count())
 
 func _spawn_initial_enemies() -> void:
 	# Spawn initial wave of enemies across the world.
@@ -342,7 +342,7 @@ func _spawn_destructibles() -> void:
 					prop.prop_name = "Crate"
 				add_child(prop)
 				count += 1
-	print("[WorldGenerator] Spawned %d destructibles" % count)
+	print_verbose("[WorldGenerator] Spawned %d destructibles" % count)
 
 func _spawn_portal_pairs() -> void:
 	# Create linked portal pairs at walkable locations around the world.
@@ -599,7 +599,7 @@ func _spawn_lore_stones() -> void:
 				add_child(stone)
 				stone.global_position = Vector3(wx, 0, wz)
 				count += 1
-	print("[WorldGenerator] Spawned %d lore stones" % count)
+	print_verbose("[WorldGenerator] Spawned %d lore stones" % count)
 
 func _spawn_treasure_chests() -> void:
 	# Scatter hidden treasure chests across walkable biomes. Skipped near spawn.
@@ -621,7 +621,7 @@ func _spawn_treasure_chests() -> void:
 				add_child(chest)
 				chest.global_position = Vector3(wx, 0, wz)
 				count += 1
-	print("[WorldGenerator] Spawned %d treasure chests" % count)
+	print_verbose("[WorldGenerator] Spawned %d treasure chests" % count)
 
 func _spawn_wildlife() -> void:
 	# Spawn biome-appropriate wildlife. Each species only spawns in its
@@ -655,7 +655,7 @@ func _spawn_wildlife() -> void:
 				add_child(creature)
 				creature.global_position = Vector3(wx, 0.5, wz)
 				count += 1
-	print("[WorldGenerator] Spawned %d wildlife" % count)
+	print_verbose("[WorldGenerator] Spawned %d wildlife" % count)
 
 func _pick_wildlife_species_for_biome(biome: int) -> Dictionary:
 	# Return a random species from WILDLIFE_SPECIES that prefers the given
@@ -716,7 +716,7 @@ func _spawn_dialogue_npcs() -> void:
 			add_child(npc)
 			npc.global_position = Vector3(wx, 0.5, wz)
 			count += 1
-	print("[WorldGenerator] Spawned %d dialogue NPCs" % count)
+	print_verbose("[WorldGenerator] Spawned %d dialogue NPCs" % count)
 
 func _spawn_environmental_hazards() -> void:
 	# Spawn environmental hazards in their preferred biomes. Each hazard type
@@ -755,7 +755,7 @@ func _spawn_environmental_hazards() -> void:
 			add_child(hazard)
 			hazard.global_position = Vector3(wx, 0, wz)
 			count += 1
-	print("[WorldGenerator] Spawned %d environmental hazards" % count)
+	print_verbose("[WorldGenerator] Spawned %d environmental hazards" % count)
 
 func _spawn_interactive_objects() -> void:
 	# Spawn interactive objects (switches, doors, breakable walls, hidden
@@ -802,7 +802,7 @@ func _spawn_interactive_objects() -> void:
 			add_child(obj)
 			obj.global_position = Vector3(wx, 0, wz)
 			count += 1
-	print("[WorldGenerator] Spawned %d interactive objects" % count)
+	print_verbose("[WorldGenerator] Spawned %d interactive objects" % count)
 
 func _spawn_fast_travel_waypoints() -> void:
 	# Spawn fast travel waypoints across walkable biomes. These are sparse
@@ -833,4 +833,4 @@ func _spawn_fast_travel_waypoints() -> void:
 			add_child(wp)
 			wp.global_position = Vector3(wx, 0, wz)
 			count += 1
-	print("[WorldGenerator] Spawned %d fast travel waypoints" % count)
+	print_verbose("[WorldGenerator] Spawned %d fast travel waypoints" % count)

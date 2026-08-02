@@ -92,7 +92,7 @@ func unlock_slot(slot: int) -> bool:
 	_unlocked[slot] = true
 	slot_unlocked.emit(slot)
 	GameManager.add_message("🐾 Pet slot %d unlocked! You can now own up to %d pets." % [slot + 1, get_slot_count()])
-	print("[MultiPet] Slot %d unlocked" % slot)
+	print_verbose("[MultiPet] Slot %d unlocked" % slot)
 	return true
 
 
@@ -125,7 +125,7 @@ func store_active_pet(pet_node: CharacterBody3D) -> bool:
 		"max_hp": pet_node.max_hp,
 	}
 	pet_stored.emit(_active_slot)
-	print("[MultiPet] Stored pet to slot %d (stage=%s, path=%s, hp=%d/%d)" %
+	print_verbose("[MultiPet] Stored pet to slot %d (stage=%s, path=%s, hp=%d/%d)" %
 		[_active_slot, pet_node.stage, pet_node.evolution_path, pet_node.hp, pet_node.max_hp])
 	return true
 
@@ -155,7 +155,7 @@ func restore_pet_to_slot(slot: int, pet_scene: PackedScene) -> CharacterBody3D:
 	pet.max_hp = int(profile.get("max_hp", 30))
 	_active_slot = slot
 	pet_restored.emit(slot)
-	print("[MultiPet] Restored pet from slot %d" % slot)
+	print_verbose("[MultiPet] Restored pet from slot %d" % slot)
 	return pet
 
 

@@ -121,7 +121,7 @@ func _ready() -> void:
 		PetAccessorySystem.accessory_equipped.connect(_on_accessories_changed)
 		PetAccessorySystem.accessory_unequipped.connect(_on_accessories_changed)
 
-	print("[Pet] Companion pet summoned at stage %s" % GameConstants.PET_STAGE_NAMES[stage])
+	print_verbose("[Pet] Companion pet summoned at stage %s" % GameConstants.PET_STAGE_NAMES[stage])
 
 
 func _on_accessories_changed(_a = null, _b = null) -> void:
@@ -377,7 +377,7 @@ func _set_path(new_path: int) -> void:
 	AudioManager.play_sfx(AudioManager.SFX_PET_EVOLVE)
 	# Emote: LOVE on path change (it's exciting!)
 	_trigger_emote(GameConstants.PetEmote.LOVE)
-	print("[Pet] Path set to %s" % path_name)
+	print_verbose("[Pet] Path set to %s" % path_name)
 
 
 func _check_evolution() -> void:
@@ -418,7 +418,7 @@ func _evolve_to(new_stage: int) -> void:
 	# ── Phase 27: Pet Questline — notify stage change ──
 	if PetQuestline:
 		PetQuestline.notify_pet_stage_changed(stage, evolution_path)
-	print("[Pet] Evolved to %s (points=%d, path=%s)" % [
+	print_verbose("[Pet] Evolved to %s (points=%d, path=%s)" % [
 		GameConstants.PET_STAGE_NAMES[stage], evolution_points,
 		GameConstants.PET_PATH_NAMES[evolution_path]
 	])

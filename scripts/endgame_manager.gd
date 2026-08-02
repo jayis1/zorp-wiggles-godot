@@ -84,7 +84,7 @@ func set_ng_tier(tier: int) -> void:
 		return
 	_ng_tier = tier
 	ng_tier_changed.emit(tier)
-	print("[Endgame] NG tier set to: %s" % GameConstants.NG_TIER_NAMES[tier])
+	print_verbose("[Endgame] NG tier set to: %s" % GameConstants.NG_TIER_NAMES[tier])
 	# ── Enhancement: NG tier change juice ── SFX + camera trauma + HUD
 	# message so the player gets sensory feedback when cycling difficulty
 	# tiers (Shift+N). Previously the tier change was a silent console
@@ -456,7 +456,7 @@ func generate_loot_caves() -> void:
 		}
 		_loot_caves.append(cave)
 		_build_loot_cave_entrance(cave)
-	print("[Endgame] Generated %d loot caves" % _loot_caves.size())
+	print_verbose("[Endgame] Generated %d loot caves" % _loot_caves.size())
 
 func _build_loot_cave_entrance(cave: Dictionary) -> void:
 	var root := Node3D.new()
@@ -689,7 +689,7 @@ func generate_ancient_vault() -> void:
 	}
 	_vault_guardian_died_handled = false
 	_build_vault_entrance()
-	print("[Endgame] Generated ancient vault at %s" % str(pos))
+	print_verbose("[Endgame] Generated ancient vault at %s" % str(pos))
 
 func _build_vault_entrance() -> void:
 	var root := Node3D.new()

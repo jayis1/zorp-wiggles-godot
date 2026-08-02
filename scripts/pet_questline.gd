@@ -268,7 +268,7 @@ func _complete_quest(idx: int) -> void:
 	# Unlock next quest
 	if idx + 1 < QUESTS.size():
 		quest_unlocked.emit(idx + 1)
-	print("[PetQuestline] Quest %d completed: %s" % [idx, title])
+	print_verbose("[PetQuestline] Quest %d completed: %s" % [idx, title])
 
 
 func _apply_reward(idx: int) -> void:

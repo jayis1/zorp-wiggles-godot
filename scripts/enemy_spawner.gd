@@ -303,7 +303,7 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	# every subsequent spawn of this type). Avoids a per-spawn load() lookup.
 	var scene: PackedScene = _get_cached_scene(enemy_type)
 	if not scene:
-		print("[EnemySpawner] Failed to load enemy scene for type %d" % enemy_type)
+		print_verbose("[EnemySpawner] Failed to load enemy scene for type %d" % enemy_type)
 		return
 
 	var enemy: CharacterBody3D = scene.instantiate()

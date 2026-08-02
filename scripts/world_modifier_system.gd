@@ -263,9 +263,9 @@ func roll_modifiers(world_seed: int) -> void:
 	if AudioManager and _active_modifiers.size() > 0:
 		AudioManager.play_sfx(AudioManager.SFX_MUTATION)
 	# Print the rolled modifiers for debugging
-	print("[WorldModifiers] Rolled %d modifiers for seed %d:" % [_active_modifiers.size(), world_seed])
+	print_verbose("[WorldModifiers] Rolled %d modifiers for seed %d:" % [_active_modifiers.size(), world_seed])
 	for mod_id in _active_modifiers:
-		print("  - %s: %s" % [MODIFIER_NAMES[mod_id], MODIFIER_DESCRIPTIONS[mod_id]])
+		print_verbose("  - %s: %s" % [MODIFIER_NAMES[mod_id], MODIFIER_DESCRIPTIONS[mod_id]])
 
 # Apply a single modifier's effects to the cached multipliers
 func _apply_modifier(mod_id: int) -> void:

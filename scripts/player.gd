@@ -2208,7 +2208,7 @@ func _toggle_pet() -> void:
 			TutorialManager.notify_pet_summoned()
 		if PetQuestline:
 			PetQuestline.notify_pet_summoned()
-		print("[Player] Pet summoned at %s" % pet.global_position)
+		print_verbose("[Player] Pet summoned at %s" % pet.global_position)
 
 
 # ── Phase 27: Use an evolution stone from inventory on the active pet ──

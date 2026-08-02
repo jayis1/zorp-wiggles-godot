@@ -158,7 +158,7 @@ func _load() -> void:
 		return
 	_current_mode = int(parsed.get("mode", Mode.NORMAL))
 	_current_mode = clampi(_current_mode, 0, MODE_NAMES.size() - 1)
-	print("[GameMode] Loaded — mode: %s" % MODE_NAMES[_current_mode])
+	print_verbose("[GameMode] Loaded — mode: %s" % MODE_NAMES[_current_mode])
 
 func _save() -> void:
 	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -188,7 +188,7 @@ func set_mode(mode: int) -> void:
 	_current_mode = mode
 	_save()
 	mode_changed.emit(_current_mode)
-	print("[GameMode] Mode set to: %s" % MODE_NAMES[_current_mode])
+	print_verbose("[GameMode] Mode set to: %s" % MODE_NAMES[_current_mode])
 
 func cycle_mode() -> void:
 	set_mode((_current_mode + 1) % MODE_NAMES.size())

@@ -219,7 +219,7 @@ func try_fuse() -> CharacterBody3D:
 	# Tutorial notification
 	if TutorialManager and TutorialManager.has_method("notify_pet_summoned"):
 		TutorialManager.notify_pet_summoned()
-	print("[PetFusion] Created fusion pet type %d (%s)" % [ft, GameConstants.PET_FUSION_NAMES[ft]])
+	print_verbose("[PetFusion] Created fusion pet type %d (%s)" % [ft, GameConstants.PET_FUSION_NAMES[ft]])
 	return fusion_pet
 
 

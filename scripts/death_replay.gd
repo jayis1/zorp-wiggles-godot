@@ -141,7 +141,7 @@ func start_replay(player: CharacterBody3D) -> void:
 	HitStopCoordinator.reset()
 	Engine.time_scale = REPLAY_TIME_SCALE
 	replay_started.emit()
-	print("[DeathReplay] Starting slow-mo replay (%d samples)" % _samples.size())
+	print_verbose("[DeathReplay] Starting slow-mo replay (%d samples)" % _samples.size())
 
 
 func _process(delta: float) -> void:
@@ -193,7 +193,7 @@ func _finish_replay() -> void:
 		if m and is_instance_valid(m):
 			m.rotation = _saved_mesh_rot
 	replay_finished.emit()
-	print("[DeathReplay] Replay finished")
+	print_verbose("[DeathReplay] Replay finished")
 
 
 func is_playing() -> bool:

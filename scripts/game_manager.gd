@@ -96,7 +96,7 @@ var hud: CanvasLayer = null
 
 func _ready() -> void:
 	world_seed = randi()
-	print("[ZorpWiggles] Game initialized — seed: %d" % world_seed)
+	print_verbose("[ZorpWiggles] Game initialized — seed: %d" % world_seed)
 	# Defer scene node lookup — autoload is ready before the main scene exists
 	call_deferred("_resolve_scene_refs")
 	_start_game()
@@ -627,7 +627,7 @@ func _level_up() -> void:
 		GameConstants.PLAYER_LEVEL_DMG_BONUS + tier * GameConstants.PLAYER_LEVEL_DMG_TIER_BONUS,
 		tier * GameConstants.PLAYER_LEVEL_SPEED_TIER_BONUS
 	])
-	print("[ZorpWiggles] Level up! Now level %d (HP: %d, XP next: %d)" % [player_level, player_max_hp, player_xp_to_next])
+	print_verbose("[ZorpWiggles] Level up! Now level %d (HP: %d, XP next: %d)" % [player_level, player_max_hp, player_xp_to_next])
 	# Phase 6: Level-up shockwave + particle burst
 	if player and is_instance_valid(player):
 		ParticleEffects.spawn_levelup_burst(player.get_parent(), player.global_position)
@@ -707,13 +707,13 @@ func _die() -> void:
 		AudioManager.play_sfx_pitched(AudioManager.SFX_DAMAGE, 0.8)
 		if camera_rig and camera_rig.has_method("add_trauma"):
 			camera_rig.add_trauma(0.2)
-		print("[GameManager] P1 downed in co-op — awaiting revive")
+		print_verbose("[GameManager] P1 downed in co-op — awaiting revive")
 		return
 	# If already downed and bleed-out timer expired, or no co-op partner → actual death
 	player_is_alive = false
 	player_is_downed = false
 	player_died.emit()
-	print("[ZorpWiggles] Zorp died! Score: %d, Kills: %d, Best Combo: %d" % [player_score, player_kills, player_best_combo])
+	print_verbose("[ZorpWiggles] Zorp died! Score: %d, Kills: %d, Best Combo: %d" % [player_score, player_kills, player_best_combo])
 
 func restart_game() -> void:
 	# ── Phase 35: Safety reset — ensure Engine.time_scale is always 1.0 ──
@@ -858,7 +858,7 @@ func add_pickup_streak() -> void:
 func add_message(text: String) -> void:
 	messages.append(text)
 	message_added.emit(text)
-	print("[ZorpWiggles] %s" % text)
+	print_verbose("[ZorpWiggles] %s" % text)
 
 # ── Phase 18: Boss Arena — track current boss ──
 func set_current_boss(boss: Node) -> void:

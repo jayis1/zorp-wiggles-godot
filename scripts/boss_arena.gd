@@ -510,7 +510,7 @@ func _spawn_arena_boss() -> void:
 
 	var scene: PackedScene = load(scene_path)
 	if not scene:
-		print("[BossArena] Failed to load boss scene: %s" % scene_path)
+		print_verbose("[BossArena] Failed to load boss scene: %s" % scene_path)
 		return
 
 	var boss: CharacterBody3D = scene.instantiate()

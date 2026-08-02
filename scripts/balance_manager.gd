@@ -75,7 +75,7 @@ var _is_initialized: bool = false
 
 func _ready() -> void:
 	_is_initialized = true
-	print("[BalanceManager] Balance tuning active — XP curve, loot, pets, difficulty, weapon mods")
+	print_verbose("[BalanceManager] Balance tuning active — XP curve, loot, pets, difficulty, weapon mods")
 
 
 # ─── XP Curve ─────────────────────────────────────────────────────────────────

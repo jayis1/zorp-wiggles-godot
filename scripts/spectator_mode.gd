@@ -175,7 +175,7 @@ func start_spectating(replay_id: String) -> bool:
 	# Audio feedback for entering spectator mode — a soft whoosh.
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_RIFT)
-	print("[Spectator] Spectating replay: %s" % replay_id)
+	print_verbose("[Spectator] Spectating replay: %s" % replay_id)
 	return true
 
 func stop_spectating() -> void:
@@ -206,7 +206,7 @@ func stop_spectating() -> void:
 	# Audio feedback for exiting spectator mode — a lower-pitched click.
 	if AudioManager:
 		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.8)
-	print("[Spectator] Stopped spectating")
+	print_verbose("[Spectator] Stopped spectating")
 
 func cycle_next_replay() -> void:
 	if not _spectating or not ReplaySystem:
@@ -311,7 +311,7 @@ func _update_hud() -> void:
 
 func _show_hud_message(msg: String) -> void:
 	# Simple: print to console + could show on HUD
-	print("[Spectator] %s" % msg)
+	print_verbose("[Spectator] %s" % msg)
 
 func _find_replay_in_manifest(replay_id: String) -> Dictionary:
 	if not ReplaySystem:

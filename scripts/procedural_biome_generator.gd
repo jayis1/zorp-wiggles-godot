@@ -96,7 +96,7 @@ func _generate_zones() -> void:
 			"entered": false,
 		}
 		_zones.append(zone)
-	print("[ProcBiome] Generated %d anomalous zones" % _zones.size())
+	print_verbose("[ProcBiome] Generated %d anomalous zones" % _zones.size())
 
 func _pick_traits() -> Array:
 	# Pick PROC_BIOME_TRAIT_COUNT unique traits from the pool.

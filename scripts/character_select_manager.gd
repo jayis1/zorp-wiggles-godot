@@ -85,7 +85,7 @@ func _load() -> void:
 		return
 	_selected = int(data.get("character", Character.ZORP))
 	_selected = clampi(_selected, 0, Character.size() - 1)
-	print("[CharacterSelect] Loaded — character: %s" % get_character_name(_selected))
+	print_verbose("[CharacterSelect] Loaded — character: %s" % get_character_name(_selected))
 
 
 func _save() -> void:
@@ -116,7 +116,7 @@ func set_character(id: int) -> void:
 	# UI plays its own SFX, but the system-level setter had no feedback).
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
-	print("[CharacterSelect] Character set to: %s" % get_character_name(_selected))
+	print_verbose("[CharacterSelect] Character set to: %s" % get_character_name(_selected))
 
 
 func get_character_name(id: int) -> String:

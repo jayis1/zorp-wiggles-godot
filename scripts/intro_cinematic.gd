@@ -116,7 +116,7 @@ func _ready() -> void:
 		_hud.move_child(_hud_fade_rect, -1)
 	# Lock controls
 	_controls_unlocked = false
-	print("[IntroCinematic] Starting landing sequence")
+	print_verbose("[IntroCinematic] Starting landing sequence")
 
 
 func _process(delta: float) -> void:
@@ -262,7 +262,7 @@ func _finish() -> void:
 	if _camera_rig and _camera_rig.has_method("set_camera_pitch"):
 		_camera_rig.set_camera_pitch(_saved_cam_pitch)
 	_phase = Phase.DONE
-	print("[IntroCinematic] Landing sequence complete")
+	print_verbose("[IntroCinematic] Landing sequence complete")
 	queue_free()
 
 

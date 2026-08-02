@@ -144,7 +144,7 @@ func _load_lifetime() -> void:
 	# Merge saved values over defaults (so new fields get defaults if missing)
 	for key in parsed.keys():
 		_lifetime[key] = parsed[key]
-	print("[Statistics] Lifetime stats loaded — runs: %d, kills: %d" % [
+	print_verbose("[Statistics] Lifetime stats loaded — runs: %d, kills: %d" % [
 		int(_lifetime.get("total_runs", 0)),
 		int(_lifetime.get("total_kills", 0))
 	])

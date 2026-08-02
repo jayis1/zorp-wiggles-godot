@@ -91,7 +91,7 @@ func _load() -> void:
 	var unlocked: Dictionary = data.get("unlocked_skins", {})
 	for key in unlocked.keys():
 		_unlocked_skins[int(key)] = true
-	print("[Cosmetics] Loaded — skin: %s, trail: %s/%s, unlocked: %d" % [
+	print_verbose("[Cosmetics] Loaded — skin: %s, trail: %s/%s, unlocked: %d" % [
 		GameConstants.SKIN_NAMES[_active_skin],
 		GameConstants.TRAIL_STYLE_NAMES[_active_trail_style],
 		GameConstants.TRAIL_COLOR_NAMES[_active_trail_color_index],
@@ -135,7 +135,7 @@ func set_skin(skin_id: int) -> void:
 	# cycling skins with F10 was completely silent.
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
-	print("[Cosmetics] Skin set to: %s" % GameConstants.SKIN_NAMES[_active_skin])
+	print_verbose("[Cosmetics] Skin set to: %s" % GameConstants.SKIN_NAMES[_active_skin])
 
 
 func cycle_skin() -> int:
@@ -282,7 +282,7 @@ func refresh_unlocks() -> void:
 			_unlocked_skins[skin_id] = true
 			skin_unlocked.emit(skin_id)
 			_save()
-			print("[Cosmetics] Skin unlocked: %s" % GameConstants.SKIN_NAMES[skin_id])
+			print_verbose("[Cosmetics] Skin unlocked: %s" % GameConstants.SKIN_NAMES[skin_id])
 			if GameManager:
 				GameManager.add_message("🎨 Skin unlocked: %s!" % GameConstants.SKIN_NAMES[skin_id])
 			# Celebratory chime for skin unlock — a significant milestone.

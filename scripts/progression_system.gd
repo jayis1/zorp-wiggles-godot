@@ -119,7 +119,7 @@ func _load() -> void:
 	_skill_points = int(parsed.get("skill_points", 0))
 	_prestige_level = int(parsed.get("prestige_level", 0))
 	_total_skill_points_earned = int(parsed.get("total_sp_earned", 0))
-	print("[Progression] Loaded — SP: %d, Prestige: %d, Total earned: %d" % [
+	print_verbose("[Progression] Loaded — SP: %d, Prestige: %d, Total earned: %d" % [
 		_skill_points, _prestige_level, _total_skill_points_earned
 	])
 

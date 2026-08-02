@@ -174,7 +174,7 @@ func stop_recording(metadata: Dictionary) -> String:
 	_samples.clear()
 	_update_manifest(replay_id, metadata, replay_data)
 	recording_stopped.emit(replay_id)
-	print("[ReplaySystem] Saved replay %s (%d samples, %.1fs)" % [replay_id, replay_data["sample_count"], replay_data["duration"]])
+	print_verbose("[ReplaySystem] Saved replay %s (%d samples, %.1fs)" % [replay_id, replay_data["sample_count"], replay_data["duration"]])
 	_prune_old_replays()
 	return replay_id
 
@@ -217,7 +217,7 @@ func play_replay(replay_id: String) -> bool:
 	# entrance. Previously the ghost appeared silently.
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_RIFT)
-	print("[ReplaySystem] Playing replay %s (%d samples)" % [replay_id, samples.size()])
+	print_verbose("[ReplaySystem] Playing replay %s (%d samples)" % [replay_id, samples.size()])
 	return true
 
 
@@ -306,7 +306,7 @@ func _finish_playback() -> void:
 	# Soft SFX when a replay finishes — a gentle click conveys "done".
 	if AudioManager:
 		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.8)
-	print("[ReplaySystem] Playback finished")
+	print_verbose("[ReplaySystem] Playback finished")
 
 
 # ── Replay List / Manifest ────────────────────────────────────────────────────

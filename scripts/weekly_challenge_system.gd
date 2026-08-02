@@ -138,7 +138,7 @@ func start_weekly_attempt() -> bool:
 	# the beginning of a special, limited-attempts-per-week run.
 	if AudioManager:
 		AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
-	print("[WeeklyChallenge] Attempt %d/%d started — seed: %d, week: %s" % [_attempts_used, WEEKLY_MAX_ATTEMPTS, _week_seed, _last_attempt_week])
+	print_verbose("[WeeklyChallenge] Attempt %d/%d started — seed: %d, week: %s" % [_attempts_used, WEEKLY_MAX_ATTEMPTS, _week_seed, _last_attempt_week])
 	return true
 
 func record_weekly_result(score: int, kills: int, time: float, level: int) -> void:
@@ -171,7 +171,7 @@ func record_weekly_result(score: int, kills: int, time: float, level: int) -> vo
 	_save()
 	weekly_attempt_finished.emit(score, kills, time)
 	weekly_leaderboard_updated.emit()
-	print("[WeeklyChallenge] Attempt %d recorded — score: %d, kills: %d, time: %.1fs" % [_attempts_used, score, kills, time])
+	print_verbose("[WeeklyChallenge] Attempt %d recorded — score: %d, kills: %d, time: %.1fs" % [_attempts_used, score, kills, time])
 	if Statistics:
 		Statistics.add_lifetime("weekly_challenges_completed", 1.0)
 
@@ -234,7 +234,7 @@ func _refresh_week_seed() -> void:
 		_week_best_kills = 0
 		_week_best_time = 0.0
 		_week_best_level = 0
-	print("[WeeklyChallenge] Week: %s — seed: %d — modifiers: %s" % [
+	print_verbose("[WeeklyChallenge] Week: %s — seed: %d — modifiers: %s" % [
 		week_str, _week_seed, str(_week_modifiers)
 	])
 

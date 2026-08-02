@@ -77,7 +77,7 @@ func _generate_all_dungeons() -> void:
 		}
 		_dungeons.append(dungeon)
 		_build_entrance(dungeon)
-	print("[DungeonGenerator] Spawned %d dungeon entrances" % _dungeons.size())
+	print_verbose("[DungeonGenerator] Spawned %d dungeon entrances" % _dungeons.size())
 
 func _generate_room_layout(dungeon_id: int, _theme: int) -> Array[Dictionary]:
 	# A simple linear layout: rooms connected by short corridors along the

@@ -71,7 +71,7 @@ func build_nav_region(world: Node) -> void:
 	# async delay in 4.5+, but this is acceptable — enemies pathfind around the
 	# delay using their existing velocity + separation steering.
 	_is_baked = true
-	print("[NavigationManager] Nav mesh baked for world: %s" % world.name)
+	print_verbose("[NavigationManager] Nav mesh baked for world: %s" % world.name)
 
 
 ## Returns true if the nav mesh has been baked and is ready to use.

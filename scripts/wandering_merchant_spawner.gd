@@ -56,7 +56,7 @@ func _spawn_merchant() -> void:
 		return
 	var scene: PackedScene = load("res://scenes/entities/wandering_merchant.tscn")
 	if not scene:
-		print("[WanderingMerchantSpawner] Failed to load merchant scene")
+		print_verbose("[WanderingMerchantSpawner] Failed to load merchant scene")
 		return
 	# Spawn near the player but not on top of them.
 	var angle: float = randf() * TAU

@@ -134,7 +134,7 @@ func drop_in_p2() -> void:
 	# Audio — welcoming chime for P2 joining the adventure.
 	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
 	GameManager.add_message("🎮 %s joined the adventure! [Arrows] move, [/] shoot, [Enter] dash, [RShift] pulse, [.] revive" % GameConstants.P2_NAME)
-	print("[CoOp] Player 2 (%s) dropped in" % GameConstants.P2_NAME)
+	print_verbose("[CoOp] Player 2 (%s) dropped in" % GameConstants.P2_NAME)
 
 ## Remove Player 2 from the game. Called on drop-out or game restart.
 func drop_out_p2() -> void:
@@ -151,7 +151,7 @@ func drop_out_p2() -> void:
 	p2_revive_progress = 0.0
 	p2_left.emit()
 	GameManager.add_message("🎮 %s left the game" % GameConstants.P2_NAME)
-	print("[CoOp] Player 2 dropped out")
+	print_verbose("[CoOp] Player 2 dropped out")
 
 ## Force-remove P2 (used on game restart / death)
 func force_remove_p2() -> void:
