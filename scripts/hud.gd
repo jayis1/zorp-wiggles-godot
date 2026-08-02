@@ -167,6 +167,24 @@ const HP_HEAL_FLASH_COLOR: Color = Color(0.3, 1.0, 0.55)  # Mint green — disti
 #    bar "draining" which feels like a loss, not a gain. A brief white-blue
 #    flash + scale pop on the XP bar at the level-up frame recontextualizes the
 #    drain as a positive event: the bar "pulses" with energy before resetting.
+
+# ── XP bar ghost trail ─ Mirrors the HP and boss bar chip-damage ghost
+#    trails. When the player gains XP, the main bar snaps forward quickly
+#    (per _bar_smoothing) while the ghost bar lingers at the previous width
+#    and catches up slowly — creating a soft purple "trail" behind the
+#    advancing XP fill. This is most visible on level-up: the bar drains
+#    from full to the new level's remainder, and the ghost trail shows the
+#    "full" state lingering behind for ~0.8s, making the drain read as a
+#    satisfying "overflow" rather than an instant snap. On normal XP gains
+#    the ghost trails slightly behind the fill, giving each pickup a tiny
+#    visible "tail" that makes progress feel tactile. Unlike the HP ghost
+#    (which only moves DOWN — damage), the XP ghost moves in BOTH
+#    directions (XP goes up on gains, wraps down on level-up), so it uses
+#    a symmetric slow lerp rather than a one-sided snap.
+var _xp_ghost_bar: ColorRect = null
+var _xp_ghost_ratio: float = 0.0       # Current displayed ghost ratio (eased)
+var _xp_ghost_smoothing: float = 3.0   # Slow catch-up (lower = longer trail)
+const XP_GHOST_COLOR: Color = Color(0.55, 0.35, 0.85, 0.30)  # Dim purple, semi-transparent — matches the XP bar's purple palette
 #    This mirrors the HP bar's damage flash but in a celebratory direction.
 var _xp_bar_flash_timer: float = 0.0
 const XP_BAR_FLASH_DURATION: float = 0.30
@@ -240,6 +258,27 @@ func _ready() -> void:
 		_boss_ghost_bar.visible = false  # Hidden until boss spawns + takes damage
 		boss_hp_bar.get_parent().add_child(_boss_ghost_bar)
 		boss_hp_bar.get_parent().move_child(_boss_ghost_bar, boss_hp_bar.get_index())
+
+	# ── XP bar ghost trail ─ Mirrors the HP/boss bar ghost trails. A
+	#    semi-transparent dim-purple ColorRect behind the XP bar fill that
+	#    slowly catches up to the real XP ratio, creating a visible "tail"
+	#    behind the advancing fill on XP gains and a satisfying "overflow
+	#    drain" on level-up. Inserted behind the fill so it renders
+	#    underneath. Starts hidden — shown only when meaningfully behind
+	#    the real bar (in _process).
+	if xp_bar and xp_bar.get_parent():
+		_xp_ghost_bar = ColorRect.new()
+		_xp_ghost_bar.name = "XPGhostBar"
+		_xp_ghost_bar.color = XP_GHOST_COLOR
+		_xp_ghost_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_xp_ghost_bar.offset_left = xp_bar.offset_left
+		_xp_ghost_bar.offset_top = xp_bar.offset_top
+		_xp_ghost_bar.offset_right = xp_bar.offset_right
+		_xp_ghost_bar.offset_bottom = xp_bar.offset_bottom
+		_xp_ghost_bar.size = xp_bar.size
+		_xp_ghost_bar.visible = false
+		xp_bar.get_parent().add_child(_xp_ghost_bar)
+		xp_bar.get_parent().move_child(_xp_ghost_bar, xp_bar.get_index())
 	
 	# Create combo milestone flash overlay (full-screen ColorRect)
 	_combo_flash_rect = ColorRect.new()
@@ -765,6 +804,28 @@ func _process(delta: float) -> void:
 		xp_bar_color = xp_bar_color.lerp(XP_BAR_FLASH_COLOR, xp_flash_env * 0.8)
 	xp_bar.color = xp_bar.color.lerp(xp_bar_color, 1.0 - exp(-_color_smoothing * delta))
 
+	# ── XP bar ghost trail ─ The ghost bar slowly catches up to the real
+	#    XP ratio using a much slower smoothing rate, creating a visible
+	#    dim-purple "tail" behind the advancing fill. On level-up the bar
+	#    wraps from ~1.0 to ~0.0; the ghost lingers at ~1.0 and slowly
+	#    drains, making the "overflow" read as a satisfying drain rather
+	#    than an instant snap — mirroring the HP/boss bar chip-damage
+	#    language but in the positive direction (XP gain / level-up).
+	#    Unlike the HP ghost (which only moves down), the XP ghost moves
+	#    symmetrically (up on gains, down on level-up) since XP never
+	#    decreases except on the level-up wrap. The ghost is only shown
+	#    when it's meaningfully different from the real bar so it's
+	#    invisible at steady state (no visual noise while standing still).
+	if _xp_ghost_bar and xp_bar_width > 0:
+		var xp_ghost_weight: float = 1.0 - exp(-_xp_ghost_smoothing * delta)
+		_xp_ghost_ratio = lerpf(_xp_ghost_ratio, _xp_bar_target_ratio, xp_ghost_weight)
+		_xp_ghost_bar.size.x = xp_bar_width * _xp_ghost_ratio
+		_xp_ghost_bar.offset_left = xp_bar.offset_left
+		# Show the ghost only when it's meaningfully ahead of (or below)
+		# the real bar — a visible trail exists when the two differ by
+		# more than ~0.5% of the bar width. Hidden at steady state.
+		_xp_ghost_bar.visible = absf(_xp_ghost_ratio - xp_current_ratio) > 0.005
+
 	# Combo timer bar
 	if GameManager.player_combo > 0:
 		combo_timer_bar.visible = true
@@ -801,8 +862,35 @@ func _process(delta: float) -> void:
 			# smoothstep to it gives an S-curve fade rather than a linear drain.
 			t_red = t_red * t_red * (3.0 - 2.0 * t_red)
 			combo_timer_bar.color = Color(1.0, t_red, 0.0)
+		# ── Urgency pulse in the final 25% ── When the combo timer is
+		#    about to expire (ratio < 0.25), the bar rapidly pulses in
+		#    size + alpha — a visual "hurry up!" that's visible even at
+		#    a glance. The pulse uses a high-frequency sine (14 Hz) so
+		#    it reads as an urgent flicker rather than a gentle breath.
+		#    The pulse intensity ramps from 0 at ratio=0.25 to full at
+		#    ratio=0.0, so the urgency builds as time runs out. Only the
+		#    bar's vertical size pulses (width tracks the timer); the
+		#    alpha also flickers for extra attention. The bar's
+		#    bar's base height is 6px (from the scene layout), so the pulse
+		#    adds up to +4px. This gives players a clear "the combo is about
+		#    to drop" cue without needing to read the bar width.
+		if ratio < 0.25:
+			var urgency: float = (0.25 - ratio) / 0.25  # 0→1 as ratio→0
+			var pulse_env: float = sin(GameManager.player_combo_timer * 14.0) * 0.5 + 0.5
+			var height_pulse: float = 4.0 * urgency * pulse_env
+			combo_timer_bar.size.y = 6.0 + height_pulse
+			# Alpha flicker: the bar's modulate alpha dips slightly on
+			# each pulse trough so it reads as a strobe, not just a
+			# stretch. Clamped so it never fully disappears.
+			combo_timer_bar.modulate.a = lerpf(0.6, 1.0, pulse_env) * (1.0 - urgency * 0.2)
+		else:
+			combo_timer_bar.size.y = 6.0
+			combo_timer_bar.modulate.a = 1.0
 	else:
 		combo_timer_bar.visible = false
+		# Reset the pulse state so the next combo starts clean
+		combo_timer_bar.size.y = 6.0
+		combo_timer_bar.modulate.a = 1.0
 
 	# Boss HP bar (smooth)
 	# NOTE: We do NOT touch boss_hp_container.visible here — the entrance
@@ -1181,6 +1269,10 @@ func _on_game_restarted() -> void:
 	# cyan glow from the previous run's last level-up.
 	_xp_bar_flash_timer = 0.0
 	_xp_bar_prev_ratio = 0.0
+	# Reset XP ghost trail so a fresh game doesn't carry a stale trail
+	_xp_ghost_ratio = 0.0
+	if _xp_ghost_bar:
+		_xp_ghost_bar.visible = false
 	if xp_bar:
 		xp_bar.color = GameConstants.C_XP_PURPLE
 	# Reset floating score increment state so a fresh game doesn't carry a

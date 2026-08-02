@@ -1157,9 +1157,23 @@ func _handle_movement(delta: float) -> void:
 	else:
 		velocity_target = Vector3.ZERO
 	
-	# Smooth acceleration / deceleration
-	var accel: float = GameConstants.PLAYER_ACCELERATION if velocity_target.length_squared() > 0.01 else GameConstants.PLAYER_DECELERATION
-	velocity = velocity.move_toward(velocity_target, accel * delta)
+	# Smooth acceleration / deceleration.
+	# Exponential smoothing (1 - exp(-rate * delta)) is frame-rate
+	# independent: the player reaches the same percentage of the target in
+	# the same elapsed time regardless of whether the physics tick runs at
+	# 60 Hz, 144 Hz, or a hitching 40 Hz. The old move_toward() was a linear
+	# ramp (constant m/s²) that felt slightly mechanical and, more
+	# importantly, behaved differently at different frame rates — a 144 Hz
+	# monitor reached top speed in fewer perceived frames than a 60 Hz one.
+	# Using the ACCELERATION/DECELERATION constants as the exponential rate
+	# (divided by a scale factor so the feel matches the old linear tuning)
+	# keeps the same character speed-up / slow-down timing while gaining
+	# frame-rate independence and a softer, more organic ease. The
+	# deceleration rate is lower so stopping feels like a gentle skate
+	# rather than an instant brake — matching the alien-tech hover feel.
+	var rate: float = GameConstants.PLAYER_ACCELERATION if velocity_target.length_squared() > 0.01 else GameConstants.PLAYER_DECELERATION
+	var smoothing_weight: float = 1.0 - exp(-rate * 0.15 * delta)
+	velocity = velocity.lerp(velocity_target, smoothing_weight)
 	velocity.y = 0  # No vertical movement
 
 func _handle_dash(delta: float) -> void:

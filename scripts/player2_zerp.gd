@@ -288,7 +288,10 @@ func _handle_movement(delta: float) -> void:
 		velocity = move_direction * GameConstants.PLAYER_SPEED * speed_mult
 		velocity.y = 0
 	else:
-		velocity = velocity.move_toward(Vector3.ZERO, GameConstants.PLAYER_DECELERATION * delta)
+		# Frame-rate independent deceleration via exponential smoothing
+		# (matches P1's smoothing approach for co-op movement parity).
+		var decel_weight: float = 1.0 - exp(-GameConstants.PLAYER_DECELERATION * 0.15 * delta)
+		velocity = velocity.lerp(Vector3.ZERO, decel_weight)
 		velocity.y = 0
 
 func _handle_dash(delta: float) -> void:
