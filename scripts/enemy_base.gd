@@ -703,6 +703,13 @@ func _execute_attack_on_enemy(target: Node3D) -> void:
 		lunge_stretch.tween_property(body_mesh, "scale",
 			Vector3.ONE * base_scale, 0.18) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# ── Lunge trail particle ── A small color-tinted particle burst at the
+	#    lunge origin gives the attack a visible motion trail, making the
+	#    enemy's committed lunge read as a burst of speed rather than a
+	#    silent glide. Skipped for small enemies (base_scale < 0.8) since
+	#    their lunges are too short for a trail to be visible.
+	if base_scale >= 0.8:
+		ParticleEffects.spawn_dash_trail(get_parent(), global_position, current_color)
 	# Restore scale
 	var restore_tween := create_tween()
 	restore_tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15)
@@ -897,6 +904,17 @@ func _execute_attack(player: Node3D) -> void:
 		lunge_stretch.tween_property(body_mesh, "scale",
 			Vector3.ONE * base_scale, 0.18) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+
+	# ── Lunge trail particle ── A small color-tinted particle burst at the
+	#    lunge origin gives the attack a visible motion trail, making the
+	#    enemy's committed lunge read as a burst of speed rather than a
+	#    silent glide. Skipped for small enemies (base_scale < 0.8) since
+	#    their lunges are too short for a trail to be visible, and for
+	#    mind-controlled enemies attacking other enemies (the MC color
+	#    trail would be confusing — the particle color wouldn't match the
+	#    target's attacker in the kill feed).
+	if base_scale >= 0.8 and not player.is_in_group("enemies"):
+		ParticleEffects.spawn_dash_trail(get_parent(), global_position, current_color)
 
 	# Restore scale
 	var restore_tween := create_tween()

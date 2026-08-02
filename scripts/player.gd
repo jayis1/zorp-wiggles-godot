@@ -1198,8 +1198,16 @@ func _start_dash() -> void:
 	if ProceduralQuestSystem:
 		ProceduralQuestSystem.notify_dash()
 
-	# Camera shake on dash for punch
-	_trigger_camera_trauma(0.15)
+	# Camera shake on dash for punch — biased in the dash direction so the
+	# camera surges forward with Zorp, amplifying the speed sensation. The
+	# bias direction is the horizontal dash direction (y=0), and add_trauma
+	# scales the bias by the trauma amount so the kick is directional at the
+	# start and returns to centered noise as it decays.
+	var dash_bias: Vector3 = dash_direction
+	dash_bias.y = 0.0
+	if dash_bias.length_squared() > 0.01:
+		dash_bias = dash_bias.normalized()
+	_trigger_camera_trauma(0.15, dash_bias)
 
 	# ── Dash launch dust kick ── A small ground-level dust burst at Zorp's
 	#    feet the moment the dash fires. The dash already has camera shake,

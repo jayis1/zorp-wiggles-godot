@@ -43,6 +43,26 @@ var glow_phase: float = 0.0
 var _mat: StandardMaterial3D = null
 var _cached_player: Node3D = null
 
+# ── Despawn timer ── Collectibles that sit uncollected for too long clutter
+#    the world and waste memory. After DESPAWN_LIFETIME seconds (unless the
+#    player is actively nearby), the collectible enters a warning flicker
+#    phase (rapid emission pulsing) for DESPAWN_WARNING_DURATION seconds,
+#    then fades out and frees itself. This keeps the world clean during
+#    long runs without abruptly removing items the player was approaching.
+#    The despawn is paused while the player is within DESPAWN_PAUSE_RADIUS
+#    so items the player is walking toward don't vanish from under them.
+#    Rare items (evolution stones, meteor shards, crafting materials) get
+#    a 3× longer lifetime since they're valuable and the player may want
+#    to backtrack for them.
+var _despawn_timer: float = 0.0
+var _despawn_warning: bool = false
+var _despawn_flicker_phase: float = 0.0
+const DESPAWN_LIFETIME: float = 45.0           # Seconds before warning phase
+const DESPAWN_LIFETIME_RARE: float = 135.0     # 3× longer for rare items
+const DESPAWN_WARNING_DURATION: float = 4.0    # Flicker phase before fade
+const DESPAWN_PAUSE_RADIUS: float = 12.0       # Don't despawn if player this close
+var _despawn_fade_tween: Tween = null
+
 # ─── Type-specific config ────────────────────────────────────────────────────
 const TYPE_CONFIG := {
 	GameConstants.CollectibleType.XP_ORB: {"color": Color(0.4, 0.2, 1.0), "value": 10, "scale": 0.3},
@@ -101,6 +121,10 @@ func _ready() -> void:
 	base_pos_x = global_position.x
 	base_pos_z = global_position.z
 	bob_offset = randf() * TAU  # Random phase offset
+	# ── Initialize despawn timer ── Rare items get a 3× longer lifetime so
+	#    the player has ample time to backtrack for valuable drops. Common
+	#    items (XP orbs, space gloop) despawn sooner to keep the world clean.
+	_despawn_timer = DESPAWN_LIFETIME_RARE if _is_rare() else DESPAWN_LIFETIME
 
 func set_type(type: int) -> void:
 	collectible_type = type
@@ -249,6 +273,10 @@ func _apply_type_config() -> void:
 		_mat.emission_enabled = true
 		_mat.emission = config["color"] * 0.3
 		_mat.emission_energy_multiplier = 1.0
+		# Enable transparency so the despawn fade-out alpha tween works.
+		# Alpha SCISSOR would clip the emission halo; ALPHA preserves the glow
+		# while fading the overall opacity, giving a clean "dissolve" read.
+		_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		# Rim lighting so collectibles catch the eye at grazing angles
 		_mat.rim_enabled = true
 		_mat.rim = 0.8
@@ -291,6 +319,52 @@ func _physics_process(delta: float) -> void:
 	if GameManager.is_paused or not GameManager.player_is_alive:
 		return
 
+	# ── Despawn timer ── Tick down the lifetime. The timer is paused when
+	#    the player is within DESPAWN_PAUSE_RADIUS so items the player is
+	#    approaching don't vanish. Once the timer hits zero, a warning
+	#    flicker phase begins (rapid emission pulsing) for
+	#    DESPAWN_WARNING_DURATION seconds, then the collectible fades out
+	#    and frees itself. The flicker uses a high-frequency sine (18 Hz)
+	#    so it reads as an urgent "about to disappear" blink — the same
+	#    language as low-HP enemy pulsing but faster. The fade-out tween
+	#    scales the collectible down and drops alpha to zero so it reads
+	#    as "dissolving" rather than popping out of existence.
+	if not _is_tumbling and not is_popping and not _despawn_warning:
+		if not _cached_player or not is_instance_valid(_cached_player):
+			_cached_player = get_tree().get_first_node_in_group("player")
+		var player_nearby: bool = false
+		if _cached_player and is_instance_valid(_cached_player):
+			player_nearby = global_position.distance_to(_cached_player.global_position) < DESPAWN_PAUSE_RADIUS
+		if not player_nearby:
+			_despawn_timer -= delta
+			if _despawn_timer <= 0.0:
+				_despawn_warning = true
+				_despawn_flicker_phase = 0.0
+	# ── Warning flicker + fade-out ── When in the warning phase, rapidly
+	#    pulse the emission energy to signal impending despawn, then fade
+	#    out and free. The flicker overrides the normal breathing pulse.
+	if _despawn_warning and not is_popping:
+		_despawn_flicker_phase += delta
+		if _despawn_flicker_phase < DESPAWN_WARNING_DURATION:
+			# Rapid emission flicker (18 Hz on/off) for an urgent "blink"
+			var flicker_t: float = _despawn_flicker_phase / DESPAWN_WARNING_DURATION
+			# Ease in the flicker intensity as we approach the despawn moment
+			var intensity: float = 0.5 + 0.5 * flicker_t
+			var flicker_on: bool = fmod(_despawn_flicker_phase * 18.0, TAU) < PI
+			if _mat:
+				_mat.emission_energy_multiplier = 3.0 * intensity if flicker_on else 0.3
+		else:
+			# Fade out and free — scale down + alpha to zero over 0.4s
+			if not _despawn_fade_tween or not _despawn_fade_tween.is_valid():
+				_despawn_fade_tween = create_tween()
+				_despawn_fade_tween.set_parallel(true)
+				if _mat:
+					_despawn_fade_tween.tween_property(_mat, "albedo_color:a", 0.0, 0.4) \
+						.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+				_despawn_fade_tween.tween_property(self, "scale", Vector3.ZERO, 0.4) \
+					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+				_despawn_fade_tween.chain().tween_callback(_despawn_free)
+
 	# ── Phase 8: Tumble mode — RigidBody3D physics bounce ──
 	# While tumbling, the Area3D follows the RigidBody proxy. When the tumble
 	# timer expires, we snap to the RigidBody's settled position, free it,
@@ -329,7 +403,8 @@ func _physics_process(delta: float) -> void:
 			rarity_spin = 2.2
 		rotate_y(delta * rarity_spin)
 		# Pulsing emission glow for better visibility ("breathing" effect)
-		if _mat:
+		# Skip during despawn warning — the flicker code owns emission then.
+		if _mat and not _despawn_warning:
 			var pulse: float = 0.7 + 0.4 * sin(bob_offset * 1.5)
 			_mat.emission_energy_multiplier = pulse
 		# ── Breathing scale pulse ── A subtle scale oscillation synced to the
@@ -341,7 +416,9 @@ func _physics_process(delta: float) -> void:
 		#    We use the same bob_offset phase as the Y bob so the scale
 		#    peaks align with the top of the bob arc — the item swells as it
 		#    rises, creating a cohesive "breathing" rhythm.
-		if mesh_instance:
+		# Skip during despawn fade — the fade tween owns self.scale and the
+		# mesh pulse would visually fight the dissolve.
+		if mesh_instance and not _despawn_warning:
 			var pulse_amp: float = 0.06 if not _is_rare() else 0.09
 			var scale_pulse: float = 1.0 + sin(bob_offset * 1.5) * pulse_amp
 			mesh_instance.scale = Vector3.ONE * scale_pulse
@@ -444,6 +521,12 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if body.is_in_group("player"):
 		_collect()
+
+## Free the collectible after the despawn fade-out completes. Removes from
+## the GameManager collectibles list first to prevent invalid references.
+func _despawn_free() -> void:
+	GameManager.collectibles.erase(self)
+	queue_free()
 
 func _collect() -> void:
 	if is_popping:
