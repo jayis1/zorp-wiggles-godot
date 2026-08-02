@@ -765,6 +765,13 @@ func _on_pet_proj_body_entered(body: Node3D, bolt: Area3D) -> void:
 		bolt.queue_free()
 		return
 	# Hit an enemy
+	# Track hit enemies to avoid double-hits on pierce — check BEFORE dealing
+	# damage so an enemy that re-enters the bolt's Area3D isn't damaged twice.
+	var hit: Array = bolt.get_meta("pet_proj_hit_enemies", [])
+	if hit.has(body):
+		return
+	hit.append(body)
+	bolt.set_meta("pet_proj_hit_enemies", hit)
 	var dmg: int = bolt.get_meta("pet_proj_damage", 10)
 	if body.has_method("take_damage_from"):
 		body.take_damage_from(dmg, bolt.global_position)
@@ -772,11 +779,6 @@ func _on_pet_proj_body_entered(body: Node3D, bolt: Area3D) -> void:
 		body.take_damage(dmg)
 	# Sparkle on hit
 	ParticleEffects.spawn_pickup_sparkle(get_parent(), body.global_position + Vector3(0, 1, 0), _stage_color())
-	# Track hit enemies to avoid double-hits on pierce
-	var hit: Array = bolt.get_meta("pet_proj_hit_enemies", [])
-	if not hit.has(body):
-		hit.append(body)
-		bolt.set_meta("pet_proj_hit_enemies", hit)
 	# Fire path: explode on impact. Void path: pierce if pierce_left > 0.
 	if bolt_path == GameConstants.PetPath.FIRE:
 		_pet_proj_explode(bolt)
