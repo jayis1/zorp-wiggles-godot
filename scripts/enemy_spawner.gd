@@ -328,6 +328,17 @@ func _materialize_enemy(spawn_data: Dictionary) -> void:
 	var enemy_base: EnemyBase = enemy as EnemyBase
 	if enemy_base:
 		ParticleEffects.spawn_materialization(get_parent(), pos, enemy_base.base_color)
+		# ── Spawn ground ring (initial materialization) ── A quick, small
+		# ground ring at the exact spawn point, fired at the moment the enemy
+		# materializes — before the 2s grace period fade-in. This is the
+		# "energy arriving" visual; the enemy_base.gd activation ring (fired
+		# when the grace period ends) is the "entity activated" visual. The
+		# two rings create a two-stage materialization that reads as the
+		# enemy assembling from raw energy → becoming a threat. This initial
+		# ring is smaller and faster (max_radius 2-4, 0.35s) than the
+		# activation ring (2.5+scale*0.5, same timing) to distinguish the stages.
+		var _spawn_ring_radius: float = clampf(1.5 + enemy_base.base_scale * 1.0, 1.5, 4.0)
+		ParticleEffects.spawn_spawn_ring(get_parent(), pos, enemy_base.base_color, _spawn_ring_radius)
 		# Materialization SFX — a subtle descending blip that gives the
 		# coalescing particles an audio identity. Low volume so it doesn't
 		# overwhelm during heavy waves where several enemies materialize

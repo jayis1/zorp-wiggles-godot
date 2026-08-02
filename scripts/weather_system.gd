@@ -940,28 +940,36 @@ func _start_combo_effects(combo: int) -> void:
 func _end_combo_effects(combo: int) -> void:
 	match combo:
 		GameConstants.Weather.MAGNETIC_STORM:
-			if _magnetic_light and is_instance_valid(_magnetic_light):
-				_magnetic_light.queue_free()
+			_fade_weather_light_node(_magnetic_light)
 			_magnetic_light = null
 			_emp_disable_timer = 0.0
 		GameConstants.Weather.GRAVITY_ANOMALY:
-			if _gravity_light and is_instance_valid(_gravity_light):
-				_gravity_light.queue_free()
+			_fade_weather_light_node(_gravity_light)
 			_gravity_light = null
 			_gravity_shift_active = false
 			_gravity_anomaly_force = 0.0
 		GameConstants.Weather.DIMENSIONAL_STORM:
-			if _dimensional_light and is_instance_valid(_dimensional_light):
-				_dimensional_light.queue_free()
+			_fade_weather_light_node(_dimensional_light)
 			_dimensional_light = null
 		GameConstants.Weather.POLLEN_STORM:
-			if _pollen_light and is_instance_valid(_pollen_light):
-				_pollen_light.queue_free()
+			_fade_weather_light_node(_pollen_light)
 			_pollen_light = null
 		GameConstants.Weather.ECLIPSE:
 			_restore_eclipse_darkness()
 		_:
 			pass
+
+# Helper: fade out a weather OmniLight3D over 0.4s (ease-out quadratic)
+# instead of queue_free-ing it instantly. Used by _end_combo_effects and
+# _end_weather_effects for a cohesive weather transition.
+func _fade_weather_light_node(light: OmniLight3D) -> void:
+	if not light or not is_instance_valid(light):
+		return
+	var tw := light.create_tween()
+	tw.tween_property(light, "light_energy", 0.0, 0.4) \
+		.set_ease(Tween.EASE_OUT) \
+		.set_trans(Tween.TRANS_QUAD)
+	tw.chain().tween_callback(light.queue_free)
 
 ## Phase 28: Apply the Eclipse darkness effect to the WorldEnvironment.
 func _apply_eclipse_darkness() -> void:
@@ -1098,14 +1106,44 @@ func _start_weather_effects(weather: int) -> void:
 	_try_start_weather_combo(weather)
 
 func _end_weather_effects(weather: int) -> void:
-	# Remove weather particles
+	# ── Weather particle crossfade ── Instead of instantly queue_free-ing
+	# the old weather particles, fade them out over 0.8s for a smooth
+	# visual transition between weather types. The particles stop emitting
+	# immediately (emitting = false) so no new particles spawn, then the
+	# existing ones drift away naturally while their process material
+	# modulate alpha eases to 0. This prevents the jarring "pop" where
+	# 500 rain particles vanish in a single frame only to be replaced by
+	# 500 snow particles — the old particles linger briefly and fade,
+	# creating a crossfade with the new weather's particles that are
+	# spawned by _start_weather_effects() right after this call.
 	if _weather_particles and is_instance_valid(_weather_particles):
-		_weather_particles.queue_free()
-	_weather_particles = null
+		_weather_particles.emitting = false
+		var _old_particles := _weather_particles
+		_weather_particles = null  # Clear reference so _start_weather_effects can create new ones
+		# Fade out the process material's modulate alpha
+		var pmat := _old_particles.process_material
+		if pmat and pmat is ParticleProcessMaterial:
+			# Fade the particle color alpha to 0 so existing particles
+			# become transparent as they drift away. The color property on
+			# ParticleProcessMaterial is a Color, so "color:a" targets
+			# just the alpha channel via sub-property path access.
+			var fade_tween := _old_particles.create_tween()
+			fade_tween.tween_property(pmat, "color:a", 0.0, 0.8) \
+				.set_ease(Tween.EASE_OUT) \
+				.set_trans(Tween.TRANS_CUBIC)
+			fade_tween.chain().tween_callback(_old_particles.queue_free)
+		else:
+			_old_particles.queue_free()
 	# Remove solar/aurora light (shared variable — used for both solar flare and aurora)
+	# ── Fade out the light instead of popping it out ──
 	if _solar_light and is_instance_valid(_solar_light):
-		_solar_light.queue_free()
-	_solar_light = null
+		var _old_solar := _solar_light
+		_solar_light = null
+		var light_tween := _old_solar.create_tween()
+		light_tween.tween_property(_old_solar, "light_energy", 0.0, 0.6) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_QUAD)
+		light_tween.chain().tween_callback(_old_solar.queue_free)
 	# Reset fog
 	_target_fog_density = _base_fog_density
 	# Clear pending strikes
@@ -1117,29 +1155,27 @@ func _end_weather_effects(weather: int) -> void:
 			mesh.queue_free()
 	_active_meteors.clear()
 	# ── Phase 28: Weather Expansion — clean up new weather lights ──
-	if _blood_moon_light and is_instance_valid(_blood_moon_light):
-		_blood_moon_light.queue_free()
+	# All weather lights fade out (0.5s ease-out) instead of popping out,
+	# matching the primary solar/aurora light crossfade for a cohesive
+	# weather transition. The fade is purely cosmetic — gameplay effects
+	# (EMP, gravity shifts) are disabled immediately via the state flags.
+	_fade_weather_light_node(_blood_moon_light)
 	_blood_moon_light = null
-	if _eclipse_light and is_instance_valid(_eclipse_light):
-		_eclipse_light.queue_free()
+	_fade_weather_light_node(_eclipse_light)
 	_eclipse_light = null
 	# Eclipse darkness restoration (only if this was the eclipse weather)
 	if weather == GameConstants.Weather.ECLIPSE:
 		_restore_eclipse_darkness()
-	if _pollen_light and is_instance_valid(_pollen_light):
-		_pollen_light.queue_free()
+	_fade_weather_light_node(_pollen_light)
 	_pollen_light = null
-	if _magnetic_light and is_instance_valid(_magnetic_light):
-		_magnetic_light.queue_free()
+	_fade_weather_light_node(_magnetic_light)
 	_magnetic_light = null
 	_emp_disable_timer = 0.0
-	if _gravity_light and is_instance_valid(_gravity_light):
-		_gravity_light.queue_free()
+	_fade_weather_light_node(_gravity_light)
 	_gravity_light = null
 	_gravity_shift_active = false
 	_gravity_anomaly_force = 0.0
-	if _dimensional_light and is_instance_valid(_dimensional_light):
-		_dimensional_light.queue_free()
+	_fade_weather_light_node(_dimensional_light)
 	_dimensional_light = null
 	# ── Phase 28: End any active weather combo ──
 	_end_weather_combo()

@@ -1166,6 +1166,32 @@ static func spawn_levelup_shockwave(parent: Node, pos: Vector3) -> void:
 	sparkles.global_position = pos
 	_free_after_lifetime(sparkles, 1.5)
 
+	# ── Golden light beam ── A vertical golden light pillar at the player's
+	# position that gives the level-up a "power surge" visual — the alien
+	# equivalent of a level-up beam. Uses the existing spawn_sky_beam helper
+	# (already used for boss deaths and rare pickups) with golden coloring
+	# and a shorter height (12m vs 30m for boss deaths) so it reads as a
+	# personal celebration, not a world-shaking event. Paired with the
+	# OmniLight flash below for a double-layered golden column.
+	spawn_sky_beam(parent, pos, Color(1.0, 0.85, 0.2), 12.0)
+
+	# ── Golden OmniLight flash ── A brief golden light at the player's
+	# position that illuminates the surroundings, making the level-up
+	# visible even in dark biomes. Brighter and wider than the death flash
+	# because level-up is a positive, celebratory moment.
+	var gold_light := OmniLight3D.new()
+	gold_light.light_color = Color(1.0, 0.85, 0.3)
+	gold_light.light_energy = 6.0
+	gold_light.omni_range = 12.0
+	gold_light.omni_attenuation = 1.0
+	parent.add_child(gold_light)
+	gold_light.global_position = pos + Vector3(0, 1, 0)
+	var gold_light_tween := gold_light.create_tween()
+	gold_light_tween.tween_property(gold_light, "light_energy", 0.0, 0.8) \
+		.set_ease(Tween.EASE_OUT) \
+		.set_trans(Tween.TRANS_QUAD)
+	gold_light_tween.chain().tween_callback(gold_light.queue_free)
+
 ## ── Phase 6: Idle regen sparkle stream ──
 ## Ambient sparkles that orbit the player when idle and healthy.
 ## Returns the GPUParticles3D node so the caller can position it each frame.
