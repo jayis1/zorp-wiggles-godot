@@ -147,9 +147,23 @@ func _process(delta: float) -> void:
 			#    so the player hears the spawn coming. This fires a single
 			#    time when the flash begins (progress == _FLASH_FRAC) and
 			#    is guarded by _flash_sfx_played so it doesn't repeat.
+			#    ── Distance attenuation ── The volume scales with distance to
+			#    the player so spawns far off-screen don't play at full volume
+			#    (which would be disorienting — the player hears a loud warp
+			#    but sees nothing). Within 15m → full volume, at 60m+ → ~15%
+			#    volume, smoothstep in between. This keeps nearby spawns
+			#    audible while distant ones read as a subtle ambient cue.
 			if not _flash_sfx_played:
 				_flash_sfx_played = true
-				AudioManager.play_sfx(AudioManager.SFX_RIFT)
+				var _sfx_vol: float = 1.0
+				var _player_node: Node3D = get_tree().get_first_node_in_group("player")
+				if _player_node and is_instance_valid(_player_node):
+					var _spawn_dist: float = global_position.distance_to(_player_node.global_position)
+					# Smoothstep: 15m → 1.0 (full), 60m → 0.15 (minimal)
+					var _dist_t: float = clampf((_spawn_dist - 15.0) / 45.0, 0.0, 1.0)
+					_dist_t = 1.0 - _dist_t * _dist_t * (3.0 - 2.0 * _dist_t)
+					_sfx_vol = lerpf(0.15, 1.0, _dist_t)
+				AudioManager.play_sfx_volume(AudioManager.SFX_RIFT, _sfx_vol)
 		else:
 			# ── Multi-octave pulse: two sines at incommensurate frequencies
 			# (15 Hz and 23 Hz) give an organic, non-rhythmic flicker instead

@@ -107,6 +107,21 @@ const BOSS_BAR_FLASH_DURATION: float = 0.18
 const BOSS_BAR_SHAKE_AMP: float = 6.0  # Max horizontal shake in pixels
 var _boss_bar_rest_left: float = 0.0   # Resting offset_left (for shake restore)
 
+# ── Boss bar damage ghost trail ── A "chip damage" trail bar behind the boss
+#    HP bar that slowly catches up to the real value, mirroring the player HP
+#    bar's ghost trail. When the boss takes a hit, the main bar snaps down
+#    (via the smooth lerp) while the ghost lingers at the pre-damage width
+#    and drains slowly — showing exactly how much HP the boss just lost.
+#    This makes every boss hit feel weighty on the UI, not just the 3D mesh.
+#    The ghost only moves DOWN (damage), never up — bosses don't heal, so
+#    the ghost never needs to snap upward. The ghost is a ColorRect created
+#    in _ready and inserted behind the boss bar fill. Its smoothing is much
+#    slower than the main bar so the trail is visible for ~0.8s after a hit.
+var _boss_ghost_bar: ColorRect = null
+var _boss_ghost_ratio: float = 1.0       # Current displayed ghost ratio (eased)
+var _boss_ghost_smoothing: float = 2.0   # Slow catch-up (lower = longer trail)
+const BOSS_GHOST_COLOR: Color = Color(1.0, 0.6, 0.3, 0.35)  # Warm orange, semi-transparent
+
 # ── Player HP bar damage flash ── Mirrors the boss bar juice: when the player
 #    takes damage, the HP bar flashes white and shakes horizontally. This
 #    gives the player's own damage events a visceral UI read that matches the
@@ -203,6 +218,28 @@ func _ready() -> void:
 		# Insert behind the fill so it renders underneath
 		hp_bar.get_parent().add_child(_hp_ghost_bar)
 		hp_bar.get_parent().move_child(_hp_ghost_bar, hp_bar.get_index())
+	
+	# ── Boss bar damage ghost trail ── Create a semi-transparent "chip
+	#    damage" bar behind the boss HP bar fill, mirroring the player HP
+	#    ghost trail. Inserted as a sibling BEFORE the boss bar fill so it
+	#    renders underneath. The ghost slowly catches up to the real boss
+	#    HP ratio, creating a visible trail of "where the boss HP just was"
+	#    for ~0.8s after each hit — making every boss hit feel weighty on
+	#    the UI. The ghost starts hidden (visible = false) and is shown
+	#    only when it's meaningfully behind the real bar (in _process).
+	if boss_hp_bar and boss_hp_bar.get_parent():
+		_boss_ghost_bar = ColorRect.new()
+		_boss_ghost_bar.name = "BossGhostBar"
+		_boss_ghost_bar.color = BOSS_GHOST_COLOR
+		_boss_ghost_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_boss_ghost_bar.offset_left = boss_hp_bar.offset_left
+		_boss_ghost_bar.offset_top = boss_hp_bar.offset_top
+		_boss_ghost_bar.offset_right = boss_hp_bar.offset_right
+		_boss_ghost_bar.offset_bottom = boss_hp_bar.offset_bottom
+		_boss_ghost_bar.size = boss_hp_bar.size
+		_boss_ghost_bar.visible = false  # Hidden until boss spawns + takes damage
+		boss_hp_bar.get_parent().add_child(_boss_ghost_bar)
+		boss_hp_bar.get_parent().move_child(_boss_ghost_bar, boss_hp_bar.get_index())
 	
 	# Create combo milestone flash overlay (full-screen ColorRect)
 	_combo_flash_rect = ColorRect.new()
@@ -817,12 +854,36 @@ func _process(delta: float) -> void:
 			boss_hp_bar.offset_left = 2.0 + shake
 		else:
 			boss_hp_bar.offset_left = 2.0
+		# ── Boss bar ghost trail ── The ghost bar slowly catches up to the
+		#    real boss HP ratio using a much slower smoothing rate, creating
+		#    a visible "chip damage" trail behind the main bar. The ghost
+		#    only moves DOWN (damage) — bosses don't heal, so the ghost
+		#    never needs to snap upward. The ghost bar's width is set from
+		#    the container width * ghost ratio, and its offset_left matches
+		#    the main bar (including the damage shake) so it stays
+		#    pixel-aligned underneath. Only shown when meaningfully behind
+		#    the real bar so it doesn't clutter the bar at full HP.
+		if _boss_ghost_bar and boss_bar_width > 0:
+			# Damage → ease ghost toward target slowly (visible trail)
+			# Heal → snap ghost up (bosses don't heal, but defensive)
+			if _boss_bar_target_ratio > _boss_ghost_ratio + 0.001:
+				_boss_ghost_ratio = _boss_bar_target_ratio
+			else:
+				var ghost_w: float = 1.0 - exp(-_boss_ghost_smoothing * delta)
+				_boss_ghost_ratio = lerpf(_boss_ghost_ratio, _boss_bar_target_ratio, ghost_w)
+			_boss_ghost_bar.size.x = boss_bar_width * _boss_ghost_ratio
+			_boss_ghost_bar.offset_left = boss_hp_bar.offset_left
+			_boss_ghost_bar.visible = _boss_ghost_ratio > _boss_bar_target_ratio + 0.005
 	else:
 		# Boss reference is gone — clear it so we don't keep querying a
 		# freed node. The container visibility is handled by the exit anim.
 		boss_ref = null
 		_boss_bar_prev_ratio = 1.0
 		_boss_bar_flash_timer = 0.0
+		# Hide the ghost bar when the boss is gone so it doesn't linger
+		if _boss_ghost_bar:
+			_boss_ghost_bar.visible = false
+			_boss_ghost_ratio = 1.0
 
 	# ── Auto-fire indicator pulse ── A gentle alpha breathing so the [AUTO]
 	#    badge reads as "active" without being distracting. Uses a slow sine
@@ -1207,6 +1268,11 @@ func _on_boss_spawned(boss: Node) -> void:
 		# Reset damage-flash state so the spawn doesn't register as a hit
 		_boss_bar_prev_ratio = 1.0
 		_boss_bar_flash_timer = 0.0
+		# Reset the ghost trail so a new boss starts with a clean ghost
+		# (the previous boss's ghost might still be draining)
+		_boss_ghost_ratio = 1.0
+		if _boss_ghost_bar:
+			_boss_ghost_bar.visible = false
 		# Cache the resting offsets so we can tween relative to them
 		var rest_top: float = boss_hp_container.offset_top
 		# Start from 40px above the resting position BEFORE creating the

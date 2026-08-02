@@ -251,8 +251,21 @@ func _physics_process(delta: float) -> void:
 			# an audio partner that says "this enemy is NOW a threat."
 			# Pitch scales with enemy size: small = high chirp, large =
 			# deeper thrum. Low volume so mass spawns don't overwhelm.
+			# ── Distance attenuation ── Volume scales with distance to the
+			# player so enemies materializing far off-screen don't play at
+			# full volume. Within 15m → full volume, at 60m+ → ~15% volume,
+			# smoothstep in between. This keeps nearby activations audible
+			# while distant ones read as a subtle ambient cue rather than a
+			# disorienting loud warp from an unseen direction.
 			var activate_pitch: float = clampf(1.5 - base_scale * 0.2, 0.7, 1.5)
-			AudioManager.play_sfx_pitched(AudioManager.SFX_SPAWN_IN, activate_pitch)
+			var activate_vol: float = 1.0
+			var _act_player: Node3D = get_tree().get_first_node_in_group("player")
+			if _act_player and is_instance_valid(_act_player):
+				var _act_dist: float = global_position.distance_to(_act_player.global_position)
+				var _act_dist_t: float = clampf((_act_dist - 15.0) / 45.0, 0.0, 1.0)
+				_act_dist_t = 1.0 - _act_dist_t * _act_dist_t * (3.0 - 2.0 * _act_dist_t)
+				activate_vol = lerpf(0.15, 1.0, _act_dist_t)
+			AudioManager.play_sfx_pitched_volume(AudioManager.SFX_SPAWN_IN, activate_pitch, activate_vol)
 		return
 
 	# Check if player is alive

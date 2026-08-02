@@ -119,6 +119,10 @@ const _IDLE_EMISSION_MAX: float = 1.3    # Idle emission pulse max
 #    is seamless (no sudden snap when stopping/starting).
 var _walk_phase: float = 0.0  # Phase accumulator for walk bob
 var _walk_blend: float = 0.0  # 0 = idle bob, 1 = walk bob (eased)
+# ── Footstep tracking ── Previous walk-bob phase, used to detect the
+#    zero-crossing of the underlying sine (the "foot down" moment of each
+#    walk-bob hump) so we can play a footstep SFX exactly once per step.
+var _prev_walk_phase: float = 0.0
 const _WALK_BOB_AMPLITUDE: float = 0.07  # Max bob at full speed (meters)
 const _WALK_BOB_SPEED: float = 11.0      # Bob frequency at full speed (rad/s)
 const _WALK_BOB_BLEND_SPEED: float = 6.0  # How fast idle→walk blend eases (higher = snappier)
@@ -595,6 +599,24 @@ func _update_idle_breathing(delta: float) -> void:
 	# Those tweens set mesh.scale; we only offset y-position to avoid conflicts.
 	if mesh and not is_invuln_blinking:
 		mesh.position.y = bob_y
+	# ── Footstep SFX ── Play a soft footstep sound at the bottom of each walk
+	#    bob hump (when the underlying sine crosses zero → |sin| is at its
+	#    minimum). We detect the zero-crossing by tracking the previous phase
+	#    modulo PI: when floor(prev_phase / PI) != floor(phase / PI), a new
+	#    hump has started, meaning the previous hump just hit its valley —
+	#    the "foot down" moment. Only fires when the walk blend is dominant
+	#    (the player is actually moving, not standing still with idle bob)
+	#    and the horizontal speed is above a small threshold so slow drift
+	#    doesn't trigger footsteps. Skipped during dash/slide (early return
+	#    above) and invuln-blinking (the blink owns mesh visibility). The
+	#    footstep frequency naturally scales with speed because _walk_phase
+	#    advances proportional to speed_frac — sprinting = faster steps.
+	if _walk_blend > 0.35 and horiz_speed > 1.5:
+		var _prev_hump: int = int(_prev_walk_phase / PI)
+		var _curr_hump: int = int(_walk_phase / PI)
+		if _curr_hump != _prev_hump:
+			AudioManager.play_sfx(AudioManager.SFX_FOOTSTEP)
+	_prev_walk_phase = _walk_phase
 	# Emission pulse synced to the active bob (idle or walk blend)
 	if _player_material:
 		var pulse: float = 0.5 + 0.5 * sin(_idle_phase)

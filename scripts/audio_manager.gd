@@ -292,6 +292,18 @@ const SFX_PET_STONE_DROP: String = "pet_stone_drop"
 # subconsciously as "something shiny fell from this enemy."
 const SFX_CRAFT_DROP: String = "craft_drop"
 
+# ── Player footstep SFX ── A short, soft, muffled thud (~0.04s) that plays
+#    when Zorp's walk-bob cycle hits the "foot down" phase (the bottom of
+#    each |sin| hump). The sound is a low-frequency filtered-noise click —
+#    the universal audio shorthand for a soft step on alien terrain. Very
+#    quiet (0.10) so it sits under the biome ambient music and combat SFX
+#    without being annoying during long exploration walks. Pitch varies
+#    subtly per step (via _PITCH_VARIATION_SFX) so a sprint doesn't sound
+#    like a metronome. The footstep only fires when the player is moving
+#    at a meaningful speed (above the idle threshold) and not dashing /
+#    sliding (those have their own SFX), so standing still is silent.
+const SFX_FOOTSTEP: String = "footstep"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -444,6 +456,27 @@ func play_sfx(sfx_name: String) -> void:
 		player.pitch_scale = 1.0
 	player.play()
 
+## Play a one-shot SFX with a volume multiplier (0.0 = silent, 1.0 = full).
+## Used for distance-attenuated sounds (e.g. spawn warnings far from the
+## player) where the caller computes a volume scale based on distance.
+## The volume multiplier scales the sfx_volume × master_volume product
+## before converting to dB, so 0.5 = half the perceived volume of play_sfx.
+## Pitch variation is applied the same way as play_sfx.
+func play_sfx_volume(sfx_name: String, vol_mult: float) -> void:
+	if not _initialized:
+		return
+	if not _sfx_streams.has(sfx_name):
+		return
+	var player = _next_sfx_player()
+	player.stream = _sfx_streams[sfx_name]
+	var effective_vol: float = maxf(sfx_volume * master_volume * vol_mult, 0.0001)
+	player.volume_db = linear_to_db(effective_vol)
+	if sfx_name in _PITCH_VARIATION_SFX:
+		player.pitch_scale = 1.0 + randf_range(-_PITCH_VARIATION_AMOUNT, _PITCH_VARIATION_AMOUNT)
+	else:
+		player.pitch_scale = 1.0
+	player.play()
+
 ## Play a one-shot SFX with an explicit pitch scale override. This is used
 ## for size-based audio hierarchy: larger enemies get deeper (lower pitch)
 ## death/hit sounds so a Drake's death sounds weightier than a Blob's.
@@ -460,6 +493,25 @@ func play_sfx_pitched(sfx_name: String, pitch_base: float) -> void:
 	player.stream = _sfx_streams[sfx_name]
 	player.volume_db = linear_to_db(maxf(sfx_volume * master_volume, 0.0001))
 	# Apply the base pitch, then add random variation on top for natural detuning
+	var variation: float = 0.0
+	if sfx_name in _PITCH_VARIATION_SFX:
+		variation = randf_range(-_PITCH_VARIATION_AMOUNT, _PITCH_VARIATION_AMOUNT)
+	player.pitch_scale = clampf(pitch_base + variation, 0.1, 4.0)
+	player.play()
+
+## Play a one-shot SFX with both an explicit pitch scale AND a volume multiplier.
+## Combines play_sfx_pitched and play_sfx_volume for sounds that need both
+## size-based pitch AND distance attenuation (e.g. enemy activation SFX:
+## large enemies get a deeper pitch, distant enemies get a lower volume).
+func play_sfx_pitched_volume(sfx_name: String, pitch_base: float, vol_mult: float) -> void:
+	if not _initialized:
+		return
+	if not _sfx_streams.has(sfx_name):
+		return
+	var player = _next_sfx_player()
+	player.stream = _sfx_streams[sfx_name]
+	var effective_vol: float = maxf(sfx_volume * master_volume * vol_mult, 0.0001)
+	player.volume_db = linear_to_db(effective_vol)
 	var variation: float = 0.0
 	if sfx_name in _PITCH_VARIATION_SFX:
 		variation = randf_range(-_PITCH_VARIATION_AMOUNT, _PITCH_VARIATION_AMOUNT)
@@ -590,6 +642,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_LAND, SFX_PULL,
 	# Enhancement Pack 23: Loot drop SFX get pitch variation
 	SFX_RARE_DROP, SFX_PET_STONE_DROP, SFX_CRAFT_DROP,
+	# Footstep — micro-detuning so walking doesn't sound like a metronome
+	SFX_FOOTSTEP,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1056,6 +1110,13 @@ func _generate_all_sfx() -> void:
 	# quiet and short since crafting materials are common (12% drop rate).
 	# Just enough to register subconsciously as "something shiny dropped."
 	_sfx_streams[SFX_CRAFT_DROP] = _gen_blip(880.0, 0.04, 0.12)
+
+	# ── Player footstep ── A very short (0.04s) low-frequency filtered-noise
+	# thud. Uses _gen_noise_hit with a fast decay so it reads as a soft step
+	# on alien terrain — muffled, not clicky. Very quiet (0.10) so it sits
+	# under ambient music and combat. The ±6% pitch variation from
+	# _PITCH_VARIATION_SFX keeps a sprint from sounding mechanical.
+	_sfx_streams[SFX_FOOTSTEP] = _gen_noise_hit(0.04, 0.10)
 
 
 func _generate_all_music() -> void:
