@@ -514,11 +514,26 @@ static func spawn_sky_beam(parent: Node, pos: Vector3, color: Color = Color(1.0,
 	parent.add_child(beam)
 	beam.global_position = pos + Vector3(0, height / 2.0, 0)
 
-	# Animate: fade in fast, hold, fade out
+	# Animate: fade in fast, hold with a subtle energy pulse, fade out.
+	# During the hold phase the beam's emission pulses at ~6 Hz so it
+	# reads as living energy rather than a static cylinder. The pulse
+	# amplitude is small (±15% of the peak emission) so the beam stays
+	# bright and readable but shimmers with a heartbeat-like quality.
+	# This is the same language used for the player's idle emission
+	# breathing — energy that exists *pulses*, it doesn't sit still.
 	var tween := beam.create_tween()
 	mat.albedo_color.a = 0.0
 	tween.tween_property(mat, "albedo_color:a", 0.6, 0.15)
-	tween.tween_interval(0.4)
+	# Hold phase: tween emission energy up and down a few times for the
+	# shimmer. We use a tween_method so the pulse is driven by the tween
+	# timeline (consistent regardless of frame rate), not _process.
+	# The t parameter goes 0→1 over the hold; we map it through sin to
+	# get ~2.5 full pulse cycles (2.5 * TAU) so the beam shimmers visibly.
+	tween.tween_method(
+		func(t: float):
+			mat.emission_energy_multiplier = 2.0 + sin(t * TAU * 2.5) * 0.3,
+		0.0, 1.0, 0.4
+	).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(mat, "albedo_color:a", 0.0, 0.6)
 	tween.tween_callback(beam.queue_free)
 

@@ -1433,6 +1433,25 @@ func _on_combo_milestone(combo: int, tier: int, flash_color: Color) -> void:
 	if _combo_flash_rect:
 		# Set the flash color with initial alpha
 		_combo_flash_rect.color = Color(flash_color.r, flash_color.g, flash_color.b, 0.157)
+	# ── Milestone scale pop ── Combo milestones (every 5 kills) deserve a
+	#    bigger celebration than a regular combo tick. The normal combo
+	#    increment pops to 1.3x; a milestone pops to 1.6x with a longer,
+	#    bouncier settle (TRANS_ELASTIC, 0.25s) so the achievement reads as
+	#    a distinct "LEVEL UP" moment within the combo system. The pop
+	#    uses ease-out-back for the overshoot then elastic for the wobble,
+	#    mirroring the level-up celebration's bounce language. This
+	#    composes with the existing screen flash — the flash says
+	#    "something special happened" and the bigger pop says "this one
+	#    is bigger than the last tick."
+	if combo_text:
+		if combo_text.has_meta("_combo_tween") and is_instance_valid(combo_text.get_meta("_combo_tween") as Tween):
+			(combo_text.get_meta("_combo_tween") as Tween).kill()
+		var milestone_tween := create_tween()
+		milestone_tween.tween_property(combo_text, "scale", Vector2.ONE * 1.6, 0.08) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		milestone_tween.tween_property(combo_text, "scale", Vector2.ONE, 0.25) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		combo_text.set_meta("_combo_tween", milestone_tween)
 
 # ─── Pickup Streak Milestone ──────────────────────────────────────────────────
 func _on_pickup_streak_milestone(streak: int, xp_bonus: int) -> void:

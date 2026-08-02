@@ -304,7 +304,18 @@ func _draw() -> void:
 
 	# Draw restart prompt
 	if _prompt_alpha > 0.01:
-		var prompt_color := Color(0.8, 0.8, 0.8, _prompt_alpha * (0.6 + 0.4 * sin(_stat_anim_timer * 3.0)))
+		# ── Urgency escalation ── The blink rate accelerates the longer the
+		#    player sits on the death screen. For the first ~3s the prompt
+		#    blinks gently at 1.5 Hz (calm "take your time" pace). After 5s
+		#    it ramps up to ~4 Hz (urgent "press me" nag), so the prompt
+		#    escalates from a soft invitation to a persistent call-to-action
+		#    without ever being annoying. The blink frequency is eased so
+		#    the transition is smooth, not a step function. This mirrors
+		#    the enemy low-HP pulse urgency language but on the UI layer.
+		var blink_freq: float = lerpf(1.5, 4.0,
+			clampf((_stat_anim_timer - 1.0) / 4.0, 0.0, 1.0))
+		blink_freq = clampf(blink_freq, 1.5, 4.0)
+		var prompt_color := Color(0.8, 0.8, 0.8, _prompt_alpha * (0.6 + 0.4 * sin(_stat_anim_timer * blink_freq * TAU)))
 		_draw_centered_text("Press R or SPACE to Restart", Vector2(center.x, center.y + 140), 22, prompt_color)
 
 func _draw_centered_text(text_str: String, pos: Vector2, font_size: int, color: Color) -> void:

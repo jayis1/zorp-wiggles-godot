@@ -80,11 +80,17 @@ var _walk_amp: float = 0.08   # Bob amplitude (meters)
 # ── Idle breathing ── When stationary, enemies have no animation and look
 #    frozen/dead. A subtle breathing scale pulse + vertical bob gives them
 #    life, mirroring the player's idle breathing. Each enemy gets a random
-#    phase so groups don't pulse in sync. The amplitude is small (±4% scale,
-#    ±0.02m bob) so it reads as organic life, not a mechanical throb. Skipped
-#    during windup/attacking/hit-flash (those own mesh.scale) and death.
+#    phase AND a slightly randomized frequency so groups of idle enemies
+#    don't pulse in mechanical lockstep — even with random phases, a shared
+#    frequency makes a cluster visibly breathe at the same rate, which
+#    reads as synchronized rather than organic. The frequency varies ±20%
+#    around the base (2.0–3.0 rad/s) so each enemy has its own breathing
+#    rhythm. The amplitude is small (±4% scale, ±0.02m bob) so it reads as
+#    organic life, not a mechanical throb. Skipped during
+#    windup/attacking/hit-flash (those own mesh.scale) and death.
 var _idle_breath_phase: float = 0.0
-const _IDLE_BREATH_SPEED: float = 2.5  # Breaths per second (rad/s)
+var _idle_breath_speed: float = 2.5  # Per-enemy randomized breathing rate (rad/s)
+const _IDLE_BREATH_SPEED_BASE: float = 2.5  # Center of the random range
 const _IDLE_BREATH_SCALE_AMP: float = 0.04  # ±4% scale pulse
 const _IDLE_BREATH_Y_AMP: float = 0.02  # ±2cm vertical bob
 
@@ -146,6 +152,9 @@ func _ready() -> void:
 	_walk_amp = randf_range(0.05, 0.12) * base_scale
 	# Random idle breath phase so groups don't pulse in sync
 	_idle_breath_phase = randf_range(0.0, TAU)
+	# Per-enemy breathing frequency — ±20% around the base so a cluster of
+	# idle enemies each breathes at their own rhythm, not in lockstep.
+	_idle_breath_speed = _IDLE_BREATH_SPEED_BASE * randf_range(0.8, 1.2)
 
 	# Spawn grace period — enemy can't detect player for a bit
 	spawn_grace_timer = GameConstants.ENEMY_SPAWN_GRACE_PERIOD
@@ -1552,7 +1561,7 @@ func _update_visuals(delta: float) -> void:
 		#    death, and attacking (those own mesh.scale). The pulse is
 		#    tiny (±4% scale, ±2cm bob) so it reads as organic life.
 		if not is_dead and not is_attacking and _hit_flash_timer <= 0:
-			_idle_breath_phase += delta * _IDLE_BREATH_SPEED
+			_idle_breath_phase += delta * _idle_breath_speed
 			var breath_y: float = sin(_idle_breath_phase) * _IDLE_BREATH_Y_AMP
 			body_mesh.position.y = 0.5 + breath_y
 			var breath_scale: float = 1.0 + sin(_idle_breath_phase) * _IDLE_BREATH_SCALE_AMP
