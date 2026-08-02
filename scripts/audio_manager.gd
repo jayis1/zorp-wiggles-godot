@@ -263,6 +263,35 @@ const SFX_PULL: String = "pull"
 # wildlife without realizing they'd scared it.
 const SFX_WILDLIFE_FLEE: String = "wildlife_flee"
 
+# ── Enhancement Pack 23: Loot drop feedback SFX ───────────────────────────────
+# SFX_RARE_DROP — a shimmering ascending chime (E5→G5→B5→E6, 659→784→988→1319 Hz)
+# that plays when a rare crafting material drops from an enemy. Rare materials
+# are added directly to inventory (no physical collectible), so previously the
+# only feedback was a text message — the player might miss the drop entirely
+# during combat. This chime is pitched higher than SFX_PICKUP_RARE (which plays
+# on physical collectible pickup) so the player can distinguish "something
+# valuable dropped from this enemy" from "I picked up a rare item." Moderate
+# volume (0.25) so it's audible over combat but doesn't overwhelm.
+const SFX_RARE_DROP: String = "rare_drop"
+
+# SFX_PET_STONE_DROP — a warm magical chime (A4→C5→E5, 440→523→659 Hz) that
+# plays when a pet evolution stone drops from an enemy. Pet stones are rare
+# (1.5% normal, 100% boss) and the player should know immediately when one
+# drops so they can spot the collectible on the ground. The magical timbre
+# (major triad) matches the mystical nature of evolution stones. Slightly
+# quieter (0.22) than SFX_RARE_DROP since the collectible itself also plays
+# SFX_PICKUP_RARE when picked up — the drop SFX is a "look over there" cue,
+# not a "you got it" cue.
+const SFX_PET_STONE_DROP: String = "pet_stone_drop"
+
+# SFX_CRAFT_DROP — a subtle material-friendly blip (880 Hz, 0.04s, 0.12 vol)
+# that plays when a crafting material drops from an enemy. Quieter and shorter
+# than the rare drop and pet stone sounds since crafting materials are common
+# (12% drop rate) — playing a loud sound on every material drop would be
+# noisy during heavy combat. The blip is just loud enough to register
+# subconsciously as "something shiny fell from this enemy."
+const SFX_CRAFT_DROP: String = "craft_drop"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -559,6 +588,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_SHOOT_LIGHTNING, SFX_SHOOT_HEAVY, SFX_SHOOT_UTILITY, SFX_SHOOT_VAMPIRE,
 	# Enhancement Pack 21: Environmental impact SFX get pitch variation
 	SFX_LAND, SFX_PULL,
+	# Enhancement Pack 23: Loot drop SFX get pitch variation
+	SFX_RARE_DROP, SFX_PET_STONE_DROP, SFX_CRAFT_DROP,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1007,6 +1038,24 @@ func _generate_all_sfx() -> void:
 
 	# SFX_WILDLIFE_FLEE — tiny startled chirp (1400 Hz, 0.05s, 0.10 vol)
 	_sfx_streams[SFX_WILDLIFE_FLEE] = _gen_blip(1400.0, 0.05, 0.10)
+
+	# ── Enhancement Pack 23: Loot drop feedback SFX ───────────────────────────
+	# SFX_RARE_DROP — shimmering ascending chime (E5→G5→B5→E6). Higher and
+	# brighter than SFX_PICKUP_RARE so the player distinguishes "a rare
+	# material just dropped from this enemy" from "I picked up a rare item."
+	# Uses an augmented fifth arpeggio (E-G-B-E) for a magical, valuable feel.
+	_sfx_streams[SFX_RARE_DROP] = _gen_arpeggio([659.0, 784.0, 988.0, 1319.0], 0.06, 0.25)
+
+	# SFX_PET_STONE_DROP — warm magical chime (A4→C5→E5 major triad). The
+	# major triad conveys the mystical nature of evolution stones. Quieter
+	# than SFX_RARE_DROP since the collectible pickup itself also plays a
+	# sound — this is just the "look over there" attention cue.
+	_sfx_streams[SFX_PET_STONE_DROP] = _gen_chime([440.0, 523.0, 659.0], 0.12, 0.22)
+
+	# SFX_CRAFT_DROP — subtle material blip (880 Hz, 0.04s, 0.12 vol). Very
+	# quiet and short since crafting materials are common (12% drop rate).
+	# Just enough to register subconsciously as "something shiny dropped."
+	_sfx_streams[SFX_CRAFT_DROP] = _gen_blip(880.0, 0.04, 0.12)
 
 
 func _generate_all_music() -> void:

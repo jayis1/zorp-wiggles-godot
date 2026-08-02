@@ -1625,6 +1625,23 @@ func _drop_crafting_material() -> void:
 	# Add to collectibles group
 	if not drop.is_in_group("collectibles"):
 		drop.add_to_group("collectibles")
+	# ── Enhancement Pack 23: Visual + audio feedback for crafting material drops ──
+	# Crafting materials are common (12% drop rate) so the feedback is subtle —
+	# a quiet blip + small sparkle at the enemy's position. This gives the
+	# player a subconscious "something shiny dropped" cue without being noisy
+	# during heavy combat where multiple materials can drop in quick succession.
+	# Boss drops get a slightly louder pitch since they're always guaranteed.
+	if AudioManager:
+		if is_boss:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_CRAFT_DROP, 0.9)
+		else:
+			AudioManager.play_sfx(AudioManager.SFX_CRAFT_DROP)
+	if ParticleEffects and drop.get("TYPE_CONFIG") is Dictionary:
+		var drop_config: Dictionary = drop.TYPE_CONFIG.get(drop_type, {})
+		if drop_config.has("color"):
+			ParticleEffects.spawn_pickup_sparkle(
+				get_parent(), global_position + Vector3(0, 0.8, 0), drop_config["color"])
+
 
 ## Weighted random pick from a {type: weight} dictionary. Returns a random key
 ## with probability proportional to its weight. Falls back to uniform random
@@ -1685,6 +1702,20 @@ func _drop_pet_stone() -> void:
 	GameManager.collectibles.append(drop)
 	if not drop.is_in_group("collectibles"):
 		drop.add_to_group("collectibles")
+	# ── Enhancement Pack 23: Visual + audio feedback for pet stone drops ──
+	# Pet stones are rare (1.5% normal, 100% boss) and the player should know
+	# immediately when one drops so they can spot the collectible on the ground.
+	# A color-matched sparkle burst + dedicated SFX draws the player's attention
+	# to the drop location. The stone color comes from PET_STONE_COLORS indexed
+	# by the PetPath that the stone maps to.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_PET_STONE_DROP)
+	if ParticleEffects and GameConstants.PET_STONE_TO_PATH.has(stone_type):
+		var stone_path_idx: int = GameConstants.PET_STONE_TO_PATH[stone_type]
+		if stone_path_idx < GameConstants.PET_STONE_COLORS.size():
+			var stone_color: Color = GameConstants.PET_STONE_COLORS[stone_path_idx]
+			ParticleEffects.spawn_pickup_sparkle(
+				get_parent(), global_position + Vector3(0, 1.0, 0), stone_color)
 
 
 ## Pick a pet stone type via a weighted table. The current biome biases the
@@ -1770,6 +1801,28 @@ func _drop_rare_material() -> void:
 		GameManager.add_message("💎 %s dropped %s!" % [enemy_name, rm_name])
 	else:
 		GameManager.add_message("💎 Rare drop: %s" % rm_name)
+	# ── Enhancement Pack 23: Visual + audio feedback for rare material drops ──
+	# Rare materials are added directly to inventory (no physical collectible),
+	# so previously the only feedback was a text message — easy to miss during
+	# combat. Now we play a dedicated SFX + spawn a color-matched particle burst
+	# + brief OmniLight flash at the enemy's position so the player sees and
+	# hears exactly where the rare drop happened.
+	if AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_RARE_DROP)
+	if ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(
+			get_parent(), global_position + Vector3(0, 1.0, 0), rarity_color)
+	# Brief color-matched light flash for visibility in dark biomes
+	var _rm_light := OmniLight3D.new()
+	_rm_light.light_color = rarity_color
+	_rm_light.light_energy = 4.0
+	_rm_light.omni_range = 6.0
+	_rm_light.omni_attenuation = 1.5
+	get_parent().add_child(_rm_light)
+	_rm_light.global_position = global_position + Vector3(0, 1.0, 0)
+	var _rm_light_tween := _rm_light.create_tween()
+	_rm_light_tween.tween_property(_rm_light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT)
+	_rm_light_tween.tween_callback(_rm_light.queue_free)
 	# Statistics tracking
 	if Statistics and Statistics.has_method("record_rare_material_drop"):
 		Statistics.record_rare_material_drop(rm_type)
