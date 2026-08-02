@@ -17,6 +17,14 @@ var is_popping: bool = false  # Pickup lift animation
 #    trail timer controls how often a sparkle spawns (every ~0.06s).
 var _pull_trail_timer: float = 0.0
 const PULL_TRAIL_INTERVAL: float = 0.06
+# ── Magnet hum audio timer ── While being magnetically pulled, the
+#    collectible plays a very quiet "magnet hum" blip at intervals
+#    (every 0.18s) so the player hears the vacuum effect without
+#    audio spam from multiple simultaneous pulls. The interval is
+#    long enough that 5-10 simultaneous vacuums don't stack into noise
+#    but short enough to feel like a continuous "humming" energy field.
+var _magnet_hum_timer: float = 0.0
+const MAGNET_HUM_INTERVAL: float = 0.18
 # ── Magnet activation flash ── When the collectible first enters the
 #    magnetic pull radius, the emission briefly spikes. This gives the
 #    player a visual "the item noticed me" signal — the collectible
@@ -479,6 +487,11 @@ func _physics_process(delta: float) -> void:
 				if _pull_trail_timer <= 0.0:
 					_pull_trail_timer = PULL_TRAIL_INTERVAL
 					_spawn_pull_sparkle()
+				# Magnet hum audio — periodic soft blip while vacuuming
+				_magnet_hum_timer -= delta
+				if _magnet_hum_timer <= 0.0:
+					_magnet_hum_timer = MAGNET_HUM_INTERVAL
+					AudioManager.play_sfx_volume(AudioManager.SFX_MAGNET_HUM, 0.5)
 
 	# Normal pull radius (skip if emergency magnet already handled)
 	if not is_emergency_magnet and dist < GameConstants.COLLECT_PULL_RADIUS and not is_popping:
@@ -502,6 +515,11 @@ func _physics_process(delta: float) -> void:
 		if _pull_trail_timer <= 0.0:
 			_pull_trail_timer = PULL_TRAIL_INTERVAL
 			_spawn_pull_sparkle()
+		# Magnet hum audio — periodic soft blip while vacuuming
+		_magnet_hum_timer -= delta
+		if _magnet_hum_timer <= 0.0:
+			_magnet_hum_timer = MAGNET_HUM_INTERVAL
+			AudioManager.play_sfx_volume(AudioManager.SFX_MAGNET_HUM, 0.5)
 	elif not is_popping and not is_magnetic:
 		# Not being pulled — apply gentle X/Z wobble for an organic float.
 		# Items feel suspended in alien gravity rather than on a rail.

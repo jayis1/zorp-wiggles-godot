@@ -110,6 +110,14 @@ const _IDLE_BOB_AMPLITUDE: float = 0.04  # Subtle vertical bob (meters)
 const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
 const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
 const _IDLE_EMISSION_MAX: float = 1.3    # Idle emission pulse max
+# ── Dash exhaustion ── When dash is on cooldown, the player's emission
+#    dims slightly and shifts toward a cool blue tint, visually
+#    communicating "recharging" — the alien equivalent of catching
+#    your breath. The effect fades smoothly as the cooldown progresses
+#    (full dim at start, restored at 50% cooldown) so it reads as a
+#    recovery arc, not a binary toggle. Only active when not in the
+#    low-HP heartbeat range (that system owns emission at critical HP).
+var _dash_exhaustion_blend: float = 0.0  # 0 = normal, 1 = full exhaustion
 # ── Walk bob: a subtle vertical bob while moving that blends smoothly with the
 #    idle breathing. When Zorp walks, the bob frequency increases and the
 #    amplitude scales with speed — so a slow walk has a gentle sway and a
@@ -526,8 +534,9 @@ func _physics_process(delta: float) -> void:
 	_handle_invuln_blink(delta)
 	_update_idle_breathing(delta)
 	_update_movement_lean(delta)
-	_update_low_hp_heartbeat(delta)
-	_update_idle_aura(delta)
+	update_low_hp_heartbeat(delta)
+	_update_dash_exhaustion(delta)
+	update_idle_aura(delta)
 	# ── Phase 30: Update cosmetic skin color (RAINBOW cycles hue at runtime) ──
 	_update_cosmetic_color(delta)
 
@@ -691,6 +700,51 @@ func _update_low_hp_heartbeat(delta: float) -> void:
 		# Between beats, ease emission back to the idle color
 		var idle_emission: Color = base_color * 0.4
 		_player_material.emission = _player_material.emission.lerp(idle_emission, 1.0 - exp(-8.0 * delta))
+
+# ── Dash exhaustion visual ── When dash is on cooldown, Zorp's emission
+#    dims and shifts toward a cool blue tint — the visual language for
+#    "recharging energy." The exhaustion is strongest right after a dash
+#    and fades as the cooldown progresses (reaching 0 at 50% cooldown),
+#    so the player sees a recovery arc rather than a binary on/off. The
+#    effect is skipped when the low-HP heartbeat is active (that system
+#    owns emission at critical HP) and when dashing/sliding (those own
+#    mesh scale and emission). The dimming is subtle (~20% darker) so it
+#    reads as a gentle "tired" state, not a punishment.
+func _update_dash_exhaustion(delta: float) -> void:
+	if is_dashing or is_sliding or is_invuln_blinking:
+		_dash_exhaustion_blend = 0.0
+		return
+	# Skip when low-HP heartbeat is active — that system owns emission
+	var hp_ratio: float = float(GameManager.player_hp) / float(GameManager.player_max_hp) \
+		if GameManager.player_max_hp > 0 else 1.0
+	if hp_ratio <= _HEARTBEAT_HP_THRESHOLD and hp_ratio > 0.0:
+		_dash_exhaustion_blend = 0.0
+		return
+	# Compute target exhaustion: 1.0 at start of cooldown, 0.0 at 50% through
+	var dash_cd: float = GameManager.player_dash_cooldown_timer
+	var target_blend: float = 0.0
+	if dash_cd > 0.0:
+		# Get the full dash cooldown duration to compute the fraction
+		var full_cd: float = GameConstants.PLAYER_DASH_COOLDOWN
+		if ProgressionSystem:
+			full_cd *= ProgressionSystem.get_dash_cooldown_mult()
+		if full_cd > 0.0:
+			var cd_frac: float = dash_cd / full_cd  # 1.0 at start, 0.0 at end
+			# Fade out exhaustion in the first half of the cooldown
+			target_blend = clampf((cd_frac - 0.5) * 2.0, 0.0, 1.0)
+	# Smooth the blend so it doesn't snap on/off
+	_dash_exhaustion_blend = lerpf(_dash_exhaustion_blend, target_blend,
+		1.0 - exp(-10.0 * delta))
+	# Apply the exhaustion effect to the emission
+	if _dash_exhaustion_blend > 0.01 and _player_material:
+		# Dim emission energy by up to 20% and shift toward cool blue
+		var dim_factor: float = 1.0 - 0.2 * _dash_exhaustion_blend
+		var current_energy: float = _player_material.emission_energy_multiplier
+		_player_material.emission_energy_multiplier = current_energy * dim_factor
+		# Shift emission color toward a cool blue (0.3, 0.5, 0.8)
+		var cool_tint: Color = Color(0.3, 0.5, 0.8) * 0.4
+		var blend_amt: float = _dash_exhaustion_blend * 0.3
+		_player_material.emission = _player_material.emission.lerp(cool_tint, blend_amt)
 
 # ── Phase 6: Idle regen sparkle aura ──
 # When the player is standing still and has high HP, spawn gentle green

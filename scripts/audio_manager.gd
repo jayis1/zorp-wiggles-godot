@@ -304,6 +304,21 @@ const SFX_CRAFT_DROP: String = "craft_drop"
 #    sliding (those have their own SFX), so standing still is silent.
 const SFX_FOOTSTEP: String = "footstep"
 
+# ── Enemy stagger SFX ── A short metallic "recoil" hit (0.10s, 0.25 vol)
+#    that plays when an enemy's attack windup is interrupted by taking
+#    damage. The sound is a quick descending metallic ping — conveys the
+#    enemy's attack being knocked off-balance. Pitch variation keeps
+#    successive staggers from sounding identical.
+const SFX_STAGGER: String = "stagger"
+
+# ── Collectible magnet hum SFX ── A very short (0.08s) soft sine pulse
+#    at a warm mid-range frequency (440 Hz, 0.08 vol) that plays
+#    periodically when a collectible is being magnetically vacuumed
+#    toward the player. Intentionally very quiet so multiple simultaneous
+#    vacuums don't stack into noise. Pitch variation makes each blip
+#    feel slightly different, avoiding a mechanical beep.
+const SFX_MAGNET_HUM: String = "magnet_hum"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -644,6 +659,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_RARE_DROP, SFX_PET_STONE_DROP, SFX_CRAFT_DROP,
 	# Footstep — micro-detuning so walking doesn't sound like a metronome
 	SFX_FOOTSTEP,
+	# Stagger + magnet hum — micro-detuning for natural variation
+	SFX_STAGGER, SFX_MAGNET_HUM,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1117,6 +1134,20 @@ func _generate_all_sfx() -> void:
 	# under ambient music and combat. The ±6% pitch variation from
 	# _PITCH_VARIATION_SFX keeps a sprint from sounding mechanical.
 	_sfx_streams[SFX_FOOTSTEP] = _gen_noise_hit(0.04, 0.10)
+
+	# ── Enemy stagger ── A quick descending metallic ping (660→440 Hz,
+	# 0.10s, 0.25 vol) that conveys a metallic "clang" of an enemy's
+	# attack being knocked off course. The descending pitch reads as
+	# "recoil" — the enemy's force being deflected. Uses a short
+	# descending tone with fast decay so it's punchy, not lingering.
+	_sfx_streams[SFX_STAGGER] = _gen_descending(660.0, 440.0, 0.10, 0.25)
+
+	# ── Collectible magnet hum ── A very short soft sine pulse (440 Hz,
+	# 0.08s, 0.08 vol) that plays periodically while a collectible is
+	# being magnetically vacuumed. Very quiet so multiple simultaneous
+	# vacuums don't stack into noise. The warm mid-range frequency
+	# reads as a gentle "energy field" hum.
+	_sfx_streams[SFX_MAGNET_HUM] = _gen_blip(440.0, 0.08, 0.08)
 
 
 func _generate_all_music() -> void:

@@ -42,7 +42,6 @@ var attack_cooldown_timer: float = 0.0
 var is_dead: bool = false
 var spawn_grace_timer: float = GameConstants.ENEMY_SPAWN_GRACE_PERIOD
 var alert_indicator_timer: float = 0.0
-var hit_flinch_timer: float = 0.0
 var _hit_flash_timer: float = 0.0
 var is_windup: bool = false
 # ── Windup emission tween ── Tracks the emission-energy ramp tween so a new
@@ -50,6 +49,11 @@ var is_windup: bool = false
 #    tween cleanly. Without this, the windup emission ramp could fight the
 #    hit-flash emission spike or stack across rapid re-attacks.
 var _windup_emit_tween: Tween = null
+# ── Windup scale tween ── Tracks the squash-down scale tween of the attack
+#    windup so it can be killed cleanly when the windup is interrupted by
+#    taking damage (stagger). Without this, the interrupted windup's scale
+#    tween would keep running and call _execute_attack after the stagger.
+var _windup_scale_tween: Tween = null
 # Cached pre-windup emission energy so _execute_attack can restore it exactly,
 # even if the windup was interrupted by a hit-flash that also touches
 # emission_energy_multiplier.
@@ -669,12 +673,12 @@ func _try_attack_enemy(target: Node3D) -> void:
 	# mechanical linear shrink. The deceleration sells the gathering of
 	# force before the lunge release.
 	is_windup = true
-	var windup_tween := create_tween()
-	windup_tween.tween_property(self, "scale",
+	_windup_scale_tween = create_tween()
+	_windup_scale_tween.tween_property(self, "scale",
 		Vector3.ONE * base_scale * (1.0 - GameConstants.ENEMY_ATTACK_WINDUP_SQUASH),
 		GameConstants.ENEMY_ATTACK_WINDUP_TIME) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	windup_tween.tween_callback(_execute_attack_on_enemy.bind(target))
+	_windup_scale_tween.tween_callback(_execute_attack_on_enemy.bind(target))
 	# ── Windup emission ramp ── Brighten the enemy's emission during windup
 	# so the charge-up is readable as a glow, not just a silhouette squash.
 	# Uses the ENEMY_ATTACK_WINDUP_BRIGHTNESS constant (previously unused) as
@@ -684,6 +688,7 @@ func _try_attack_enemy(target: Node3D) -> void:
 ## Execute the attack on an enemy (mind control version)
 func _execute_attack_on_enemy(target: Node3D) -> void:
 	is_windup = false
+	_windup_scale_tween = null  # Tween completed, clear reference
 	_restore_windup_emission()
 	if not target or not is_instance_valid(target):
 		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
@@ -802,12 +807,12 @@ func _try_attack(player: Node3D) -> void:
 
 	# Attack windup telegraph — ease-out cubic for organic decelerating squash
 	is_windup = true
-	var windup_tween := create_tween()
-	windup_tween.tween_property(self, "scale",
+	_windup_scale_tween = create_tween()
+	_windup_scale_tween.tween_property(self, "scale",
 		Vector3.ONE * base_scale * (1.0 - GameConstants.ENEMY_ATTACK_WINDUP_SQUASH),
 		GameConstants.ENEMY_ATTACK_WINDUP_TIME) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	windup_tween.tween_callback(_execute_attack.bind(player))
+	_windup_scale_tween.tween_callback(_execute_attack.bind(player))
 	# ── Windup emission ramp ── Brighten the enemy's emission during windup
 	# so the charge-up is readable as a glow, not just a silhouette squash.
 	# Restored in _execute_attack().
@@ -815,6 +820,7 @@ func _try_attack(player: Node3D) -> void:
 
 func _execute_attack(player: Node3D) -> void:
 	is_windup = false
+	_windup_scale_tween = null  # Tween completed, clear reference
 	_restore_windup_emission()
 	# The windup tween calls this via tween_callback after ENEMY_ATTACK_WINDUP_TIME.
 	# The bound `player` reference may have been freed during that delay (especially
@@ -1110,6 +1116,50 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		hit_tween.tween_property(body_mesh, "scale",
 			Vector3.ONE * base_scale, 0.14) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+
+	# ── Attack windup interruption (stagger) ── When an enemy takes damage
+	#    during its attack windup, the windup is cancelled — the attack
+	#    doesn't fire. This rewards aggressive play: hitting an enemy
+	#    while it's charging up prevents the attack entirely instead of
+	#    just racing the windup timer. The enemy plays a brief "stagger"
+	#    visual (recoil scale wobble + scale restore) and SFX so the
+	#    player sees and hears that they interrupted the attack. The
+	#    windup scale tween and emission tween are both killed cleanly
+	#    so neither lingers. is_attacking is reset after a short delay
+	#    so the enemy can't immediately re-attack (prevents stagger →
+	#    instant re-windup loops). Bosses (max_hp >= 200) are immune to
+	#    stagger — their attacks can't be interrupted, only damaged.
+	if is_windup and max_hp < 200:
+		is_windup = false
+		# Kill the windup scale tween so _execute_attack is never called
+		if _windup_scale_tween and _windup_scale_tween.is_valid():
+			_windup_scale_tween.kill()
+			_windup_scale_tween = null
+		# Restore windup emission immediately
+		_restore_windup_emission()
+		# Stagger visual — a quick recoil scale wobble (snap small →
+		# bounce back with elastic) distinct from the hit squash. The
+		# body_mesh briefly squashes horizontally and stretches
+		# vertically as if knocked backward, then wobbles to rest.
+		if body_mesh:
+			var stagger_scale := Vector3(1.0 + 0.2, 1.0 - 0.15, 1.0 + 0.2)
+			var stagger_tween := create_tween()
+			stagger_tween.tween_property(body_mesh, "scale",
+				Vector3.ONE * base_scale * stagger_scale, 0.06) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			stagger_tween.tween_property(body_mesh, "scale",
+				Vector3.ONE * base_scale, 0.22) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+		# Restore self.scale from the windup squash
+		var restore_scale_tween := create_tween()
+		restore_scale_tween.tween_property(self, "scale",
+			Vector3.ONE * base_scale, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		# Stagger SFX — metallic recoil ping
+		AudioManager.play_sfx_pitched(AudioManager.SFX_STAGGER,
+			clampf(1.2 - base_scale * 0.15, 0.7, 1.4))
+		# Reset attack flag after a short delay (prevents instant re-windup)
+		get_tree().create_timer(0.3).timeout.connect(_reset_attack_flag)
 
 	# ── Phase 8: Apply knockback impulse from the hit direction
 	if source_pos != Vector3.ZERO:
@@ -1415,8 +1465,6 @@ func _spawn_physics_corpse() -> void:
 func _update_timers(delta: float) -> void:
 	if attack_cooldown_timer > 0:
 		attack_cooldown_timer -= delta
-	if hit_flinch_timer > 0:
-		hit_flinch_timer -= delta
 	if _hit_flash_timer > 0:
 		_hit_flash_timer -= delta
 
