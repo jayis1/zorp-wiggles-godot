@@ -423,8 +423,20 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			draw_colored_polygon(PackedVector2Array([arrow_tip, arrow_l, arrow_r]), pcolor)
 
 	# ── Player dot (white, center) with facing direction line ──
+	# ── Subtle size pulse ── The player dot is the focal point of the
+	#    minimap — the one dot the player always needs to find instantly.
+	#    A subtle 2.5 Hz size pulse (3.0 → 3.6 → 3.0) draws the eye to
+	#    the center without being distracting, the way a breathing cursor
+	#    in a text editor signals "you are here." The pulse amplitude is
+	#    tiny (±0.3px) so it doesn't compete with the enemy/collectible
+	#    dots, and it only affects the inner dot — the facing line stays
+	#    fixed so movement direction reads cleanly.
 	var center := Vector2(_half_size, _half_size)
-	draw_circle(center, 3.0, GameConstants.MINIMAP_PLAYER_DOT_COLOR)
+	var player_pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.016)
+	var player_dot_radius: float = 3.0 + player_pulse * 0.6
+	# Outer glow ring for extra visibility (fixed, doesn't pulse)
+	draw_circle(center, player_dot_radius + 2.0, Color(1.0, 1.0, 1.0, 0.15))
+	draw_circle(center, player_dot_radius, GameConstants.MINIMAP_PLAYER_DOT_COLOR)
 	# Direction indicator based on player's facing
 	var facing := Vector2(0, -1)  # Default: up
 	if player.has_method("get_shoot_direction"):

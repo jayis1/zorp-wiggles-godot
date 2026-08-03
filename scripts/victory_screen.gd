@@ -33,6 +33,17 @@ var _is_shown: bool = false
 var _fade_progress: float = 0.0
 var _title_alpha: float = 0.0
 var _rank_alpha: float = 0.0
+# ── Rank scale-in ── The rank letter (S/A/B/C/D) is the climax of the
+#    victory screen — the single most important piece of information. It
+#    used to just fade in linearly with _rank_alpha, which felt flat for
+#    such a momentous reveal. Now it also scales in from 0.5 → 1.0 with
+#    an ease-out-back curve (slight overshoot past 1.0 then settle),
+#    mirroring the death screen's title scale-in but with a bigger
+#    overshoot since the rank is a celebration, not a somber moment.
+#    The scale follows the same timing window as _rank_alpha (0.3s start,
+#    0.4s ramp) so the scale and fade are in sync. The ease-out-back
+#    formula uses c1=1.70158, c3=c1+1 — the standard CSS/Godot curve.
+var _rank_scale: float = 0.5
 var _stats_alpha: float = 0.0
 var _buttons_alpha: float = 0.0
 var _stat_anim_timer: float = 0.0
@@ -150,6 +161,7 @@ func _show() -> void:
 	_fade_progress = 0.0
 	_title_alpha = 0.0
 	_rank_alpha = 0.0
+	_rank_scale = 0.5
 	_stats_alpha = 0.0
 	_buttons_alpha = 0.0
 	_stat_anim_timer = 0.0
@@ -173,6 +185,7 @@ func _show_milestone(wave: int) -> void:
 	_fade_progress = 0.0
 	_title_alpha = 0.0
 	_rank_alpha = 0.0
+	_rank_scale = 0.5
 	_stats_alpha = 0.0
 	_buttons_alpha = 0.0
 	_stat_anim_timer = 0.0
@@ -216,6 +229,24 @@ func _process(delta: float) -> void:
 	_stat_anim_timer += delta
 	_title_alpha = clampf((_stat_anim_timer - 0.0) / 0.4, 0.0, 1.0)
 	_rank_alpha = clampf((_stat_anim_timer - 0.3) / 0.4, 0.0, 1.0)
+	# ── Rank scale-in with ease-out-back overshoot ── The rank letter
+	#    scales from 0.5 → 1.0 with a slight overshoot past 1.0, giving
+	#    the climax a celebratory pop. Uses the same timing window as
+	#    _rank_alpha (0.3s start, 0.4s ramp) so scale and fade are in
+	#    sync. The ease-out-back formula (c1=1.70158, c3=c1+1) is the
+	#    standard overshoot curve — it pops ~7% past 1.0 then settles,
+	#    making the rank reveal feel like a triumphant stamp rather than
+	#    a passive fade. A larger c1 (2.2) gives a more pronounced
+	#    overshoot than the death screen's title (1.7) since this is a
+	#    celebration, not a somber moment.
+	var rank_t: float = clampf((_stat_anim_timer - 0.3) / 0.4, 0.0, 1.0)
+	if rank_t > 0.0 and rank_t < 1.0:
+		var c1: float = 2.2
+		var c3: float = c1 + 1.0
+		var tm: float = rank_t - 1.0
+		_rank_scale = 1.0 + c3 * tm * tm * tm + c1 * tm * tm
+	elif rank_t >= 1.0:
+		_rank_scale = 1.0
 	_stats_alpha = clampf((_stat_anim_timer - 0.6) / 0.5, 0.0, 1.0)
 	_buttons_alpha = clampf((_stat_anim_timer - 1.2) / 0.4, 0.0, 1.0)
 	# Show buttons once they've started fading in
@@ -272,8 +303,15 @@ func _draw() -> void:
 		var rank_label: String = "RANK  " + RANK_NAMES[_rank]
 		var rank_color: Color = RANK_COLORS[_rank]
 		rank_color.a = _rank_alpha
-		draw_string(_get_title_font(), Vector2(size.x / 2 - 150, 220), rank_label,
-			HORIZONTAL_ALIGNMENT_CENTER, 300, 72, rank_color)
+		# ── Scale the rank font by _rank_scale ── The rank letter pops in
+		#    from 0.5x with an ease-out-back overshoot (computed in _process),
+		#    giving the victory climax a triumphant stamp. The font size is
+		#    clamped so the overshoot can't blow up the text. The draw width
+		#    and position are adjusted so the text stays centered as it scales.
+		var rank_font_size: int = int(round(72 * clampf(_rank_scale, 0.3, 1.25)))
+		var rank_w: float = 300.0 * clampf(_rank_scale, 0.3, 1.25)
+		draw_string(_get_title_font(), Vector2(size.x / 2 - rank_w / 2, 220), rank_label,
+			HORIZONTAL_ALIGNMENT_CENTER, rank_w, rank_font_size, rank_color)
 	# Stats
 	if _stats_alpha > 0.0:
 		_draw_stats(size, _stats_alpha)

@@ -62,20 +62,31 @@ func _draw() -> void:
 		return
 
 	# Draw a vignette: full-screen rect with radial gradient (simulated with
-	# multiple concentric rect outlines fading from edge to center)
+	# multiple concentric rect outlines fading from edge to center).
+	# ── Smoothstep falloff ── Previously used 8 layers with linear alpha
+	#    falloff (1.0 - frac), which created a blocky, stepped appearance —
+	#    the discrete layers were visible as bands rather than a smooth
+	#    gradient. Now we use 16 layers with a smoothstep alpha curve
+	#    (t² * (3-2t)) so the vignette fades organically from edge to
+	#    center, reading as a proper radial gradient rather than nested
+	#    rectangles. The doubled layer count + smoothstep eliminates the
+	#    visible banding, giving the danger vignette a cinematic quality.
 	var screen_size := size
 	var center := screen_size / 2.0
 	var max_dim: float = max(screen_size.x, screen_size.y)
 
 	# Draw concentric rectangles from outside in, fading alpha
-	var layers: int = 8
+	var layers: int = 16
 	for i in range(layers):
 		var frac: float = float(i) / float(layers)
-		var inset: float = frac * max_dim * 0.25
+		# Smoothstep: t² * (3-2t) — smooth S-curve instead of linear
+		var smooth: float = frac * frac * (3.0 - 2.0 * frac)
+		var inset: float = smooth * max_dim * 0.28
 		var rect := Rect2(inset, inset, screen_size.x - inset * 2, screen_size.y - inset * 2)
-		var layer_alpha: float = _vignette_color.a * (1.0 - frac)
+		# Alpha falls off with smoothstep so layers blend seamlessly
+		var layer_alpha: float = _vignette_color.a * (1.0 - smooth)
 		var c := Color(_vignette_color.r, _vignette_color.g, _vignette_color.b, layer_alpha)
-		draw_rect(rect, c, false, max_dim * 0.04)
+		draw_rect(rect, c, false, max_dim * 0.025)
 
 	# Also draw a soft full-screen tint at very low alpha
 	var tint := Color(_vignette_color.r, _vignette_color.g, _vignette_color.b, _vignette_color.a * 0.15)
