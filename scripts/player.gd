@@ -534,9 +534,9 @@ func _physics_process(delta: float) -> void:
 	_handle_invuln_blink(delta)
 	_update_idle_breathing(delta)
 	_update_movement_lean(delta)
-	update_low_hp_heartbeat(delta)
+	_update_low_hp_heartbeat(delta)
 	_update_dash_exhaustion(delta)
-	update_idle_aura(delta)
+	_update_idle_aura(delta)
 	# ── Phase 30: Update cosmetic skin color (RAINBOW cycles hue at runtime) ──
 	_update_cosmetic_color(delta)
 
