@@ -254,6 +254,10 @@ func _update_stone_display() -> void:
 func _on_stage_changed(new_stage: int) -> void:
 	var stage_name: String = GameConstants.PET_STAGE_NAMES[new_stage]
 	_name_label.text = "🐾 Pet — %s" % stage_name
+	# Enhancement Pack 26: SFX on pet evolution — a major milestone that
+	# previously had only a visual border flash. The SFX_PET_EVOLVE is a
+	# magical ascending chime conveying the pet's growth moment.
+	AudioManager.play_sfx(AudioManager.SFX_PET_EVOLVE)
 	# Flash the panel border on evolution
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.05, 0.03, 0.1, 0.8)

@@ -47,8 +47,6 @@ var _acid_rain_tick_timer: float = 0.0
 var _lightning_timer: float = 8.0
 # Solar flare light
 var _solar_light: OmniLight3D = null
-# Thunderstorm light flash (brief)
-var _thunder_flash_light: OmniLight3D = null
 # Active weather particle node (follows player)
 var _weather_particles: GPUParticles3D = null
 # Weather fog override — references the WorldEnvironment for density tweaks

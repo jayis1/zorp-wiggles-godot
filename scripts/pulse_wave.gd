@@ -30,6 +30,10 @@ static func _ensure_shared_mesh() -> void:
 		_shared_ring_mesh.rings = 2
 
 func _ready() -> void:
+	# Enhancement Pack 26: SFX on pulse wave fire — the player's Q ability
+	# had visual particles + light flash but no audio. The SFX_PULSE_WAVE
+	# is a sweeping energy wave sound that matches the expanding ring visual.
+	AudioManager.play_sfx(AudioManager.SFX_PULSE_WAVE)
 	# Create expanding ring visual
 	if ring_mesh:
 		_ensure_shared_mesh()

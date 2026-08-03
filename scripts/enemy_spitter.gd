@@ -123,6 +123,10 @@ func _update_spit(delta: float, player: Node3D, dist_to_player: float) -> void:
 			_material.emission_energy_multiplier = 1.0
 
 func _fire_spit(player: Node3D) -> void:
+	# Enhancement Pack 26: SFX on spit fire — the Spore Spitter's projectile
+	# attack had no audio, making it hard to notice the projectile in busy
+	# combat. The acid hiss conveys the spore/spit nature of the attack.
+	AudioManager.play_sfx(AudioManager.SFX_SHOOT_POISON)
 	# Create enemy projectile
 	var proj_scene: PackedScene = load("res://scenes/entities/enemy_projectile.tscn")
 	if proj_scene:

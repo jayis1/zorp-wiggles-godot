@@ -248,6 +248,9 @@ func _try_trade() -> void:
 	var item_name: String = TRADE_ITEMS[randi() % TRADE_ITEMS.size()]
 	GameManager.add_message("%s traded! Got: %s" % [trader_name, item_name])
 	trade_completed.emit(item_name)
+	# Enhancement Pack 26: SFX on successful trade — the trader exchange
+	# had only a camera shake. The SFX_MERCHANT chime confirms the trade.
+	AudioManager.play_sfx(AudioManager.SFX_MERCHANT)
 
 	# Camera shake
 	var cam_rig: Node3D = GameManager.camera_rig

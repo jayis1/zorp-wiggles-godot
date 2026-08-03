@@ -75,6 +75,10 @@ func _update_ai(delta: float) -> void:
 			)
 
 func _fire_shockwave() -> void:
+	# Enhancement Pack 26: SFX on shockwave fire — previously the sentinel's
+	# shockwave attack was completely silent, despite having visual particles
+	# + a light flash. The SFX_RIFT whoosh conveys a seismic energy ripple.
+	AudioManager.play_sfx(AudioManager.SFX_RIFT)
 	# Create expanding shockwave ring
 	var shockwave_scene: PackedScene = load("res://scenes/entities/shockwave.tscn")
 	if shockwave_scene:

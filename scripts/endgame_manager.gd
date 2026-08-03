@@ -996,10 +996,19 @@ func _on_game_restarted() -> void:
 	# Reset mode-driven state, keep NG tier + unlocks.
 	_survival_active = false
 	_survival_time = 0.0
+	_survival_next_boss_time = 0.0
+	_survival_score_accumulator = 0.0
 	_gauntlet_active = false
 	_gauntlet_completed = false
+	_gauntlet_index = 0
+	_gauntlet_biome_timer = 0.0
+	_gauntlet_kills_this_biome = 0
+	_gauntlet_total_time = 0.0
 	_boss_gauntlet_active = false
 	_boss_gauntlet_completed = false
+	_boss_gauntlet_index = 0
+	_boss_gauntlet_intermission = 0.0
+	_boss_gauntlet_total_time = 0.0
 	# Regenerate loot caves + vault for the new world.
 	_loot_cave_entrance_visuals.clear()
 	_vault_entrance_visuals.clear()

@@ -54,6 +54,10 @@ static func _ensure_shared_mesh() -> void:
 const _BASE_MESH_RADIUS: float = 0.5
 
 func _ready() -> void:
+	# Enhancement Pack 26: SFX on shockwave spawn — the Sentinel's shockwave
+	# ring had a light flash + expanding ring visual but no audio. The
+	# SFX_EXPLOSION conveys a seismic detonation matching the visual impact.
+	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
 	# Set up material — duplicate the shared base so each instance can tween
 	# its alpha/emission independently. Cheaper than creating a new
 	# StandardMaterial3D and setting every property from scratch per spawn.

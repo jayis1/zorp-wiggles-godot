@@ -148,6 +148,10 @@ func _on_boss_spawned(boss: Node) -> void:
 	_show_card(boss_name, subtitle)
 
 func _show_card(boss_name: String, subtitle: String) -> void:
+	# Enhancement Pack 26: SFX on boss intro card — the dramatic card
+	# animation had a visual slide-in but no audio. The SFX_BOSS_SPAWN
+	# syncs with the card appearance for a cinematic moment.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
 	# Kill any existing tween
 	if _card_tween and _card_tween.is_valid():
 		_card_tween.kill()

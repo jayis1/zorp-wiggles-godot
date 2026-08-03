@@ -107,6 +107,18 @@ const MUTATION_COLORS: Dictionary = {
 
 func _ready() -> void:
 	GameManager.biome_changed.connect(_on_biome_changed)
+	GameManager.game_restarted.connect(_on_game_restarted)
+
+# ── Enhancement Pack 26: Reset mutations on game restart ──
+# Previously, _active_mutations and _biome_time were never cleared on
+# restart, so mutations from a previous run could persist into a new
+# run if the player spawned in the same biome.
+func _on_game_restarted() -> void:
+	for mut in _active_mutations.keys():
+		_remove_mutation_visuals(mut)
+	_active_mutations.clear()
+	_biome_time = 0.0
+	_current_biome = -1
 
 func _on_biome_changed(biome_id: int) -> void:
 	if _current_biome == biome_id:

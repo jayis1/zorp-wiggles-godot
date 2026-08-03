@@ -309,14 +309,22 @@ func _on_p2_score_changed(score: int) -> void:
 
 func _on_p2_downed() -> void:
 	_downed_overlay.visible = true
+	# Enhancement Pack 26: SFX on P2 downed — critical co-op event with no
+	# audio. SFX_DEATH pitched high conveys urgency without full death finality.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_DEATH, 1.3)
 
 func _on_p2_revived() -> void:
 	_downed_overlay.visible = false
 	if _revive_progress_bar:
 		_revive_progress_bar.size.x = 0.0
+	# Enhancement Pack 26: SFX on P2 revived — the revive moment had no audio.
+	# SFX_REVIVE is a warm ascending chime conveying partner rescue.
+	AudioManager.play_sfx(AudioManager.SFX_REVIVE)
 
 func _on_p2_died() -> void:
 	_downed_overlay.visible = false
+	# Enhancement Pack 26: SFX on P2 death — full death event with no audio.
+	AudioManager.play_sfx(AudioManager.SFX_DEATH)
 
 func _on_revive_progress(progress: float) -> void:
 	if _revive_progress_bar:
@@ -332,6 +340,8 @@ func _on_coop_milestone(id: int, desc: String) -> void:
 func _on_p1_downed() -> void:
 	if _p1_downed_overlay:
 		_p1_downed_overlay.visible = true
+	# Enhancement Pack 26: SFX on P1 downed — critical co-op event.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_DEATH, 1.2)
 
 # Hide P1 downed overlay when P1 is revived or dies
 func _process_p1_downed_hide() -> void:
