@@ -151,8 +151,12 @@ func _process(delta: float) -> void:
 		_finish_replay()
 		return
 	# Advance playback using REAL delta (not scaled — we want consistent
-	# playback speed regardless of the time scale we just set)
-	_play_accum += delta * REPLAY_HZ
+	# playback speed regardless of the time scale we just set).
+	# _process(delta) delta IS scaled by Engine.time_scale, so we un-scale
+	# it to recover real elapsed time. Guard against zero to avoid div-by-zero.
+	var ts: float = Engine.time_scale
+	var real_delta: float = delta / ts if ts != 0.0 else delta
+	_play_accum += real_delta * REPLAY_HZ
 	while _play_accum >= 1.0 and _play_idx < _samples.size():
 		_play_accum -= 1.0
 		_play_idx += 1
