@@ -507,6 +507,17 @@ func _physics_process(delta: float) -> void:
 		var pull_speed: float = GameConstants.COLLECT_PULL_SPEED * (0.3 + 0.7 * accel_curve)
 		var dir := (player.global_position - global_position).normalized()
 		global_position += dir * pull_speed * delta
+		# ── Magnetic lift arc ── While being pulled, items get a subtle
+		# vertical lift so they arc upward as they converge on the player,
+		# creating a more satisfying "magnetic vacuum" trajectory. The lift
+		# is proportional to the pull proximity (stronger when closer) and
+		# uses a smoothstep so it eases in. Without this, items glide in a
+		# straight horizontal line — the arc makes them feel like they're
+		# being lifted by the magnetic field rather than sliding on rails.
+		# The lift is small (max 3 m/s upward at point-blank) so it doesn't
+		# overshoot the player's position.
+		var lift_t: float = proximity * proximity * (3.0 - 2.0 * proximity)  # smoothstep
+		global_position.y += lift_t * 3.0 * delta
 		# ── Sparkle trail while being pulled ── Spawn tiny sparkle particles
 		# at intervals along the pull path, leaving a light trail that makes
 		# the magnetic pull visually dynamic. The sparkles are very small and
@@ -587,6 +598,20 @@ func _collect() -> void:
 		return
 
 	is_popping = true
+	# ── Pickup emission flash ── A brief white-hot emission spike on the
+	# collectible mesh at the moment of pickup, so the "absorption" reads
+	# as a burst of energy being consumed rather than just the item
+	# shrinking away. The emission jumps to 6x and eases back over 0.15s
+	# (overlapping with the spiral pickup animation), giving the final
+	# moment of the collectible's life a flash of brilliance — the visual
+	# equivalent of the pickup chime. Skipped if the material is already
+	# freed (mirror dimension path may have modified it).
+	if _mat:
+		_mat.emission_energy_multiplier = 6.0
+		var pickup_flash_tween := create_tween()
+		pickup_flash_tween.tween_property(_mat, "emission_energy_multiplier",
+			1.0, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Remove from GameManager's collectible list to prevent the array from growing
 	# with invalid references over time (performance leak).
 	GameManager.collectibles.erase(self)

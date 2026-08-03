@@ -182,7 +182,16 @@ func _physics_process(delta: float) -> void:
 		if absf(direction.dot(Vector3.UP)) > 0.98:
 			up_vec = Vector3.FORWARD
 		mesh_instance.look_at(global_position + direction * 2.0, up_vec)
-		mesh_instance.scale = Vector3(0.75, 0.75, 2.4)
+		# ── Bolt scale pulse ── A subtle scale oscillation on the bolt body
+		# so it reads as crackling energy rather than a static stretched
+		# sphere. The pulse uses wall-clock time (consistent regardless of
+		# time-scale) and only modifies X/Y (perpendicular to travel) — Z
+		# stays at the stretched value so the bolt's forward streak doesn't
+		# wobble. The amplitude is small (±8%) so it reads as energetic
+		# vibration, not a mechanical throb.
+		var pulse_t: float = Time.get_ticks_msec() * 0.025
+		var pulse_scale: float = 0.75 + 0.06 * sin(pulse_t)
+		mesh_instance.scale = Vector3(pulse_scale, pulse_scale, 2.4)
 		# ── Rifled spin ── Add a constant roll around the travel axis so the
 		# bolt reads as spinning energy rather than a static stretched sphere.
 		# The roll accumulates on the mesh's local Z (forward after look_at),

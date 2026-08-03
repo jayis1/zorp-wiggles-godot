@@ -1304,7 +1304,20 @@ func _die() -> void:
 		var dist_t: float = clampf((death_dist - 15.0) / 45.0, 0.0, 1.0)
 		dist_t = 1.0 - dist_t * dist_t * (3.0 - 2.0 * dist_t)  # Inverted smoothstep
 		death_dist_mult = lerpf(0.1, 1.0, dist_t)
-	_trigger_camera_trauma(death_trauma_base * death_dist_mult)
+	# ── Directional death shake bias ── The camera should recoil *away*
+	# from the kill, as if the enemy's death explosion pushed the camera
+	# back. Without a bias, the shake is a centered wobble that doesn't
+	# convey where the kill happened — the player feels a generic rumble
+	# instead of a directional impact. We compute the direction from the
+	# enemy to the player (horizontal only) and pass it as the bias so the
+	# shake kicks the camera toward the player, away from the explosion.
+	var death_bias: Vector3 = Vector3.ZERO
+	if GameManager.player and is_instance_valid(GameManager.player):
+		death_bias = GameManager.player.global_position - global_position
+		death_bias.y = 0.0
+		if death_bias.length_squared() > 0.01:
+			death_bias = death_bias.normalized()
+	_trigger_camera_trauma(death_trauma_base * death_dist_mult, death_bias)
 
 	# Phase 6: Death poof particles
 	ParticleEffects.spawn_death_poof(get_parent(), global_position, base_color, base_scale)
