@@ -132,6 +132,7 @@ func _ease_restore() -> void:
 	# The tween calls a method that writes Engine.time_scale each frame.
 	var start_scale: float = _current_applied_scale
 	_restore_tween = create_tween()
+	_restore_tween.set_ignore_time_scale(true)
 	_restore_tween.tween_method(
 		func(s: float):
 			Engine.time_scale = s
