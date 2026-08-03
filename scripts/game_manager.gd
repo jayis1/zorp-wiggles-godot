@@ -545,7 +545,14 @@ func heal(amount: int) -> void:
 	# fires on damage) so the reaction is heal-specific.
 	player_healed.emit(actual_heal)
 	# Phase 20: Audio — heal SFX
-	AudioManager.play_sfx(AudioManager.SFX_HEAL)
+	# ── Pitch scales with heal size: a small heal (health fragment, +10 HP)
+	#    plays at a higher pitch (1.2× — quick tinkle), while a big heal
+	#    (healing shrine, level-up heal, +80 HP) plays at a lower pitch
+	#    (0.85× — substantial, warm recovery). This gives the player an
+	#    audio cue for how much they healed without looking at the HP bar.
+	#    The mapping is linear from 10 HP (1.2×) to 80+ HP (0.85×), clamped.
+	var heal_pitch: float = clampf(1.2 - float(actual_heal) / 100.0 * 0.35, 0.85, 1.2)
+	AudioManager.play_sfx_pitched(AudioManager.SFX_HEAL, heal_pitch)
 	# ── Enhancement: Low-HP heal pulse ──
 	# If the player was below 25% HP before healing, spawn a green expanding
 	# ring + sparkles at their position. This gives emergency heals (health

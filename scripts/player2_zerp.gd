@@ -43,6 +43,16 @@ var _material: StandardMaterial3D = null
 var _idle_phase: float = 0.0
 const _IDLE_BOB_AMPLITUDE: float = 0.04
 const _IDLE_BOB_SPEED: float = 2.5
+# ── Walk bob + footstep SFX (P1 parity) ── P1 has a speed-scaled walk bob
+# with |sin| humps and footstep SFX at each hump valley. P2 previously only
+# had the idle sine bob — no walk bob, no footsteps. Now P2 gets the same
+# walk bob blend + footstep SFX so co-op movement feels equally alive.
+var _walk_phase: float = 0.0
+var _walk_blend: float = 0.0
+var _prev_walk_phase: float = 0.0
+const _WALK_BOB_AMPLITUDE: float = 0.07
+const _WALK_BOB_SPEED: float = 11.0
+const _WALK_BOB_BLEND_SPEED: float = 6.0
 # ── Low-HP heartbeat constants (matching P1) ──
 const _HEARTBEAT_BPM: float = 75.0
 const _HEARTBEAT_BPM_CRITICAL: float = 125.0  # BPM at near-zero HP (P2 slightly lower than P1)
@@ -414,8 +424,29 @@ func _update_idle_breathing(delta: float) -> void:
 			mesh.position.y = 0.0
 		return
 	_idle_phase += delta * _IDLE_BOB_SPEED
+	# ── Walk bob (P1 parity): blend between idle breathing and a faster,
+	#    speed-scaled walk bob. The walk bob uses |sin| (single-sided humps)
+	#    so each footstep reads as a distinct step. Frequency scales with
+	#    speed so sprinting bobs faster than walking.
+	var horiz_speed: float = Vector2(velocity.x, velocity.z).length()
+	var speed_frac: float = clampf(horiz_speed / GameConstants.PLAYER_SPEED, 0.0, 1.0)
+	_walk_phase += delta * _WALK_BOB_SPEED * speed_frac
+	var blend: float = 1.0 - exp(-_WALK_BOB_BLEND_SPEED * delta)
+	_walk_blend = lerpf(_walk_blend, speed_frac, blend)
+	var idle_y: float = sin(_idle_phase) * _IDLE_BOB_AMPLITUDE
+	var walk_y: float = absf(sin(_walk_phase)) * _WALK_BOB_AMPLITUDE * _walk_blend
+	var bob_y: float = lerpf(idle_y, walk_y, _walk_blend)
 	if mesh and not is_invuln:
-		mesh.position.y = sin(_idle_phase) * _IDLE_BOB_AMPLITUDE
+		mesh.position.y = bob_y
+	# ── Footstep SFX (P1 parity) ── Play a soft footstep at the bottom of
+	#    each walk bob hump (zero-crossing of the underlying sine). Only
+	#    fires when the walk blend is dominant and speed is above threshold.
+	if _walk_blend > 0.35 and horiz_speed > 1.5:
+		var _prev_hump: int = int(_prev_walk_phase / PI)
+		var _curr_hump: int = int(_walk_phase / PI)
+		if _curr_hump != _prev_hump:
+			AudioManager.play_sfx(AudioManager.SFX_FOOTSTEP)
+	_prev_walk_phase = _walk_phase
 	if _material:
 		var pulse: float = 0.5 + 0.5 * sin(_idle_phase)
 		_material.emission_energy_multiplier = lerpf(0.8, 1.3, pulse)

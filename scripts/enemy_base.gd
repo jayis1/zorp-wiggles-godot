@@ -383,7 +383,15 @@ func _update_ai(delta: float) -> void:
 			if not is_alerted:
 				is_alerted = true
 				alert_indicator_timer = GameConstants.ENEMY_ALERT_INDICATOR_DURATION
-				AudioManager.play_sfx(AudioManager.SFX_ENEMY_ALERT)
+				# ── Distance attenuation ── The alert SFX plays at full volume
+				# for close enemies (≤15m) and attenuates to 15% at 60m+,
+				# matching the spawn SFX distance model. Previously the alert
+				# blip played at full volume regardless of distance — an enemy
+				# spotting the player from 50m away was just as loud as one
+				# right next to them, which was disorienting during large
+				# encounters with many simultaneous alerts.
+				var _mc_alert_vol: float = _compute_dist_atten(mc_dist)
+				AudioManager.play_sfx_volume(AudioManager.SFX_ENEMY_ALERT, _mc_alert_vol)
 				if alert_indicator:
 					# Kill any in-progress exit fade so the pop-in doesn't fight it
 					if alert_indicator.has_meta("_alert_exit_tween") and is_instance_valid(alert_indicator.get_meta("_alert_exit_tween") as Tween):
@@ -421,7 +429,9 @@ func _update_ai(delta: float) -> void:
 	if not is_alerted and dist_to_player < effective_detect_range:
 		is_alerted = true
 		alert_indicator_timer = GameConstants.ENEMY_ALERT_INDICATOR_DURATION
-		AudioManager.play_sfx(AudioManager.SFX_ENEMY_ALERT)
+		# ── Distance attenuation ── same model as the MC alert above.
+		var _alert_vol: float = _compute_dist_atten(dist_to_player)
+		AudioManager.play_sfx_volume(AudioManager.SFX_ENEMY_ALERT, _alert_vol)
 		if alert_indicator:
 			# Kill any in-progress exit fade so the pop-in doesn't fight it
 			if alert_indicator.has_meta("_alert_exit_tween") and is_instance_valid(alert_indicator.get_meta("_alert_exit_tween") as Tween):
@@ -1061,7 +1071,15 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	#    (normal) → pitch 1.0, ~2.0+ (boss) → pitch 0.7. The mapping
 	#    is a simple inverse scale with clamping.
 	var hit_pitch: float = clampf(1.3 - base_scale * 0.2, 0.6, 1.3)
-	AudioManager.play_sfx_pitched(AudioManager.SFX_ENEMY_HIT, hit_pitch)
+	# ── Distance attenuation ── Hit SFX scales with distance to the player
+	#    so far-off combat doesn't play at full volume. Uses the same
+	#    smoothstep model as the alert SFX. Close hits (≤15m) are full
+	#    volume; distant hits (60m+) are 15% volume.
+	var _hit_dist: float = 0.0
+	if GameManager.player and is_instance_valid(GameManager.player):
+		_hit_dist = global_position.distance_to(GameManager.player.global_position)
+	var _hit_vol: float = _compute_dist_atten(_hit_dist)
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_ENEMY_HIT, hit_pitch, _hit_vol)
 
 	# Hit flash — white albedo + emission spike for a punchy combat read.
 	# The albedo snaps to white and the emission energy kicks up, then both
@@ -1228,7 +1246,15 @@ func _die() -> void:
 	#    deaths are lower stakes per-hit but the pitch shift makes
 	#    the audio hierarchy clear (small = ping, large = BOOM).
 	var death_pitch: float = clampf(1.35 - base_scale * 0.25, 0.5, 1.35)
-	AudioManager.play_sfx_pitched(AudioManager.SFX_ENEMY_DEATH, death_pitch)
+	# ── Distance attenuation ── Death SFX also scales with distance so
+	#    off-screen kills don't play at full volume. The death distance
+	#    is already computed below for the camera trauma, but we need it
+	#    here before the trauma call. Compute it inline for the SFX.
+	var _death_dist: float = 0.0
+	if GameManager.player and is_instance_valid(GameManager.player):
+		_death_dist = global_position.distance_to(GameManager.player.global_position)
+	var _death_vol: float = _compute_dist_atten(_death_dist)
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_ENEMY_DEATH, death_pitch, _death_vol)
 	# ── Phase 18: Boss Arena — emit boss_defeated for arena-promoted bosses ──
 	if is_arena_boss:
 		GameManager.boss_defeated.emit(self)
@@ -1613,6 +1639,16 @@ func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> 
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(amount, bias_dir)
+
+# ── Distance attenuation helper ── Returns a volume multiplier (0.15–1.0)
+#    based on distance to the player. Uses the same smoothstep model as the
+#    spawn SFX distance attenuation: 15m = full volume (1.0), 60m+ = 15%.
+#    Shared by the alert SFX and any other enemy-originated sound that
+#    should be quieter when the source is far from the player.
+func _compute_dist_atten(dist: float) -> float:
+	var dist_t: float = clampf((dist - 15.0) / 45.0, 0.0, 1.0)
+	dist_t = 1.0 - dist_t * dist_t * (3.0 - 2.0 * dist_t)  # Inverted smoothstep
+	return lerpf(0.15, 1.0, dist_t)
 
 # ─── Phase 16: Weapon Mod Crafting — material drops ───────────────────────────
 
