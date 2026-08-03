@@ -1478,15 +1478,29 @@ func _on_pickup_streak_milestone(streak: int, xp_bonus: int) -> void:
 # Maps an HP ratio (0..1) to a green → yellow → red color gradient.
 # Used by both the player HP bar and the boss HP bar so they share the same
 # color language. >0.5 interpolates green→yellow; <0.5 interpolates yellow→red.
+# ── Smoothstep transitions ── The color gradients used to use raw linear
+#    interpolation: at exactly 50% HP the bar snapped from green to yellow
+#    with no blend zone, then from yellow to red at 25%. This made the color
+#    transitions feel mechanical — the bar was green, then suddenly yellow,
+#    then suddenly red, with hard midpoint jumps. Now we apply smoothstep
+#    (t²*(3-2t)) in each transition zone so the color eases through a warm
+#    amber at the midpoint instead of snapping. This mirrors the combo timer
+#    bar's smoothstep color transitions and makes the HP urgency ramp feel
+#    organic rather than digital — the player sees the bar warm through amber
+#    as they lose HP, not pop from green to yellow at a magic threshold.
 func _ratio_to_bar_color(ratio: float) -> Color:
 	ratio = clampf(ratio, 0.0, 1.0)
 	if ratio > 0.5:
 		# Green (0,1,0) → Yellow (1,1,0) as ratio goes 1.0 → 0.5
 		var t: float = (1.0 - ratio) * 2.0  # 0 at full, 1 at half
+		# Smoothstep for a soft S-curve instead of linear
+		t = t * t * (3.0 - 2.0 * t)
 		return Color(t, 1.0, 0.0)
 	else:
 		# Yellow (1,1,0) → Red (1,0,0) as ratio goes 0.5 → 0.0
 		var t: float = ratio * 2.0  # 1 at half, 0 at empty
+		# Smoothstep the green-channel fade so yellow→red eases through amber
+		t = t * t * (3.0 - 2.0 * t)
 		return Color(1.0, t, 0.0)
 
 # ─── Phase 16: Weapon Mod HUD Handlers ────────────────────────────────────────

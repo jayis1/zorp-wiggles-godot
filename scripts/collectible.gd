@@ -106,6 +106,21 @@ const TYPE_CONFIG := {
 # common pickup types.
 static var _shared_meshes: Dictionary = {}  # { type_key: SphereMesh }
 
+# ── Shared tumble physics material ── Every collectible drop creates a
+#    RigidBody3D proxy for the bounce-and-tumble animation. Each one was
+#    allocating a new PhysicsMaterial (bounce=0.4, friction=0.5) — identical
+#    across all drops. Sharing it statically eliminates per-drop physics
+#    resource allocation, mirroring the enemy corpse shared PhysicsMaterial
+#    pattern in enemy_base.gd. The material is read-only at runtime (no
+#    per-instance property writes), so sharing is safe.
+static var _shared_tumble_phys_mat: PhysicsMaterial = null
+
+static func _ensure_shared_tumble_phys_mat() -> void:
+	if _shared_tumble_phys_mat == null:
+		_shared_tumble_phys_mat = PhysicsMaterial.new()
+		_shared_tumble_phys_mat.bounce = 0.4
+		_shared_tumble_phys_mat.friction = 0.5
+
 static func _get_shared_mesh(type_key: int, radius: float) -> SphereMesh:
 	if _shared_meshes.has(type_key):
 		return _shared_meshes[type_key]
@@ -179,11 +194,10 @@ func start_tumble(impulse_dir: Vector3 = Vector3.ZERO) -> void:
 	tumble_mesh.material_override = tumble_mat
 	_tumble_rigid.add_child(tumble_mesh)
 
-	# Physics material with bounce
-	var phys_mat := PhysicsMaterial.new()
-	phys_mat.bounce = 0.4
-	phys_mat.friction = 0.5
-	_tumble_rigid.physics_material_override = phys_mat
+	# Physics material with bounce — shared across all tumble proxies to
+	# avoid per-drop PhysicsMaterial allocation (identical across all drops).
+	_ensure_shared_tumble_phys_mat()
+	_tumble_rigid.physics_material_override = _shared_tumble_phys_mat
 
 	# Add to parent scene
 	var parent_node: Node = get_parent()

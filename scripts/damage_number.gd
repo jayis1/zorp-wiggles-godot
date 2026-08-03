@@ -19,12 +19,30 @@ class_name DamageNumber
 static var _pool: Array[DamageNumber] = []
 const POOL_MAX_SIZE: int = 40  # Cap — prevents unbounded growth
 
+# ── Active instance counter ── Tracks how many damage numbers are currently
+#    in the scene (spawned but not yet released back to the pool). During
+#    heavy combat (Spread Shot + Multishot skill = 5+ bolts per shot, each
+#    hitting a different enemy), dozens of damage numbers can flood the
+#    screen simultaneously — the numbers overlap into an unreadable blob of
+#    text, and the per-instance _process cost (drift, jitter, fade) adds up.
+#    The active cap prevents this: when MAX_ACTIVE instances are already in
+#    the scene, new spawns are silently skipped (the damage still applies,
+#    just the floating number is suppressed). The cap is high enough that
+#    normal combat (single-shot, ~9/sec, each living ~1s) never hits it —
+#    it only kicks in during extreme burst scenarios. This mirrors the
+#    real-world cap that fighting games (Skullgirls, MvC) use to prevent
+#    hit-spark spam from obscuring the action.
+static var _active_count: int = 0
+const MAX_ACTIVE: int = 25  # Max simultaneous damage numbers on screen
+
 static func _acquire() -> DamageNumber:
 	if _pool.size() > 0:
 		return _pool.pop_back()
 	return DamageNumber.new()
 
 func _release_to_pool() -> void:
+	# Decrement the active counter so new spawns are allowed again.
+	_active_count = maxi(0, _active_count - 1)
 	# Hide + detach from tree, return to the free list for reuse.
 	# Only pool if the tree still exists (avoid issues during scene teardown).
 	if not get_tree():
@@ -43,12 +61,15 @@ func _release_to_pool() -> void:
 ## Clear the entire pool (scene change / game restart). Frees all dormant
 ## pooled instances so memory is released between runs. Called by
 ## GameManager on game_restart to prevent stale instances from a previous
-## scene lingering in the static pool.
+## scene lingering in the static pool. Also resets the active counter so
+## the new run starts with a clean slate (the previous run's in-flight
+## damage numbers are freed by the scene tree teardown, not by the pool).
 static func clear_pool() -> void:
 	for dn in _pool:
 		if is_instance_valid(dn):
 			dn.queue_free()
 	_pool.clear()
+	_active_count = 0
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 var lifetime: float = GameConstants.DMG_NUMBER_LIFETIME
@@ -281,7 +302,20 @@ func configure_heal(amount: int) -> void:
 ## avoiding per-hit Label3D allocation during combat.
 ## Optional `source_pos` biases the drift so the number pops away from the
 ## source (e.g. the player's position), making hits feel directional.
+## ── Active cap ── When MAX_ACTIVE damage numbers are already in the scene,
+##    new spawns are silently skipped to prevent screen clutter during extreme
+##    burst combat (Spread Shot + Multishot, boss AoE phases, etc.). The
+##    damage itself is still applied — only the floating number is suppressed.
+##    Boss-kill popups always bypass the cap (they're rare milestones that
+##    deserve guaranteed visibility).
 static func spawn(parent: Node, pos: Vector3, amount: int, is_crit: bool = false, is_kill: bool = false, is_boss: bool = false, source_pos: Vector3 = Vector3.ZERO) -> void:
+	# ── Active cap ── Skip spawning when too many damage numbers are on screen.
+	#    Boss-kill popups bypass the cap so the climactic "BOSS SLAIN!" always
+	#    shows. The counter is decremented in _release_to_pool() when each
+	#    number expires.
+	if not is_boss and _active_count >= MAX_ACTIVE:
+		return
+	_active_count += 1
 	var dn := _acquire()
 	# Request _ready() to fire on re-entry for pooled instances so per-spawn
 	# runtime state (drift, scale, modulate) resets cleanly.
