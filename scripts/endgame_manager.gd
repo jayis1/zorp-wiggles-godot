@@ -913,8 +913,10 @@ func _spawn_vault_guardian() -> void:
 		# scene, and EnemyDrake._die() already emits boss_defeated and calls
 		# clear_current_boss(). Setting is_arena_boss would cause EnemyBase._die()
 		# to emit boss_defeated a SECOND time (double-fire).
+		# NOTE: Do NOT emit boss_spawned here — the Drake scene's _ready()
+		# already emits boss_spawned, so emitting here would double-fire
+		# the signal to all 13 listeners (HUD, camera, arena, etc.).
 		guardian.set_meta("vault_guardian", true)
-	GameManager.boss_spawned.emit(guardian)
 	# NOTE: Do NOT connect enemy_died here — _on_boss_defeated already routes
 	# vault guardian deaths via GameManager.boss_defeated (the guardian has
 	# is_arena_boss = true, so enemy_base.gd emits boss_defeated on death).
