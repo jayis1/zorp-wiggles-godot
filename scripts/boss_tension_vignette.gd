@@ -12,6 +12,8 @@ var _vignette_color: Color = Color(0, 0, 0, 0)
 var _pulse_time: float = 0.0
 var _has_boss: bool = false
 var _boss_ref: Node3D = null
+# Cached player reference — avoids per-frame group scan in _process.
+var _cached_player: Node3D = null
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -29,6 +31,13 @@ func _on_boss_defeated(_boss: Node) -> void:
 	_has_boss = false
 	_boss_ref = null
 
+# Lazily cache the player node — only re-scan when the cache is stale.
+func _get_player() -> Node3D:
+	if _cached_player and is_instance_valid(_cached_player):
+		return _cached_player
+	_cached_player = get_tree().get_first_node_in_group("player")
+	return _cached_player
+
 func _process(delta: float) -> void:
 	_pulse_time += delta
 
@@ -39,8 +48,8 @@ func _process(delta: float) -> void:
 			queue_redraw()
 		return
 
-	var player: Node3D = get_tree().get_first_node_in_group("player")
-	if not player or not is_instance_valid(player):
+	var player: Node3D = _get_player()
+	if not player:
 		return
 
 	# Calculate proximity to boss (0 = far, 1 = close)

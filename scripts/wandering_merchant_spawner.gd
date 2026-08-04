@@ -12,11 +12,17 @@ extends Node
 
 var _spawn_timer: float = 0.0
 var _next_spawn_time: float = 0.0
+# Cached count instead of per-frame group scan. Incremented when a merchant
+# spawns, decremented when one despawns (via tree_node_removed signal filter).
+var _active_count: int = 0
 
 func _ready() -> void:
 	_schedule_next_spawn()
 	if not GameManager.game_restarted.is_connected(_on_game_restarted):
 		GameManager.game_restarted.connect(_on_game_restarted)
+	# Track merchant removals to keep _active_count accurate without
+	# calling get_nodes_in_group() every frame.
+	get_tree().node_removed.connect(_on_node_removed)
 
 func _on_game_restarted() -> void:
 	# Despawn any lingering wandering merchants so they don't survive a
@@ -26,8 +32,16 @@ func _on_game_restarted() -> void:
 	for merchant in get_tree().get_nodes_in_group("wandering_merchant"):
 		if is_instance_valid(merchant):
 			merchant.queue_free()
+	_active_count = 0
 	_spawn_timer = 0.0
 	_schedule_next_spawn()
+
+# Decrement the cached counter when a merchant is removed from the tree.
+# This avoids the O(n) get_nodes_in_group() call that previously ran every
+# frame in _process just to check if a merchant was alive.
+func _on_node_removed(node: Node) -> void:
+	if node is CharacterBody3D and node.is_in_group("wandering_merchant"):
+		_active_count = max(0, _active_count - 1)
 
 func _schedule_next_spawn() -> void:
 	_next_spawn_time = randf_range(
@@ -41,9 +55,9 @@ func _process(delta: float) -> void:
 		return
 	if not GameManager.player_is_alive and not CoOpManager.p2_active:
 		return
-	# Only one wandering merchant at a time.
-	var existing: int = get_tree().get_nodes_in_group("wandering_merchant").size()
-	if existing >= GameConstants.WANDERING_MERCHANT_MAX_ALIVE:
+	# Only one wandering merchant at a time — use cached counter instead of
+	# per-frame group scan (O(n) → O(1)).
+	if _active_count >= GameConstants.WANDERING_MERCHANT_MAX_ALIVE:
 		return
 	_spawn_timer += delta
 	if _spawn_timer >= _next_spawn_time:
@@ -68,6 +82,7 @@ func _spawn_merchant() -> void:
 	var merchant: CharacterBody3D = scene.instantiate()
 	get_tree().current_scene.add_child(merchant)
 	merchant.global_position = spawn_pos
+	_active_count += 1
 	# Arrival particles + message.
 	ParticleEffects.spawn_materialization(get_tree().current_scene, spawn_pos, GameConstants.WANDERING_MERCHANT_BODY_COLOR)
 	GameManager.add_message("🛍 A wandering merchant has arrived nearby! Look for the magenta canopy.")

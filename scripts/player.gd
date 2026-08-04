@@ -260,6 +260,11 @@ func _ready() -> void:
 	# ── Phase 27: Pet emote triggers — biome change → CURIOUS, damage → SCARED ──
 	if not GameManager.biome_changed.is_connected(_on_biome_changed_pet_emote):
 		GameManager.biome_changed.connect(_on_biome_changed_pet_emote)
+	# ── Biome transition ground ripple — expanding ring at the player's feet
+	# colored by the new biome's fog color. Gives the biome change a tangible
+	# physical presence alongside the existing audio crossfade + fog transition.
+	if not GameManager.biome_changed.is_connected(_on_biome_changed_ripple):
+		GameManager.biome_changed.connect(_on_biome_changed_ripple)
 	if not GameManager.damage_taken_from.is_connected(_on_player_damaged_pet_emote):
 		GameManager.damage_taken_from.connect(_on_player_damaged_pet_emote)
 	if not GameManager.level_up.is_connected(_on_player_levelup_pet_emote):
@@ -296,6 +301,55 @@ func _ready() -> void:
 func _on_biome_changed_pet_emote(_biome_id: int) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
 		pet.trigger_emote(GameConstants.PetEmote.CURIOUS)
+
+# ── Biome transition ground ripple ── When the player crosses a biome
+# boundary, an expanding ring spawns at their feet colored by the new
+# biome's fog color. This gives the transition a physical "energy wave"
+# feel that complements the existing audio crossfade + fog shader blend.
+# The ring is larger and slower than a spawn ring (biome changes are
+# environmental, not combat) — 1.0s expand to 6m radius with a gentle
+# ease-out. A brief upward light column (4m) adds a vertical element
+# so the ripple is visible even in biomes with tall terrain features.
+func _on_biome_changed_ripple(biome_id: int) -> void:
+	var fog_entry: Dictionary = GameConstants.BIOME_FOG.get(biome_id, {})
+	if fog_entry.is_empty():
+		return
+	var ripple_color: Color = fog_entry.get("color", Color(0.5, 0.5, 0.8))
+	var pos: Vector3 = global_position
+	# Ground ripple ring — expanding, fading, colored by the new biome.
+	ParticleEffects.spawn_spawn_ring(get_parent(), pos, ripple_color, 6.0)
+	# Brief upward light column — 4m tall, fades over 0.6s. Uses a dimmer
+	# version of the ripple color so it reads as a "biome energy surge"
+	# rather than a beacon. Shorter than boss/level-up beams (4m vs 12-30m)
+	# so it's a subtle environmental accent, not a spectacle.
+	var beam_mat := StandardMaterial3D.new()
+	beam_mat.albedo_color = Color(ripple_color.r, ripple_color.g, ripple_color.b, 0.0)
+	beam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	beam_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	beam_mat.emission_enabled = true
+	beam_mat.emission = ripple_color * 0.3
+	beam_mat.emission_energy_multiplier = 0.0
+	beam_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var beam := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.4
+	cyl.bottom_radius = 0.8
+	cyl.height = 4.0
+	cyl.radial_segments = 8
+	cyl.rings = 1
+	beam.mesh = cyl
+	beam.material_override = beam_mat
+	get_parent().add_child(beam)
+	beam.global_position = pos + Vector3(0, 2.0, 0)
+	var beam_tween := beam.create_tween()
+	beam_tween.set_parallel(true)
+	beam_tween.tween_property(beam_mat, "albedo_color:a", 0.25, 0.15) \
+		.set_ease(Tween.EASE_OUT)
+	beam_tween.tween_property(beam_mat, "emission_energy_multiplier", 1.2, 0.15) \
+		.set_ease(Tween.EASE_OUT)
+	beam_tween.chain().tween_property(beam_mat, "albedo_color:a", 0.0, 0.45) \
+		.set_ease(Tween.EASE_IN)
+	beam_tween.chain().tween_callback(beam.queue_free)
 
 func _on_player_damaged_pet_emote(_source_pos: Vector3) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):

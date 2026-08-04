@@ -533,6 +533,39 @@ func play_sfx_pitched_volume(sfx_name: String, pitch_base: float, vol_mult: floa
 	player.pitch_scale = clampf(pitch_base + variation, 0.1, 4.0)
 	player.play()
 
+# ── 3D Positional SFX ─────────────────────────────────────────────────────────
+## Play a one-shot SFX as a 3D positional sound at the given world position.
+## Uses Godot's built-in AudioStreamPlayer3D with linear attenuation so the
+## player hears the sound coming from the correct direction — essential for
+## off-screen spawn warnings, distant explosions, and environmental events.
+## The SFX auto-frees after playback finishes. The attenuation model is
+## ATTENUATION_LINEAR, with max_distance tuned for gameplay readability:
+## full volume within 5m, fading to 0 at 60m.
+func play_sfx_3d(sfx_name: String, world_pos: Vector3, vol_mult: float = 1.0) -> void:
+	if not _initialized:
+		return
+	if not _sfx_streams.has(sfx_name):
+		return
+	var scene_root: Node = get_tree().current_scene
+	if not scene_root:
+		return
+	var player_3d := AudioStreamPlayer3D.new()
+	player_3d.stream = _sfx_streams[sfx_name]
+	player_3d.unit_size = 8.0
+	player_3d.max_distance = 60.0
+	player_3d.attenuation_model = AudioStreamPlayer3D.ATTENUATION_LINEAR
+	player_3d.global_position = world_pos
+	var effective_vol: float = maxf(sfx_volume * master_volume * vol_mult, 0.0001)
+	player_3d.volume_db = linear_to_db(effective_vol)
+	if sfx_name in _PITCH_VARIATION_SFX:
+		player_3d.pitch_scale = 1.0 + randf_range(-_PITCH_VARIATION_AMOUNT, _PITCH_VARIATION_AMOUNT)
+	else:
+		player_3d.pitch_scale = 1.0
+	scene_root.add_child(player_3d)
+	player_3d.play()
+	# Auto-free after the stream finishes (plus a small safety margin).
+	player_3d.finished.connect(player_3d.queue_free)
+
 # ── Phase 30: Adaptive shoot SFX ──────────────────────────────────────────────
 ## Play the shoot SFX appropriate for the equipped weapon mod. If mod_id is
 ## NONE (or the mod has no mapping), falls back to the standard laser SFX.

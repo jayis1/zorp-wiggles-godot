@@ -12,9 +12,10 @@
 ##   full white and peaks in scale — a classic "tell" that telegraphs the
 ##   exact spawn moment so the player can pre-aim. This is the same trick
 ##   used in bullet-hell telegraphs (Touhou, Enter the Gungeon).
-##   A subtle "warp" SFX fires once when the anticipation flash begins, so
-##   off-screen spawns the player can't see still register audibly — they
-##   hear something materializing nearby and can react.
+##   A 3D positional "warp" SFX fires once at the spawn location when the
+##   anticipation flash begins, so off-screen spawns the player can't see
+##   still register audibly with correct directional cueing — the player
+##   hears the materialization coming from the right direction.
 ## - Final pop tween on free so the ring doesn't just vanish — it flashes
 ##   out with a quick scale-up + fade, masking the spawn frame.
 
@@ -155,15 +156,16 @@ func _process(delta: float) -> void:
 			#    audible while distant ones read as a subtle ambient cue.
 			if not _flash_sfx_played:
 				_flash_sfx_played = true
-				var _sfx_vol: float = 1.0
-				var _player_node: Node3D = get_tree().get_first_node_in_group("player")
-				if _player_node and is_instance_valid(_player_node):
-					var _spawn_dist: float = global_position.distance_to(_player_node.global_position)
-					# Smoothstep: 15m → 1.0 (full), 60m → 0.15 (minimal)
-					var _dist_t: float = clampf((_spawn_dist - 15.0) / 45.0, 0.0, 1.0)
-					_dist_t = 1.0 - _dist_t * _dist_t * (3.0 - 2.0 * _dist_t)
-					_sfx_vol = lerpf(0.15, 1.0, _dist_t)
-				AudioManager.play_sfx_volume(AudioManager.SFX_RIFT, _sfx_vol)
+				# ── 3D positional SFX ── The spawn warning warp sound now
+				#    plays as a positional AudioStreamPlayer3D at the
+				#    spawn location, so the player hears the direction
+				#    the enemy is materializing from. This is critical
+				#    for off-screen spawns — the player can turn toward
+				#    the sound to find the threat. Godot's 3D audio
+				#    handles the distance attenuation natively (linear
+				#    model, 60m max distance), replacing the manual
+				#    smoothstep volume calculation.
+				AudioManager.play_sfx_3d(AudioManager.SFX_RIFT, global_position)
 		else:
 			# ── Multi-octave pulse: two sines at incommensurate frequencies
 			# (15 Hz and 23 Hz) give an organic, non-rhythmic flicker instead
