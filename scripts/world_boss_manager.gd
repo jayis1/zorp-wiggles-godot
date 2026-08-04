@@ -68,13 +68,12 @@ func _process(delta: float) -> void:
 			if d > GameConstants.WORLD_BOSS_DESPAWN_DISTANCE:
 				_despawn_world_boss("You escaped the world boss.")
 		return
-	# Count existing world bosses (safety: only one at a time).
-	var existing: int = 0
-	for e in get_tree().get_nodes_in_group("enemies"):
-		if is_instance_valid(e) and "is_world_boss" in e and e.is_world_boss:
-			existing += 1
-	if existing >= GameConstants.WORLD_BOSS_MAX_ALIVE:
-		return
+	# _active_world_boss is null — no world boss is active. The old code
+	# called get_nodes_in_group("enemies") every frame to count existing
+	# world bosses, but since only one world boss can exist at a time and
+	# we track it via _active_world_boss, if _active_world_boss is null
+	# then there is no world boss. Skip the per-frame group scan entirely
+	# and just advance the spawn timer.
 	_spawn_timer += delta
 	if _spawn_timer >= _next_spawn_time:
 		_try_spawn_world_boss()

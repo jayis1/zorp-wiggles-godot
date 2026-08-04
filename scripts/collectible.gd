@@ -126,11 +126,40 @@ static var _shared_meshes: Dictionary = {}  # { type_key: SphereMesh }
 #    per-instance property writes), so sharing is safe.
 static var _shared_tumble_phys_mat: PhysicsMaterial = null
 
+# ── Shared tumble visual materials ── The tumble RigidBody3D proxy also
+#    allocated a new StandardMaterial3D per drop (6+ property assignments).
+#    The tumble material only varies by the collectible type's color (from
+#    TYPE_CONFIG) and is never tweened at runtime — the proxy is a short-lived
+#    physics visual that gets hidden when the bounce settles. We cache one
+#    material per collectible type and share it across all tumble proxies of
+#    that type. Since no per-instance property writes happen after creation
+#    (the proxy is hidden, not faded), sharing is safe. This eliminates per-
+#    drop StandardMaterial3D allocation during combat, where multiple enemies
+#    can die simultaneously and each drop spawns a tumble proxy.
+static var _shared_tumble_mats: Dictionary = {}  # { type_key: StandardMaterial3D }
+
 static func _ensure_shared_tumble_phys_mat() -> void:
 	if _shared_tumble_phys_mat == null:
 		_shared_tumble_phys_mat = PhysicsMaterial.new()
 		_shared_tumble_phys_mat.bounce = 0.4
 		_shared_tumble_phys_mat.friction = 0.5
+
+## Get a shared tumble visual material for a collectible type. The material
+## is created once per type and reused across all tumble proxies of that type.
+## This eliminates per-drop StandardMaterial3D allocation during combat.
+static func _get_shared_tumble_mat(type_key: int, color: Color) -> StandardMaterial3D:
+	if _shared_tumble_mats.has(type_key):
+		return _shared_tumble_mats[type_key]
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.emission_enabled = true
+	mat.emission = color * 0.3
+	mat.rim_enabled = true
+	mat.rim = 0.8
+	mat.rim_tint = 1.0
+	_shared_tumble_mats[type_key] = mat
+	return mat
 
 static func _get_shared_mesh(type_key: int, radius: float) -> SphereMesh:
 	if _shared_meshes.has(type_key):
@@ -194,15 +223,11 @@ func start_tumble(impulse_dir: Vector3 = Vector3.ZERO) -> void:
 	# Visual mesh copy for the tumble body
 	var tumble_mesh := MeshInstance3D.new()
 	tumble_mesh.mesh = _get_shared_mesh(collectible_type, col_scale)
-	var tumble_mat := StandardMaterial3D.new()
-	tumble_mat.albedo_color = config["color"]
-	tumble_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	tumble_mat.emission_enabled = true
-	tumble_mat.emission = config["color"] * 0.3
-	tumble_mat.rim_enabled = true
-	tumble_mat.rim = 0.8
-	tumble_mat.rim_tint = 1.0
-	tumble_mesh.material_override = tumble_mat
+	# Use the shared tumble material for this collectible type — the tumble
+	# proxy is a short-lived physics visual that doesn't tween material
+	# properties, so a shared per-type material is safe and eliminates
+	# per-drop StandardMaterial3D allocation.
+	tumble_mesh.material_override = _get_shared_tumble_mat(collectible_type, config["color"])
 	_tumble_rigid.add_child(tumble_mesh)
 
 	# Physics material with bounce — shared across all tumble proxies to

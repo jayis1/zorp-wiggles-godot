@@ -1533,12 +1533,12 @@ func _spawn_physics_corpse() -> void:
 	var corpse_mesh := MeshInstance3D.new()
 	corpse_mesh.mesh = _shared_corpse_mesh
 	corpse_mesh.scale = Vector3.ONE * base_scale  # Scale the shared mesh
-	var corpse_mat := StandardMaterial3D.new()
+	# Duplicate the shared base material instead of creating one from scratch.
+	# The base already has shading_mode, emission_enabled, and transparency
+	# pre-configured — we only need to set the per-corpse color + emission.
+	var corpse_mat := _shared_corpse_mat_base.duplicate() as StandardMaterial3D
 	corpse_mat.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.7)
-	corpse_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	corpse_mat.emission_enabled = true
 	corpse_mat.emission = base_color * 0.1
-	corpse_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	corpse_mesh.material_override = corpse_mat
 	corpse.add_child(corpse_mesh)
 
@@ -1732,6 +1732,15 @@ const COLLECTIBLE_DROP_SCENE := preload("res://scenes/entities/collectible.tscn"
 # the fade-out tween writes its alpha independently.
 static var _shared_corpse_mesh: SphereMesh = null
 static var _shared_corpse_phys_mat: PhysicsMaterial = null
+# ── Shared base corpse material ── Creating a StandardMaterial3D from scratch
+#    per kill (6+ property assignments) is wasteful when the only per-instance
+#    variation is the color (base_color) and the alpha fade tween. We create a
+#    single base material once and duplicate() it per corpse — duplicate() is
+#    a single-shot copy of all pre-configured properties, which is measurably
+#    cheaper than 6+ individual property sets. The duplicate still gets its
+#    own albedo_color and emission overwritten per-corpse, and the alpha tween
+#    writes to the duplicate's albedo_color.a independently.
+static var _shared_corpse_mat_base: StandardMaterial3D = null
 
 static func _ensure_corpse_shared_resources() -> void:
 	if _shared_corpse_mesh == null:
@@ -1744,6 +1753,12 @@ static func _ensure_corpse_shared_resources() -> void:
 		_shared_corpse_phys_mat = PhysicsMaterial.new()
 		_shared_corpse_phys_mat.bounce = 0.3
 		_shared_corpse_phys_mat.friction = 0.6
+	if _shared_corpse_mat_base == null:
+		_shared_corpse_mat_base = StandardMaterial3D.new()
+		_shared_corpse_mat_base.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_shared_corpse_mat_base.emission_enabled = true
+		_shared_corpse_mat_base.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		# albedo_color and emission are overwritten per-corpse after duplicate()
 
 ## Drop a crafting material when the enemy dies. Chance depends on enemy type
 ## (normal enemies have 12% chance, bosses always drop).

@@ -92,13 +92,29 @@ func _ready() -> void:
 	# with the warning ring and intensifies during the anticipation flash.
 	# The light color matches the warning red so it reads as a threat glow.
 	# It starts dim and ramps up so the glow "charges" alongside the ring.
-	_glow_light = OmniLight3D.new()
-	_glow_light.light_color = _base_emission
-	_glow_light.light_energy = 0.3  # Starts dim
-	_glow_light.omni_range = 3.0
-	_glow_light.omni_attenuation = 1.5
-	_glow_light.position = Vector3(0, 0.1, 0)  # Just above ground
-	add_child(_glow_light)
+	# POOLING: Uses the PerformanceOptimizer transient light pool instead of
+	# allocating a new OmniLight3D per spawn warning. During heavy combat
+	# (swarm packs, endless mode), multiple spawn warnings can be active
+	# simultaneously — each creating + freeing a light. The pool reuses
+	# dormant lights, eliminating per-warning light allocation churn. The
+	# pool auto-reclaims the light after the warning duration + a small
+	# margin, so we don't need to manage the release ourselves.
+	var glow_pos := global_position + Vector3(0, 0.1, 0)
+	if PerformanceOptimizer:
+		# The pool duration is set slightly longer than the warning duration
+		# so the pop tween (which fades the light) has time to complete
+		# before the pool auto-reclaims the light.
+		_glow_light = PerformanceOptimizer.acquire_transient_light(
+			glow_pos, _base_emission, 0.3, duration + 0.3, 3.0, 1.5)
+	else:
+		# Fallback: create a standalone light (non-pooled path)
+		_glow_light = OmniLight3D.new()
+		_glow_light.light_color = _base_emission
+		_glow_light.light_energy = 0.3  # Starts dim
+		_glow_light.omni_range = 3.0
+		_glow_light.omni_attenuation = 1.5
+		_glow_light.position = Vector3(0, 0.1, 0)  # Local pos (child of warning)
+		add_child(_glow_light)
 
 func _process(delta: float) -> void:
 	age += delta
@@ -117,7 +133,10 @@ func _process(delta: float) -> void:
 	# During the anticipation flash, the light snaps to full white-red
 	# intensity matching the ring's white flash. After the flash, the light
 	# fades to zero as the ring pops out.
-	if _glow_light:
+	# Guard with is_instance_valid for the pooled-light path — the pool
+	# may reclaim the light if the duration timer fires before the warning
+	# ends (edge case during scene teardown).
+	if _glow_light and is_instance_valid(_glow_light):
 		if progress < _FLASH_FRAC:
 			# Charging phase — light grows with the ring
 			_glow_light.light_energy = 0.3 + eased * 1.2  # 0.3 → 1.5
@@ -192,7 +211,9 @@ func _process(delta: float) -> void:
 				.set_ease(Tween.EASE_IN)
 		# Fade the ground glow out alongside the ring pop so the light
 		# doesn't snap off while the ring is still fading.
-		if _glow_light:
+		# Guard with is_instance_valid — the pooled light may have been
+		# reclaimed by the transient light pool if the timing is tight.
+		if _glow_light and is_instance_valid(_glow_light):
 			pop_tween.tween_property(_glow_light, "light_energy", 0.0, 0.12) \
 				.set_ease(Tween.EASE_IN)
 		pop_tween.chain().tween_callback(queue_free)

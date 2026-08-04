@@ -16,6 +16,7 @@ var _cloud_light: OmniLight3D = null
 var _tick_timer: Timer = null
 var _life_timer: Timer = null
 var _pulse_tween: Tween = null
+var _cached_p1: Node3D = null  # Cached P1 reference — avoids per-tick group scan
 
 ## Called by EnemyToxicSpore._spawn_poison_cloud() right after set_script().
 ## Stores references to the visual/material/timer nodes (already children of
@@ -36,10 +37,11 @@ func setup(mat: StandardMaterial3D, light: OmniLight3D, tick_timer: Timer, life_
 
 ## Damage tick — damages players and enemies within the cloud radius.
 func _on_tick() -> void:
-	# Damage P1
-	var p1: Node3D = get_tree().get_first_node_in_group("player")
-	if p1 and is_instance_valid(p1) and GameManager.player_is_alive and not GameManager.player_is_downed:
-		var d1: float = global_position.distance_to(p1.global_position)
+	# Damage P1 — cache the player reference to avoid per-tick group scan
+	if _cached_p1 == null or not is_instance_valid(_cached_p1):
+		_cached_p1 = get_tree().get_first_node_in_group("player")
+	if _cached_p1 and is_instance_valid(_cached_p1) and GameManager.player_is_alive and not GameManager.player_is_downed:
+		var d1: float = global_position.distance_to(_cached_p1.global_position)
 		if d1 < GameConstants.TOXIC_SPORE_CLOUD_RADIUS:
 			GameManager.take_damage(GameConstants.TOXIC_SPORE_CLOUD_DAMAGE_PER_TICK, global_position)
 	# Co-op: damage P2
@@ -49,7 +51,10 @@ func _on_tick() -> void:
 			if d2 < GameConstants.TOXIC_SPORE_CLOUD_RADIUS:
 				CoOpManager.p2_take_damage(GameConstants.TOXIC_SPORE_CLOUD_DAMAGE_PER_TICK, global_position)
 	# Damage enemies (friendly fire — reduced)
-	for enemy in get_tree().get_nodes_in_group("enemies"):
+	# Use GameManager.enemies array instead of get_nodes_in_group("enemies")
+	# — the array is already maintained and avoids a scene-tree group scan
+	# per tick. The array is iterated safely (elements are null-checked).
+	for enemy in GameManager.enemies:
 		if not is_instance_valid(enemy):
 			continue
 		var eb: EnemyBase = enemy as EnemyBase

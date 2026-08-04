@@ -535,12 +535,16 @@ func play_sfx_pitched_volume(sfx_name: String, pitch_base: float, vol_mult: floa
 
 # ── 3D Positional SFX ─────────────────────────────────────────────────────────
 ## Play a one-shot SFX as a 3D positional sound at the given world position.
-## Uses Godot's built-in AudioStreamPlayer3D with linear attenuation so the
-## player hears the sound coming from the correct direction — essential for
+## Uses Godot's built-in AudioStreamPlayer3D with inverse-distance attenuation so
+## the player hears the sound coming from the correct direction — essential for
 ## off-screen spawn warnings, distant explosions, and environmental events.
 ## The SFX auto-frees after playback finishes. The attenuation model is
-## ATTENUATION_LINEAR, with max_distance tuned for gameplay readability:
-## full volume within 5m, fading to 0 at 60m.
+## ATTENUATION_INVERSE_DISTANCE, with max_distance tuned for gameplay
+## readability: full volume near the source, natural rolloff to 60m.
+## Inverse-distance is the physically-based default for 3D game audio —
+## ATTENUATION_LINEAR produces an unnatural abrupt cutoff at max_distance
+## (volume = 0 at exactly max_distance), while inverse-distance fades
+## gradually, matching how real sound propagates.
 func play_sfx_3d(sfx_name: String, world_pos: Vector3, vol_mult: float = 1.0) -> void:
 	if not _initialized:
 		return
@@ -553,7 +557,7 @@ func play_sfx_3d(sfx_name: String, world_pos: Vector3, vol_mult: float = 1.0) ->
 	player_3d.stream = _sfx_streams[sfx_name]
 	player_3d.unit_size = 8.0
 	player_3d.max_distance = 60.0
-	player_3d.attenuation_model = AudioStreamPlayer3D.ATTENUATION_LINEAR
+	player_3d.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 	player_3d.global_position = world_pos
 	var effective_vol: float = maxf(sfx_volume * master_volume * vol_mult, 0.0001)
 	player_3d.volume_db = linear_to_db(effective_vol)
