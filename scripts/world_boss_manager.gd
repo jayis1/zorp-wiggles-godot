@@ -149,7 +149,14 @@ func _materialize_world_boss(boss_type: int, spawn_pos: Vector3, display_name: S
 	_active_world_boss = boss
 	_active_display_name = display_name
 	# Emit the boss_spawned signal so the HUD boss bar appears.
-	GameManager.boss_spawned.emit(boss)
+	# Drake, Void Leviathan, and Ancient Sentinel all emit boss_spawned in
+	# their own _ready(), so only emit here for other boss types to avoid
+	# double-firing the signal to all 13 listeners (HUD, camera, arena, etc.).
+	var _wb_type: int = boss_type
+	if _wb_type != GameConstants.EnemyType.DRAKE and \
+	   _wb_type != GameConstants.EnemyType.VOID_LEVIATHAN and \
+	   _wb_type != GameConstants.EnemyType.ANCIENT_SENTINEL:
+		GameManager.boss_spawned.emit(boss)
 	world_boss_spawned.emit(boss, display_name)
 	# Audio — second boss spawn SFX for the actual materialization
 	# (the first SFX_WORLD_BOSS plays during the telegraph warning).

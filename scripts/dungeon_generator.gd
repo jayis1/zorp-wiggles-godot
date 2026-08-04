@@ -501,9 +501,12 @@ func _spawn_dungeon_boss(room: Dictionary, theme: int, dungeon_id: int) -> void:
 		   boss_type != GameConstants.EnemyType.VOID_LEVIATHAN and \
 		   boss_type != GameConstants.EnemyType.ANCIENT_SENTINEL:
 			boss.is_arena_boss = true
+			# Emit boss_spawned only for bosses that don't self-emit in _ready().
+			# Drake, Void Leviathan, and Ancient Sentinel all emit boss_spawned
+			# in their own _ready(), so emitting here too would double-fire
+			# the signal to all 13 listeners (HUD, camera, arena, etc.).
+			GameManager.boss_spawned.emit(boss)
 		boss.set_meta("dungeon_id", dungeon_id)
-	# Emit boss_spawned so HUD tracks it.
-	GameManager.boss_spawned.emit(boss)
 	# Connect to boss death to clear dungeon.
 	if boss is EnemyBase:
 		(boss as EnemyBase).enemy_died.connect(_on_dungeon_boss_died.bind(dungeon_id))

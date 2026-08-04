@@ -500,8 +500,11 @@ func _spawn_next_boss_rush_boss() -> void:
 			boss_type == GameConstants.EnemyType.ANCIENT_SENTINEL
 		if boss_type != GameConstants.EnemyType.DRAKE and not is_new_boss:
 			boss.is_arena_boss = true
-	# Emit boss_spawned so BossArena seals the player in and the HUD shows the bar
-	GameManager.boss_spawned.emit(boss)
+			# Emit boss_spawned for bosses that don't self-emit in _ready().
+			# Drake, Void Leviathan, and Ancient Sentinel all emit boss_spawned
+			# in their own _ready(), so emitting here too would double-fire
+			# the signal to all 13 listeners (HUD, camera, arena, etc.).
+			GameManager.boss_spawned.emit(boss)
 	boss_rush_boss_index.emit(_boss_rush_index, BOSS_RUSH_QUEUE.size())
 	var bname: String = "Boss"
 	if "enemy_name" in boss:

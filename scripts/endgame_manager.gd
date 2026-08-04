@@ -235,7 +235,11 @@ func _spawn_survival_boss() -> void:
 		   bt != GameConstants.EnemyType.VOID_LEVIATHAN and \
 		   bt != GameConstants.EnemyType.ANCIENT_SENTINEL:
 			boss.is_arena_boss = true
-	GameManager.boss_spawned.emit(boss)
+			# Emit boss_spawned only for bosses that don't self-emit in _ready().
+			# Drake, Void Leviathan, and Ancient Sentinel all emit boss_spawned
+			# in their own _ready(), so emitting here too would double-fire
+			# the signal to all 13 listeners (HUD, camera, arena, etc.).
+			GameManager.boss_spawned.emit(boss)
 	GameManager.add_message("☠ Survival boss incoming!")
 	# ── Enhancement: Survival boss spawn juice ── the periodic boss gets the
 	# boss-spawn rumble + camera shake, matching all other boss spawn paths.
@@ -409,7 +413,11 @@ func _spawn_boss_gauntlet_next() -> void:
 		   bt != GameConstants.EnemyType.VOID_LEVIATHAN and \
 		   bt != GameConstants.EnemyType.ANCIENT_SENTINEL:
 			boss.is_arena_boss = true
-	GameManager.boss_spawned.emit(boss)
+			# Emit boss_spawned only for bosses that don't self-emit in _ready().
+			# Drake, Void Leviathan, and Ancient Sentinel all emit boss_spawned
+			# in their own _ready(), so emitting here too would double-fire
+			# the signal to all 13 listeners (HUD, camera, arena, etc.).
+			GameManager.boss_spawned.emit(boss)
 	boss_gauntlet_progress.emit(_boss_gauntlet_index, GameConstants.BOSS_GAUNTLET_QUEUE.size())
 	GameManager.add_message("☠ Boss Gauntlet %d/%d" % [_boss_gauntlet_index + 1, GameConstants.BOSS_GAUNTLET_QUEUE.size()])
 	# ── Enhancement: Boss Gauntlet boss spawn juice ── each escalating boss
