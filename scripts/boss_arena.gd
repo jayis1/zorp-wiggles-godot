@@ -247,6 +247,10 @@ func _build_arena() -> void:
 		var box_mesh := BoxMesh.new()
 		box_mesh.size = Vector2(box.size.x, box.size.y)
 		mesh_inst.mesh = box_mesh
+		# BoxMesh depth equals width, so scale Z to match the collider's
+		# Z extent (box.size.z) which differs from X for thin wall segments.
+		if box.size.x > 0.0:
+			mesh_inst.scale.z = box.size.z / box.size.x
 		mesh_inst.material_override = wall_mat
 		wall.add_child(mesh_inst)
 

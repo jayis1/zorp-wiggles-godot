@@ -350,6 +350,12 @@ func _build_wall(pos: Vector3, extents: Vector3, color: Color) -> void:
 	var box := BoxMesh.new()
 	box.size = Vector2(extents.x, extents.y)
 	mesh_inst.mesh = box
+	# BoxMesh.size is Vector2(width, height) and depth equals width, so
+	# scale Z to match the collider's Z extent (extents.z) which may differ
+	# from X (e.g. long thin walls). Without this, the visual is a cube
+	# (width × height × width) instead of the correct (width × height × depth).
+	if extents.x > 0.0:
+		mesh_inst.scale.z = extents.z / extents.x
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
 	mesh_inst.material_override = mat

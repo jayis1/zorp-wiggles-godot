@@ -279,6 +279,9 @@ func _create_box(pos: Vector3, scale: Vector3, col: Color) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = box
 	mi.position = pos
+	# BoxMesh depth equals width, so scale Z to match scale.z when it differs.
+	if scale.x > 0.0 and scale.z != scale.x:
+		mi.scale.z = scale.z / scale.x
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = col
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

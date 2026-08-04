@@ -575,6 +575,10 @@ func _spawn_loot_cave_interior(cave: Dictionary) -> void:
 		var box := BoxMesh.new()
 		box.size = Vector2(shape.size.x, shape.size.y)
 		mesh_inst.mesh = box
+		# BoxMesh depth equals width, so scale Z to match the collider's
+		# Z extent (shape.size.z) which differs from X for thin walls.
+		if shape.size.x > 0.0:
+			mesh_inst.scale.z = shape.size.z / shape.size.x
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Color(0.15, 0.1, 0.08)
 		mesh_inst.material_override = mat
