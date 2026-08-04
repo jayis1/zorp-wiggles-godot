@@ -592,6 +592,14 @@ func _physics_process(delta: float) -> void:
 		# position (in case the item was previously pulled and released).
 		base_pos_x = global_position.x
 		base_pos_z = global_position.z
+		# ── Smooth Y re-anchor ── When magnetic pull ends, the item's Y has
+		#    been displaced by the lift arc but base_y still holds the original
+		#    spawn Y. The bob code writes global_position.y = base_y + sin(...)
+		#    which would snap the item back down to spawn height. We ease
+		#    base_y toward the current Y so the bob re-anchors smoothly —
+		#    the item drifts to its natural float height over ~0.5s instead
+		#    of popping. The lerp weight is frame-rate-independent.
+		base_y = lerpf(base_y, global_position.y, 1.0 - exp(-4.0 * delta))
 		var wobble_x: float = sin(bob_offset * 0.7) * 0.12
 		var wobble_z: float = cos(bob_offset * 0.7 + PI * 0.25) * 0.12
 		global_position.x = base_pos_x + wobble_x

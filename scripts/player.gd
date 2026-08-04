@@ -930,9 +930,18 @@ func _on_player_damaged(source_pos: Vector3) -> void:
 	# from the hit. This is the same juice language as the dash/landing
 	# squash but tuned for a hit (faster, sharper, less overshoot).
 	_dmg_squash_tween = create_tween()
-	# Impact frame: flat squash in 50ms (sharp, almost a freeze-frame)
+	# Impact frame: flat squash in 50ms (sharp, almost a freeze-frame).
+	# The X/Z stretch is biased by the recoil direction so the squash is
+	# directional — Zorp stretches MORE along the hit axis (away from the
+	# source) and less perpendicular. We compute the axis-aligned bias by
+	# taking |recoil_dir| components (0..1) and using them to lerp the
+	# stretch from 1.35 (perpendicular) to 1.55 (along the recoil). This
+	# makes a hit from the north push Zorp south — the mesh visibly recoils
+	# in the hit direction rather than uniformly inflating.
+	var _sx: float = lerpf(1.35, 1.55, absf(recoil_dir.x))
+	var _sz: float = lerpf(1.35, 1.55, absf(recoil_dir.z))
 	_dmg_squash_tween.tween_property(mesh, "scale",
-		Vector3(1.35, 0.55, 1.35), 0.05) \
+		Vector3(_sx, 0.55, _sz), 0.05) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	# Recoil bounce back with elastic for a wobbly recovery
 	_dmg_squash_tween.tween_property(mesh, "scale", Vector3.ONE, 0.28) \

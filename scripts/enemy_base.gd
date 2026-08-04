@@ -1186,10 +1186,27 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# windup (the windup tween controls scale and would conflict) and during
 	# death (the death tween owns scale). Uses TRANS_ELASTIC rebound so the
 	# enemy bounces back to base_scale with a satisfying wobble.
+	# ── Directional bias ── The squash is biased toward the hit direction
+	#    (source→enemy axis) so the enemy visibly recoils in the direction
+	#    it was struck. A hit from the left stretches the enemy to the right,
+	#    reinforcing the impact direction. We compute the axis-aligned bias
+	#    from the normalized hit direction and lerp the stretch from 1.25
+	#    (perpendicular) to 1.45 (along the hit axis) so the squash reads as
+	#    directional rather than a uniform inflation. Falls back to the
+	#    uniform 1.25 squash if no source position is provided.
 	if body_mesh and not is_windup and not is_dead:
+		var _hit_bx: float = 1.25
+		var _hit_bz: float = 1.25
+		if source_pos != Vector3.ZERO:
+			var _hit_dir: Vector3 = (global_position - source_pos)
+			_hit_dir.y = 0.0
+			if _hit_dir.length_squared() > 0.01:
+				_hit_dir = _hit_dir.normalized()
+				_hit_bx = lerpf(1.25, 1.45, absf(_hit_dir.x))
+				_hit_bz = lerpf(1.25, 1.45, absf(_hit_dir.z))
 		var hit_tween := create_tween()
 		hit_tween.tween_property(body_mesh, "scale",
-			Vector3.ONE * base_scale * 1.25, 0.04) \
+			Vector3(_hit_bx, _hit_bz, base_scale * 1.25), 0.04) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		hit_tween.tween_property(body_mesh, "scale",
 			Vector3.ONE * base_scale, 0.14) \

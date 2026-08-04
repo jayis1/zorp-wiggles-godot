@@ -535,6 +535,15 @@ func _on_body_entered(body: Node3D) -> void:
 		queue_free()
 	else:
 		# Hit terrain/wall
+		# ── Subtle camera micro-nudge on terrain hit ── A missed shot that
+		#    hits a wall currently has zero camera feedback, making misses
+		#    feel completely weightless. A feather-touch trauma (0.02, well
+		#    below the 0.015 per-shot micro-recoil and the 0.03 normal-hit
+		#    kick) gives the terrain impact a tiny physical read. The bias
+		#    direction points from the wall back toward the player so the
+		#    camera nudges backward, simulating the shot "bouncing" off the
+		#    surface. Skipped for Bouncing Bolt and Spectral Beam since
+		#    they don't actually stop on terrain.
 		# Enhancement: Spectral Beam — phases through walls and terrain, never blocked
 		if _weapon_mod == GameConstants.WeaponMod.SPECTRAL_BEAM:
 			# Pass through terrain — small visual ripple but don't stop
@@ -553,6 +562,21 @@ func _on_body_entered(body: Node3D) -> void:
 		# Phase 24: Black Hole Launcher — terrain hit triggers the collapse
 		elif _weapon_mod == GameConstants.WeaponMod.BLACK_HOLE_LAUNCHER:
 			_spawn_black_hole_launcher_collapse(damage)
+		# ── Camera micro-nudge on terrain hit ── A feather-touch camera
+		#    trauma (0.02) gives missed shots a tiny physical read so they
+		#    don't feel weightless. The bias points from the impact back
+		#    toward the player so the camera nudges "backward" as if the
+		#    shot bounced off the wall. Only fires for shots that actually
+		#    stop on terrain (not Bouncing Bolt or Spectral Beam, which
+		#    return early above).
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			var _terrain_bias: Vector3 = Vector3.ZERO
+			if GameManager.player and is_instance_valid(GameManager.player):
+				_terrain_bias = GameManager.player.global_position - global_position
+				_terrain_bias.y = 0.0
+				if _terrain_bias.length_squared() > 0.01:
+					_terrain_bias = _terrain_bias.normalized()
+			GameManager.camera_rig.add_trauma(0.02, _terrain_bias)
 		_impact_effect()
 		_is_consumed = true
 		queue_free()
