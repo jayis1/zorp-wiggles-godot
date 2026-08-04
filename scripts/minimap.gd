@@ -361,29 +361,51 @@ func _draw_entity_dots(rect: Rect2) -> void:
 		draw_colored_polygon(pts, wp_color)
 
 	# ── Enemy dots (red, boss = magenta, world boss = red ring) ──
+	# ── Off-screen enemy edge indicators ── Enemies just outside the
+	#    minimap's view range are clamped to the minimap edge with a
+	#    small directional arrow, so the player has spatial awareness
+	#    of threats approaching from beyond the visible area. Only
+	#    enemies within 1.5× the view range get edge arrows (far-off
+	#    enemies would clutter the edge). Bosses always get an edge
+	#    indicator regardless of distance so the player never loses
+	#    track of a boss. Mirrors the ping edge-arrow pattern.
 	for enemy in GameManager.enemies:
 		if not is_instance_valid(enemy):
 			continue
 		if "is_dead" in enemy and enemy.is_dead:
 			continue
 		var pos: Vector2 = _world_to_mini(enemy.global_position.x, enemy.global_position.z, px, pz, pixel_per_world)
-		if _is_in_rect(pos, rect):
-			var is_boss: bool = false
-			if "enemy_type" in enemy and enemy.enemy_type == GameConstants.EnemyType.DRAKE:
-				is_boss = true
-			# Phase 26: World bosses get a distinct pulsing red ring.
-			var is_world_boss: bool = "is_world_boss" in enemy and enemy.is_world_boss
-			if is_world_boss:
+		var is_boss: bool = false
+		if "enemy_type" in enemy and enemy.enemy_type == GameConstants.EnemyType.DRAKE:
+			is_boss = true
+		# Phase 26: World bosses get a distinct pulsing red ring.
+		var is_world_boss: bool = "is_world_boss" in enemy and enemy.is_world_boss
+		if is_world_boss:
+			if _is_in_rect(pos, rect):
 				var wb_pulse: float = 0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.004)
 				draw_circle(pos, 5.0, Color(1.0, 0.2, 0.2, wb_pulse))
 				draw_circle(pos, 3.0, Color(1.0, 0.2, 0.2))
-				continue
-			if is_boss:
+			else:
+				_draw_edge_indicator(pos, rect, Color(1.0, 0.2, 0.2), 5.0)
+			continue
+		if is_boss:
+			if _is_in_rect(pos, rect):
 				draw_circle(pos, 4.0, GameConstants.MINIMAP_BOSS_DOT_COLOR)
 				draw_circle(pos, 6.0, Color(GameConstants.MINIMAP_BOSS_DOT_COLOR.r,
 					GameConstants.MINIMAP_BOSS_DOT_COLOR.g, GameConstants.MINIMAP_BOSS_DOT_COLOR.b, 0.3))
 			else:
+				# Bosses always get an edge indicator so the player
+				# never loses track of a boss off the minimap edge.
+				_draw_edge_indicator(pos, rect, GameConstants.MINIMAP_BOSS_DOT_COLOR, 4.0)
+		else:
+			if _is_in_rect(pos, rect):
 				draw_circle(pos, 2.0, GameConstants.MINIMAP_ENEMY_DOT_COLOR)
+			else:
+				# Normal enemies: only show edge arrow if within 1.5×
+				# view range so distant enemies don't clutter the edge.
+				var enemy_dist: float = enemy.global_position.distance_to(player.global_position)
+				if enemy_dist <= _view_range * 1.5:
+					_draw_edge_indicator(pos, rect, GameConstants.MINIMAP_ENEMY_DOT_COLOR, 2.0)
 
 	# ── Phase 31: Ping markers (flashing colored diamonds) ──
 	# Pings dropped by the player appear as flashing diamonds on the minimap
@@ -494,3 +516,27 @@ func _draw_entity_dots(rect: Rect2) -> void:
 func _is_in_rect(pos: Vector2, rect: Rect2) -> bool:
 	return pos.x >= rect.position.x and pos.x <= rect.position.x + rect.size.x \
 		and pos.y >= rect.position.y and pos.y <= rect.position.y + rect.size.y
+
+## Draw a small arrow indicator at the minimap edge pointing toward an
+## off-screen entity. The arrow is clamped to the minimap edge and points
+## inward from the entity's direction, so the player knows which way to
+## look for a threat that's just beyond the minimap's view range. The
+## arrow size scales with the dot radius so boss arrows are bigger than
+## normal enemy arrows. A small dot at the arrow tip reinforces the
+## direction. Mirrors the ping edge-arrow pattern.
+func _draw_edge_indicator(world_pos: Vector2, rect: Rect2, color: Color, dot_radius: float) -> void:
+	var center := Vector2(_half_size, _half_size)
+	var rel := world_pos - center
+	if rel.length() < _half_size:
+		return  # Actually inside the minimap — no edge indicator needed
+	# Clamp to the minimap edge (minus a small margin so the arrow
+	# sits just inside the border, not on the very edge)
+	var edge_pos: Vector2 = center + rel.normalized() * (_half_size - 4.0)
+	# Draw a small dot at the edge position
+	draw_circle(edge_pos, dot_radius, color)
+	# Draw a small arrow triangle pointing inward (toward center)
+	var arrow_dir: Vector2 = -rel.normalized()  # Points from edge toward center
+	var arrow_tip: Vector2 = edge_pos + arrow_dir * (dot_radius + 3.0)
+	var arrow_l: Vector2 = edge_pos + arrow_dir.rotated(2.5) * (dot_radius + 1.5)
+	var arrow_r: Vector2 = edge_pos + arrow_dir.rotated(-2.5) * (dot_radius + 1.5)
+	draw_colored_polygon(PackedVector2Array([arrow_tip, arrow_l, arrow_r]), color)

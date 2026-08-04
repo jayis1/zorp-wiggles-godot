@@ -38,6 +38,15 @@ var _has_grazed: bool = false
 # per-instance so each projectile can pulse its emission independently.
 static var _shared_mesh: SphereMesh = null
 
+# ── Shared base material ── Duplicated per shot so each projectile can tween
+#    its emission independently without creating a full StandardMaterial3D
+#    from scratch and setting 7+ properties per spawn. Duplicate copies the
+#    pre-configured property block (unlit, emission, rim lighting) in one
+#    shot — cheaper than new + configure. The albedo_color and emission are
+#    overwritten per instance to match the projectile_color. Mirrors the
+#    shared-base-material pattern used by shockwave.gd and impact_burst.gd.
+static var _shared_material_base: StandardMaterial3D = null
+
 static func _ensure_shared_resources() -> void:
 	if _shared_mesh == null:
 		_shared_mesh = SphereMesh.new()
@@ -45,6 +54,15 @@ static func _ensure_shared_resources() -> void:
 		_shared_mesh.height = 0.4
 		_shared_mesh.radial_segments = 8
 		_shared_mesh.rings = 4
+	if _shared_material_base == null:
+		_shared_material_base = StandardMaterial3D.new()
+		_shared_material_base.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_shared_material_base.emission_enabled = true
+		_shared_material_base.emission_energy_multiplier = 1.2
+		# Rim lighting for silhouette pop against dark terrain
+		_shared_material_base.rim_enabled = true
+		_shared_material_base.rim = 0.7
+		_shared_material_base.rim_tint = 0.9
 
 const IMPACT_SCENE := preload("res://scenes/entities/impact_burst.tscn")
 
@@ -52,21 +70,17 @@ func _ready() -> void:
 	# Connect collision signal
 	body_entered.connect(_on_body_entered)
 
+	# Set up material — duplicate the shared base so each projectile can
+	# pulse its emission independently. The base pre-configures unlit
+	# shading, emission, and rim lighting; we only overwrite albedo_color
+	# and emission per instance to match projectile_color. Cheaper than
+	# creating a new StandardMaterial3D and setting 7+ properties per shot.
 	_ensure_shared_resources()
-
-	# Set up material — per-instance so emission can pulse independently
 	if mesh:
 		mesh.mesh = _shared_mesh
-		_material = StandardMaterial3D.new()
+		_material = _shared_material_base.duplicate() as StandardMaterial3D
 		_material.albedo_color = projectile_color
-		_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_material.emission_enabled = true
 		_material.emission = projectile_color * 0.6
-		_material.emission_energy_multiplier = 1.2
-		# Rim lighting for silhouette pop against dark terrain
-		_material.rim_enabled = true
-		_material.rim = 0.7
-		_material.rim_tint = 0.9
 		mesh.material_override = _material
 
 	# Point light for real-time glow — makes the projectile visible and

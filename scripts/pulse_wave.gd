@@ -20,6 +20,14 @@ var _material: StandardMaterial3D = null
 # per-cast geometry allocation. The material is per-instance (alpha tweens).
 static var _shared_ring_mesh: CylinderMesh = null
 
+# ── Shared base material ── Duplicated per cast so each ring can tween its
+#    alpha/emission independently without creating a full StandardMaterial3D
+#    from scratch and setting 7+ properties every cast. Duplicate copies the
+#    pre-configured property block in one shot — cheaper than new + configure.
+#    Mirrors the shared-base-material pattern used by shockwave.gd and
+#    impact_burst.gd.
+static var _shared_material_base: StandardMaterial3D = null
+
 static func _ensure_shared_mesh() -> void:
 	if _shared_ring_mesh == null:
 		_shared_ring_mesh = CylinderMesh.new()
@@ -28,6 +36,14 @@ static func _ensure_shared_mesh() -> void:
 		_shared_ring_mesh.height = 0.1
 		_shared_ring_mesh.radial_segments = 32
 		_shared_ring_mesh.rings = 2
+	if _shared_material_base == null:
+		_shared_material_base = StandardMaterial3D.new()
+		_shared_material_base.albedo_color = Color(0.3, 0.8, 1.0, 0.6)  # Cyan ring
+		_shared_material_base.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_shared_material_base.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_shared_material_base.emission_enabled = true
+		_shared_material_base.emission = Color(0.3, 0.8, 1.0) * 0.5
+		_shared_material_base.emission_energy_multiplier = 1.5
 
 func _ready() -> void:
 	# Enhancement Pack 26: SFX on pulse wave fire — the player's Q ability
@@ -38,13 +54,9 @@ func _ready() -> void:
 	if ring_mesh:
 		_ensure_shared_mesh()
 		ring_mesh.mesh = _shared_ring_mesh
-		_material = StandardMaterial3D.new()
-		_material.albedo_color = Color(0.3, 0.8, 1.0, 0.6)  # Cyan ring
-		_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_material.emission_enabled = true
-		_material.emission = Color(0.3, 0.8, 1.0) * 0.5
-		_material.emission_energy_multiplier = 1.5
+		# Duplicate the shared base material so each cast can tween alpha/
+		# emission independently. Cheaper than new + 7 property assignments.
+		_material = _shared_material_base.duplicate() as StandardMaterial3D
 		ring_mesh.material_override = _material
 
 	# Center light flash — illuminates the area as the wave fires, fading as it expands
@@ -124,14 +136,14 @@ func _physics_process(delta: float) -> void:
 		_light.light_energy = 3.0 * light_fade
 		_light.omni_range = 8.0 * light_fade + 1.0  # Floor at 1m so it never fully snaps off
 	
-	# Damage enemies in ring
-	var enemies := get_tree().get_nodes_in_group("enemies")
-	for enemy in enemies:
+	# Damage enemies in ring — iterate the cached GameManager.enemies array
+	# instead of get_nodes_in_group("enemies") to avoid the O(n) scene-tree
+	# group scan every physics frame. Mirrors the optimization pattern used
+	# by poison_cloud.gd (Enhancement Pack 30).
+	for enemy in GameManager.enemies:
 		if not is_instance_valid(enemy):
 			continue
 		var enemy_node: Node3D = enemy
-		if not enemy_node.is_in_group("enemies"):
-			continue
 		if not has_hit.has(enemy_node.get_instance_id()):
 			var dist := global_position.distance_to(enemy_node.global_position)
 			# Hit if the enemy falls within the swept band this frame —
