@@ -227,7 +227,8 @@ func _play_discharge_animation() -> void:
 
 func _create_box(pos: Vector3, scale: Vector3, col: Color) -> MeshInstance3D:
 	var box := BoxMesh.new()
-	box.size = scale
+	# BoxMesh.size is Vector2(width, height) — the depth equals the width.
+	box.size = Vector2(scale.x, scale.y)
 	var mi := MeshInstance3D.new()
 	mi.mesh = box
 	mi.position = pos

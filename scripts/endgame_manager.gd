@@ -573,7 +573,7 @@ func _spawn_loot_cave_interior(cave: Dictionary) -> void:
 		wall.add_child(col)
 		var mesh_inst := MeshInstance3D.new()
 		var box := BoxMesh.new()
-		box.size = shape.size
+		box.size = Vector2(shape.size.x, shape.size.y)
 		mesh_inst.mesh = box
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Color(0.15, 0.1, 0.08)
@@ -700,7 +700,7 @@ func _build_vault_entrance() -> void:
 	# Large stone archway.
 	var arch := MeshInstance3D.new()
 	var arch_mesh := BoxMesh.new()
-	arch_mesh.size = Vector3(6.0, 8.0, 1.0)
+	arch_mesh.size = Vector2(6.0, 8.0)
 	arch.mesh = arch_mesh
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.4, 0.35, 0.3)

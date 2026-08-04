@@ -245,7 +245,7 @@ func _build_arena() -> void:
 		# Visual mesh
 		var mesh_inst := MeshInstance3D.new()
 		var box_mesh := BoxMesh.new()
-		box_mesh.size = box.size
+		box_mesh.size = Vector2(box.size.x, box.size.y)
 		mesh_inst.mesh = box_mesh
 		mesh_inst.material_override = wall_mat
 		wall.add_child(mesh_inst)

@@ -246,7 +246,7 @@ func _create_ground_disc(pos: Vector3, size: float, col: Color) -> MeshInstance3
 
 func _create_box(pos: Vector3, scale: Vector3, col: Color) -> MeshInstance3D:
 	var box := BoxMesh.new()
-	box.size = scale
+	box.size = Vector2(scale.x, scale.y)
 	var mi := MeshInstance3D.new()
 	mi.mesh = box
 	mi.position = pos

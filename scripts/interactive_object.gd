@@ -133,24 +133,24 @@ func _build_body_mesh() -> void:
 		"door":
 			# A tall rectangular slab.
 			var box := BoxMesh.new()
-			box.size = Vector3(2.0, 3.0, 0.4)
+			box.size = Vector2(2.0, 3.0)
 			_body_mesh.mesh = box
 			_body_mesh.position = Vector3(0, 1.5, 0)
 		"breakable_wall":
 			# A cracked wall slab.
 			var box := BoxMesh.new()
-			box.size = Vector3(2.5, 3.0, 0.6)
+			box.size = Vector2(2.5, 3.0)
 			_body_mesh.mesh = box
 			_body_mesh.position = Vector3(0, 1.5, 0)
 		"hidden_passage":
 			# A narrow archway.
 			var box := BoxMesh.new()
-			box.size = Vector3(2.0, 3.0, 0.3)
+			box.size = Vector2(2.0, 3.0)
 			_body_mesh.mesh = box
 			_body_mesh.position = Vector3(0, 1.5, 0)
 		_:
 			var box := BoxMesh.new()
-			box.size = Vector3(1.0, 1.0, 1.0)
+			box.size = Vector2(1.0, 1.0)
 			_body_mesh.mesh = box
 
 func _apply_state_visual() -> void:

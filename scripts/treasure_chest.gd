@@ -282,7 +282,7 @@ func _trigger_trap() -> void:
 
 func _create_box(pos: Vector3, sz: Vector3, col: Color) -> MeshInstance3D:
 	var box := BoxMesh.new()
-	box.size = sz
+	box.size = Vector2(sz.x, sz.y)
 	var mi := MeshInstance3D.new()
 	mi.mesh = box
 	mi.position = pos

@@ -348,7 +348,7 @@ func _build_wall(pos: Vector3, extents: Vector3, color: Color) -> void:
 	wall.add_child(col)
 	var mesh_inst := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = extents
+	box.size = Vector2(extents.x, extents.y)
 	mesh_inst.mesh = box
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color

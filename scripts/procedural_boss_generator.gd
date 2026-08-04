@@ -174,7 +174,7 @@ func _add_orbiting_crystals(boss: Node3D) -> void:
 	for i in 4:
 		var crystal := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.4, 0.8, 0.4)
+		mesh.size = Vector2(0.4, 0.8)
 		crystal.mesh = mesh
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Color(0.6, 0.4, 1.0)
@@ -281,7 +281,7 @@ func _add_prism_shards(boss: Node3D) -> void:
 	for i in 6:
 		var shard := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.5, 1.0, 0.5)
+		mesh.size = Vector2(0.5, 1.0)
 		shard.mesh = mesh
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = colors[i]
