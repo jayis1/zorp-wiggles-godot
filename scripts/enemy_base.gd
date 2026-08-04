@@ -61,6 +61,16 @@ var _windup_prev_emission: float = 1.0
 var knockback_vel: Vector3 = Vector3.ZERO
 var _spawn_target_alpha: float = 1.0
 
+# ── First-hit aggro flash ── When an enemy is hit for the first time
+#    (transitions from full HP to damaged), a brief "aggro ping" — a
+#    small expanding ring at the enemy's position in the enemy's color —
+#    fires once to visually communicate "this enemy is now in combat."
+#    This is separate from the existing alert indicator ("!") which
+#    fires on detection; the aggro flash fires on the first actual hit,
+#    giving the player a "I connected" feedback moment that also signals
+#    the enemy's transition from idle/wandering to active combat.
+var _first_hit_triggered: bool = false
+
 # ─── Wandering ────────────────────────────────────────────────────────────────
 var wander_dir: Vector3 = Vector3.ZERO
 var wander_timer: float = 3.0
@@ -1084,6 +1094,26 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# caller. Since we can't access the caller here, P2 projectiles call
 	# set_p2_hit() before take_damage_from().
 	hp -= amount
+	# ── First-hit aggro flash ── Fires once, the first time the enemy
+	#    takes damage (transitions from full HP to damaged). Spawns a
+	#    small expanding ring in the enemy's color at the enemy's position,
+	#    communicating "this enemy is now in combat." Uses the existing
+	#    spawn_spawn_ring helper from ParticleEffects for visual consistency
+	#    with the spawn materialization ring. Skipped for enemies that
+	#    spawn already damaged (HP < max_hp at first hit check).
+	if not _first_hit_triggered and hp < max_hp:
+		_first_hit_triggered = true
+		if ParticleEffects and get_parent():
+			ParticleEffects.spawn_spawn_ring(
+				get_parent(), global_position,
+				base_color, clampf(base_scale * 1.5, 1.5, 3.5))
+		# Brief emission brighten on first aggro — the enemy "wakes up"
+		if _material:
+			var prev_emi: float = _material.emission_energy_multiplier
+			_material.emission_energy_multiplier = prev_emi * 2.5
+			var aggro_tween := create_tween()
+			aggro_tween.tween_property(_material, "emission_energy_multiplier",
+				prev_emi, 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	enemy_hit.emit(self, amount)
 	# Phase 20: Audio — enemy hit SFX
 	# ── Size-based pitch: larger enemies get deeper hit sounds so a

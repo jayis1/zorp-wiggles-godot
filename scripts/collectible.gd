@@ -33,6 +33,17 @@ const MAGNET_HUM_INTERVAL: float = 0.18
 #    fire once per pull sequence (not every frame while being pulled).
 var _magnet_flash_triggered: bool = false
 
+# ── Spiral vacuum orbit ── While being magnetically pulled, collectibles
+#    spiral around the pull direction (player → item axis) rather than
+#    flying in a straight line. This creates a dynamic "energy vortex"
+#    visual — items whirl into the player's magnetic field like they're
+#    being sucked into a singularity, not sliding on rails. The spiral
+#    phase accumulates while pulling and resets on pull start. The orbit
+#    radius decays as the item closes in so the spiral tightens near the
+#    player, mimicking angular momentum conservation.
+var _spiral_phase: float = 0.0
+var _spiral_active: bool = false
+
 # ── Phase 8: Collectible bounce and tumble ──
 # When true, the collectible is in physics bounce mode (just spawned/dropped).
 # A RigidBody3D proxy handles the tumble; once it settles, we switch to
@@ -455,6 +466,9 @@ func _physics_process(delta: float) -> void:
 	# Reset the magnet flash flag when not being pulled so the next pull
 	# engagement triggers a fresh emission flash.
 	_magnet_flash_triggered = false
+	# Reset spiral orbit state when not being pulled so the next engagement
+	# starts a fresh spiral with a new random phase.
+	_spiral_active = false
 	if not _cached_player or not is_instance_valid(_cached_player):
 		_cached_player = get_tree().get_first_node_in_group("player")
 	var player: Node3D = _cached_player
@@ -491,11 +505,24 @@ func _physics_process(delta: float) -> void:
 			if dist < GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS and not is_popping:
 				is_emergency_magnet = true
 				is_magnetic = true
+				# Reset spiral phase on new pull engagement
+				if not _spiral_active:
+					_spiral_active = true
+					_spiral_phase = randf() * TAU  # Random initial phase per item
 				# Trigger the magnet activation flash on first engagement
 				_trigger_magnet_flash()
 				var pull_speed := GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_SPEED * (1.0 - dist / GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS)
 				var dir := (player.global_position - global_position).normalized()
+				# ── Spiral vacuum orbit ── Apply a perpendicular orbit offset so
+				#    the item whirls around the pull axis. The orbit radius is
+				#    proportional to distance (tightens as it closes in), and the
+				#    phase advances faster when closer (angular momentum).
+				_spiral_phase += delta * (8.0 + 12.0 * (1.0 - dist / GameConstants.HEALTH_FRAGMENT_EMERGENCY_PULL_RADIUS))
+				var perp := Vector3(-dir.z, 0.0, dir.x).normalized()
+				var orbit_radius: float = clampf(dist * 0.15, 0.0, 1.2)
+				var spiral_offset: Vector3 = perp * sin(_spiral_phase) * orbit_radius
 				global_position += dir * pull_speed * delta
+				global_position += spiral_offset * delta * 2.0
 				# Sparkle trail for emergency magnet too
 				_pull_trail_timer -= delta
 				if _pull_trail_timer <= 0.0:
@@ -510,6 +537,10 @@ func _physics_process(delta: float) -> void:
 	# Normal pull radius (skip if emergency magnet already handled)
 	if not is_emergency_magnet and dist < GameConstants.COLLECT_PULL_RADIUS and not is_popping:
 		is_magnetic = true
+		# Reset spiral phase on new pull engagement
+		if not _spiral_active:
+			_spiral_active = true
+			_spiral_phase = randf() * TAU  # Random initial phase per item
 		# Trigger the magnet activation flash on first engagement
 		_trigger_magnet_flash()
 		# Exponential acceleration: pull starts gentle when far, then ramps up
@@ -520,7 +551,16 @@ func _physics_process(delta: float) -> void:
 		var accel_curve: float = proximity * proximity  # Quadratic ease-in
 		var pull_speed: float = GameConstants.COLLECT_PULL_SPEED * (0.3 + 0.7 * accel_curve)
 		var dir := (player.global_position - global_position).normalized()
+		# ── Spiral vacuum orbit ── Apply a perpendicular orbit offset so
+		#    the item whirls around the pull axis. The orbit radius is
+		#    proportional to distance (tightens as it closes in), and the
+		#    phase advances faster when closer (angular momentum).
+		_spiral_phase += delta * (6.0 + 10.0 * proximity)
+		var perp := Vector3(-dir.z, 0.0, dir.x).normalized()
+		var orbit_radius: float = clampf(dist * 0.12, 0.0, 0.8)
+		var spiral_offset: Vector3 = perp * sin(_spiral_phase) * orbit_radius
 		global_position += dir * pull_speed * delta
+		global_position += spiral_offset * delta * 2.0
 		# ── Magnetic lift arc ── While being pulled, items get a subtle
 		# vertical lift so they arc upward as they converge on the player,
 		# creating a more satisfying "magnetic vacuum" trajectory. The lift

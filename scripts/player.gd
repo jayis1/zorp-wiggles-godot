@@ -1529,10 +1529,21 @@ func _spawn_dash_afterimage() -> void:
 	# because StandardMaterial3D.albedo_color is a Color and we can write its
 	# 'a' component via a property path). We also scale the ghost up slightly
 	# for a dispersing energy effect.
+	# ── Emission energy fade ── The ghost's emission also fades to 0 over
+	#    the lifetime alongside the alpha, so the ghost dims its glow as it
+	#    becomes transparent — a cohesive "energy dissipating" read rather
+	#    than alpha-only fade where the glow stays at full intensity while
+	#    the body becomes invisible. Without this, the trail color's
+	#    emission persisted at full strength while the body faded, creating
+	#    a "glowing outline shrinking" effect that looked like a bug
+	#    rather than a smooth energy dissolution.
 	var fade_tween := ghost.create_tween()
 	fade_tween.set_parallel(true)
 	# Tween alpha: Color.a is a sub-property of albedo_color on the material
 	fade_tween.tween_property(ghost_mat, "albedo_color:a", 0.0, lifetime) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	# Tween emission energy alongside alpha for cohesive energy dissipation
+	fade_tween.tween_property(ghost_mat, "emission_energy_multiplier", 0.0, lifetime) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Slightly scale up as it fades (energy dispersing)
 	fade_tween.tween_property(ghost, "scale",

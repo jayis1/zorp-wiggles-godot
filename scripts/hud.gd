@@ -122,6 +122,20 @@ var _boss_ghost_ratio: float = 1.0       # Current displayed ghost ratio (eased)
 var _boss_ghost_smoothing: float = 2.0   # Slow catch-up (lower = longer trail)
 const BOSS_GHOST_COLOR: Color = Color(1.0, 0.6, 0.3, 0.35)  # Warm orange, semi-transparent
 
+# ── Boss bar enrage glow pulse ── When the boss HP drops below 25% (the
+#    enrage threshold matching the EnemyAIController enrage at <25% HP),
+#    the boss HP container's border pulses with a red glow to visually
+#    communicate the boss's heightened danger state. The pulse uses a
+#    sine wave (2.5 Hz) that modulates a red-tinted self_modulate on the
+#    container Panel, creating a rhythmic "warning" glow. The pulse
+#    amplitude scales with how deep into enrage the boss is — at exactly
+#    25% HP the pulse is subtle, at 5% HP it's urgent. This gives the
+#    player a persistent UI-level cue that the boss is in its dangerous
+#    phase without requiring them to read the bar color.
+var _boss_enrage_phase: float = 0.0
+var _boss_enrage_active: bool = false
+const BOSS_ENRAGE_THRESHOLD: float = 0.25  # <25% HP = enrage
+
 # ── Player HP bar damage flash ── Mirrors the boss bar juice: when the player
 #    takes damage, the HP bar flashes white and shakes horizontally. This
 #    gives the player's own damage events a visceral UI read that matches the
@@ -962,16 +976,42 @@ func _process(delta: float) -> void:
 			_boss_ghost_bar.size.x = boss_bar_width * _boss_ghost_ratio
 			_boss_ghost_bar.offset_left = boss_hp_bar.offset_left
 			_boss_ghost_bar.visible = _boss_ghost_ratio > _boss_bar_target_ratio + 0.005
-	else:
-		# Boss reference is gone — clear it so we don't keep querying a
-		# freed node. The container visibility is handled by the exit anim.
-		boss_ref = null
-		_boss_bar_prev_ratio = 1.0
-		_boss_bar_flash_timer = 0.0
-		# Hide the ghost bar when the boss is gone so it doesn't linger
-		if _boss_ghost_bar:
-			_boss_ghost_bar.visible = false
-			_boss_ghost_ratio = 1.0
+			# ── Boss bar enrage glow pulse ── When the boss HP drops below 25%,
+			#    the container Panel pulses with a red-tinted self_modulate glow
+			#    to signal the boss's enrage state. The pulse is a 2.5 Hz sine
+			#    whose amplitude scales with how deep into enrage the boss is
+			#    (subtle at 25% HP, urgent at 5% HP). The glow is applied via
+			#    self_modulate so it doesn't interfere with the container's
+			#    modulate (used by the entrance/exit fade animations).
+			if _boss_bar_target_ratio < BOSS_ENRAGE_THRESHOLD:
+				if not _boss_enrage_active:
+					_boss_enrage_active = true
+					_boss_enrage_phase = 0.0
+				_boss_enrage_phase += delta * 2.5 * TAU
+				# Amplitude scales with enrage depth (0 at threshold, 1 at 0% HP)
+				var enrage_depth: float = clampf(1.0 - _boss_bar_target_ratio / BOSS_ENRAGE_THRESHOLD, 0.0, 1.0)
+				var pulse_env: float = 0.5 + 0.5 * sin(_boss_enrage_phase)
+				# Red glow intensity: subtle (0.15) at 25% HP → urgent (0.45) at 5% HP
+				var glow_intensity: float = lerpf(0.15, 0.45, enrage_depth) * pulse_env
+				boss_hp_container.self_modulate = Color(1.0, 0.2, 0.15, 1.0 + glow_intensity)
+			else:
+				if _boss_enrage_active:
+					_boss_enrage_active = false
+					boss_hp_container.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+			else:
+			# Boss reference is gone — clear it so we don't keep querying a
+			# freed node. The container visibility is handled by the exit anim.
+			boss_ref = null
+			_boss_bar_prev_ratio = 1.0
+			_boss_bar_flash_timer = 0.0
+			# Reset enrage glow when boss is gone
+			if _boss_enrage_active:
+				_boss_enrage_active = false
+				boss_hp_container.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+			# Hide the ghost bar when the boss is gone so it doesn't linger
+			if _boss_ghost_bar:
+				_boss_ghost_bar.visible = false
+				_boss_ghost_ratio = 1.0
 
 	# ── Auto-fire indicator pulse ── A gentle alpha breathing so the [AUTO]
 	#    badge reads as "active" without being distracting. Uses a slow sine
