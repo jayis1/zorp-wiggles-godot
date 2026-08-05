@@ -404,13 +404,25 @@ func _physics_process(delta: float) -> void:
 	if _despawn_warning and not is_popping:
 		_despawn_flicker_phase += delta
 		if _despawn_flicker_phase < DESPAWN_WARNING_DURATION:
-			# Rapid emission flicker (18 Hz on/off) for an urgent "blink"
+			# Rapid emission flicker (18 Hz) for an urgent "blink". Previously
+			# a hard square wave (flicker_on boolean → 3.0*intensity or 0.3),
+			# which produced a jarring instant on/off. Now a sine pulse drives
+			# the emission so the flicker breathes in and out — the urgency
+			# still reads (18 Hz is fast) but the edges are softer, matching
+			# the game's sine-based pulse language (idle breathing, combo
+			# urgency, boss enrage glow). A smoothstep shapes the sine's
+			# 0..1 range into a 0.2..1.0 band so the "off" state is a dim
+			# glow rather than a near-zero cut, keeping the collectible
+			# visible throughout the warning. The intensity still eases in
+			# over the warning duration so the flicker gets more urgent as
+			# despawn approaches.
 			var flicker_t: float = _despawn_flicker_phase / DESPAWN_WARNING_DURATION
-			# Ease in the flicker intensity as we approach the despawn moment
 			var intensity: float = 0.5 + 0.5 * flicker_t
-			var flicker_on: bool = fmod(_despawn_flicker_phase * 18.0, TAU) < PI
+			var sine_val: float = 0.5 + 0.5 * sin(_despawn_flicker_phase * 18.0)
+			# Smoothstep the sine into a 0.2..1.0 band (dim-glow → full-bright)
+			var flicker_env: float = lerpf(0.2, 1.0, sine_val * sine_val * (3.0 - 2.0 * sine_val))
 			if _mat:
-				_mat.emission_energy_multiplier = 3.0 * intensity if flicker_on else 0.3
+				_mat.emission_energy_multiplier = lerpf(0.3, 3.0, flicker_env) * intensity
 		else:
 			# Fade out and free — scale down + alpha to zero over 0.4s
 			if not _despawn_fade_tween or not _despawn_fade_tween.is_valid():

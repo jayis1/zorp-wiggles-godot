@@ -81,10 +81,17 @@ func _process(delta: float) -> void:
 			_indicators.remove_at(i)
 			needs_redraw = true
 			continue
-		# Fade out over duration
+		# Fade out over duration. Uses ease-in cubic (life_frac³) so the arrow
+		# holds near-full opacity for most of its life, then drops off sharply
+		# at the end — the standard indicator drain that matches the game's
+		# eased fade language (boss bar flash, message fade, etc.). A linear
+		# fade makes the arrow visibly dim from the moment it appears, which
+		# reads as "fading" too early; the cubic keeps it punchy and readable,
+		# then snaps out of view.
 		var life_frac: float = ind["timer"] / GameConstants.DAMAGE_INDICATOR_DURATION
 		life_frac = clampf(life_frac, 0.0, 1.0)
-		ind["alpha"] = life_frac * GameConstants.DAMAGE_INDICATOR_MAX_ALPHA
+		var eased_alpha: float = life_frac * life_frac * life_frac  # ease-in cubic
+		ind["alpha"] = eased_alpha * GameConstants.DAMAGE_INDICATOR_MAX_ALPHA
 		# ── Scale pop decay ── Ease the scale from the peak back to 1.0
 		# over SCALE_POP_DURATION. Uses ease-out cubic so the pop is sharp
 		# on the hit frame and settles gently.

@@ -66,9 +66,17 @@ func _process(delta: float) -> void:
 			entry.entrance_t = minf(entry.entrance_t + delta / 0.25, 1.0)
 			var eased: float = 1.0 - pow(1.0 - entry.entrance_t, 3.0)
 			entry.alpha = eased
-		# Fade out in the last second (overrides the entrance alpha)
+		# Fade out in the last second (overrides the entrance alpha). Uses
+		# ease-in quad (life_frac²) so the text holds near-full opacity for
+		# most of its life, then fades out gently at the end — matching the
+		# HUD message fade (ease-in quad) and the achievement popup exit
+		# (ease-in cubic). A linear fade makes the entry visibly dim from
+		# the moment the fade window starts, which reads as "dying" too
+		# early; the quadratic keeps it readable, then eases out smoothly.
 		if entry.timer < 1.0:
-			entry.alpha = clampf(entry.timer, 0.0, 1.0)
+			var fade_frac: float = clampf(entry.timer, 0.0, 1.0)
+			var eased_fade: float = fade_frac * fade_frac  # ease-in quad
+			entry.alpha = eased_fade
 		# ── Exit slide: in the final EXIT_SLIDE_DURATION, accelerate the
 		#    entry rightward off-screen. Uses ease-in cubic (t³) so the
 		#    slide starts slow (still readable) and accelerates out, giving

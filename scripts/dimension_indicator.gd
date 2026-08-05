@@ -7,6 +7,12 @@ extends Control
 var _label: Label = null
 var _timer_bar: ColorRect = null
 var _timer_bar_bg: ColorRect = null
+# ── Cached base dimension color ── The urgency pulse lerps the timer bar
+#    color toward warm amber, but it must lerp from the dimension's base
+#    color (not the previous frame's already-shifted color) so the blend
+#    doesn't compound toward warm over many frames. Set when the dimension
+#    changes and used as the lerp source in the urgency pulse.
+var _timer_bar_base_color: Color = Color(0.8, 0.9, 1.0)
 var _visible: bool = false
 
 # ── Entrance/exit animation ── The indicator used to snap in/out when a
@@ -74,6 +80,7 @@ func _on_dimension_changed(new_dim: int, _old_dim: int) -> void:
 		_label.text = "🌀 %s" % dim_name
 		_label.add_theme_color_override("font_color", dim_color)
 		_timer_bar.color = dim_color
+		_timer_bar_base_color = dim_color  # Cache for the urgency pulse lerp
 		_visible = true
 		_play_entrance_animation()
 
@@ -157,3 +164,36 @@ func _on_dimension_timer_changed(time_remaining: float) -> void:
 	var ratio: float = clampf(time_remaining / GameConstants.DIMENSION_DURATION, 0.0, 1.0)
 	var fill_width: float = (BAR_WIDTH - 4.0) * ratio
 	_timer_bar.offset_right = 542.0 + fill_width
+	# ── Urgency pulse in the final 25% ── When the dimension rift is about
+	#    to end (ratio < 0.25), the timer bar pulses in height + alpha so
+	#    the player gets a clear "hurry up / about to end" cue — mirroring
+	#    the combo timer bar's urgency pulse. The pulse uses a high-frequency
+	#    sine (12 Hz) so it reads as an urgent flicker rather than a gentle
+	#    breath. The pulse intensity ramps from 0 at ratio=0.25 to full at
+	#    ratio=0.0, so the urgency builds as time runs out. The bar also
+	#    shifts toward a warm amber tint (lerp from the dimension's color
+	#    toward orange-red) so the color language matches the urgency:
+	#    calm dimension color → warm "ending soon" warning. Above 25%, the
+	#    bar rests at its base dimension color and full opacity.
+	if ratio < 0.25:
+		var urgency: float = (0.25 - ratio) / 0.25  # 0→1 as ratio→0
+		var pulse_env: float = sin(time_remaining * 12.0) * 0.5 + 0.5
+		# Height pulse: up to +3px on top of the base 6px height
+		var height_pulse: float = 3.0 * urgency * pulse_env
+		_timer_bar.offset_bottom = 89.0 + BAR_HEIGHT - 2.0 + height_pulse
+		# Alpha flicker: dips slightly on each pulse trough (clamped so it
+		# never fully disappears)
+		_timer_bar.modulate.a = lerpf(0.6, 1.0, pulse_env) * (1.0 - urgency * 0.2)
+		# Color shift toward warm amber as urgency builds. Lerps from the
+		# cached base dimension color (not the previous frame's shifted
+		# color) so the blend doesn't compound toward warm over time.
+		var warm_color: Color = Color(1.0, 0.6, 0.2)
+		var blend_t: float = urgency * 0.5  # Max 50% blend toward warm
+		_timer_bar.color = _timer_bar_base_color.lerp(warm_color, blend_t * (0.5 + 0.5 * pulse_env))
+	else:
+		# Restore resting state — the entrance animation sets modulate.a to
+		# 1.0 and the dimension color; we undo the urgency overrides (height,
+		# alpha, and color) so the bar returns to its calm dimension color.
+		_timer_bar.offset_bottom = 89.0 + BAR_HEIGHT - 2.0
+		_timer_bar.modulate.a = 1.0
+		_timer_bar.color = _timer_bar_base_color
