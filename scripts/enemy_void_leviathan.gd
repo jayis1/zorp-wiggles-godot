@@ -460,8 +460,14 @@ func _die() -> void:
 	_is_vacuuming = false
 	# Boss death spectacle
 	GameManager.add_message("Void Leviathan defeated!")
-	GameManager.boss_defeated.emit(self)
-	GameManager.clear_current_boss()
+	# Only emit boss_defeated / clear_current_boss here if NOT a world boss.
+	# World bosses are handled by super._die() (EnemyBase._die checks is_world_boss
+	# and emits boss_defeated there). Without this guard, a Void Leviathan promoted
+	# to world boss would emit boss_defeated twice — once here and once in
+	# super._die() — causing double loot showers, double stats, double messages.
+	if not is_world_boss:
+		GameManager.boss_defeated.emit(self)
+		GameManager.clear_current_boss()
 	ParticleEffects.spawn_boss_death_spectacle(get_parent(), global_position,
 		GameConstants.VOID_LEVIATHAN_ENRAGE_COLOR, 4.0)
 	super._die()

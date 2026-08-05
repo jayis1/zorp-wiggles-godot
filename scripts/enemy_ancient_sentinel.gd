@@ -492,8 +492,14 @@ func _die() -> void:
 		_beam_ray.queue_free()
 		_beam_ray = null
 	GameManager.add_message("Ancient Sentinel destroyed!")
-	GameManager.boss_defeated.emit(self)
-	GameManager.clear_current_boss()
+	# Only emit boss_defeated / clear_current_boss here if NOT a world boss.
+	# World bosses are handled by super._die() (EnemyBase._die checks is_world_boss
+	# and emits boss_defeated there). Without this guard, an Ancient Sentinel
+	# promoted to world boss would emit boss_defeated twice — once here and once
+	# in super._die() — causing double loot showers, double stats, double messages.
+	if not is_world_boss:
+		GameManager.boss_defeated.emit(self)
+		GameManager.clear_current_boss()
 	ParticleEffects.spawn_boss_death_spectacle(get_parent(), global_position,
 		GameConstants.ANCIENT_SENTINEL_ENRAGE_COLOR, 5.0)
 	super._die()
