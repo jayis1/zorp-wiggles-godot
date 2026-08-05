@@ -75,8 +75,11 @@ func _spawn_mite_batch() -> void:
 	if _spawned_mites.size() >= GameConstants.SWARM_QUEEN_MAX_MITES_ALIVE:
 		return
 	# Check the global enemy cap (don't spawn if the world is already at max)
+	# Use GameManager.enemies array instead of get_nodes_in_group("enemies") to
+	# avoid an O(n) scene-tree group scan. The array is already maintained
+	# (append on materialize, erase on death) and is the canonical enemy list.
 	var alive_enemies: int = 0
-	for e in get_tree().get_nodes_in_group("enemies"):
+	for e in GameManager.enemies:
 		if is_instance_valid(e) and not e.is_dead:
 			alive_enemies += 1
 	var spawn_cap: int = GameConstants.MAX_ACTIVE_ENEMIES + CoOpManager.get_max_enemies_bonus() + GameManager.get_time_max_enemy_bonus()

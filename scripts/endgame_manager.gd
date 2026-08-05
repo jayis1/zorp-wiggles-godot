@@ -1056,9 +1056,12 @@ func _check_loot_cave_clear() -> void:
 		if not cave["discovered"]:
 			continue
 		# Count remaining enemies near the cave.
+		# Use GameManager.enemies array instead of get_nodes_in_group("enemies")
+		# to avoid an O(n) scene-tree group scan — matches the optimization pattern
+		# from poison_cloud.gd, pulse_wave.gd, and enemy_swarm_queen.gd.
 		var cave_pos: Vector3 = cave["position"]
 		var remaining: int = 0
-		for e in get_tree().get_nodes_in_group("enemies"):
+		for e in GameManager.enemies:
 			if not is_instance_valid(e) or e.is_dead:
 				continue
 			if e.global_position.distance_to(Vector3(cave_pos.x, GameConstants.LOOT_CAVE_DEPTH, cave_pos.z)) < 25.0:

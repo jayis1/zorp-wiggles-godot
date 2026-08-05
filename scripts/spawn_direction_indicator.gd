@@ -12,6 +12,7 @@ class_name SpawnDirectionIndicator
 var _arrows: Array[Dictionary] = []  # Each: {pos, timer, arrow_rect, type}
 
 var _arrow_container: Control = null
+var _cached_player: Node3D = null
 
 func _ready() -> void:
 	# Connect to enemy spawn signal
@@ -25,14 +26,20 @@ func _ready() -> void:
 	_arrow_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_arrow_container)
 
+func _get_player() -> Node3D:
+	if _cached_player and is_instance_valid(_cached_player):
+		return _cached_player
+	_cached_player = get_tree().get_first_node_in_group("player")
+	return _cached_player
+
 func _process(delta: float) -> void:
-	# Update each arrow
+# Update each arrow
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	if not camera:
 		return
 
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _get_player()
 	if not player:
 		return
 

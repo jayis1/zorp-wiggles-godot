@@ -306,8 +306,11 @@ func _summon_wisps() -> void:
 	if not wisp_scene:
 		return
 	# Respect the global enemy cap
+	# Use GameManager.enemies array instead of get_nodes_in_group("enemies") to
+	# avoid an O(n) scene-tree group scan — matches the optimization pattern from
+	# poison_cloud.gd, pulse_wave.gd, and enemy_swarm_queen.gd.
 	var alive_enemies: int = 0
-	for e in get_tree().get_nodes_in_group("enemies"):
+	for e in GameManager.enemies:
 		if is_instance_valid(e) and not e.is_dead:
 			alive_enemies += 1
 	var spawn_cap: int = GameConstants.MAX_ACTIVE_ENEMIES + CoOpManager.get_max_enemies_bonus() + GameManager.get_time_max_enemy_bonus()
