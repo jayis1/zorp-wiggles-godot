@@ -286,7 +286,12 @@ func _update_pillar_phase(delta: float) -> void:
 ## Spawn a single falling pillar at a random position near the player.
 ## The pillar telegraphs (glowing ground patch) then drops, dealing AoE damage.
 func _spawn_falling_pillar() -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# Lazy-cached player — the Sentinel overrides _update_ai to pass,
+	# so the base class _cached_player is never populated. Use the
+	# same lazy-scan pattern as enemy_sentinel.gd.
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _cached_player
 	if not player:
 		return
 	var angle: float = randf() * TAU
@@ -437,7 +442,10 @@ func _update_enrage_extra(delta: float) -> void:
 
 ## Apply AoE damage to all players within radius of a position.
 func _apply_aoe_damage(center: Vector3, radius: float, dmg: int) -> void:
-	var p1: Node3D = get_tree().get_first_node_in_group("player")
+	# Lazy-cached player — avoids per-call group scan for AoE damage checks.
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var p1: Node3D = _cached_player
 	if p1 and is_instance_valid(p1) and not GameManager.player_is_downed:
 		if center.distance_to(p1.global_position) < radius:
 			GameManager.take_damage(dmg, center)

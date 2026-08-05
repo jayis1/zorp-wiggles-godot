@@ -80,10 +80,22 @@ func _teleport_behind_player() -> void:
 		if _teleport_tween and _teleport_tween.is_valid():
 			_teleport_tween.kill()
 		_material.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.0)
+		# Departure particle burst at the old position
+		ParticleEffects.spawn_explosion(get_parent(), global_position,
+			base_color, 8, 0.25)
 		global_position = new_pos
 		_teleport_tween = create_tween()
 		_teleport_tween.tween_property(_material, "albedo_color:a",
 			_spawn_target_alpha, 0.3)
+		# Arrival particle burst at the new position — gives the player
+		# a visual cue of where the Wisp reappeared, critical for
+		# combat awareness since the Wisp teleports behind the player.
+		ParticleEffects.spawn_explosion(get_parent(), new_pos,
+			base_color, 8, 0.25)
+		# Subtle teleport SFX — the void wisp's phase shift deserves an
+		# audio cue so the player hears the repositioning even if they
+		# weren't looking at the Wisp when it teleported.
+		AudioManager.play_sfx_volume(AudioManager.SFX_RIFT, 0.4)
 
 	teleport_cooldown = GameConstants.VOID_WISP_TELEPORT_COOLDOWN
 	is_alerted = true

@@ -17,6 +17,7 @@ var age: float = 0.0
 var _material: StandardMaterial3D = null
 var _has_hit_player: bool = false
 var _light: OmniLight3D = null
+var _cached_player: Node3D = null
 
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
@@ -118,7 +119,14 @@ func _physics_process(delta: float) -> void:
 		# the `if player and ...` sibling block would be out of scope here.
 		var band_min: float = _prev_radius - 0.5
 		var band_max: float = current_radius + 0.5
-		var player: Node3D = get_tree().get_first_node_in_group("player")
+		# Cached player reference — shockwaves run _physics_process every
+		# frame while expanding (~0.5s per shot). Avoid a per-frame
+		# scene-tree group scan by caching the player and only re-scanning
+		# when the cache is stale. Matches the pattern used by
+		# enemy_base.gd, collectible.gd, wildlife.gd, etc.
+		if not _cached_player or not is_instance_valid(_cached_player):
+			_cached_player = get_tree().get_first_node_in_group("player")
+		var player: Node3D = _cached_player
 		if player and GameManager.player_is_alive and not GameManager.player_is_downed:
 			var dist: float = global_position.distance_to(player.global_position)
 			# Hit if the player falls within the swept band this frame

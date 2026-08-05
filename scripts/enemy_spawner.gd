@@ -183,11 +183,13 @@ func _update_pending_spawns(delta: float) -> void:
 
 func _try_spawn() -> void:
 	# Count active enemies and nearby density in a SINGLE pass over the
-	# enemies group. The previous code iterated the group twice — once for
-	# the alive count and once for the nearby density throttle — which is
-	# wasteful when many enemies are active. Combining both checks into one
-	# loop halves the iteration cost of every spawn tick.
-	var enemies: Array[Node] = get_tree().get_nodes_in_group("enemies")
+	# GameManager.enemies array. This avoids a scene-tree group scan
+	# (get_nodes_in_group) on every spawn tick — the GameManager.enemies
+	# array is already maintained (append on materialize, erase on death)
+	# and is the canonical enemy list. Matches the optimization pattern
+	# from poison_cloud.gd (Enhancement Pack 30) and pulse_wave.gd
+	# (Enhancement Pack 31).
+	var enemies: Array[Node3D] = GameManager.enemies
 	var alive_count: int = 0
 	var nearby_count: int = 0
 

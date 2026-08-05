@@ -19,6 +19,12 @@ var _grid_size: int = 0
 var _tile_scale: float = 4.0
 var _biome_colors: Dictionary = {}
 
+# Cached player reference — the minimap _draw() runs up to 20×/sec
+# (MINIMAP_DOT_REFRESH_INTERVAL=0.05s) and calls get_first_node_in_group
+# ("player") in both _draw_terrain and _draw_entity_dots. Caching
+# eliminates ~40 scene-tree group scans per second.
+var _cached_player: Node3D = null
+
 # ── Phase 31: Minimap zoom ──
 # View range is now a variable so the scroll wheel can adjust it. Clamped to
 # [MINIMAP_VIEW_RANGE_MIN, MINIMAP_VIEW_RANGE_MAX]. Zoom is in "world units
@@ -58,6 +64,16 @@ func _resolve_world_ref() -> void:
 	# Copy biome colors from WorldGenerator's const dictionary
 	if _world_ref and "BIOME_COLORS" in _world_ref:
 		_biome_colors = _world_ref.BIOME_COLORS
+
+# Lazy-cached player getter — re-scans only when the cache is stale
+# (null or freed). Used by _draw_terrain and _draw_entity_dots to
+# avoid 40+ per-second scene-tree group scans from the minimap's
+# frequent _draw() calls.
+func _get_player() -> Node3D:
+	if _cached_player and is_instance_valid(_cached_player):
+		return _cached_player
+	_cached_player = get_tree().get_first_node_in_group("player")
+	return _cached_player
 
 func _process(delta: float) -> void:
 	if not _minimap_visible:
@@ -154,7 +170,7 @@ func _draw() -> void:
 	_draw_entity_dots(minimap_rect)
 
 func _draw_terrain(rect: Rect2) -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _get_player()
 	var player_world_pos: Vector2 = Vector2.ZERO
 	if player and is_instance_valid(player):
 		player_world_pos = Vector2(player.global_position.x, player.global_position.z)
@@ -211,7 +227,7 @@ func _world_to_mini(wx: float, wz: float, px: float, pz: float, pixel_per_world:
 	return Vector2(mx, mz)
 
 func _draw_entity_dots(rect: Rect2) -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _get_player()
 	if not player or not is_instance_valid(player):
 		return
 

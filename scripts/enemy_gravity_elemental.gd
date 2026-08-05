@@ -170,7 +170,12 @@ func _update_active_field(delta: float) -> void:
 
 ## Repel the player outward from the elemental's center.
 func _repel_player() -> void:
-	var p1: Node3D = get_tree().get_first_node_in_group("player")
+	# Use the base class _cached_player (populated by _update_ai via
+	# super._physics_process) instead of a fresh group scan every
+	# field tick. Falls back to a one-shot scan if the cache is stale.
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var p1: Node3D = _cached_player
 	if p1 and is_instance_valid(p1) and not GameManager.player_is_downed:
 		var dist: float = global_position.distance_to(p1.global_position)
 		if dist < GameConstants.GRAVITY_ELEMENTAL_FIELD_RADIUS and dist > 0.5:
@@ -201,7 +206,10 @@ func _repel_player() -> void:
 ## an enemy projectile that deals damage on hit. We cap the number of flung
 ## objects to avoid spawning too many projectiles.
 func _fling_loose_objects() -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# Use the base class _cached_player instead of a fresh group scan.
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _cached_player
 	if not player:
 		return
 	var flung: int = 0

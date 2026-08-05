@@ -31,8 +31,13 @@ func _ready() -> void:
 	)
 
 func _update_ai(delta: float) -> void:
-	# In co-op, target the nearest valid player (matches base class co-op logic)
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# Cached player reference — the Sentinel overrides _update_ai without
+	# calling super, so the base class _cached_player is never populated.
+	# Use the same lazy-scan pattern to avoid a per-physics-frame group scan.
+	# Matches the pattern used by enemy_spitter.gd (Enhancement Pack 32).
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _cached_player
 	if not player:
 		return
 	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
@@ -90,8 +95,7 @@ func _fire_shockwave() -> void:
 		shockwave.set("expand_speed", GameConstants.STARBURST_SHOCKWAVE_EXPAND_SPEED)
 	else:
 		# Fallback: directly damage player if in range
-		var player: Node3D = get_tree().get_first_node_in_group("player")
-		if player:
-			var dist: float = global_position.distance_to(player.global_position)
+		if _cached_player and is_instance_valid(_cached_player):
+			var dist: float = global_position.distance_to(_cached_player.global_position)
 			if dist < GameConstants.STARBURST_SHOCKWAVE_MAX_RADIUS:
 				GameManager.take_damage(GameConstants.STARBURST_SHOCKWAVE_DAMAGE, global_position)
