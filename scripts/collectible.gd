@@ -769,10 +769,20 @@ func _collect() -> void:
 	#    briefly "absorbs" the item with a small grow + emission flash
 	#    in the collectible's color. Rare items get a slightly bigger
 	#    pop. This is skipped during dash/slide (their tweens own
-	#    mesh.scale) and when the player is dead. The player reference
-	#    is cached (_cached_player) so we don't need a group lookup.
-	if _cached_player and is_instance_valid(_cached_player) and _cached_player.has_method("_play_pickup_pulse"):
-		_cached_player._play_pickup_pulse(config["color"], _is_rare())
+	#    mesh.scale) and when the player is dead.
+	#    ── Co-op routing ── In co-op, the pulse is routed to the player
+	#    who actually collected the item (P1 or P2). Previously the pulse
+	#    always played on P1 (_cached_player) even when P2 collected,
+	#    meaning P2 never felt the tactile pickup feedback. Now P2 also
+	#    has _play_pickup_pulse (P1 parity) and the correct player is
+	#    selected based on collected_by_p2.
+	var _pickup_pulse_target: Node3D = null
+	if collected_by_p2 and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+		_pickup_pulse_target = CoOpManager.p2_node
+	elif _cached_player and is_instance_valid(_cached_player):
+		_pickup_pulse_target = _cached_player
+	if _pickup_pulse_target and _pickup_pulse_target.has_method("_play_pickup_pulse"):
+		_pickup_pulse_target._play_pickup_pulse(config["color"], _is_rare())
 
 	# ── Pickup light flash ── A brief OmniLight3D at the pickup point that
 	# flashes the collectible's color and fades over 0.25s. Gives pickups

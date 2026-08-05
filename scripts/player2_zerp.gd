@@ -90,6 +90,10 @@ var pulse_wave_cooldown_timer: float = 0.0
 # ── Tracked shoot pulse tween ── Tracks the shoot recoil + scale pulse so
 #    rapid fire doesn't stack tweens. P2 parity with P1.
 var _shoot_pulse_tween: Tween = null
+# ── Pickup pulse tweens ── Tracks the pickup feedback scale pop + emission
+#    flash so rapid magnet-chain pickups restart cleanly (P1 parity).
+var _pickup_pulse_tween: Tween = null
+var _pickup_emit_tween: Tween = null
 const PROJECTILE_SCENE := preload("res://scenes/entities/projectile.tscn")
 const PULSE_WAVE_SCENE := preload("res://scenes/entities/pulse_wave.tscn")
 
@@ -472,6 +476,47 @@ func _play_landing_effect() -> void:
 		cam_rig.add_trauma(0.12)
 	# ── Enhancement Pack 21: Landing SFX — P2 parity with P1's landing thump.
 	AudioManager.play_sfx_pitched(AudioManager.SFX_LAND, 1.0)
+
+# ── Pickup feedback pulse ── P2 parity with P1's _play_pickup_pulse. When P2
+#    collects an item, P2's mesh briefly scales up and emission flashes in the
+#    collectible's color so the pickup feels tactile — Zerp "absorbs" the item.
+#    Rare items get a bigger pop. Skipped during dash/slide (their tweens own
+#    mesh.scale) and when P2 is downed. The pickup pulse tweens are tracked so
+#    rapid magnet-chain pickups restart cleanly instead of stacking.
+func _play_pickup_pulse(item_color: Color, is_rare: bool) -> void:
+	if is_dashing or is_sliding:
+		return
+	if CoOpManager and CoOpManager.p2_is_downed:
+		return
+	if not mesh:
+		return
+	# Kill any in-progress pickup tween so rapid magnet-chain pickups restart
+	# cleanly instead of stacking (5 orbs in 0.3s would otherwise pile up).
+	if _pickup_pulse_tween and _pickup_pulse_tween.is_valid():
+		_pickup_pulse_tween.kill()
+	# Scale pop: rare items get 1.08x, common items get 1.04x (matches P1).
+	var pop_scale: float = 1.08 if is_rare else 1.04
+	_pickup_pulse_tween = create_tween()
+	_pickup_pulse_tween.tween_property(mesh, "scale", Vector3.ONE * pop_scale, 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_pickup_pulse_tween.tween_property(mesh, "scale", Vector3.ONE, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	# Emission flash in the item's color — brief and small so it reads as
+	# a "taste" of the pickup. Only the emission ENERGY spikes; the color
+	# is set directly and eased back to P2's base emission.
+	if _material:
+		var flash_emission: Color = item_color * 0.4
+		_material.emission = flash_emission
+		_material.emission_energy_multiplier = 2.0 if is_rare else 1.5
+		if _pickup_emit_tween and _pickup_emit_tween.is_valid():
+			_pickup_emit_tween.kill()
+		_pickup_emit_tween = create_tween()
+		_pickup_emit_tween.tween_property(_material, "emission_energy_multiplier",
+			1.0, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		_pickup_emit_tween.parallel().tween_property(_material, "emission",
+			GameConstants.P2_EMISSION_COLOR, 0.18) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 # ── Low-HP heartbeat — P2 mesh throbs with a "lub-dub" pattern when HP < 25% ──
 func _update_low_hp_heartbeat(delta: float) -> void:
@@ -1058,6 +1103,9 @@ func _update_cosmetic_color(_delta: float) -> void:
 func _exit_tree() -> void:
 	_dismiss_idle_aura()
 	_shoot_pulse_tween = null
+	# Clean up pickup pulse tweens so they don't reference freed nodes.
+	_pickup_pulse_tween = null
+	_pickup_emit_tween = null
 	if CoOpManager:
 		if CoOpManager.p2_damaged.is_connected(_on_p2_damaged):
 			CoOpManager.p2_damaged.disconnect(_on_p2_damaged)

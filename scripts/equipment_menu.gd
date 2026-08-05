@@ -188,7 +188,17 @@ func _draw() -> void:
 	var font := get_theme_default_font()
 	if not font:
 		return
-	var a: float = _fade_alpha
+	# Ease the fade alpha for a smoother feel — linear move_toward feels
+	# mechanical. ease_out_cubic makes the panel snap in quickly then settle,
+	# and ease_in_cubic makes it accelerate out on close. This matches the
+	# tween-based easing used by the trade_menu, quest_log, and skill_tree
+	# for a cohesive UI feel across all _draw()-based menus.
+	var eased: float
+	if _visible_flag:
+		eased = 1.0 - pow(1.0 - _fade_alpha, 3.0)  # ease_out_cubic
+	else:
+		eased = _fade_alpha * _fade_alpha * _fade_alpha  # ease_in_cubic
+	var a: float = eased
 	var screen := size
 	# Full-screen dim background
 	draw_rect(Rect2(Vector2.ZERO, screen), Color(0.02, 0.03, 0.08, 0.90 * a), true)

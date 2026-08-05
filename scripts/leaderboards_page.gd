@@ -70,7 +70,15 @@ func _draw() -> void:
 	var font := get_theme_default_font()
 	if not font:
 		return
-	var a: float = _fade_alpha
+	# Ease the fade alpha for a smoother entrance/exit (ease_out_cubic on
+	# open, ease_in_cubic on close) — matches trade_menu, quest_log, and
+	# skill_tree for a cohesive UI feel across all _draw()-based panels.
+	var eased: float
+	if _visible_flag:
+		eased = 1.0 - pow(1.0 - _fade_alpha, 3.0)  # ease_out_cubic
+	else:
+		eased = _fade_alpha * _fade_alpha * _fade_alpha  # ease_in_cubic
+	var a: float = eased
 	var screen := size
 	# Full-screen dim background
 	var bg := Color(0.02, 0.03, 0.08, 0.88 * a)
