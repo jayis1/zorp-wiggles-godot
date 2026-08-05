@@ -13,6 +13,7 @@ var _current_particles: GPUParticles3D = null
 var _atmosphere_particles: GPUParticles3D = null
 var _current_biome: int = -1
 var _check_timer: float = 0.0
+var _cached_player: Node3D = null
 const BIOME_CHECK_INTERVAL: float = 0.5
 
 # ─── Biome → Particle Type Mapping (weather) ──────────────────────────────────
@@ -78,10 +79,11 @@ func _process(delta: float) -> void:
 	_check_timer -= delta
 	if _check_timer <= 0:
 		_check_timer = BIOME_CHECK_INTERVAL
-		# Follow the player
-		var player: Node3D = get_tree().get_first_node_in_group("player")
-		if player and is_instance_valid(player):
-			global_position = player.global_position + Vector3(0, 5, 0)
+		# Follow the player — use cached reference, only re-scan when stale
+		if not _cached_player or not is_instance_valid(_cached_player):
+			_cached_player = get_tree().get_first_node_in_group("player")
+		if _cached_player and is_instance_valid(_cached_player):
+			global_position = _cached_player.global_position + Vector3(0, 5, 0)
 		# Check biome if not yet set
 		if _current_biome == -1:
 			_current_biome = GameManager.current_biome

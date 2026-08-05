@@ -95,7 +95,9 @@ func _enter_enrage() -> void:
 func _update_boss_attacks(delta: float) -> void:
 	# In co-op, target the nearest valid player (base class logic handles this
 	# for normal AI, but boss attacks have their own targeting)
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# Use _cached_player from the base class (populated via super._physics_process)
+	# instead of a fresh scene-tree group scan every physics frame.
+	var player: Node3D = _cached_player
 	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
 		var p1_dist: float = global_position.distance_to(player.global_position) if player else 99999.0
 		var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)

@@ -243,8 +243,10 @@ func _deal_damage_in_radius() -> void:
 				elif hazard_type == HazardType.VOID_SHOCKWAVE:
 					_apply_knockback(CoOpManager.p2_node, center, 15.0)
 
-	# Damage enemies within radius
-	for enemy in get_tree().get_nodes_in_group("enemies"):
+	# Damage enemies within radius — iterate GameManager.enemies array
+	# instead of get_nodes_in_group("enemies") to avoid an O(n) scene-tree
+	# scan. The array is maintained (append on materialize, erase on death).
+	for enemy in GameManager.enemies:
 		if not is_instance_valid(enemy) or enemy.is_dead:
 			continue
 		var edist: float = enemy.global_position.distance_to(center)

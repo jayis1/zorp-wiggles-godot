@@ -85,7 +85,9 @@ func _physics_process(delta: float) -> void:
 	
 	# Check if close enough to trigger fuse (after AI has updated is_alerted)
 	# In co-op, check both players — trigger if either is close enough
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# Use the base class _cached_player (populated by super._physics_process above)
+	# instead of a fresh scene-tree group scan every physics frame.
+	var player: Node3D = _cached_player
 	if player and is_alerted:
 		var dist: float = global_position.distance_to(player.global_position)
 		if dist < GameConstants.VOID_BOMBER_FUSE_TRIGGER_RANGE:
@@ -113,7 +115,9 @@ func _explode() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
 
 	# Damage players within explosion radius — check both P1 and P2 in co-op
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# Use _cached_player instead of a fresh group scan (the bomber ran
+	# super._physics_process before exploding, so the cache is valid).
+	var player: Node3D = _cached_player
 	if player and GameManager.player_is_alive and not GameManager.player_is_downed:
 		var dist: float = global_position.distance_to(player.global_position)
 		if dist < GameConstants.VOID_BOMBER_EXPLOSION_RADIUS:
@@ -125,8 +129,9 @@ func _explode() -> void:
 			if p2_dist < GameConstants.VOID_BOMBER_EXPLOSION_RADIUS:
 				CoOpManager.p2_take_damage(GameConstants.VOID_BOMBER_EXPLOSION_DAMAGE, global_position)
 
-	# Damage nearby enemies too
-	for enemy in get_tree().get_nodes_in_group("enemies"):
+	# Damage nearby enemies too — iterate GameManager.enemies array instead
+	# of get_nodes_in_group("enemies") to avoid an O(n) scene-tree scan.
+	for enemy in GameManager.enemies:
 		if enemy == self or not is_instance_valid(enemy):
 			continue
 		if enemy.has_method("take_damage_from") or enemy.has_method("take_damage"):
@@ -141,22 +146,35 @@ func _explode() -> void:
 	if _material:
 		_material.albedo_color = Color(1.0, 0.6, 0.0)
 	# Explosion light flash — a brief orange burst that illuminates nearby geometry
-	var boom_light := OmniLight3D.new()
-	boom_light.light_color = Color(1.0, 0.5, 0.1)
-	boom_light.light_energy = 5.0
-	boom_light.omni_range = GameConstants.VOID_BOMBER_EXPLOSION_RADIUS * 1.5
-	boom_light.omni_attenuation = 1.5
-	add_child(boom_light)
+	# Use the PerformanceOptimizer transient light pool instead of allocating a
+	# new OmniLight3D per explosion (matches enemy_base.gd death light pattern).
+	if PerformanceOptimizer:
+		PerformanceOptimizer.acquire_transient_light(
+			global_position,
+			Color(1.0, 0.5, 0.1),
+			5.0,
+			0.25,
+			GameConstants.VOID_BOMBER_EXPLOSION_RADIUS * 1.5,
+			1.5
+		)
+	else:
+		var boom_light := OmniLight3D.new()
+		boom_light.light_color = Color(1.0, 0.5, 0.1)
+		boom_light.light_energy = 5.0
+		boom_light.omni_range = GameConstants.VOID_BOMBER_EXPLOSION_RADIUS * 1.5
+		boom_light.omni_attenuation = 1.5
+		add_child(boom_light)
+		var fade_tween := create_tween()
+		fade_tween.tween_property(boom_light, "light_energy", 0.0, 0.2) \
+			.set_ease(Tween.EASE_OUT) \
+			.set_trans(Tween.TRANS_QUAD)
+		fade_tween.chain().tween_callback(boom_light.queue_free)
 	var boom_tween := create_tween()
 	boom_tween.set_parallel(true)
 	boom_tween.tween_property(self, "scale",
 		Vector3.ONE * base_scale * 3.0, 0.15)
 	if _material:
 		boom_tween.tween_property(_material, "albedo_color:a", 0.0, 0.15)
-	# Light fades out fast for a snappy flash
-	boom_tween.tween_property(boom_light, "light_energy", 0.0, 0.2) \
-		.set_ease(Tween.EASE_OUT) \
-		.set_trans(Tween.TRANS_QUAD)
 	boom_tween.chain().tween_callback(queue_free)
 
 	# Camera shake on explosion
