@@ -158,7 +158,7 @@ func _read_lore() -> void:
 
 func _create_box(pos: Vector3, sz: Vector3, col: Color) -> MeshInstance3D:
 	var box := BoxMesh.new()
-	box.size = Vector2(sz.x, sz.y)
+	box.size = Vector3(sz.x, sz.y, sz.x)
 	var mi := MeshInstance3D.new()
 	mi.mesh = box
 	mi.position = pos

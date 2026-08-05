@@ -275,7 +275,7 @@ func _spawn_buff_activation_effect(color: Color) -> void:
 
 func _create_box(pos: Vector3, scale: Vector3, col: Color) -> MeshInstance3D:
 	var box := BoxMesh.new()
-	box.size = Vector2(scale.x, scale.y)
+	box.size = Vector3(scale.x, scale.y, scale.x)
 	var mi := MeshInstance3D.new()
 	mi.mesh = box
 	mi.position = pos

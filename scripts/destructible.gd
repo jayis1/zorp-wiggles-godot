@@ -187,7 +187,7 @@ func _spawn_fragment(index: int) -> void:
 	# Visual — random small box or shard
 	var mesh_inst := MeshInstance3D.new()
 	var frag_mesh := BoxMesh.new()
-	frag_mesh.size = Vector2(0.18, 0.18)
+	frag_mesh.size = Vector3(0.18, 0.18, 0.18)
 	mesh_inst.mesh = frag_mesh
 	var fmat := StandardMaterial3D.new()
 	fmat.albedo_color = fragment_color

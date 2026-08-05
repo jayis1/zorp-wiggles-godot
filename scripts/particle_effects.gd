@@ -82,7 +82,7 @@ static func _ensure_shared_particle_meshes() -> void:
 		_shared_levelup_spark_mesh.rings = 2
 	if _shared_shield_break_mesh == null:
 		_shared_shield_break_mesh = BoxMesh.new()
-		_shared_shield_break_mesh.size = Vector2(0.15, 0.15)
+		_shared_shield_break_mesh.size = Vector3(0.15, 0.15, 0.15)
 	if _shared_dash_trail_mesh == null:
 		_shared_dash_trail_mesh = SphereMesh.new()
 		_shared_dash_trail_mesh.radius = 0.3
@@ -801,7 +801,7 @@ static func spawn_mega_explosion(parent: Node, pos: Vector3,
 	deb_mat.color_ramp = _create_fade_ramp(color, color * 0.2)
 	debris.process_material = deb_mat
 	var deb_mesh := BoxMesh.new()
-	deb_mesh.size = Vector2(0.3, 0.3)
+	deb_mesh.size = Vector3(0.3, 0.3, 0.3)
 	var deb_mat3d := StandardMaterial3D.new()
 	deb_mat3d.albedo_color = color
 	deb_mat3d.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -1302,7 +1302,7 @@ static func spawn_shield_break_shatter(parent: Node, pos: Vector3, color: Color 
 	_ensure_shared_particle_meshes()
 	var mesh := _shared_shield_break_mesh.duplicate() as BoxMesh
 	# Scale up for the larger shatter fragments
-	mesh.size = Vector2(0.2, 0.2)
+	mesh.size = Vector3(0.2, 0.2, 0.2)
 	var smat := _shared_explosion_draw_mat_template.duplicate() as StandardMaterial3D
 	smat.albedo_color = color
 	smat.emission = color * 0.8

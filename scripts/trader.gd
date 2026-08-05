@@ -82,7 +82,7 @@ func _build_visuals() -> void:
 
 	# Hat — small box on top
 	var hat_box := BoxMesh.new()
-	hat_box.size = Vector2(0.8, 0.4)
+	hat_box.size = Vector3(0.8, 0.4, 0.8)
 	_hat_mesh = MeshInstance3D.new()
 	_hat_mesh.mesh = hat_box
 	_hat_mesh.position = Vector3(0, 0.8, 0)

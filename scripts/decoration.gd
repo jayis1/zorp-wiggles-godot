@@ -538,7 +538,7 @@ func _spawn_underground_glow(wx: float, wz: float) -> void:
 
 func _create_box(pos: Vector3, scale: Vector3, col: Color) -> MeshInstance3D:
 	var box_mesh := BoxMesh.new()
-	box_mesh.size = Vector2(scale.x, scale.y)
+	box_mesh.size = Vector3(scale.x, scale.y, scale.x)
 	var mi := MeshInstance3D.new()
 	mi.mesh = box_mesh
 	mi.position = pos

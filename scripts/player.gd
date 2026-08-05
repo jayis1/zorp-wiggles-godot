@@ -1544,7 +1544,7 @@ func _spawn_dash_afterimage() -> void:
 	match mesh_type:
 		1:  # CUBE (Glitch style)
 			var cube := BoxMesh.new()
-			cube.size = Vector2(0.8, 0.8)
+			cube.size = Vector3(0.8, 0.8, 0.8)
 			ghost_mesh = cube
 		2:  # ELLIPSOID (Comet — stretched sphere)
 			var ellipsoid := SphereMesh.new()

@@ -245,7 +245,7 @@ func _build_arena() -> void:
 		# Visual mesh
 		var mesh_inst := MeshInstance3D.new()
 		var box_mesh := BoxMesh.new()
-		box_mesh.size = Vector2(box.size.x, box.size.y)
+		box_mesh.size = Vector3(box.size.x, box.size.y, box.size.x)
 		mesh_inst.mesh = box_mesh
 		# BoxMesh depth equals width, so scale Z to match the collider's
 		# Z extent (box.size.z) which differs from X for thin wall segments.

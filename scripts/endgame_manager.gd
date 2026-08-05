@@ -581,7 +581,7 @@ func _spawn_loot_cave_interior(cave: Dictionary) -> void:
 		wall.add_child(col)
 		var mesh_inst := MeshInstance3D.new()
 		var box := BoxMesh.new()
-		box.size = Vector2(shape.size.x, shape.size.y)
+		box.size = Vector3(shape.size.x, shape.size.y, shape.size.x)
 		mesh_inst.mesh = box
 		# BoxMesh depth equals width, so scale Z to match the collider's
 		# Z extent (shape.size.z) which differs from X for thin walls.
@@ -712,7 +712,7 @@ func _build_vault_entrance() -> void:
 	# Large stone archway.
 	var arch := MeshInstance3D.new()
 	var arch_mesh := BoxMesh.new()
-	arch_mesh.size = Vector2(6.0, 8.0)
+	arch_mesh.size = Vector3(6.0, 8.0, 6.0)
 	arch.mesh = arch_mesh
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.4, 0.35, 0.3)

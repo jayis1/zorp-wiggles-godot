@@ -1491,7 +1491,7 @@ func _add_accessory_mesh(visual_kind: int, accessory_id: int) -> void:
 		2:  # Wings — two box meshes on the sides
 			# We use a single mesh inst with a combined mesh; simpler: just two boxes
 			var box := BoxMesh.new()
-			box.size = Vector2(0.6, 0.3)
+			box.size = Vector3(0.6, 0.3, 0.6)
 			mesh_inst.mesh = box
 			mesh_inst.position.y = 0.7
 			mesh_inst.position.x = 0.5 * _stage_config().get("scale", 0.5)
@@ -1505,7 +1505,7 @@ func _add_accessory_mesh(visual_kind: int, accessory_id: int) -> void:
 			mesh_inst.position.y = 0.5
 		4:  # Bow — small box on top
 			var bow := BoxMesh.new()
-			bow.size = Vector2(0.3, 0.2)
+			bow.size = Vector3(0.3, 0.2, 0.3)
 			mesh_inst.mesh = bow
 			mesh_inst.position.y = 1.0 * _stage_config().get("scale", 0.5)
 		5:  # Crown — cone on top of head (cylinder with top_radius=0)
