@@ -26,6 +26,16 @@ var _spawn_timer: float = 0.0
 var _next_spawn_time: float = 0.0
 var _active_world_boss: Node = null
 var _active_display_name: String = ""
+# ── Enhancement Pack 32: Cached player reference ── The _process function
+#    calls get_first_node_in_group("player") every frame when a world boss
+#    is active (for the despawn-on-flee distance check). This is an O(n)
+#    scene-tree group scan that runs 60 times per second for the entire
+#    duration a world boss is alive (potentially minutes). Now we cache
+#    the player reference and only re-scan when the cache is stale (null
+#    or freed). The cache is reset on game restart since the player node
+#    is freed and re-created. Matches the caching pattern used by
+#    enemy_base.gd, collectible.gd, wildlife.gd, and boss_tension_vignette.gd.
+var _cached_player: Node3D = null
 
 func _ready() -> void:
 	_schedule_next_spawn()
@@ -46,6 +56,7 @@ func _ready() -> void:
 func _on_game_restarted() -> void:
 	_active_world_boss = null
 	_active_display_name = ""
+	_cached_player = null  # Enhancement Pack 32: clear stale player cache
 	_schedule_next_spawn()
 
 func _schedule_next_spawn() -> void:
@@ -62,9 +73,15 @@ func _process(delta: float) -> void:
 		return
 	if _active_world_boss and is_instance_valid(_active_world_boss):
 		# Check despawn-on-flee.
-		var player: Node3D = get_tree().get_first_node_in_group("player")
-		if player:
-			var d: float = _active_world_boss.global_position.distance_to(player.global_position)
+		# ── Enhancement Pack 32: Use cached player reference instead of
+		#    per-frame get_first_node_in_group("player"). This scan was
+		#    running every frame for the entire lifetime of a world boss
+		#    (potentially several minutes). Now we only re-scan when the
+		#    cache is stale.
+		if not _cached_player or not is_instance_valid(_cached_player):
+			_cached_player = get_tree().get_first_node_in_group("player")
+		if _cached_player:
+			var d: float = _active_world_boss.global_position.distance_to(_cached_player.global_position)
 			if d > GameConstants.WORLD_BOSS_DESPAWN_DISTANCE:
 				_despawn_world_boss("You escaped the world boss.")
 		return

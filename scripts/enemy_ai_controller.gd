@@ -218,6 +218,19 @@ func _update_enrage(delta: float, enemy: EnemyBase) -> void:
 			mat.albedo_color.a = 0.3 + 0.2 * pulse
 		_enrage_aura.scale = Vector3.ONE * (1.0 + 0.08 * pulse)
 
+# ── Enhancement Pack 32: Shared enrage aura base material ──
+# All enrage auras use the same material properties (red alpha, unshaded,
+# emission enabled, red emission). The only per-instance variation is the
+# alpha pulse, which writes albedo_color.a per-frame. Instead of creating
+# a StandardMaterial3D from scratch with 6 property assignments per enemy
+# that enters enrage, we create a static base once and duplicate() it.
+# duplicate() copies all pre-configured properties in a single call, then
+# we only need to assign it — the per-frame alpha pulse writes to the
+# duplicate's own albedo_color.a independently. Mirrors the shared-base-
+# material pattern used by enemy_base.gd (_shared_corpse_mat_base) and
+# collectible.gd (_shared_tumble_mats).
+static var _shared_enrage_mat_base: StandardMaterial3D = null
+
 func _create_enrage_aura(enemy: EnemyBase) -> void:
 	if _enrage_aura and is_instance_valid(_enrage_aura):
 		return
@@ -226,13 +239,18 @@ func _create_enrage_aura(enemy: EnemyBase) -> void:
 	aura_mesh.height = enemy.base_scale * 1.3
 	_enrage_aura = MeshInstance3D.new()
 	_enrage_aura.mesh = aura_mesh
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(1.0, 0.15, 0.15, 0.3)
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.emission_enabled = true
-	mat.emission = Color(1.0, 0.1, 0.1)
-	mat.emission_energy_multiplier = 0.8
+	# Create the shared base material once (lazy init), then duplicate per
+	# enemy. The duplicate gets its own albedo_color (including alpha) so
+	# the per-frame pulse in _update_enrage doesn't affect other auras.
+	if not _shared_enrage_mat_base:
+		_shared_enrage_mat_base = StandardMaterial3D.new()
+		_shared_enrage_mat_base.albedo_color = Color(1.0, 0.15, 0.15, 0.3)
+		_shared_enrage_mat_base.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_shared_enrage_mat_base.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_shared_enrage_mat_base.emission_enabled = true
+		_shared_enrage_mat_base.emission = Color(1.0, 0.1, 0.1)
+		_shared_enrage_mat_base.emission_energy_multiplier = 0.8
+	var mat: StandardMaterial3D = _shared_enrage_mat_base.duplicate()
 	_enrage_aura.material_override = mat
 	enemy.add_child(_enrage_aura)
 	_enrage_aura.position = Vector3(0, 0.5, 0)

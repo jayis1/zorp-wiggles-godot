@@ -33,7 +33,17 @@ func _ready() -> void:
 
 func _update_ai(delta: float) -> void:
 	# In co-op, target the nearest valid player (matches base class co-op logic)
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# ── Enhancement Pack 32: Use the cached player reference from the base
+	#    class instead of calling get_first_node_in_group("player") every
+	#    physics frame. The Spitter's _update_ai runs 60 times per second
+	#    and was doing a scene-tree group scan each frame. Since this
+	#    override doesn't call super._update_ai() (which populates the
+	#    cache in the base class), we populate it here with the same
+	#    lazy-scan pattern: check if the cache is valid, and only scan
+	#    the scene tree when it's stale or empty.
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _cached_player
 	if not player:
 		return
 	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):

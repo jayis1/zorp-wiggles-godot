@@ -83,7 +83,19 @@ func _physics_process(delta: float) -> void:
 
 	# Target nearest valid player — in co-op, the graviton should pull
 	# whichever player is closest, not always P1.
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# ── Enhancement Pack 32: Use the cached player reference from the base
+	#    class instead of calling get_first_node_in_group("player") every
+	#    physics frame. The Graviton's _physics_process runs 60 times per
+	#    second and was doing a scene-tree group scan each frame just to
+	#    find the player node. The base EnemyBase class already maintains
+	#    a _cached_player field (populated in _update_ai and lazily re-scanned
+	#    when stale). Since super._physics_process() calls _update_ai which
+	#    refreshes the cache, we can safely reuse it here. If the cache is
+	#    empty or freed, fall back to a one-shot scan.
+	var player: Node3D = _cached_player
+	if not player or not is_instance_valid(player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+		player = _cached_player
 	if not player:
 		return
 	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
