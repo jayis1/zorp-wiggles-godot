@@ -58,6 +58,11 @@ var _windup_scale_tween: Tween = null
 # even if the windup was interrupted by a hit-flash that also touches
 # emission_energy_multiplier.
 var _windup_prev_emission: float = 1.0
+# ── Hit squash tween ── Tracks the body_mesh hit squash tween so the idle
+#    breathing code can check if it's still running (the elastic rebound
+#    lasts longer than _hit_flash_timer, so without this check the idle
+#    breathing would overwrite the scale mid-rebound, causing a pop).
+var _hit_squash_tween: Tween = null
 var knockback_vel: Vector3 = Vector3.ZERO
 var _spawn_target_alpha: float = 1.0
 
@@ -1204,13 +1209,18 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 				_hit_dir = _hit_dir.normalized()
 				_hit_bx = lerpf(1.25, 1.45, absf(_hit_dir.x))
 				_hit_bz = lerpf(1.25, 1.45, absf(_hit_dir.z))
-		var hit_tween := create_tween()
-		hit_tween.tween_property(body_mesh, "scale",
-			Vector3(_hit_bx, _hit_bz, base_scale * 1.25), 0.04) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-		hit_tween.tween_property(body_mesh, "scale",
-			Vector3.ONE * base_scale, 0.14) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+			# Kill any in-flight hit squash tween so rapid hits restart the pop
+			# cleanly instead of stacking (multiple projectiles in the same frame).
+			if _hit_squash_tween and _hit_squash_tween.is_valid():
+				_hit_squash_tween.kill()
+			var hit_tween := create_tween()
+			_hit_squash_tween = hit_tween
+			hit_tween.tween_property(body_mesh, "scale",
+				Vector3(_hit_bx, _hit_bz, base_scale * 1.25), 0.04) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			hit_tween.tween_property(body_mesh, "scale",
+				Vector3.ONE * base_scale, 0.14) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 	# ── Attack windup interruption (stagger) ── When an enemy takes damage
 	#    during its attack windup, the windup is cancelled — the attack
@@ -1282,6 +1292,13 @@ func set_p2_hit() -> void:
 
 func _die() -> void:
 	is_dead = true
+	# ── Kill any in-flight hit squash tween so it doesn't reference the
+	#    body_mesh after it's hidden/freed. The tween auto-frees on
+	#    completion but may still be running the elastic rebound when
+	#    death fires (e.g. the killing blow's squash tween).
+	if _hit_squash_tween and _hit_squash_tween.is_valid():
+		_hit_squash_tween.kill()
+		_hit_squash_tween = null
 	# ── Phase 24: Clean up mind control state on death ──
 	if is_mind_controlled:
 		is_mind_controlled = false
@@ -1690,7 +1707,17 @@ func _update_visuals(delta: float) -> void:
 		#    frozen. Skipped during hit-flash (tween controls albedo),
 		#    death, and attacking (those own mesh.scale). The pulse is
 		#    tiny (±4% scale, ±2cm bob) so it reads as organic life.
-		if not is_dead and not is_attacking and _hit_flash_timer <= 0:
+		#    ── Hit squash guard ── Also skip while the hit squash tween
+		#    is still running. The hit squash uses TRANS_ELASTIC (0.18s
+		#    total) but _hit_flash_timer is only 0.15s — so for ~0.03s
+		#    the squash tween is still animating body_mesh.scale AFTER
+		#    the flash timer expired. Without this guard, the idle
+		#    breathing code would overwrite body_mesh.scale during that
+		#    window, causing a visible pop as the elastic rebound is
+		#    cut short. The tracked tween reference is checked for
+		#    validity so completed tweens (which auto-free) don't block.
+		if not is_dead and not is_attacking and _hit_flash_timer <= 0 \
+				and not (_hit_squash_tween and _hit_squash_tween.is_valid()):
 			_idle_breath_phase += delta * _idle_breath_speed
 			var breath_y: float = sin(_idle_breath_phase) * _IDLE_BREATH_Y_AMP
 			body_mesh.position.y = 0.5 + breath_y

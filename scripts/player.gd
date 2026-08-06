@@ -106,6 +106,11 @@ var _muzzle_tween: Tween = null
 #    rapid fire doesn't stack tweens. Each shot kills the previous pulse
 #    and restarts from rest, keeping the recoil crisp at all fire rates.
 var _shoot_pulse_tween: Tween = null
+# ── Dash ready emission flash tween ── Tracks the emission spike that
+#    fires when the dash cooldown expires, so rapid cooldown completions
+#    (e.g. from cooldown-reset skills) don't stack tweens on the player
+#    material's emission_energy_multiplier.
+var _dash_ready_flash_tween: Tween = null
 const _IDLE_BOB_AMPLITUDE: float = 0.04  # Subtle vertical bob (meters)
 const _IDLE_BOB_SPEED: float = 2.5       # Bob frequency (rad/s)
 const _IDLE_EMISSION_MIN: float = 0.8    # Idle emission pulse min
@@ -377,6 +382,7 @@ func _on_game_restarted_player() -> void:
 	_muzzle_light = null
 	_muzzle_tween = null
 	_shoot_pulse_tween = null
+	_dash_ready_flash_tween = null
 	# Clean up pickup pulse tweens so they don't reference freed nodes.
 	_pickup_pulse_tween = null
 	_pickup_emit_tween = null
@@ -553,11 +559,31 @@ func _physics_process(delta: float) -> void:
 			# Cooldown just expired — start the coyote grace window
 			_dash_coyote_timer = DASH_COYOTE_WINDOW
 			# ── Dash ready SFX ── Play a bright two-note chime so the player
-			# knows the dash is available again without looking at the HUD
-			# cooldown ring. Previously the cooldown completed silently —
-			# the player had no audio cue that they could dash again.
+			#    knows the dash is available again without looking at the HUD
+			#    cooldown ring. Previously the cooldown completed silently —
+			#    the player had no audio cue that they could dash again.
 			if AudioManager:
 				AudioManager.play_sfx(AudioManager.SFX_DASH_READY)
+			# ── Dash ready emission recharge flash ── When the dash cooldown
+			#    expires, Zorp's emission briefly spikes to 2.5x and eases back
+			#    to the idle baseline over 0.3s. This gives a visual "energy
+			#    recharged" cue that complements the dash-ready chime — the
+			#    player SEES the dash is ready (a brief glow pulse) even if
+			#    they're not looking at the HUD cooldown ring. The flash uses
+			#    the player's base color (not a special color) so it reads as
+			#    "Zorp's energy is full" rather than a special event. Skipped
+			#    during low-HP heartbeat (that system owns emission at critical
+			#    HP) and invuln-blinking (toggles visibility). Uses a tracked
+			#    tween so rapid cooldown completions don't stack.
+			var hp_ratio_dr: float = float(GameManager.player_hp) / float(GameManager.player_max_hp) if GameManager.player_max_hp > 0 else 1.0
+			if _player_material and not is_invuln_blinking and hp_ratio_dr > _HEARTBEAT_HP_THRESHOLD:
+				if _dash_ready_flash_tween and _dash_ready_flash_tween.is_valid():
+					_dash_ready_flash_tween.kill()
+				_player_material.emission_energy_multiplier = 2.5
+				_dash_ready_flash_tween = create_tween()
+				_dash_ready_flash_tween.tween_property(_player_material, "emission_energy_multiplier",
+					1.0, 0.30) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	elif _dash_coyote_timer > 0:
 		_dash_coyote_timer -= delta
 

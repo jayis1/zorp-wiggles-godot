@@ -161,6 +161,28 @@ func _ready() -> void:
 	#    damage feedback read. The signal carries the source position but we
 	#    don't need it for the FOV dip (the shake uses it for direction bias).
 	GameManager.damage_taken_from.connect(_on_player_damage_fov_dip)
+	# ── Level-up FOV punch ── connect to the level-up signal so the camera
+	#    does a brief cinematic zoom-in/ease-out when the player levels up.
+	#    A level-up is a milestone moment; a subtle FOV punch (zoom in ~4°
+	#    then ease back) gives it a cinematic "shutter click" feel — the
+	#    camera briefly tightens on Zorp as the golden burst fires, then
+	#    relaxes back to the normal baseline. Distinct from the dash FOV
+	#    kick (which widens for speed) and the damage FOV dip (which
+	#    narrows for danger) — this is a positive moment, so it zooms IN
+	#    (reduces FOV) to frame the celebration tighter.
+	GameManager.level_up.connect(_on_player_levelup_fov_punch)
+
+# ── Level-up FOV punch ── Briefly reduces the FOV by LEVELUP_FOV_PUNCH
+#    degrees for a cinematic zoom-in, then eases back. The _process FOV
+#    return loop handles the ease-back via fov_return_speed. We set the
+#    camera.fov directly (below the default baseline) so the return loop
+#    smoothly eases it back up to default_fov + speed_fov_current. This
+#    mirrors the damage FOV dip's approach but in the opposite direction
+#    (zoom in vs zoom out) — a positive "shutter click" vs a negative
+#    "tunnel vision."
+const LEVELUP_FOV_PUNCH: float = 4.0
+func _on_player_levelup_fov_punch(_level: int) -> void:
+	camera.fov = maxf(camera.fov - LEVELUP_FOV_PUNCH, default_fov - LEVELUP_FOV_PUNCH)
 
 func _process(delta: float) -> void:
 	if not _target_node or not is_instance_valid(_target_node):
