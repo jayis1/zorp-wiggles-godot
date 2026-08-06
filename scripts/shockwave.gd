@@ -19,6 +19,14 @@ var _has_hit_player: bool = false
 var _light: OmniLight3D = null
 var _cached_player: Node3D = null
 
+# ── Ring spin ── The shockwave ring is a flat cylinder that only scales X/Z.
+#    Without rotation it reads as a static 2D hoop. Adding a fast Y-axis spin
+#    makes the ring feel like rotating energy — a spinning shockwave disk
+#    rather than a growing circle. The spin rate decays as the ring expands
+#    so the energy "settles" as it dissipates, matching the ease-out expansion.
+var _ring_spin_phase: float = 0.0
+const RING_SPIN_SPEED: float = 15.0  # Rad/s at cast — decays with expansion
+
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
 # ─── Shared Resources ──────────────────────────────────────────────────────────
@@ -103,6 +111,14 @@ func _physics_process(delta: float) -> void:
 	# Scale X and Z to expand the ring radius; keep Y (thickness) at 1.
 	var target_scale := Vector3(ring_scale, 1.0, ring_scale)
 	scale = scale.lerp(target_scale, 1.0 - exp(-12.0 * delta))
+	# ── Ring spin ── Rotate the ring around Y so it reads as spinning
+	#    energy rather than a static expanding hoop. The spin rate decays
+	#    with expansion progress (matching the ease-out expansion curve)
+	#    so the ring spins fast on cast and settles as it dissipates.
+	var sw_spin_decay: float = 1.0 - 0.7 * progress
+	_ring_spin_phase += delta * RING_SPIN_SPEED * sw_spin_decay
+	if mesh:
+		mesh.rotation.y = _ring_spin_phase
 
 	# Check player hit — damage once when ring passes through
 	# In co-op, check both players — the ring can hit either one

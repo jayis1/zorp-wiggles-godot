@@ -874,6 +874,19 @@ func _collect() -> void:
 	# Rise slightly during shrink for a "lift" feel
 	tween.parallel().tween_property(self, "global_position:y", global_position.y + 0.8, 0.25) \
 		.set_ease(Tween.EASE_OUT)
+	# ── Fast mesh spin during pickup ── The idle spin stops when is_popping
+	#    is true (the _physics_process early-returns on is_popping), so the
+	#    mesh has no rotation during the pickup animation. Adding a rapid
+	#    Y-axis spin tween on the mesh makes the item whirl as it shrinks,
+	#    complementing the spiral orbit for a dynamic "energy absorption"
+	#    read — the item spins faster and faster as it's consumed. Rare
+	#    items get a faster spin (2x) so legendary pickups feel even more
+	#    energetic. The spin runs in parallel with the scale shrink.
+	if mesh_instance:
+		var spin_speed: float = TAU * 3.0 if not _is_rare() else TAU * 6.0
+		tween.parallel().tween_property(mesh_instance, "rotation:y",
+			mesh_instance.rotation.y + spin_speed, 0.28) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tween.tween_callback(queue_free)
 
 	collected.emit(collectible_type, xp_value)

@@ -28,6 +28,16 @@ static var _shared_ring_mesh: CylinderMesh = null
 #    impact_burst.gd.
 static var _shared_material_base: StandardMaterial3D = null
 
+# ── Ring spin ── The expanding ring is a flat cylinder that only scales X/Z.
+#    Without rotation it reads as a static 2D hoop on the ground. Adding a fast
+#    Y-axis spin makes the ring feel like rotating energy — a spinning shockwave
+#    disk rather than a growing circle. The spin rate decays as the ring
+#    expands so the energy "settles" as it dissipates, matching the ease-out
+#    expansion curve. Uses wall-clock time so the spin is consistent regardless
+#    of time-scale (hit-stop, Time-Slow dimension).
+var _ring_spin_phase: float = 0.0
+const RING_SPIN_SPEED: float = 12.0  # Rad/s at cast — decays with expansion
+
 static func _ensure_shared_mesh() -> void:
 	if _shared_ring_mesh == null:
 		_shared_ring_mesh = CylinderMesh.new()
@@ -115,6 +125,15 @@ func _physics_process(delta: float) -> void:
 		var y_stretch: float = 1.0 + 3.0 * (1.0 - clampf(progress * 3.3, 0.0, 1.0)) ** 2
 		# Use a smoothed scale so the ring doesn't pop on the first frame
 		ring_mesh.scale = ring_mesh.scale.lerp(Vector3(scale_val, y_stretch, scale_val), 1.0 - exp(-12.0 * delta))
+		# ── Ring spin ── Rotate the ring around Y so it reads as spinning
+		#    energy rather than a static expanding hoop. The spin rate decays
+		#    with expansion progress (matching the ease-out expansion curve)
+		#    so the ring spins fast on cast and settles as it dissipates.
+		#    Uses wall-clock time so the spin is consistent regardless of
+		#    time-scale (hit-stop, Time-Slow dimension).
+		var spin_decay: float = 1.0 - 0.7 * progress  # Fast at cast, slower at edge
+		_ring_spin_phase += delta * RING_SPIN_SPEED * spin_decay
+		ring_mesh.rotation.y = _ring_spin_phase
 		# Fade out as it expands — ease-in so it stays visible early then fades fast
 		var alpha := 1.0 - progress
 		alpha = alpha * alpha  # Quadratic fade for a sharper disappear at the edge
