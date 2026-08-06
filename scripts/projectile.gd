@@ -1196,6 +1196,23 @@ func _impact_effect(override_color: Color = Color(0.0, 0.0, 0.0, -1.0)) -> void:
 	# burst and the impact sphere share the same color identity.
 	var particle_color: Color = override_color if override_color.a >= 0.0 else Color(0.2, 1.0, 0.8)
 	ParticleEffects.spawn_explosion(get_parent(), global_position, particle_color, 12, 0.4)
+	# ── Directional spark spray ── A directional spark cone back toward the
+	#    shooter on enemy impacts, complementing the omnidirectional explosion.
+	#    The sparks shoot from the hit point back toward the player's position,
+	#    giving the impact a spatial read — you see WHERE the hit came from,
+	#    not just THAT something exploded. This mirrors the enemy hit_spark
+	#    that fires on take_damage, but at the projectile's impact point so
+	#    the burst originates from the contact location (not the enemy center).
+	#    Skipped for terrain hits where there's no meaningful "back toward
+	#    shooter" direction (the terrain micro-nudge already handles that).
+	#    The spark color matches the impact burst so the two effects share
+	#    a color identity. Crits get a gold-tinted spark spray.
+	var _spark_source: Vector3 = Vector3.ZERO
+	if GameManager.player and is_instance_valid(GameManager.player):
+		_spark_source = GameManager.player.global_position
+	if _spark_source != Vector3.ZERO:
+		ParticleEffects.spawn_hit_spark(get_parent(), global_position,
+			particle_color, _spark_source)
 	# Phase 20: Audio — explosion SFX on impact
 	AudioManager.play_sfx(AudioManager.SFX_EXPLOSION)
 

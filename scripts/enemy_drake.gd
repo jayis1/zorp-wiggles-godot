@@ -90,6 +90,8 @@ func _enter_enrage() -> void:
 	current_color = base_color
 	# Audio — threatening roar on enrage.
 	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
+	# ── Enhancement Pack 38: Boss phase transition screen flash ──
+	GameManager.boss_phase_changed.emit(Color(1.0, 0.2, 0.0, 1.0))
 	GameManager.add_message("Plasma Drake is enraged!")
 
 func _update_boss_attacks(delta: float) -> void:

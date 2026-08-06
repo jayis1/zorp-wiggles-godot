@@ -319,6 +319,26 @@ const SFX_STAGGER: String = "stagger"
 #    feel slightly different, avoiding a mechanical beep.
 const SFX_MAGNET_HUM: String = "magnet_hum"
 
+# ── Enhancement Pack 38: Enemy enrage SFX ── A menacing mid-range growl
+#    (descending 220→110 Hz with a slight harmonic at 440 Hz, 0.18s) that
+#    plays when a regular enemy enters the enrage state (<25% HP). Pairs
+#    with the existing red rage particle burst and color shift. The growl
+#    is shorter and quieter than the boss enrage roar (SFX_BOSS_SPAWN) so
+#    it doesn't overwhelm when multiple enemies enrage simultaneously during
+#    AoE combat. The descending pitch reads as "this enemy is getting
+#    dangerous" — the universal audio shorthand for a rising threat.
+const SFX_ENRAGE: String = "enrage"
+
+# ── Enhancement Pack 38: Prestige fanfare SFX ── A triumphant 5-note
+#    ascending fanfare (C4→E4→G4→C5→E5, 0.10s per note) with full volume
+#    (0.35) that plays on prestige — one of the biggest milestones in the
+#    game. Previously prestige reused SFX_PET_EVOLVE (a 3-note arpeggio at
+#    0.30 volume) which wasn't triumphant enough for such a major event.
+#    The wider range (two octaves), more notes (5 vs 3), and brighter
+#    top end (E5=659 Hz vs C5=523 Hz) make this feel like a true
+#    celebration — the "you beat the game and chose to continue" fanfare.
+const SFX_PRESTIGE: String = "prestige"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -1185,6 +1205,24 @@ func _generate_all_sfx() -> void:
 	# vacuums don't stack into noise. The warm mid-range frequency
 	# reads as a gentle "energy field" hum.
 	_sfx_streams[SFX_MAGNET_HUM] = _gen_blip(440.0, 0.08, 0.08)
+
+	# ── Enhancement Pack 38: Enemy enrage growl ── A menacing descending
+	# tone (220→110 Hz, 0.18s, 0.18 vol) that conveys a rising threat.
+	# Shorter and quieter than the boss enrage roar (SFX_BOSS_SPAWN at
+	# 0.35 vol) so it doesn't overwhelm when multiple enemies enrage
+	# simultaneously during AoE combat. The descending pitch reads as
+	# "this enemy is getting dangerous."
+	_sfx_streams[SFX_ENRAGE] = _gen_descending(220.0, 110.0, 0.18, 0.18)
+
+	# ── Enhancement Pack 38: Prestige fanfare ── A triumphant 5-note
+	# ascending arpeggio (C4→E4→G4→C5→E5, 0.10s per note, 0.35 vol) for
+	# the biggest milestone in the game. The wider two-octave range and
+	# 5 notes make this feel like a true celebration, distinct from
+	# SFX_PET_EVOLVE (3 notes, 0.07s/note, 0.30 vol) which was previously
+	# reused for prestige. The bright top end (E5=659 Hz) gives it a
+	# triumphant resolution — the "you beat the game and chose to
+	# continue" fanfare.
+	_sfx_streams[SFX_PRESTIGE] = _gen_arpeggio([261.63, 329.63, 392.0, 523.0, 659.0], 0.10, 0.35)
 
 
 func _generate_all_music() -> void:

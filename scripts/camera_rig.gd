@@ -86,6 +86,25 @@ var _speed_fov_current: float = 0.0            # Current speed-FOV offset (eased
 ## rather than mechanical. Higher = snappier, lower = smoother.
 @export var rotation_smoothing: float = 12.0
 
+## ── Idle camera drift ── When the player is stationary for a few seconds,
+## the camera gently breathes — a very subtle sinusoidal sway that keeps the
+## scene feeling alive. Without this, the camera locks perfectly still during
+## idle, which reads as frozen/sleepy rather than calm. The drift is tiny
+## (max 0.3° yaw + 0.2° pitch, ~0.15m positional sway) so it never interferes
+## with aiming or reading the scene — it's subliminal life. After any camera
+## input (right-click drag) or significant player movement, the drift resets
+## and stays dormant for `idle_drift_delay` seconds before gently resuming.
+## The drift uses two incoherent sine frequencies (X and Y) so the motion
+## never repeats in a visible pattern — it reads as organic ambient sway.
+@export var idle_drift_delay: float = 4.0     # Seconds of stillness before drift starts
+@export var idle_drift_yaw_amp: float = 0.3    # Max yaw sway in degrees
+@export var idle_drift_pitch_amp: float = 0.2  # Max pitch sway in degrees
+@export var idle_drift_pos_amp: float = 0.15  # Max positional sway in meters
+@export var idle_drift_speed: float = 0.35    # Sway frequency (rad/s — slow, breathing)
+var _idle_drift_timer: float = 0.0  # Counts up while player is still; resets on movement
+var _idle_drift_phase: Vector2 = Vector2.ZERO  # Per-axis phase for incoherent sway
+var _idle_drift_active: bool = false
+
 @onready var camera: Camera3D = $Camera3D
 
 var _target_node: Node3D = null
@@ -128,6 +147,9 @@ func _ready() -> void:
 
 	# Random seeds for shake noise
 	_shake_seed = Vector3(randf() * 1000.0, randf() * 1000.0, randf() * 1000.0)
+
+	# Random initial phase for idle drift so each run's sway is unique
+	_idle_drift_phase = Vector2(randf() * TAU, randf() * TAU)
 
 	# Connect boss signals so the camera automatically zooms out during boss fights.
 	# CameraRig is instantiated fresh each scene load, so double-connect can't happen.
@@ -242,6 +264,46 @@ func _process(delta: float) -> void:
 	var rot_weight: float = 1.0 - exp(-rotation_smoothing * delta)
 	rotation_degrees.x = lerpf(rotation_degrees.x, _target_pitch, rot_weight)
 	rotation_degrees.y = lerpf(rotation_degrees.y, _target_yaw, rot_weight)
+
+	# ── Idle camera drift ── After the player has been stationary for
+	# `idle_drift_delay` seconds, apply a very subtle sinusoidal sway to the
+	# rig's rotation and position so the camera "breathes" — the scene feels
+	# alive rather than frozen. The drift layers on top of the smoothed
+	# rotation and the follow position, and is cleared instantly when the
+	# player moves or the camera is dragged. The amplitude eases in over
+	# ~1.5s (smoothstep) so the drift doesn't suddenly pop when it engages.
+	# Two incoherent sine frequencies on X and Y prevent visible repetition.
+	if _target_node and is_instance_valid(_target_node):
+		var player_speed: float = 0.0
+		if _target_node is CharacterBody3D:
+			var v := (_target_node as CharacterBody3D).velocity
+			player_speed = Vector2(v.x, v.z).length()
+		if player_speed > 1.0:
+			_idle_drift_timer = 0.0
+			_idle_drift_active = false
+		else:
+			_idle_drift_timer += delta
+			_idle_drift_active = _idle_drift_timer >= idle_drift_delay
+	else:
+		_idle_drift_timer = 0.0
+		_idle_drift_active = false
+	if _idle_drift_active:
+		# Ease-in envelope: 0 → 1 over ~1.5s after activation
+		var env_t: float = clampf((_idle_drift_timer - idle_drift_delay) / 1.5, 0.0, 1.0)
+		var env: float = env_t * env_t * (3.0 - 2.0 * env_t)  # smoothstep
+		# Advance the drift phases (incoherent frequencies so no visible loop)
+		_idle_drift_phase.x += delta * idle_drift_speed
+		_idle_drift_phase.y += delta * idle_drift_speed * 1.37  # ~1.37x for incoherence
+		# Apply tiny rotation sway on top of the smoothed targets
+		var drift_yaw: float = sin(_idle_drift_phase.x) * idle_drift_yaw_amp * env
+		var drift_pitch: float = sin(_idle_drift_phase.y) * idle_drift_pitch_amp * env
+		rotation_degrees.x += drift_pitch
+		rotation_degrees.y += drift_yaw
+		# Apply tiny positional sway on top of the follow position
+		var drift_x: float = sin(_idle_drift_phase.x * 0.73) * idle_drift_pos_amp * env
+		var drift_z: float = cos(_idle_drift_phase.y * 0.73) * idle_drift_pos_amp * env
+		global_position.x += drift_x
+		global_position.z += drift_z
 
 	# Smoothly return FOV to default (the dash kick sets it above default, then
 	# this eases it back for a natural "settle" feel). The speed-FOV offset is
@@ -384,10 +446,17 @@ func _on_player_damage_fov_dip(_source_pos: Vector3) -> void:
 func set_camera_yaw(yaw_deg: float) -> void:
 	# Set the target yaw — _process eases the actual rotation toward this.
 	_target_yaw = yaw_deg
+	# Reset idle drift — camera input means the player is actively controlling,
+	# so the ambient sway should stay dormant for another `idle_drift_delay` seconds.
+	_idle_drift_timer = 0.0
+	_idle_drift_active = false
 
 ## Set the target pitch (X rotation in degrees). Eased in _process.
 func set_camera_pitch(pitch_deg: float) -> void:
 	_target_pitch = pitch_deg
+	# Reset idle drift on camera input (same rationale as set_camera_yaw).
+	_idle_drift_timer = 0.0
+	_idle_drift_active = false
 
 func get_forward_direction() -> Vector3:
 	# Return the camera's forward direction on the XZ plane

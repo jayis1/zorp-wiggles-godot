@@ -196,6 +196,14 @@ func _update_enrage(delta: float, enemy: EnemyBase) -> void:
 		ParticleEffects.spawn_explosion(enemy.get_parent(),
 			enemy.global_position + Vector3(0, 1, 0),
 			Color(1.0, 0.157, 0.157), 8, 0.5)
+		# ── Enhancement Pack 38: Enrage SFX ── A menacing growl that pairs
+		# with the red rage particle burst and color shift, giving the
+		# enrage transition a multi-sensory presence. The player can now
+		# hear when a nearby enemy enters enrage even if they're not
+		# looking at it. Quieter than the boss enrage roar so multiple
+		# simultaneous enrages during AoE combat don't stack into noise.
+		if AudioManager:
+			AudioManager.play_sfx(AudioManager.SFX_ENRAGE)
 
 	# Smooth color transition
 	if is_enraged and _enrage_color_t > 0:

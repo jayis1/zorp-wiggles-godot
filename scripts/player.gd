@@ -293,6 +293,15 @@ func _ready() -> void:
 	# and the meta is cleared so subsequent restarts don't restore.
 	if SaveSystem and SaveSystem.has_method("try_restore_player_position"):
 		SaveSystem.try_restore_player_position(self)
+	# ── Enhancement Pack 38: Weapon mod change emission flash ──
+	# When the player equips a different weapon mod (from the crafting menu
+	# or the fusion menu), the player model briefly flashes in the new
+	# mod's color so the player gets immediate visual feedback that their
+	# loadout changed — even if they're in combat and not looking at the
+	# crafting menu. The flash is a quick emission spike (2.0→1.0 over 0.3s)
+	# in the mod's color, distinct from the level-up gold flash.
+	if WeaponModSystem and not WeaponModSystem.mod_equipped.is_connected(_on_mod_equipped_flash):
+		WeaponModSystem.mod_equipped.connect(_on_mod_equipped_flash)
 
 
 # ── Phase 27: Pet emote reaction callbacks ──
@@ -1101,6 +1110,36 @@ func _on_player_healed_visual(amount: int) -> void:
 		emit_tween.parallel().tween_property(_player_material, "emission",
 			base_color * 0.4, 0.40) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+# ── Enhancement Pack 38: Weapon mod equip emission flash ── When the player
+# equips a different weapon mod, Zorp's model briefly flashes in the new
+# mod's color so the player gets immediate visual feedback that their
+# loadout changed — even mid-combat when the crafting menu isn't visible.
+# The flash is a quick emission spike (2.0→1.0 over 0.3s) in the mod's
+# color, distinct from the level-up gold flash (3.5 energy, 0.4s) and the
+# heal mint-green flash (2.2 energy, 0.35s). No mesh scale pop — equip is
+# a gear change, not a physical event, so the emission-only flash reads
+# as an "energy signature shift" rather than a bodily reaction.
+var _mod_equip_tween: Tween = null
+func _on_mod_equipped_flash(mod_id: int) -> void:
+	if not _player_material:
+		return
+	# Get the mod's color for the emission flash
+	var mod_color: Color = Color(0.0, 1.0, 1.0)  # Default cyan
+	if WeaponModSystem:
+		mod_color = WeaponModSystem.get_equipped_color()
+	# Kill any in-progress equip tween so rapid swaps restart cleanly
+	if _mod_equip_tween and _mod_equip_tween.is_valid():
+		_mod_equip_tween.kill()
+	_player_material.emission = mod_color
+	_player_material.emission_energy_multiplier = 2.0
+	_mod_equip_tween = create_tween()
+	_mod_equip_tween.tween_property(_player_material, "emission_energy_multiplier",
+		1.0, 0.30) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_mod_equip_tween.parallel().tween_property(_player_material, "emission",
+		base_color * 0.4, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 # ── Pickup feedback pulse ── When the player collects an item, Zorp's mesh
 #    does a tiny "absorb" pop — a quick grow + emission flash in the

@@ -69,6 +69,11 @@ signal damage_taken_from(source_pos: Vector3)  # Phase 5: damage direction indic
 signal enemy_killed(enemy_name: String, killer_name: String)  # Phase 5: kill feed
 signal biome_changed(biome_id: int)  # Phase 5: biome indicator
 signal p1_downed()  # Phase 19: P1 downed in co-op (can be revived by P2)
+# ── Enhancement Pack 38: Boss phase transition screen flash ── Emitted by
+# boss scripts when they enter a new phase (Drake enrage, Void Leviathan
+# stage 2/3, Ancient Sentinel enrage). The boss_phase_flash HUD overlay
+# listens and plays a colored screen-edge vignette matching the boss color.
+signal boss_phase_changed(color: Color)
 
 # ─── World State ──────────────────────────────────────────────────────────────
 var world_seed: int = 0

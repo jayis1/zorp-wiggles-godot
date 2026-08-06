@@ -1473,6 +1473,29 @@ func _die() -> void:
 	#    visual death animation via physics + a fade-out timer.
 	_spawn_physics_corpse()
 
+	# ── Death emission burst ── A brief white-hot emission spike on the
+	#    death frame so the enemy reads as releasing its energy before the
+	#    body vanishes and the corpse takes over. Without this, the enemy
+	#    goes from hit-flash → invisible in one frame — the death reads as
+	#    a "pop out of existence" rather than an "energy discharge." The
+	#    spike is a quick white-hot emission energy ramp (→ 6.0) that eases
+	#    back to 0 over 0.2s, overlapping with the death poof particles and
+	#    death light flash so all three fire together for a cohesive
+	#    spectacle. The emission also briefly shifts to white-hot (lerp
+	#    current_color → white at 70%) so the death flash is a bright
+	#    "overload" read rather than just the enemy's color getting brighter.
+	#    The tween is on the _material (not self) so it survives the
+	#    immediate `visible = false` below — the material's emission is
+	#    visible through the corpse mesh's own material, not the enemy's.
+	#    Skipped if the material was already freed (safety on scene teardown).
+	if _material:
+		_material.emission = current_color.lerp(Color(1.0, 1.0, 1.0), 0.7)
+		_material.emission_energy_multiplier = 6.0
+		var death_emit_tween := create_tween()
+		death_emit_tween.tween_property(_material, "emission_energy_multiplier",
+			0.0, 0.2) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
 	# Hide the original enemy immediately — the corpse takes over visually
 	visible = false
 	# Free the enemy node shortly after (let signals/cleanup finish first)

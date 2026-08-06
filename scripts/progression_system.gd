@@ -337,8 +337,12 @@ func prestige() -> bool:
 	# Prestige juice — one of the biggest milestones in the game deserves
 	# full multi-sensory celebration: triumphant fanfare, strong camera
 	# shake, and a spectacular particle burst at the player's position.
+	# ── Enhancement Pack 38: Prestige now uses dedicated SFX_PRESTIGE ──
+	# A triumphant 5-note ascending fanfare (C4→E4→G4→C5→E5) that's
+	# distinct from SFX_PET_EVOLVE (3 notes). Prestige is one of the
+	# biggest milestones in the game and deserves its own audio identity.
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_PET_EVOLVE)
+		AudioManager.play_sfx(AudioManager.SFX_PRESTIGE)
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.5)
 	if GameManager.player and is_instance_valid(GameManager.player):

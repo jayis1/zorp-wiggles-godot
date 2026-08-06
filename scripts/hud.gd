@@ -576,6 +576,18 @@ func _ready() -> void:
 	cf_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(cf_ctrl)
 
+	# ── Enhancement Pack 38: Boss Phase Transition Screen Flash ──
+	# A colored screen-edge vignette that flashes when a boss enters a new
+	# phase (Drake enrage, Void Leviathan stage 2/3, Ancient Sentinel enrage).
+	# Matches the boss's phase color so the player gets a visual cue of the
+	# phase shift even if they're not looking at the boss model.
+	var bpf_script := load("res://scripts/boss_phase_flash.gd")
+	var bpf_ctrl := Control.new()
+	bpf_ctrl.set_script(bpf_script)
+	bpf_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bpf_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bpf_ctrl)
+
 	# ── Phase 30: Photo Mode (free-look camera + screenshots) ──
 	# PhotoMode is a Node (not a Control) — it manages its own Camera3D and HUD panel.
 	var pm_script := load("res://scripts/photo_mode.gd")

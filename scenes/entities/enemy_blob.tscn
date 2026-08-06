@@ -11,14 +11,14 @@ height = 1.0
 
 [node name="EnemyBlob" type="CharacterBody3D" groups=["enemies"]]
 script = ExtResource("1_eb")
-enemy_name = "Space Blob"
-max_hp = 40
-speed = 3.5
+enemy_name = "Slime Blob"
+max_hp = 25
+speed = 3.0
 damage = 8
 xp_reward = 15
 score_reward = 50
 base_scale = 1.0
-base_color = Color(0.0, 1.0, 0.0, 1)
+base_color = Color(0.5, 1.0, 0.0, 1)
 
 [node name="BodyMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)

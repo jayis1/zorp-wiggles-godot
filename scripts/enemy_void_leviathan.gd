@@ -216,6 +216,8 @@ func _enter_stage_2() -> void:
 		GameConstants.VOID_LEVIATHAN_COLOR, 30, 0.6)
 	# Audio — deep rumble for stage transition.
 	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
+	# ── Enhancement Pack 38: Boss phase transition screen flash ──
+	GameManager.boss_phase_changed.emit(Color(0.4, 0.1, 0.6, 1.0))
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.3)
 
@@ -235,6 +237,8 @@ func _enter_stage_3() -> void:
 	current_color = base_color
 	# Audio — colossal roar for the final enrage phase.
 	AudioManager.play_sfx_pitched(AudioManager.SFX_BOSS_SPAWN, 0.7)
+	# ── Enhancement Pack 38: Boss phase transition screen flash ──
+	GameManager.boss_phase_changed.emit(Color(0.2, 0.0, 0.4, 1.0))
 	GameManager.add_message("Void Leviathan is ENRAGED!")
 	ParticleEffects.spawn_mega_explosion(get_parent(), global_position,
 		GameConstants.VOID_LEVIATHAN_ENRAGE_COLOR)
