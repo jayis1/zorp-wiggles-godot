@@ -129,8 +129,12 @@ func _update_field_state(delta: float) -> void:
 func _start_charging() -> void:
 	_field_state = FieldState.CHARGING
 	_field_active_timer = GameConstants.GRAVITY_ELEMENTAL_FIELD_WARN_TIME
-	# Audio cue — low rumble for charging gravity energy (was generic enemy-hit)
-	AudioManager.play_sfx(AudioManager.SFX_ARENA)
+	# Audio cue — deep gravitic rumble for charging gravity energy.
+	# Previously used SFX_ARENA (generic arena hazard rumble) which was
+	# shared with boss arena construction and didn't convey the unique
+	# gravitic nature of this attack. Now uses a dedicated descending
+	# rumble (70→35 Hz) that reads as "space is warping."
+	AudioManager.play_sfx(AudioManager.SFX_GRAVITY_CHARGE)
 
 ## Activate the gravity field — repel the player outward and fling loose objects.
 func _activate_field() -> void:

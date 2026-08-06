@@ -84,6 +84,9 @@ var _mutation_colors: Dictionary = {}  # { mutation_id: Color }
 var _active_skin_id: int = 0
 var _skin_emission_mult: float = 1.0
 
+# ── Enhancement Pack 39: Time Warden slow field entry/exit tracking (P2) ──
+var _in_time_warden_field: bool = false
+
 # ─── Combat ───────────────────────────────────────────────────────────────────
 var shoot_cooldown_timer: float = 0.0
 var pulse_wave_cooldown_timer: float = 0.0
@@ -296,7 +299,16 @@ func _handle_movement(delta: float) -> void:
 		speed_mult *= WorldModifierSystem.get_player_speed_mult()
 	# ── Phase 23: Time Warden slow field — P2 also slowed inside the field ──
 	if EnemyTimeWarden:
-		speed_mult *= EnemyTimeWarden.get_player_slow_mult(global_position)
+		var warden_slow_mult: float = EnemyTimeWarden.get_player_slow_mult(global_position)
+		speed_mult *= warden_slow_mult
+		# Enhancement Pack 39: Detect enter/exit transition for audio cue (P2).
+		var in_field_now: bool = warden_slow_mult < 0.99
+		if in_field_now and not _in_time_warden_field:
+			_in_time_warden_field = true
+			AudioManager.play_sfx(AudioManager.SFX_TIME_SLOW_ENTER)
+		elif not in_field_now and _in_time_warden_field:
+			_in_time_warden_field = false
+			AudioManager.play_sfx_pitched(AudioManager.SFX_TIME_SLOW_ENTER, 1.3)
 
 	if move_direction.length_squared() > 0.01:
 		velocity = move_direction * GameConstants.PLAYER_SPEED * speed_mult

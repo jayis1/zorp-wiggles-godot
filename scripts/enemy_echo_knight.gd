@@ -119,6 +119,18 @@ func _create_copies() -> void:
 		copy_light.position = offset + Vector3(0, 0.8, 0)
 		_copy_lights.append(copy_light)
 
+		# Enhancement Pack 39: Particle burst at each copy's spawn position
+		# so the player sees the phantoms materialize rather than pop in.
+		ParticleEffects.spawn_explosion(get_parent(),
+			global_position + offset,
+			GameConstants.ECHO_KNIGHT_COLOR, 10, 0.3)
+
+	# Enhancement Pack 39: Ethereal SFX on phantom spawn — the player gets
+	# an audio cue that shadow copies have been summoned. Previously the
+	# copies appeared with no audio at all, giving the player no cue that
+	# copies had spawned.
+	AudioManager.play_sfx(AudioManager.SFX_PHANTOM_SPAWN)
+
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
 	if is_dead or GameManager.is_paused or spawn_grace_timer > 0:
@@ -211,6 +223,12 @@ func _die() -> void:
 				.set_ease(Tween.EASE_IN)
 			fade_tween.tween_callback(cl.queue_free)
 	_copy_lights.clear()
+	# Enhancement Pack 39: Per-copy dissolve particle burst so the player
+	# sees each phantom shatter into shadow rather than just fading.
+	for offset in _copy_offsets:
+		ParticleEffects.spawn_explosion(scene_root,
+			global_position + offset,
+			GameConstants.ECHO_KNIGHT_COLOR, 6, 0.25)
 	# Extra shadowy particle burst on death
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.ECHO_KNIGHT_COLOR, 20, 0.5)

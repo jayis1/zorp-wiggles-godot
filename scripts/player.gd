@@ -145,6 +145,13 @@ const _WALK_BOB_BLEND_SPEED: float = 6.0  # How fast idle→walk blend eases (hi
 var _active_skin_id: int = 0
 var _skin_emission_mult: float = 1.0
 
+# ── Enhancement Pack 39: Time Warden slow field entry/exit tracking ──
+# Tracks whether the player is currently inside a Time Warden's slowing
+# field so we can fire a one-shot SFX + brief emission tint on the
+# enter/exit transition. Without this, the player silently slows down
+# with no audio or visual cue that they've entered the field.
+var _in_time_warden_field: bool = false
+
 # ── Phase 6: Idle regen sparkle aura ──
 # Ambient green sparkles that orbit Zorp when standing still and healthy.
 # Conveys a sense of regeneration and calm — the player feels safe.
@@ -386,6 +393,8 @@ func _on_game_restarted_player() -> void:
 	# Clean up pickup pulse tweens so they don't reference freed nodes.
 	_pickup_pulse_tween = null
 	_pickup_emit_tween = null
+	# Enhancement Pack 39: Reset Time Warden field tracking on restart
+	_in_time_warden_field = false
 
 func _on_player_levelup_pet_emote(_level: int) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
@@ -1263,7 +1272,30 @@ func _handle_movement(delta: float) -> void:
 	# This is applied AFTER the other multipliers so it compounds with weather
 	# and dimension effects (a Time Warden in a Time-Slow dimension is brutal).
 	if EnemyTimeWarden:
-		speed_mult *= EnemyTimeWarden.get_player_slow_mult(global_position)
+		var warden_slow_mult: float = EnemyTimeWarden.get_player_slow_mult(global_position)
+		speed_mult *= warden_slow_mult
+		# Enhancement Pack 39: Detect enter/exit transition for audio cue.
+		# The player's speed multiplier drops below 1.0 when inside a field,
+		# so we compare against 0.99 to handle floating-point precision at the
+		# smooth field edge.
+		var in_field_now: bool = warden_slow_mult < 0.99
+		if in_field_now and not _in_time_warden_field:
+			_in_time_warden_field = true
+			AudioManager.play_sfx(AudioManager.SFX_TIME_SLOW_ENTER)
+			# Brief blue emission tint to telegraph "you are slowed"
+			if _player_material:
+				var tint_tween := create_tween()
+				var orig_emission: Color = _player_material.emission
+				var orig_energy: float = _player_material.emission_energy_multiplier
+				_player_material.emission = Color(0.2, 0.4, 0.8)
+				_player_material.emission_energy_multiplier = 2.5
+				tint_tween.tween_property(_player_material, "emission", orig_emission, 0.4) \
+					.set_ease(Tween.EASE_OUT)
+				tint_tween.parallel().tween_property(_player_material, "emission_energy_multiplier",
+					orig_energy, 0.4).set_ease(Tween.EASE_OUT)
+		elif not in_field_now and _in_time_warden_field:
+			_in_time_warden_field = false
+			AudioManager.play_sfx_pitched(AudioManager.SFX_TIME_SLOW_ENTER, 1.3)
 	# ── Phase 25: Progression System speed bonus (skill tree) ──
 	if ProgressionSystem:
 		speed_mult *= ProgressionSystem.get_speed_mult()

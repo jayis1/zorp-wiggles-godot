@@ -339,6 +339,32 @@ const SFX_ENRAGE: String = "enrage"
 #    celebration — the "you beat the game and chose to continue" fanfare.
 const SFX_PRESTIGE: String = "prestige"
 
+# ── Enhancement Pack 39: Time slow field enter SFX ── A soft descending chime
+#    (G5→E5→C5, 784→659→523 Hz, 0.10s, 0.12 vol) that plays when the player
+#    enters a Time Warden's slowing field. The gentle descending interval
+#    conveys "time is bending" — a subtle temporal warp cue. Very quiet so
+#    it doesn't compete with combat sounds, and only fires on the transition
+#    (entering/exiting the field), not continuously while inside.
+const SFX_TIME_SLOW_ENTER: String = "time_slow_enter"
+
+# ── Enhancement Pack 39: Gravity charge SFX ── A deep descending rumble
+#    (70→35 Hz over 0.50s, 0.35 vol) that plays when a Gravity Elemental
+#    begins charging its repel field. The very low frequency sweep conveys
+#    massive gravitational energy building up — the sound of space warping.
+#    Previously the charge used SFX_ARENA (a generic arena hazard rumble at
+#    50 Hz) which was shared with boss arena construction and didn't convey
+#    the unique gravitic nature of the attack.
+const SFX_GRAVITY_CHARGE: String = "gravity_charge"
+
+# ── Enhancement Pack 39: Echo Knight phantom spawn SFX ── An ethereal
+#    shimmering chime (B4→D5→F#5, 494→587→740 Hz, 0.18s, 0.18 vol) that
+#    plays when an Echo Knight summons its shadow copies. The augmented
+#    triad (B-D-F#) has an unsettled, "otherworldly" quality that conveys
+#    phantoms splitting from a real body. Quiet and short so it doesn't
+#    compete with combat sounds. Previously the shadow copies appeared
+#    with no audio at all — the player had no cue that copies had spawned.
+const SFX_PHANTOM_SPAWN: String = "phantom_spawn"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -718,6 +744,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_FOOTSTEP,
 	# Stagger + magnet hum — micro-detuning for natural variation
 	SFX_STAGGER, SFX_MAGNET_HUM,
+	# Enhancement Pack 39: New SFX get pitch variation
+	SFX_GRAVITY_CHARGE, SFX_PHANTOM_SPAWN,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1223,6 +1251,19 @@ func _generate_all_sfx() -> void:
 	# triumphant resolution — the "you beat the game and chose to
 	# continue" fanfare.
 	_sfx_streams[SFX_PRESTIGE] = _gen_arpeggio([261.63, 329.63, 392.0, 523.0, 659.0], 0.10, 0.35)
+
+	# ── Enhancement Pack 39: New SFX ──────────────────────────────────────
+	# Time slow enter — soft descending chime (G5→E5→C5) for the moment the
+	# player crosses into a Time Warden's slowing field.
+	_sfx_streams[SFX_TIME_SLOW_ENTER] = _gen_chime([784.0, 659.0, 523.0], 0.10, 0.12)
+
+	# Gravity charge — deep descending rumble (70→35 Hz) for the Gravity
+	# Elemental's field-charging telegraph. Replaces SFX_ARENA.
+	_sfx_streams[SFX_GRAVITY_CHARGE] = _gen_descending(70.0, 35.0, 0.50, 0.35)
+
+	# Phantom spawn — ethereal augmented-triad chime (B4→D5→F#5) for the
+	# Echo Knight summoning its shadow copies.
+	_sfx_streams[SFX_PHANTOM_SPAWN] = _gen_chime([494.0, 587.0, 740.0], 0.18, 0.18)
 
 
 func _generate_all_music() -> void:
