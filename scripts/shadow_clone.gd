@@ -91,7 +91,8 @@ func _physics_process(delta: float) -> void:
 	# Cache player reference
 	if not _cached_player or not is_instance_valid(_cached_player):
 		_cached_player = get_tree().get_first_node_in_group("player")
-		return
+		if not _cached_player:
+			return  # Player not found this frame — try again next frame
 
 	var player: Node3D = _cached_player
 	var to_player: Vector3 = player.global_position - global_position

@@ -208,7 +208,7 @@ func _build_visuals() -> void:
 	_emote_label.outline_modulate = Color(0, 0, 0, 0.8)
 	_emote_label.pixel_size = 0.025
 	_emote_label.position = Vector3(0, 1.6, 0)
-	_emote_label.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	_emote_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_emote_label.no_depth_test = true
 	_emote_label.visible = false
 	add_child(_emote_label)

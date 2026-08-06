@@ -477,7 +477,7 @@ func _tick_acid_rain(delta: float) -> void:
 		GameManager.take_damage(dmg, player.global_position + Vector3(0, 20, 0))
 	# Damage enemies too (acid rain is indiscriminate)
 	for enemy in GameManager.enemies:
-		if is_instance_valid(enemy) and not enemy.is_dead:
+		if is_instance_valid(enemy) and "is_dead" in enemy and not enemy.is_dead:
 			if enemy.has_method("take_damage_from"):
 				enemy.take_damage_from(GameConstants.ACID_RAIN_DAMAGE_PER_TICK, player.global_position if player else Vector3.ZERO)
 
@@ -559,7 +559,7 @@ func _execute_lightning_strike(pos: Vector3) -> void:
 			GameManager.take_damage(GameConstants.THUNDER_LIGHTNING_DAMAGE, pos)
 	# Enemies
 	for enemy in GameManager.enemies:
-		if is_instance_valid(enemy) and not enemy.is_dead:
+		if is_instance_valid(enemy) and "is_dead" in enemy and not enemy.is_dead:
 			if enemy.global_position.distance_to(pos) <= radius:
 				if enemy.has_method("take_damage_from"):
 					enemy.take_damage_from(GameConstants.THUNDER_LIGHTNING_DAMAGE, pos)
@@ -666,7 +666,7 @@ func _execute_meteor_strike(pos: Vector3) -> void:
 			GameManager.take_damage(GameConstants.METEOR_DAMAGE, pos)
 	# Enemies take damage too
 	for enemy in GameManager.enemies:
-		if is_instance_valid(enemy) and not enemy.is_dead:
+		if is_instance_valid(enemy) and "is_dead" in enemy and not enemy.is_dead:
 			if enemy.global_position.distance_to(pos) <= radius:
 				if enemy.has_method("take_damage_from"):
 					enemy.take_damage_from(GameConstants.METEOR_DAMAGE, pos)
@@ -696,7 +696,7 @@ func _tick_sandstorm(delta: float) -> void:
 		GameManager.take_damage(dmg, player.global_position + Vector3(0, 20, 0))
 	# Damage enemies too (sand is indiscriminate)
 	for enemy in GameManager.enemies:
-		if is_instance_valid(enemy) and not enemy.is_dead:
+		if is_instance_valid(enemy) and "is_dead" in enemy and not enemy.is_dead:
 			if enemy.has_method("take_damage_from"):
 				enemy.take_damage_from(GameConstants.SANDSTORM_DAMAGE_PER_TICK,
 					player.global_position if player else Vector3.ZERO)
@@ -714,7 +714,7 @@ func _tick_pollen_storm(delta: float) -> void:
 		GameManager.heal(GameConstants.POLLEN_STORM_HEAL_PER_TICK)
 	# Heal enemies too (the pollen is indiscriminate — everything blooms)
 	for enemy in GameManager.enemies:
-		if is_instance_valid(enemy) and not enemy.is_dead and "hp" in enemy and "max_hp" in enemy:
+		if is_instance_valid(enemy) and "is_dead" in enemy and not enemy.is_dead and "hp" in enemy and "max_hp" in enemy:
 			if enemy.hp < enemy.max_hp:
 				enemy.hp = min(enemy.max_hp, enemy.hp + GameConstants.POLLEN_STORM_HEAL_PER_TICK)
 

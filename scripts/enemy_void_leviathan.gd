@@ -315,7 +315,7 @@ func _summon_wisps() -> void:
 	# poison_cloud.gd, pulse_wave.gd, and enemy_swarm_queen.gd.
 	var alive_enemies: int = 0
 	for e in GameManager.enemies:
-		if is_instance_valid(e) and not e.is_dead:
+		if is_instance_valid(e) and "is_dead" in e and not e.is_dead:
 			alive_enemies += 1
 	var spawn_cap: int = GameConstants.MAX_ACTIVE_ENEMIES + CoOpManager.get_max_enemies_bonus() + GameManager.get_time_max_enemy_bonus()
 	if alive_enemies >= spawn_cap:

@@ -398,7 +398,7 @@ func _fire_nova_ring() -> void:
 	get_parent().add_child(nova)
 	nova.global_position = global_position + Vector3(0, 0.5, 0)
 	# Configure the shockwave via its properties (if available)
-	if nova.has_method("set") or nova.get("damage") != null:
+	if nova.get("damage") != null:
 		nova.set("damage", GameConstants.ANCIENT_SENTINEL_NOVA_DAMAGE)
 		nova.set("max_radius", GameConstants.ANCIENT_SENTINEL_NOVA_MAX_RADIUS)
 		nova.set("expand_speed", GameConstants.ANCIENT_SENTINEL_NOVA_EXPAND_SPEED)
