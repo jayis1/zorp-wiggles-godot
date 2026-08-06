@@ -163,7 +163,9 @@ func _fire_breath(player: Node3D) -> void:
 
 	var proj_scene: PackedScene = load("res://scenes/entities/enemy_projectile.tscn")
 	if not proj_scene:
-		GameManager.take_damage(GameConstants.DRAKE_FIRE_BREATH_DAMAGE, global_position)
+		# Scene failed to load — skip the attack rather than unfairly damaging
+		# the player as a "fallback." The scene always exists in the project,
+		# so this path should never execute, but if it does, silently skip.
 		return
 
 	for i in range(5):
