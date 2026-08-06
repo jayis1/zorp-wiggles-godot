@@ -25,6 +25,25 @@ var _biome_colors: Dictionary = {}
 # eliminates ~40 scene-tree group scans per second.
 var _cached_player: Node3D = null
 
+# ── Cached group arrays for entity dots ──
+# The minimap's _draw_entity_dots makes 12 get_nodes_in_group() calls per
+# draw (~20 draws/sec = 240 scene-tree group scans/sec). Each group scan
+# traverses the scene tree's group hash, which is O(members) per call.
+# We cache each group's node list and refresh it at the same rate as the
+# dot refresh (every 0.05s), so the group scan runs once per group per
+# refresh instead of once per group per draw. The nodes are validated
+# with is_instance_valid during iteration (they may be freed between
+# refreshes), so stale entries are harmlessly skipped.
+var _group_cache: Dictionary = {}  # group_name → Array[Node]
+var _group_cache_timer: float = 0.0
+const GROUP_CACHE_REFRESH_INTERVAL: float = 0.1  # 10×/sec, 2× the draw rate
+# Groups cached by the minimap — all 12 groups drawn in _draw_entity_dots.
+const CACHED_GROUPS: Array[String] = [
+	"portals", "rifts", "trader", "lore_stone", "treasure_chest",
+	"wildlife", "dialogue_npc", "env_hazard", "interactive_object",
+	"fast_travel_waypoint", "ping", "companion_pet",
+]
+
 # ── Phase 31: Minimap zoom ──
 # View range is now a variable so the scroll wheel can adjust it. Clamped to
 # [MINIMAP_VIEW_RANGE_MIN, MINIMAP_VIEW_RANGE_MAX]. Zoom is in "world units
@@ -78,6 +97,16 @@ func _get_player() -> Node3D:
 func _process(delta: float) -> void:
 	if not _minimap_visible:
 		return
+	# ── Refresh cached group arrays ──
+	# Runs at 10×/sec (half the draw rate), so each group scan runs once
+	# per refresh instead of once per draw. Eliminates ~240 scene-tree
+	# group scans/sec → ~120/sec (halved), and each draw now just reads
+	# the cached arrays.
+	_group_cache_timer -= delta
+	if _group_cache_timer <= 0.0:
+		_group_cache_timer = GROUP_CACHE_REFRESH_INTERVAL
+		for group_name in CACHED_GROUPS:
+			_group_cache[group_name] = get_tree().get_nodes_in_group(group_name)
 	_terrain_refresh_timer -= delta
 	_dot_refresh_timer -= delta
 	# Dots update frequently for smooth tracking
@@ -244,7 +273,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			draw_circle(pos, 1.5, GameConstants.MINIMAP_COLLECTIBLE_DOT_COLOR)
 
 	# ── Portal dots (cyan squares) ──
-	for portal in get_tree().get_nodes_in_group("portals"):
+	for portal in _get_cached_group("portals"):
 		if not is_instance_valid(portal):
 			continue
 		var pos: Vector2 = _world_to_mini(portal.global_position.x, portal.global_position.z, px, pz, pixel_per_world)
@@ -252,7 +281,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			draw_rect(Rect2(pos.x - 2.5, pos.y - 2.5, 5.0, 5.0), GameConstants.MINIMAP_PORTAL_DOT_COLOR, true)
 
 	# ── Phase 14: Rift dots (pulsing purple diamonds) ──
-	for rift in get_tree().get_nodes_in_group("rifts"):
+	for rift in _get_cached_group("rifts"):
 		if not is_instance_valid(rift):
 			continue
 		var rpos: Vector2 = _world_to_mini(rift.global_position.x, rift.global_position.z, px, pz, pixel_per_world)
@@ -269,7 +298,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			draw_colored_polygon(pts, rift_color)
 
 	# ── Trader dots (orange) ──
-	for trader in get_tree().get_nodes_in_group("trader"):
+	for trader in _get_cached_group("trader"):
 		if not is_instance_valid(trader):
 			continue
 		var pos: Vector2 = _world_to_mini(trader.global_position.x, trader.global_position.z, px, pz, pixel_per_world)
@@ -281,7 +310,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 				draw_circle(pos, 2.5, GameConstants.MINIMAP_TRADER_DOT_COLOR)
 
 	# ── Phase 26: Lore stone dots (small purple, pulsing) ──
-	for stone in get_tree().get_nodes_in_group("lore_stone"):
+	for stone in _get_cached_group("lore_stone"):
 		if not is_instance_valid(stone):
 			continue
 		var spos: Vector2 = _world_to_mini(stone.global_position.x, stone.global_position.z, px, pz, pixel_per_world)
@@ -294,7 +323,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 	# ── Phase 26: Treasure chest dots (small gold, only when close) ──
 	# Chests are hidden — only show on minimap when within glow range, so the
 	# player has to explore to find them rather than just beelining to dots.
-	for chest in get_tree().get_nodes_in_group("treasure_chest"):
+	for chest in _get_cached_group("treasure_chest"):
 		if not is_instance_valid(chest):
 			continue
 		var cpos: Vector2 = _world_to_mini(chest.global_position.x, chest.global_position.z, px, pz, pixel_per_world)
@@ -308,7 +337,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 	# ── Phase 26: Wildlife dots (small green, only when close) ──
 	# Wildlife is non-hostile and shown as small green dots so the player can
 	# spot them to hunt. Only drawn when within flee range to avoid clutter.
-	for creature in get_tree().get_nodes_in_group("wildlife"):
+	for creature in _get_cached_group("wildlife"):
 		if not is_instance_valid(creature):
 			continue
 		if "species_color" in creature:
@@ -319,7 +348,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 					draw_circle(wpos, 1.5, creature.species_color)
 
 	# ── Phase 26: Dialogue NPC dots (small cyan) ──
-	for npc in get_tree().get_nodes_in_group("dialogue_npc"):
+	for npc in _get_cached_group("dialogue_npc"):
 		if not is_instance_valid(npc):
 			continue
 		var npos: Vector2 = _world_to_mini(npc.global_position.x, npc.global_position.z, px, pz, pixel_per_world)
@@ -327,7 +356,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			draw_circle(npos, 2.5, Color(0.4, 0.9, 1.0))
 
 	# ── Phase 26: Environmental hazard dots (small orange/red) ──
-	for hazard in get_tree().get_nodes_in_group("env_hazard"):
+	for hazard in _get_cached_group("env_hazard"):
 		if not is_instance_valid(hazard):
 			continue
 		var hpos: Vector2 = _world_to_mini(hazard.global_position.x, hazard.global_position.z, px, pz, pixel_per_world)
@@ -340,7 +369,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			draw_circle(hpos, 2.0, hcolor)
 
 	# ── Phase 26: Interactive object dots (small yellow for switches) ──
-	for obj in get_tree().get_nodes_in_group("interactive_object"):
+	for obj in _get_cached_group("interactive_object"):
 		if not is_instance_valid(obj):
 			continue
 		if "object_type" not in obj:
@@ -355,7 +384,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 			draw_rect(Rect2(opos.x - 1.5, opos.y - 1.5, 3.0, 3.0), ocolor, true)
 
 	# ── Phase 26: Fast travel waypoint dots (teal when activated, grey when not) ──
-	for wp in get_tree().get_nodes_in_group("fast_travel_waypoint"):
+	for wp in _get_cached_group("fast_travel_waypoint"):
 		if not is_instance_valid(wp):
 			continue
 		var wpos: Vector2 = _world_to_mini(wp.global_position.x, wp.global_position.z, px, pz, pixel_per_world)
@@ -426,7 +455,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 	# ── Phase 31: Ping markers (flashing colored diamonds) ──
 	# Pings dropped by the player appear as flashing diamonds on the minimap
 	# so they can be found even when off-screen. Color matches the ping type.
-	for ping in get_tree().get_nodes_in_group("ping"):
+	for ping in _get_cached_group("ping"):
 		if not is_instance_valid(ping):
 			continue
 		var pp_pos: Vector2 = _world_to_mini(ping.global_position.x, ping.global_position.z, px, pz, pixel_per_world)
@@ -501,7 +530,7 @@ func _draw_entity_dots(rect: Rect2) -> void:
 		draw_line(p2_pos, p2_dir_end, GameConstants.P2_BASE_COLOR, 1.0)
 
 	# ── Phase 15: Companion pet dot (cyan-blue diamond) ──
-	for pet in get_tree().get_nodes_in_group("companion_pet"):
+	for pet in _get_cached_group("companion_pet"):
 		if not is_instance_valid(pet):
 			continue
 		var ppos: Vector2 = _world_to_mini(pet.global_position.x, pet.global_position.z, px, pz, pixel_per_world)
@@ -532,6 +561,18 @@ func _draw_entity_dots(rect: Rect2) -> void:
 func _is_in_rect(pos: Vector2, rect: Rect2) -> bool:
 	return pos.x >= rect.position.x and pos.x <= rect.position.x + rect.size.x \
 		and pos.y >= rect.position.y and pos.y <= rect.position.y + rect.size.y
+
+## Get cached group nodes — returns the cached array from _group_cache
+## (refreshed every GROUP_CACHE_REFRESH_INTERVAL in _process). Falls back
+## to a direct get_nodes_in_group call if the cache hasn't been populated
+## yet (first draw before the first refresh tick).
+func _get_cached_group(group_name: String) -> Array:
+	if _group_cache.has(group_name):
+		return _group_cache[group_name]
+	# Cache miss (first draw) — populate on demand
+	var nodes: Array = get_tree().get_nodes_in_group(group_name)
+	_group_cache[group_name] = nodes
+	return nodes
 
 ## Draw a small arrow indicator at the minimap edge pointing toward an
 ## off-screen entity. The arrow is clamped to the minimap edge and points
