@@ -549,7 +549,7 @@ func _spawn_reward_chest(room: Dictionary, dungeon_id: int) -> void:
 func _on_reward_chest_opened(_chest: Node, _trapped: bool, dungeon_id: int) -> void:
 	if dungeon_id < 0 or dungeon_id >= _dungeons.size():
 		return
-	_dungeons[dungeon_id].cleared = true
+	_dungeons[dungeon_id]["cleared"] = true
 	# XP + score reward.
 	GameManager.gain_xp(GameConstants.DUNGEON_REWARD_XP)
 	GameManager.player_score += GameConstants.DUNGEON_REWARD_SCORE
@@ -572,18 +572,18 @@ func _process(delta: float) -> void:
 	# Each entrance gets a phase-randomized sine pulse so they don't all sync.
 	var t: float = Time.get_ticks_msec() * 0.001
 	for entry in _entrance_nodes:
-		var phase: float = t + entry.time_offset
+		var phase: float = t + entry["time_offset"]
 		var pulse: float = 0.7 + 0.3 * sin(phase * 2.0)
-		var rm: StandardMaterial3D = entry.ring_mat
+		var rm: StandardMaterial3D = entry["ring_mat"]
 		if rm:
 			rm.emission_energy_multiplier = 1.2 + 0.8 * pulse
-		var bm: StandardMaterial3D = entry.beam_mat
+		var bm: StandardMaterial3D = entry["beam_mat"]
 		if bm:
 			bm.emission_energy_multiplier = 0.9 + 0.6 * pulse
 			bm.albedo_color.a = 0.35 + 0.25 * pulse
-		var lt: OmniLight3D = entry.light
+		var lt: OmniLight3D = entry["light"]
 		if lt:
 			lt.light_energy = 2.0 + 1.5 * pulse
-		var beam_node: MeshInstance3D = entry.beam
+		var beam_node: MeshInstance3D = entry["beam"]
 		if beam_node:
 			beam_node.rotation.y = phase * 0.5

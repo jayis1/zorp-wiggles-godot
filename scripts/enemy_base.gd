@@ -1217,7 +1217,7 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 			var hit_tween := create_tween()
 			_hit_squash_tween = hit_tween
 			hit_tween.tween_property(body_mesh, "scale",
-				Vector3(_hit_bx, _hit_bz, base_scale * 1.25), 0.04) \
+				Vector3(_hit_bx, base_scale * 1.25, _hit_bz), 0.04) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 			hit_tween.tween_property(body_mesh, "scale",
 				Vector3.ONE * base_scale, 0.14) \

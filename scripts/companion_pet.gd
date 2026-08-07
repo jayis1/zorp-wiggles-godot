@@ -1024,14 +1024,12 @@ func _tick_ice_aura(delta: float) -> void:
 			var t: float = 1.0 - (d / GameConstants.PET_ICE_AURA_RANGE)
 			var slow_mult: float = lerpf(1.0, GameConstants.PET_ICE_AURA_SLOW_MULT, t)
 			enemy.set_time_scale(slow_mult)
+			enemy.set_meta("pet_ice_slow_active", true)
 		else:
 			# Restore to 1.0 if outside (only if we were slowing it)
 			if enemy.get_meta("pet_ice_slow_active", false):
 				enemy.set_time_scale(1.0)
 				enemy.set_meta("pet_ice_slow_active", false)
-		# Mark enemies we're actively slowing
-		if d < GameConstants.PET_ICE_AURA_RANGE:
-			enemy.set_meta("pet_ice_slow_active", true)
 
 
 # Nature Bloom: regenerate the player's HP when within range. Tick-based.
