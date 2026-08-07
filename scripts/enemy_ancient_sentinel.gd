@@ -373,7 +373,8 @@ func _spawn_pillar_drop(target_pos: Vector3) -> void:
 		pillar.get_parent().add_child(flash)
 		flash.global_position = pillar.global_position
 		var flash_tw := flash.create_tween()
-		flash_tw.tween_property(flash, "light_energy", 0.0, 0.3)
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.3) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		flash_tw.tween_callback(flash.queue_free)
 		# Camera shake
 		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):

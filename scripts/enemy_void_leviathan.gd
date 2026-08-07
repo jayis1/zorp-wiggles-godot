@@ -299,7 +299,8 @@ func _fire_void_breath() -> void:
 	get_parent().add_child(flash)
 	flash.global_position = global_position + Vector3(0, 1.5, 0)
 	var flash_tw := flash.create_tween()
-	flash_tw.tween_property(flash, "light_energy", 0.0, 0.3)
+	flash_tw.tween_property(flash, "light_energy", 0.0, 0.3) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	flash_tw.tween_callback(flash.queue_free)
 	# Audio cue — deep void breath (uses rumble for a massive boss attack)
 	AudioManager.play_sfx(AudioManager.SFX_ARENA)
@@ -454,7 +455,8 @@ func _die() -> void:
 			sl.reparent(scene_root)
 			sl.global_position = sl_global_pos
 			var fade_tw := sl.create_tween()
-			fade_tw.tween_property(sl, "light_energy", 0.0, 0.4)
+			fade_tw.tween_property(sl, "light_energy", 0.0, 0.4) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			fade_tw.tween_callback(sl.queue_free)
 	_segment_lights.clear()
 	# Free segment colliders (no tweens — direct queue_free is fine; they

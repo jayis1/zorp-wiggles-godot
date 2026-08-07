@@ -784,9 +784,12 @@ func _execute_attack_on_enemy(target: Node3D) -> void:
 	#    their lunges are too short for a trail to be visible.
 	if base_scale >= 0.8:
 		ParticleEffects.spawn_dash_trail(get_parent(), global_position, current_color)
-	# Restore scale
+	# Restore scale — ease-out cubic so the enemy settles back to base size
+	# with a decelerating curve, reading as a natural recovery from the lunge
+	# rather than a mechanical linear snap.
 	var restore_tween := create_tween()
-	restore_tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15)
+	restore_tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
 
 ## Begin mind control on this enemy
@@ -817,11 +820,16 @@ func start_mind_control() -> void:
 	mc_light.omni_range = 5.0
 	add_child(mc_light)
 	mc_light.name = "MCMindLight"
-	# Pulse the light
+	# Pulse the light — ease in/out sine for an organic, breathing glow
+	# rather than a mechanical linear brightness ramp. The sine curve gives
+	# the mind-control aura a hypnotic, "alive" feel that matches the
+	# magenta-pink hypnosis visual.
 	var light_tw := mc_light.create_tween()
 	light_tw.set_loops()
-	light_tw.tween_property(mc_light, "light_energy", 0.8, 0.5)
-	light_tw.tween_property(mc_light, "light_energy", 2.0, 0.5)
+	light_tw.tween_property(mc_light, "light_energy", 0.8, 0.5) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	light_tw.tween_property(mc_light, "light_energy", 2.0, 0.5) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 	# Alert the enemy so it starts seeking targets immediately
 	is_alerted = true
 
@@ -912,9 +920,10 @@ func _execute_attack(player: Node3D) -> void:
 			lunge_stretch_mc.tween_property(body_mesh, "scale",
 				Vector3.ONE * base_scale, 0.18) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
-		var restore_tween_mc := create_tween()
-		restore_tween_mc.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15)
-		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
+				var restore_tween_mc := create_tween()
+				restore_tween_mc.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+				get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
 		return
 	# ── Phase 19: Co-op — damage the correct player ──
 	# Check if the target is P2 (Zerp) by checking if it's in the player2 group
@@ -991,9 +1000,12 @@ func _execute_attack(player: Node3D) -> void:
 	if base_scale >= 0.8 and not player.is_in_group("enemies"):
 		ParticleEffects.spawn_dash_trail(get_parent(), global_position, current_color)
 
-	# Restore scale
+	# Restore scale — ease-out cubic so the enemy settles back to base size
+	# with a decelerating curve, reading as a natural recovery from the lunge
+	# rather than a mechanical linear snap.
 	var restore_tween := create_tween()
-	restore_tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15)
+	restore_tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 	# Cooldown before next attack
 	get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
@@ -1057,7 +1069,8 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 				alert.modulate = Color(0.9, 0.9, 0.9, 1.0)
 				alert.visible = true
 				var dodge_tween := create_tween()
-				dodge_tween.tween_property(alert, "modulate:a", 0.0, 0.4)
+				dodge_tween.tween_property(alert, "modulate:a", 0.0, 0.4) \
+					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 				dodge_tween.tween_callback(func(): alert.visible = false)
 			# ── Enhancement Pack 16: Dodge whoosh SFX ── a quick lateral
 			# air-distortion sound so the player HEARS the dodge, not just

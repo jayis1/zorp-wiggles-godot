@@ -284,7 +284,8 @@ func _die() -> void:
 		_field_light.reparent(scene_root)
 		_field_light.global_position = light_global_pos
 		var light_tw := _field_light.create_tween()
-		light_tw.tween_property(_field_light, "light_energy", 0.0, 0.3)
+		light_tw.tween_property(_field_light, "light_energy", 0.0, 0.3) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		light_tw.tween_callback(_field_light.queue_free)
 		_field_light = null
 	# Gravitic burst on death

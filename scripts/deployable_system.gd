@@ -512,7 +512,8 @@ class TurretDeploy extends Node3D:
 		get_parent().add_child(flash)
 		flash.global_position = _head.global_position + dir * 0.8
 		var flash_tw := flash.create_tween()
-		flash_tw.tween_property(flash, "light_energy", 0.0, 0.08)
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.08) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		flash_tw.tween_callback(flash.queue_free)
 		# Enhancement Pack 41: Turret fire uses a softer, distinct sound
 		AudioManager.play_sfx_volume(AudioManager.SFX_SHOOT_ENERGY, 0.5)
@@ -566,7 +567,8 @@ class TurretDeploy extends Node3D:
 		# Light flash
 		if _light:
 			var flash_tw := create_tween()
-			flash_tw.tween_property(_light, "light_energy", 0.0, 0.3)
+			flash_tw.tween_property(_light, "light_energy", 0.0, 0.3) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		# Shrink + fade
 		if _base:
 			var shrink_tw := create_tween()
@@ -698,7 +700,8 @@ class GravityFlipField extends Node3D:
 		if _field_mat:
 			var fade_tw := create_tween()
 			fade_tw.tween_property(_field_mat, "albedo_color:a", 0.0, 0.3)
-			fade_tw.tween_property(_light, "light_energy", 0.0, 0.3)
+			fade_tw.tween_property(_light, "light_energy", 0.0, 0.3) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		# Big particle burst on collapse
 		ParticleEffects.spawn_mega_explosion(get_parent(), global_position, Color(0.6, 0.4, 1.0))
 		# Camera shake
@@ -825,7 +828,8 @@ class VoidRiftCutter extends Node3D:
 			var fade_tw := create_tween()
 			fade_tw.tween_property(_rift_mat, "albedo_color:a", 0.0, 0.4)
 			fade_tw.parallel().tween_property(_rift_mat, "emission_energy_multiplier", 0.0, 0.4)
-			fade_tw.parallel().tween_property(_light, "light_energy", 0.0, 0.4)
+			fade_tw.parallel().tween_property(_light, "light_energy", 0.0, 0.4) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		# Particle burst
 		ParticleEffects.spawn_mega_explosion(get_parent(), global_position, Color(0.5, 0.2, 0.8))
 		# Camera shake

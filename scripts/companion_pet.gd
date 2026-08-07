@@ -818,7 +818,8 @@ func _pet_proj_explode(bolt: Area3D) -> void:
 	get_parent().add_child(flash)
 	flash.global_position = pos
 	var fade := flash.create_tween()
-	fade.tween_property(flash, "light_energy", 0.0, 0.2)
+	fade.tween_property(flash, "light_energy", 0.0, 0.2) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	fade.tween_callback(flash.queue_free)
 
 

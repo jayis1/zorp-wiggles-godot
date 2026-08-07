@@ -1323,7 +1323,8 @@ func _spawn_black_hole(base_dmg: int) -> void:
 		singularity.get_parent().add_child(flash)
 		flash.global_position = singularity.global_position
 		var flash_tw := flash.create_tween()
-		flash_tw.tween_property(flash, "light_energy", 0.0, 0.4)
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.4) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		flash_tw.tween_callback(flash.queue_free)
 		# Camera shake on collapse
 		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
@@ -1426,7 +1427,8 @@ func _spawn_magnet_mine_detonation(base_dmg: int) -> void:
 		mine_node.get_parent().add_child(flash)
 		flash.global_position = mine_node.global_position
 		var flash_tw := flash.create_tween()
-		flash_tw.tween_property(flash, "light_energy", 0.0, 0.5)
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.5) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		flash_tw.tween_callback(flash.queue_free)
 		# Camera shake
 		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
@@ -1539,7 +1541,8 @@ func _spawn_black_hole_launcher_collapse(base_dmg: int) -> void:
 		singularity.get_parent().add_child(flash)
 		flash.global_position = singularity.global_position
 		var flash_tw := flash.create_tween()
-		flash_tw.tween_property(flash, "light_energy", 0.0, 0.5)
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.5) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		flash_tw.tween_callback(flash.queue_free)
 		# Camera shake on collapse
 		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
@@ -1582,7 +1585,8 @@ func _freeze_enemy_time(enemy: Node3D) -> void:
 	get_parent().add_child(ice_light)
 	ice_light.global_position = enemy.global_position + Vector3(0, 1.0, 0)
 	var light_tw := ice_light.create_tween()
-	light_tw.tween_property(ice_light, "light_energy", 0.0, 0.5)
+	light_tw.tween_property(ice_light, "light_energy", 0.0, 0.5) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	light_tw.tween_callback(ice_light.queue_free)
 
 ## Phase 24: Shrink Beam — shrink the enemy for 5 seconds. While shrunk the
@@ -1775,7 +1779,8 @@ func _call_meteor_strike(base_dmg: int) -> void:
 		meteor.get_parent().add_child(flash)
 		flash.global_position = meteor.global_position
 		var flash_tw := flash.create_tween()
-		flash_tw.tween_property(flash, "light_energy", 0.0, 0.5)
+		flash_tw.tween_property(flash, "light_energy", 0.0, 0.5) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		flash_tw.tween_callback(flash.queue_free)
 		# Camera shake
 		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
@@ -1857,7 +1862,8 @@ func _spawn_poison_nova(base_dmg: int) -> void:
 	expand_tw.tween_callback(ring.queue_free)
 	# Fade the light
 	var light_tw := nova_light.create_tween()
-	light_tw.tween_property(nova_light, "light_energy", 0.0, expand_duration + 0.2)
+	light_tw.tween_property(nova_light, "light_energy", 0.0, expand_duration + 0.2) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	light_tw.tween_callback(nova_light.queue_free)
 	# Spawn the lingering poison cloud at the impact point
 	_spawn_poison_nova_cloud(nova_pos, base_dmg)
@@ -1952,7 +1958,8 @@ func _mind_control_enemy(enemy: Node3D) -> void:
 	get_parent().add_child(mc_light)
 	mc_light.global_position = enemy.global_position + Vector3(0, 1.5, 0)
 	var light_tw := mc_light.create_tween()
-	light_tw.tween_property(mc_light, "light_energy", 0.0, 0.6)
+	light_tw.tween_property(mc_light, "light_energy", 0.0, 0.6) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	light_tw.tween_callback(mc_light.queue_free)
 	# Swirling particle burst
 	ParticleEffects.spawn_explosion(get_parent(), enemy.global_position,
