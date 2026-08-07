@@ -166,7 +166,7 @@ func _explode() -> void:
 		add_child(boom_light)
 		var fade_tween := create_tween()
 		fade_tween.tween_property(boom_light, "light_energy", 0.0, 0.2) \
-			.set_ease(Tween.EASE_OUT) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 			.set_trans(Tween.TRANS_QUAD)
 		fade_tween.chain().tween_callback(boom_light.queue_free)
 	var boom_tween := create_tween()

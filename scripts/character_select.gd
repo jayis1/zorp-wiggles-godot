@@ -88,9 +88,9 @@ func show_screen() -> void:
 		btn.scale = Vector2(0.85, 0.85)
 	var tw := create_tween()
 	tw.tween_interval(0.15)
-	tw.tween_property(_back_btn, "modulate:a", 1.0, 0.25).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_back_btn, "modulate:a", 1.0, 0.25).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tw.parallel().tween_property(_back_btn, "scale", Vector2.ONE, 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	tw.parallel().tween_property(_confirm_btn, "modulate:a", 1.0, 0.25).set_ease(Tween.EASE_OUT).set_delay(0.08)
+	tw.parallel().tween_property(_confirm_btn, "modulate:a", 1.0, 0.25).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD).set_delay(0.08)
 	tw.parallel().tween_property(_confirm_btn, "scale", Vector2.ONE, 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK).set_delay(0.08)
 	queue_redraw()
 

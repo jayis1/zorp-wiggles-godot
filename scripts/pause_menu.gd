@@ -172,7 +172,7 @@ func _animate_pause_in() -> void:
 	_panel.modulate.a = 0.0
 	var panel_tween := create_tween()
 	panel_tween.tween_property(_panel, "modulate:a", 1.0, 0.15) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	panel_tween.parallel().tween_property(_panel, "scale", Vector2.ONE, 0.3) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	# Title fades in slightly after the panel
@@ -180,7 +180,7 @@ func _animate_pause_in() -> void:
 	var title_tween := create_tween()
 	title_tween.tween_interval(0.08)
 	title_tween.tween_property(_title, "modulate:a", 1.0, 0.2) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Buttons slide up from below with staggered delays
 	var buttons: Array[Button] = [_resume_btn, _settings_btn, _quit_btn]
 	for i in range(buttons.size()):
@@ -191,7 +191,7 @@ func _animate_pause_in() -> void:
 		var btn_tween := create_tween()
 		btn_tween.tween_interval(0.1 + i * 0.06)
 		btn_tween.tween_property(btn, "modulate:a", 1.0, 0.15) \
-			.set_ease(Tween.EASE_OUT)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		btn_tween.parallel().tween_property(btn, "offset_top", orig_y, 0.25) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
@@ -257,7 +257,7 @@ func _on_resume() -> void:
 	if _panel:
 		var panel_out := create_tween()
 		panel_out.tween_property(_panel, "modulate:a", 0.0, 0.15) \
-			.set_ease(Tween.EASE_IN)
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		panel_out.parallel().tween_property(_panel, "scale", Vector2(0.9, 0.9), 0.15) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 		panel_out.tween_callback(func():

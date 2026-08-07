@@ -365,11 +365,11 @@ func _on_biome_changed_ripple(biome_id: int) -> void:
 	var beam_tween := beam.create_tween()
 	beam_tween.set_parallel(true)
 	beam_tween.tween_property(beam_mat, "albedo_color:a", 0.25, 0.15) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	beam_tween.tween_property(beam_mat, "emission_energy_multiplier", 1.2, 0.15) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	beam_tween.chain().tween_property(beam_mat, "albedo_color:a", 0.0, 0.45) \
-		.set_ease(Tween.EASE_IN)
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	beam_tween.chain().tween_callback(beam.queue_free)
 
 func _on_player_damaged_pet_emote(_source_pos: Vector3) -> void:
@@ -962,11 +962,11 @@ func _play_landing_effect() -> void:
 		var squash_y: float = lerpf(0.4, 0.15, fall_t)  # Flatter on big falls
 		land_tween.tween_property(mesh, "scale",
 			Vector3(squash_xz, squash_y, squash_xz), 0.08) \
-			.set_ease(Tween.EASE_OUT) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 			.set_trans(Tween.TRANS_CUBIC)
 		# Bounce back to normal with elastic overshoot for a juicy recovery
 		land_tween.tween_property(mesh, "scale", Vector3.ONE, 0.22) \
-			.set_ease(Tween.EASE_OUT) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 			.set_trans(Tween.TRANS_ELASTIC)
 	# Dust puff at Zorp's feet — uses the death poof with a neutral dust color
 	# Scale the poof size with fall intensity for heavier landings
@@ -1290,9 +1290,9 @@ func _handle_movement(delta: float) -> void:
 				_player_material.emission = Color(0.2, 0.4, 0.8)
 				_player_material.emission_energy_multiplier = 2.5
 				tint_tween.tween_property(_player_material, "emission", orig_emission, 0.4) \
-					.set_ease(Tween.EASE_OUT)
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 				tint_tween.parallel().tween_property(_player_material, "emission_energy_multiplier",
-					orig_energy, 0.4).set_ease(Tween.EASE_OUT)
+					orig_energy, 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		elif not in_field_now and _in_time_warden_field:
 			_in_time_warden_field = false
 			AudioManager.play_sfx_pitched(AudioManager.SFX_TIME_SLOW_ENTER, 1.3)
@@ -1487,10 +1487,10 @@ func _start_dash() -> void:
 	if mesh:
 		var squash_tween := create_tween()
 		squash_tween.tween_property(mesh, "scale", Vector3(1.4, 0.6, 1.4), 0.08) \
-			.set_ease(Tween.EASE_OUT) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 			.set_trans(Tween.TRANS_CUBIC)
 		squash_tween.tween_property(mesh, "scale", Vector3.ONE, 0.18) \
-			.set_ease(Tween.EASE_OUT) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 			.set_trans(Tween.TRANS_ELASTIC)
 
 	# ── Phase 8: Physics dash — enemies caught in dash path get knocked back
@@ -1708,7 +1708,7 @@ func _spawn_dash_afterimage() -> void:
 	# Slightly scale up as it fades (energy dispersing)
 	fade_tween.tween_property(ghost, "scale",
 		ghost.scale * 1.3, lifetime
-	).set_ease(Tween.EASE_OUT)
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Free after fade completes
 	fade_tween.chain().tween_callback(ghost.queue_free)
 

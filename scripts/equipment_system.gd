@@ -207,8 +207,8 @@ func _spawn_consumable_juice(type: int) -> void:
 	parent.add_child(light)
 	light.global_position = pos + Vector3(0, 1.0, 0)
 	var light_tween := parent.create_tween()
-	light_tween.tween_property(light, "light_energy", 0.0, 0.3).set_ease(Tween.EASE_OUT)
-	light_tween.parallel().tween_property(light, "omni_range", 1.0, 0.3).set_ease(Tween.EASE_IN)
+	light_tween.tween_property(light, "light_energy", 0.0, 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	light_tween.parallel().tween_property(light, "omni_range", 1.0, 0.3).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	light_tween.tween_callback(light.queue_free)
 	# Mesh scale pop — 1.2× bounce on the player's body mesh (if accessible)
 	var mesh: Node3D = player.get("mesh") if "mesh" in player else null
@@ -614,7 +614,7 @@ func _spawn_refinement_juice(rare_id: int) -> void:
 	light.omni_attenuation = 1.2
 	parent.add_child(light)
 	var tween := create_tween()
-	tween.tween_property(light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT)
+	tween.tween_property(light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tween.tween_callback(light.queue_free)
 	# Small camera trauma — refinement is a minor event
 	var cam_rig: Node3D = GameManager.camera_rig

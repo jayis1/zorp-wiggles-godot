@@ -157,7 +157,7 @@ func _shoot_dark_projectile(player: Node3D) -> void:
 	if _mesh:
 		var pulse_tween := create_tween()
 		pulse_tween.tween_property(_mesh, "scale", Vector3.ONE * 1.15, 0.06) \
-			.set_ease(Tween.EASE_OUT)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		pulse_tween.tween_property(_mesh, "scale", Vector3.ONE, 0.1) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	# Enhancement Pack 19: Shoot SFX — the shadow clone's dark projectile
@@ -181,13 +181,13 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		_mat.emission_energy_multiplier = 2.0
 		var tween := create_tween()
 		tween.tween_property(_mat, "emission_energy_multiplier", 0.5, 0.2) \
-			.set_ease(Tween.EASE_OUT)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Enhancement Pack 19: Hit squash — quick body mesh scale pop matching
 	# the enemy_base.gd hit squash for combat feedback parity.
 	if _mesh:
 		var squash_tween := _mesh.create_tween()
 		squash_tween.tween_property(_mesh, "scale", Vector3.ONE * 1.25, 0.04) \
-			.set_ease(Tween.EASE_OUT)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		squash_tween.tween_property(_mesh, "scale", Vector3.ONE, 0.12) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 

@@ -221,7 +221,7 @@ func _animate_entrance() -> void:
 	title_label.modulate.a = 0.0
 	var title_tween := create_tween()
 	title_tween.tween_property(title_label, "modulate:a", 1.0, 0.4) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	title_tween.parallel().tween_property(title_label, "scale", Vector2.ONE, 0.5) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	# Subtitle: fade in after title
@@ -229,7 +229,7 @@ func _animate_entrance() -> void:
 	var sub_tween := create_tween()
 	sub_tween.tween_interval(0.2)
 	sub_tween.tween_property(subtitle_label, "modulate:a", 1.0, 0.3) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Buttons: slide up from below with staggered delay
 	# ── Phase 25: Include the Mode Select button in the stagger animation ──
 	# ── Phase 30: Include the Character Select button too ──
@@ -254,7 +254,7 @@ func _animate_entrance() -> void:
 		var btn_tween := create_tween()
 		btn_tween.tween_interval(0.3 + i * 0.08)
 		btn_tween.tween_property(btn, "modulate:a", 1.0, 0.25) \
-			.set_ease(Tween.EASE_OUT)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		btn_tween.parallel().tween_property(btn, "offset_top", orig_y, 0.35) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	# Controls label: fade in last
@@ -262,7 +262,7 @@ func _animate_entrance() -> void:
 	var ctrl_tween := create_tween()
 	ctrl_tween.tween_interval(0.7)
 	ctrl_tween.tween_property(controls_label, "modulate:a", 1.0, 0.4) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 ## Hover effect: buttons grow slightly and brighten on hover, shrink on exit.
 ## Uses a kill-and-recreate tween pattern to avoid jitter from overlapping tweens.

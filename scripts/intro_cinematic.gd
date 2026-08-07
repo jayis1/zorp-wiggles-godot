@@ -188,7 +188,7 @@ func _enter_impact() -> void:
 	var pm2: Variant = _player.get("mesh")
 	if pm2 and is_instance_valid(pm2):
 		var tw := create_tween()
-		tw.tween_property(pm2, "scale", Vector3(1.5, 0.4, 1.5), 0.08).set_ease(Tween.EASE_OUT)
+		tw.tween_property(pm2, "scale", Vector3(1.5, 0.4, 1.5), 0.08).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		tw.tween_property(pm2, "scale", Vector3.ONE, 0.25).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	# Flash the light column
 	if is_instance_valid(_light_column):
@@ -223,7 +223,7 @@ func _enter_settle() -> void:
 	# Fade HUD in — fade the opaque overlay out so the HUD is revealed
 	if _hud and _hud_fade_rect:
 		var tw := create_tween()
-		tw.tween_property(_hud_fade_rect, "color:a", 0.0, 0.5).set_ease(Tween.EASE_OUT)
+		tw.tween_property(_hud_fade_rect, "color:a", 0.0, 0.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Unlock controls
 	_controls_unlocked = true
 	if is_instance_valid(_player) and _player.has_meta("cinematic_active"):
@@ -231,10 +231,10 @@ func _enter_settle() -> void:
 	# Fade out the light column + dust ring
 	if _light_column and is_instance_valid(_light_column):
 		var tw2 := create_tween()
-		tw2.tween_property(_light_column, "light_energy", 0.0, 0.5).set_ease(Tween.EASE_OUT)
+		tw2.tween_property(_light_column, "light_energy", 0.0, 0.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	if _dust_ring and is_instance_valid(_dust_ring):
 		var tw3 := create_tween()
-		tw3.tween_property(_dust_ring, "scale", _dust_ring.scale * 1.5, 0.5).set_ease(Tween.EASE_OUT)
+		tw3.tween_property(_dust_ring, "scale", _dust_ring.scale * 1.5, 0.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		tw3.tween_callback(_dust_ring.queue_free)
 
 

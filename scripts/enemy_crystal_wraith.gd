@@ -171,7 +171,7 @@ func _spawn_shard(parent_node: Node) -> void:
 		if is_instance_valid(shard_mat):
 			var fade_tween := shard_ref.create_tween()
 			fade_tween.tween_property(shard_mat, "albedo_color:a", 0.0, 0.2) \
-				.set_ease(Tween.EASE_IN)
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 			fade_tween.tween_callback(shard_ref.queue_free)
 		else:
 			shard_ref.queue_free()

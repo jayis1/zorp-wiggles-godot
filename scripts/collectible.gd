@@ -682,7 +682,7 @@ func _collect() -> void:
 			var flash_tween := create_tween()
 			flash_tween.tween_property(_mat, "albedo_color",
 				TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])["color"],
-				0.3).set_ease(Tween.EASE_OUT)
+				0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		# Small knockback away from player
 		var player: Node3D = _cached_player
 		if damage_target_is_p2 and CoOpManager.p2_node:
@@ -693,7 +693,7 @@ func _collect() -> void:
 			var knockback_tween := create_tween()
 			knockback_tween.tween_property(self, "global_position",
 				global_position + away_dir * 2.0, 0.2) \
-				.set_ease(Tween.EASE_OUT)
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		return
 
 	is_popping = true
@@ -866,14 +866,14 @@ func _collect() -> void:
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Phase 2: pop scale up + shrink to zero
 	tween.tween_property(self, "scale", Vector3.ONE * 1.5, 0.1) \
-		.set_ease(Tween.EASE_OUT) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 		.set_trans(Tween.TRANS_BACK)
 	tween.chain().tween_property(self, "scale", Vector3.ZERO, 0.18) \
-		.set_ease(Tween.EASE_IN) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD) \
 		.set_trans(Tween.TRANS_CUBIC)
 	# Rise slightly during shrink for a "lift" feel
 	tween.parallel().tween_property(self, "global_position:y", global_position.y + 0.8, 0.25) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# ── Fast mesh spin during pickup ── The idle spin stops when is_popping
 	#    is true (the _physics_process early-returns on is_popping), so the
 	#    mesh has no rotation during the pickup animation. Adding a rapid

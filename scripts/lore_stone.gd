@@ -146,7 +146,7 @@ func _read_lore() -> void:
 	tween.chain().tween_property(self, "scale", Vector3.ZERO, 0.4) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	tween.parallel().tween_property(self, "global_position:y", global_position.y + 1.5, 0.5) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tween.tween_callback(queue_free)
 	# Emit signal for any listeners (future achievement/stat tracking).
 	lore_read.emit(self, fragment_index, text)

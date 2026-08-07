@@ -1161,7 +1161,7 @@ func _on_combo_changed(count: int) -> void:
 			break_tween.tween_property(combo_text, "scale", Vector2.ONE * 0.7, 0.18) \
 				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 			break_tween.parallel().tween_property(combo_text, "modulate:a", 0.0, 0.18) \
-				.set_ease(Tween.EASE_IN)
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 			break_tween.tween_callback(func():
 				combo_text.visible = false
 				combo_text.scale = Vector2.ONE

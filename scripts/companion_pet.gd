@@ -663,7 +663,7 @@ func _update_attack(delta: float) -> void:
 		if _mesh:
 			var pop := create_tween()
 			pop.tween_property(_mesh, "scale", Vector3.ONE * cfg["scale"] * 1.4, 0.1) \
-				.set_ease(Tween.EASE_OUT)
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			pop.tween_property(_mesh, "scale", Vector3.ONE * cfg["scale"], 0.15) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 		# Small sparkle

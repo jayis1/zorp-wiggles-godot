@@ -206,7 +206,7 @@ func _ready() -> void:
 	scale = Vector3.ONE * 0.3
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.5) \
-		.set_ease(Tween.EASE_OUT) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 		.set_trans(Tween.TRANS_BACK)
 
 	# ── Spawn emission discharge ── A brief emission energy spike at spawn
@@ -1179,7 +1179,7 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 			Color(current_color.r, current_color.g, current_color.b, _spawn_target_alpha), 0.15)
 		flash_tween.tween_property(_material, "emission_energy_multiplier",
 			_prev_emission_energy, 0.15) \
-			.set_ease(Tween.EASE_OUT) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 			.set_trans(Tween.TRANS_QUAD)
 
 	# Alert on hit
@@ -1478,7 +1478,7 @@ func _die() -> void:
 		if death_light:
 			var light_tween := death_light.create_tween()
 			light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
-				.set_ease(Tween.EASE_OUT) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 				.set_trans(Tween.TRANS_QUAD)
 	else:
 		# Fallback: create a standalone light (non-pooled path)
@@ -1491,7 +1491,7 @@ func _die() -> void:
 		death_light.global_position = global_position + Vector3(0, 0.5, 0)
 		var light_tween := death_light.create_tween()
 		light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
-			.set_ease(Tween.EASE_OUT) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 			.set_trans(Tween.TRANS_QUAD)
 		light_tween.tween_callback(death_light.queue_free)
 
@@ -1622,7 +1622,7 @@ func _spawn_physics_corpse() -> void:
 			if is_instance_valid(corpse):
 				var fade_tween := corpse.create_tween()
 				fade_tween.tween_property(corpse_mat, "albedo_color:a", 0.0, 1.0) \
-					.set_ease(Tween.EASE_IN)
+					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 				fade_tween.tween_callback(corpse.queue_free)
 		)
 		# Safety free after 4s in case fade tween fails
@@ -2087,7 +2087,7 @@ func _drop_rare_material() -> void:
 	get_parent().add_child(_rm_light)
 	_rm_light.global_position = global_position + Vector3(0, 1.0, 0)
 	var _rm_light_tween := _rm_light.create_tween()
-	_rm_light_tween.tween_property(_rm_light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT)
+	_rm_light_tween.tween_property(_rm_light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_rm_light_tween.tween_callback(_rm_light.queue_free)
 	# Statistics tracking
 	if Statistics and Statistics.has_method("record_rare_material_drop"):

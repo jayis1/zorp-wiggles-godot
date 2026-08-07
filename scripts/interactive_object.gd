@@ -177,7 +177,7 @@ func _apply_state_visual() -> void:
 			var target_alpha: float = 0.0 if _is_active else 1.0
 			var tween := create_tween()
 			tween.tween_property(_material, "albedo_color:a", target_alpha, 0.5) \
-				.set_ease(Tween.EASE_IN_OUT)
+				.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 			tween.parallel().tween_property(_material, "emission_energy_multiplier",
 				0.0 if _is_active else 0.8, 0.5) \
 				.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)

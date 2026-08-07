@@ -133,7 +133,7 @@ func _activate() -> void:
 			_hazard_mesh.scale = Vector3(0.1, 0.1, 0.1)
 			var pop_tween := _hazard_mesh.create_tween()
 			pop_tween.tween_property(_hazard_mesh, "scale", Vector3.ONE, 0.15) \
-				.set_ease(Tween.EASE_OUT) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 				.set_trans(Tween.TRANS_BACK)
 
 	# Activate damage area

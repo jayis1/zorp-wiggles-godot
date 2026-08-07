@@ -175,9 +175,9 @@ func _show_card(boss_name: String, subtitle: String) -> void:
 	_card_tween.tween_property(_card_container, "position:x", center_x, SLIDE_IN_DURATION) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	_card_tween.tween_property(_card_container, "modulate:a", 1.0, SLIDE_IN_DURATION * 0.7) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_card_tween.tween_property(_backdrop, "color:a", 0.35, SLIDE_IN_DURATION) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Phase 2: Hold (no tween — just a delay via the timer)
 	_card_tween.chain().tween_interval(HOLD_DURATION)
 	# Phase 3: Slide out to right + fade out backdrop
@@ -185,9 +185,9 @@ func _show_card(boss_name: String, subtitle: String) -> void:
 	_card_tween.tween_property(_card_container, "position:x", screen_w + 50, SLIDE_OUT_DURATION) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	_card_tween.tween_property(_card_container, "modulate:a", 0.0, SLIDE_OUT_DURATION * 0.8) \
-		.set_ease(Tween.EASE_IN)
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_card_tween.tween_property(_backdrop, "color:a", 0.0, SLIDE_OUT_DURATION) \
-		.set_ease(Tween.EASE_IN)
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 func _hide_card() -> void:
 	_active = false

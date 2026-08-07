@@ -254,7 +254,7 @@ func _die() -> void:
 		_field_mesh.global_position = mesh_global_pos
 		var fade_tween := _field_mesh.create_tween()
 		fade_tween.tween_property(_field_material, "albedo_color:a", 0.0, 0.3) \
-			.set_ease(Tween.EASE_OUT)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		fade_tween.tween_callback(_field_mesh.queue_free)
 		_field_mesh = null
 	if _field_light:
@@ -263,7 +263,7 @@ func _die() -> void:
 		_field_light.global_position = light_global_pos
 		var light_tween := _field_light.create_tween()
 		light_tween.tween_property(_field_light, "light_energy", 0.0, 0.3) \
-			.set_ease(Tween.EASE_OUT)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		light_tween.tween_callback(_field_light.queue_free)
 		_field_light = null
 	# Temporal burst on death — extra particles for the time theme

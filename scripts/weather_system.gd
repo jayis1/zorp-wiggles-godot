@@ -965,7 +965,7 @@ func _fade_weather_light_node(light: OmniLight3D) -> void:
 		return
 	var tw := light.create_tween()
 	tw.tween_property(light, "light_energy", 0.0, 0.4) \
-		.set_ease(Tween.EASE_OUT) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 		.set_trans(Tween.TRANS_QUAD)
 	tw.chain().tween_callback(light.queue_free)
 
@@ -1127,7 +1127,7 @@ func _end_weather_effects(weather: int) -> void:
 			# just the alpha channel via sub-property path access.
 			var fade_tween := _old_particles.create_tween()
 			fade_tween.tween_property(pmat, "color:a", 0.0, 0.8) \
-				.set_ease(Tween.EASE_OUT) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 				.set_trans(Tween.TRANS_CUBIC)
 			fade_tween.chain().tween_callback(_old_particles.queue_free)
 		else:
@@ -1139,7 +1139,7 @@ func _end_weather_effects(weather: int) -> void:
 		_solar_light = null
 		var light_tween := _old_solar.create_tween()
 		light_tween.tween_property(_old_solar, "light_energy", 0.0, 0.6) \
-			.set_ease(Tween.EASE_OUT) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 			.set_trans(Tween.TRANS_QUAD)
 		light_tween.chain().tween_callback(_old_solar.queue_free)
 	# Reset fog

@@ -267,8 +267,8 @@ func _spawn_buff_activation_effect(color: Color) -> void:
 	add_child(light)
 	light.global_position = global_position + Vector3(0, 4, 0)
 	var light_tween := create_tween()
-	light_tween.tween_property(light, "light_energy", 0.0, 1.0).set_ease(Tween.EASE_OUT)
-	light_tween.parallel().tween_property(light, "omni_range", 2.0, 1.0).set_ease(Tween.EASE_IN)
+	light_tween.tween_property(light, "light_energy", 0.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	light_tween.parallel().tween_property(light, "omni_range", 2.0, 1.0).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	light_tween.tween_callback(light.queue_free)
 
 # ─── Mesh helpers ────────────────────────────────────────────────────────────

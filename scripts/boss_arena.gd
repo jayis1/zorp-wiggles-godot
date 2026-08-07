@@ -362,7 +362,7 @@ func _shrink_arena() -> void:
 		# Scale X/Z to shrink the radius, keep Y (thickness) unchanged.
 		floor_tween.tween_property(_floor_disc, "scale",
 			Vector3(new_radius / _current_radius, 1.0, new_radius / _current_radius), 1.5) \
-			.set_ease(Tween.EASE_IN_OUT)
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 
 	_current_radius = new_radius
 	arena_shrunk.emit(new_radius)
@@ -422,7 +422,7 @@ func _start_lowering() -> void:
 	if _floor_disc and _floor_mat:
 		var fade_tween := _floor_disc.create_tween()
 		fade_tween.tween_property(_floor_mat, "albedo_color:a", 0.0,
-			GameConstants.ARENA_RISE_DURATION).set_ease(Tween.EASE_IN)
+			GameConstants.ARENA_RISE_DURATION).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 	# Spawn exit portal
 	_spawn_exit_portal()

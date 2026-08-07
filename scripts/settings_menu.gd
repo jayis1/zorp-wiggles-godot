@@ -301,22 +301,22 @@ func show_menu() -> void:
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Panel scale-in with overshoot (parallel to bg)
 	_entrance_tween.parallel().tween_property(_panel, "modulate:a", 1.0, 0.12) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.parallel().tween_property(_panel, "scale", Vector2.ONE, 0.25) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	# Title + controls fade in after panel
 	_entrance_tween.tween_property(_title, "modulate:a", 1.0, 0.15) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.parallel().tween_property(_controls_label, "modulate:a", 1.0, 0.2) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Accessibility controls fade in alongside controls
 	for ctrl in [_acc_label, _filter_label, _filter_btn, _cb_label, _cb_btn, _scale_label, _scale_slider]:
 		if ctrl:
 			_entrance_tween.parallel().tween_property(ctrl, "modulate:a", 1.0, 0.2) \
-				.set_ease(Tween.EASE_OUT)
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Back button fades in last
 	_entrance_tween.tween_property(_back_btn, "modulate:a", 1.0, 0.15) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 
 func _on_master_changed(value: float) -> void:
@@ -463,20 +463,20 @@ func _on_back() -> void:
 	_entrance_tween.tween_property(_bg, "modulate:a", 0.0, 0.15) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.parallel().tween_property(_panel, "modulate:a", 0.0, 0.15) \
-		.set_ease(Tween.EASE_IN)
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.parallel().tween_property(_panel, "scale", Vector2(0.9, 0.9), 0.15) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	_entrance_tween.parallel().tween_property(_title, "modulate:a", 0.0, 0.12) \
-		.set_ease(Tween.EASE_IN)
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.parallel().tween_property(_controls_label, "modulate:a", 0.0, 0.12) \
-		.set_ease(Tween.EASE_IN)
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.parallel().tween_property(_back_btn, "modulate:a", 0.0, 0.12) \
-		.set_ease(Tween.EASE_IN)
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	# Fade out accessibility controls
 	for ctrl in [_acc_label, _filter_label, _filter_btn, _cb_label, _cb_btn, _scale_label, _scale_slider]:
 		if ctrl:
 			_entrance_tween.parallel().tween_property(ctrl, "modulate:a", 0.0, 0.12) \
-				.set_ease(Tween.EASE_IN)
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.tween_callback(func():
 		visible = false
 		_animating_out = false

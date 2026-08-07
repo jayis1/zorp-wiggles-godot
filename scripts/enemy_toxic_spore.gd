@@ -120,9 +120,9 @@ func _spawn_poison_cloud() -> void:
 		var pulse_tween := cloud.create_tween()
 		pulse_tween.set_loops()
 		pulse_tween.tween_property(cloud_mat, "emission_energy_multiplier", 0.7, 0.8) \
-			.set_ease(Tween.EASE_IN_OUT)
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 		pulse_tween.tween_property(cloud_mat, "emission_energy_multiplier", 1.2, 0.8) \
-			.set_ease(Tween.EASE_IN_OUT)
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 		# Pass the tween to the cloud script so it can be killed when the cloud
 		# expires. We must NOT connect to a method on self (the spore) — the
 		# spore is freed ~0.1s after _die(), so the Callable would be invalid by

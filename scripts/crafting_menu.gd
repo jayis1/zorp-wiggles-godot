@@ -297,7 +297,7 @@ func _on_menu_toggled(is_open: bool) -> void:
 			_bg_panel.scale = Vector2(0.92, 0.92)
 			var tween := create_tween()
 			tween.tween_property(_bg_panel, "modulate:a", 1.0, 0.18) \
-				.set_ease(Tween.EASE_OUT)
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			tween.parallel().tween_property(_bg_panel, "scale", Vector2.ONE, 0.28) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	# Pause game when menu is open (but not if player is dead)

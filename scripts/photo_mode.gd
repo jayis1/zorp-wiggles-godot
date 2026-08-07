@@ -293,7 +293,7 @@ func _flash_capture() -> void:
 	else:
 		get_tree().root.add_child(flash)
 	var t: Tween = flash.create_tween()
-	t.tween_property(flash, "color:a", 0.0, 0.2).set_ease(Tween.EASE_OUT)
+	t.tween_property(flash, "color:a", 0.0, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	t.tween_callback(flash.queue_free)
 
 

@@ -210,7 +210,7 @@ func _catch() -> void:
 	tween.chain().tween_property(self, "scale", Vector3.ZERO, 0.25) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	tween.parallel().tween_property(self, "global_position:y", global_position.y + 0.8, 0.3) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tween.tween_callback(queue_free)
 	caught.emit(self, species_name)
 

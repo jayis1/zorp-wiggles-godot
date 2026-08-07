@@ -77,12 +77,12 @@ func _on_expire() -> void:
 		var fade_tween := create_tween()
 		fade_tween.set_parallel(true)
 		fade_tween.tween_property(_cloud_mat, "albedo_color:a", 0.0, 0.5) \
-			.set_ease(Tween.EASE_IN)
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		fade_tween.tween_property(_cloud_mat, "emission_energy_multiplier", 0.0, 0.5) \
-			.set_ease(Tween.EASE_IN)
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		if _cloud_light:
 			fade_tween.tween_property(_cloud_light, "light_energy", 0.0, 0.5) \
-				.set_ease(Tween.EASE_IN)
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		fade_tween.chain().tween_callback(queue_free)
 	else:
 		queue_free()

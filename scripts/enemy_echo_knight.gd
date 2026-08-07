@@ -207,7 +207,7 @@ func _die() -> void:
 			if mat:
 				var fade_tween := cm.create_tween()
 				fade_tween.tween_property(mat, "albedo_color:a", 0.0, 0.4) \
-					.set_ease(Tween.EASE_IN)
+					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 				fade_tween.tween_callback(cm.queue_free)
 			else:
 				cm.queue_free()
@@ -220,7 +220,7 @@ func _die() -> void:
 			cl.global_position = cl_global_pos
 			var fade_tween := cl.create_tween()
 			fade_tween.tween_property(cl, "light_energy", 0.0, 0.3) \
-				.set_ease(Tween.EASE_IN)
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 			fade_tween.tween_callback(cl.queue_free)
 	_copy_lights.clear()
 	# Enhancement Pack 39: Per-copy dissolve particle burst so the player

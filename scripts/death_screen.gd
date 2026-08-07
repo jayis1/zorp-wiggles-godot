@@ -177,7 +177,7 @@ func _animate_button_in(btn: Button, delay: float) -> void:
 	var tween := create_tween()
 	tween.tween_interval(delay)
 	tween.tween_property(btn, "modulate:a", 1.0, 0.25) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tween.parallel().tween_property(btn, "scale", Vector2.ONE, 0.35) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 

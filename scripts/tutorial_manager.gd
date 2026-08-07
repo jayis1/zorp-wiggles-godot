@@ -375,7 +375,7 @@ func _display_tooltip(step: int) -> void:
 		panel.modulate.a = 0.0
 		var tween := create_tween()
 		tween.tween_property(panel, "modulate:a", 1.0, 0.25) \
-			.set_ease(Tween.EASE_OUT)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 
 func _hide_tooltip() -> void:
@@ -386,7 +386,7 @@ func _hide_tooltip() -> void:
 	if panel:
 		var tween := create_tween()
 		tween.tween_property(panel, "modulate:a", 0.0, 0.2) \
-			.set_ease(Tween.EASE_IN)
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		tween.tween_callback(func():
 			_tooltip.visible = false
 		)

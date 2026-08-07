@@ -204,18 +204,18 @@ func _process(delta: float) -> void:
 		var pop_tween := create_tween()
 		pop_tween.set_parallel(true)
 		pop_tween.tween_property(self, "scale", Vector3.ONE * 2.2, 0.12) \
-			.set_ease(Tween.EASE_OUT) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
 			.set_trans(Tween.TRANS_QUAD)
 		if _material:
 			pop_tween.tween_property(_material, "albedo_color:a", 0.0, 0.12) \
-				.set_ease(Tween.EASE_IN)
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		# Fade the ground glow out alongside the ring pop so the light
 		# doesn't snap off while the ring is still fading.
 		# Guard with is_instance_valid — the pooled light may have been
 		# reclaimed by the transient light pool if the timing is tight.
 		if _glow_light and is_instance_valid(_glow_light):
 			pop_tween.tween_property(_glow_light, "light_energy", 0.0, 0.12) \
-				.set_ease(Tween.EASE_IN)
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		pop_tween.chain().tween_callback(queue_free)
 		# Disable further processing while the pop tween runs
 		set_process(false)

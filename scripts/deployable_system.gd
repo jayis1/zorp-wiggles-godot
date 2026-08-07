@@ -89,7 +89,7 @@ func absorb_damage(amount: int) -> int:
 				var orig_emi: float = mat.emission_energy_multiplier
 				var hit_tw := bubble.create_tween()
 				hit_tw.tween_property(mat, "emission_energy_multiplier", 5.0, 0.04)
-				hit_tw.tween_property(mat, "emission_energy_multiplier", orig_emi, 0.20).set_ease(Tween.EASE_OUT)
+				hit_tw.tween_property(mat, "emission_energy_multiplier", orig_emi, 0.20).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 				break
 	if _shield_bubble_hp <= 0:
 		_break_shield_bubble()
@@ -193,8 +193,8 @@ func _activate_shield_bubble(player: Node3D) -> bool:
 	_active_deployables[GameConstants.WeaponMod.SHIELD_BUBBLE] = bubble
 	# Pulsing animation
 	var pulse_tw := bubble.create_tween().set_loops()
-	pulse_tw.tween_property(mat, "emission_energy_multiplier", 2.5, 0.5).set_ease(Tween.EASE_IN_OUT)
-	pulse_tw.tween_property(mat, "emission_energy_multiplier", 1.0, 0.5).set_ease(Tween.EASE_IN_OUT)
+	pulse_tw.tween_property(mat, "emission_energy_multiplier", 2.5, 0.5).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+	pulse_tw.tween_property(mat, "emission_energy_multiplier", 1.0, 0.5).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 	# Auto-expire after duration
 	var tree := get_tree()
 	if tree:
@@ -572,7 +572,7 @@ class TurretDeploy extends Node3D:
 		# Shrink + fade
 		if _base:
 			var shrink_tw := create_tween()
-			shrink_tw.tween_property(self, "scale", Vector3.ZERO, 0.3).set_ease(Tween.EASE_IN)
+			shrink_tw.tween_property(self, "scale", Vector3.ZERO, 0.3).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		# Schedule free (deferred so tweens can finish)
 		var tree := get_tree()
 		if tree:
@@ -627,8 +627,8 @@ class GravityFlipField extends Node3D:
 		_light.position = Vector3(0, 3.0, 0)
 		# Pulsing animation
 		var pulse_tw := create_tween().set_loops()
-		pulse_tw.tween_property(_field_mat, "emission_energy_multiplier", 2.5, 0.4).set_ease(Tween.EASE_IN_OUT)
-		pulse_tw.tween_property(_field_mat, "emission_energy_multiplier", 1.0, 0.4).set_ease(Tween.EASE_IN_OUT)
+		pulse_tw.tween_property(_field_mat, "emission_energy_multiplier", 2.5, 0.4).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+		pulse_tw.tween_property(_field_mat, "emission_energy_multiplier", 1.0, 0.4).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 		# Spawn particles
 		ParticleEffects.spawn_explosion(get_parent(), global_position,
 			Color(0.6, 0.4, 1.0), 30, 0.5)
@@ -680,7 +680,7 @@ class GravityFlipField extends Node3D:
 			# Drop the enemy back down
 			var drop_tw: Tween = enemy.create_tween()
 			var target_y: float = 0.5  # ground level
-			drop_tw.tween_property(enemy, "global_position:y", target_y, 0.5).set_ease(Tween.EASE_IN)
+			drop_tw.tween_property(enemy, "global_position:y", target_y, 0.5).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 			# Apply fall damage after the drop
 			drop_tw.tween_callback(func():
 				if is_instance_valid(enemy) and enemy.is_in_group("enemies"):
@@ -762,8 +762,8 @@ class VoidRiftCutter extends Node3D:
 		_light.position = Vector3(0, 1.5, 0)
 		# Pulsing animation
 		var pulse_tw := create_tween().set_loops()
-		pulse_tw.tween_property(_rift_mat, "emission_energy_multiplier", 4.0, 0.3).set_ease(Tween.EASE_IN_OUT)
-		pulse_tw.tween_property(_rift_mat, "emission_energy_multiplier", 1.5, 0.3).set_ease(Tween.EASE_IN_OUT)
+		pulse_tw.tween_property(_rift_mat, "emission_energy_multiplier", 4.0, 0.3).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
+		pulse_tw.tween_property(_rift_mat, "emission_energy_multiplier", 1.5, 0.3).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 		# Spawn particles
 		ParticleEffects.spawn_explosion(get_parent(), global_position,
 			Color(0.5, 0.2, 0.8), 30, 0.5)

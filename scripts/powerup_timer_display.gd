@@ -109,7 +109,7 @@ func _create_buff_panel(key: String) -> void:
 	# short fade so buffs don't pop in abruptly when a monolith is activated.
 	var tween := panel.create_tween()
 	tween.tween_property(panel, "modulate:a", 1.0, 0.25) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tween.parallel().tween_property(panel, "offset_left", 0.0, 0.30) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
@@ -121,7 +121,7 @@ func _remove_buff_panel(key: String) -> void:
 		# on completion so the panel is cleaned up after the animation.
 		var tween := panel.create_tween()
 		tween.tween_property(panel, "modulate:a", 0.0, 0.20) \
-			.set_ease(Tween.EASE_IN)
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		tween.parallel().tween_property(panel, "offset_left", -30.0, 0.22) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 		tween.tween_callback(panel.queue_free)
