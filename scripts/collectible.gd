@@ -866,10 +866,10 @@ func _collect() -> void:
 	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Phase 2: pop scale up + shrink to zero
 	tween.tween_property(self, "scale", Vector3.ONE * 1.5, 0.1) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BACK)
 	tween.chain().tween_property(self, "scale", Vector3.ZERO, 0.18) \
-		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD) \
+		.set_ease(Tween.EASE_IN) \
 		.set_trans(Tween.TRANS_CUBIC)
 	# Rise slightly during shrink for a "lift" feel
 	tween.parallel().tween_property(self, "global_position:y", global_position.y + 0.8, 0.25) \

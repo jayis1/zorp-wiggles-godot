@@ -103,7 +103,7 @@ func _play() -> void:
 	# for hit sparks (e.g. Vlambeer's Nuclear Throne impacts). EASE_OUT
 	# so the overshoot happens at the end of the rise, not the start.
 	_main_tween.tween_property(self, "scale", Vector3.ONE * 2.0, 0.25) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BACK)
 	if _material:
 		_main_tween.tween_property(_material, "albedo_color:a", 0.0, 0.25) \
@@ -115,7 +115,7 @@ func _play() -> void:
 		_light_tween.kill()
 	_light_tween = _light.create_tween()
 	_light_tween.tween_property(_light, "light_energy", 0.0, 0.12) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_QUAD)
 	_main_tween.chain().tween_callback(_deactivate)
 

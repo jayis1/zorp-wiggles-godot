@@ -206,7 +206,7 @@ func _ready() -> void:
 	scale = Vector3.ONE * 0.3
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.5) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BACK)
 
 	# ── Spawn emission discharge ── A brief emission energy spike at spawn
@@ -1179,7 +1179,7 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 			Color(current_color.r, current_color.g, current_color.b, _spawn_target_alpha), 0.15)
 		flash_tween.tween_property(_material, "emission_energy_multiplier",
 			_prev_emission_energy, 0.15) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
 
 	# Alert on hit
@@ -1478,7 +1478,7 @@ func _die() -> void:
 		if death_light:
 			var light_tween := death_light.create_tween()
 			light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
-				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+				.set_ease(Tween.EASE_OUT) \
 				.set_trans(Tween.TRANS_QUAD)
 	else:
 		# Fallback: create a standalone light (non-pooled path)
@@ -1491,7 +1491,7 @@ func _die() -> void:
 		death_light.global_position = global_position + Vector3(0, 0.5, 0)
 		var light_tween := death_light.create_tween()
 		light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
 		light_tween.tween_callback(death_light.queue_free)
 

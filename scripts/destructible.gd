@@ -74,7 +74,7 @@ func take_damage_from(amount: int, _source_pos: Vector3 = Vector3.ZERO) -> void:
 		# Ease-out cubic so the color returns quickly at first then settles
 		# — reads as a sharp snap-back rather than a slow bleed.
 		_flash_tween.tween_property(_mat, "albedo_color", fragment_color, 0.12) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
 	if hp <= 0:
 		_shatter()
@@ -132,7 +132,7 @@ func _shatter() -> void:
 		if shatter_light:
 			var light_tween := shatter_light.create_tween()
 			light_tween.tween_property(shatter_light, "light_energy", 0.0, 0.18) \
-				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+				.set_ease(Tween.EASE_OUT) \
 				.set_trans(Tween.TRANS_QUAD)
 	else:
 		var shatter_light := OmniLight3D.new()
@@ -147,7 +147,7 @@ func _shatter() -> void:
 		# immediately, leaving the light stuck at full intensity (leak + visual bug).
 		var light_tween := shatter_light.create_tween()
 		light_tween.tween_property(shatter_light, "light_energy", 0.0, 0.18) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
 		light_tween.chain().tween_callback(shatter_light.queue_free)
 
@@ -240,5 +240,5 @@ func _spawn_fragment(index: int) -> void:
 	var pop_tween := frag.create_tween()
 	# TRANS_BACK gives a ~10% overshoot for a punchy "snap" exit
 	pop_tween.tween_property(mesh_inst, "scale", Vector3.ONE, 0.18) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BACK)

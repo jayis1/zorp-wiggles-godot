@@ -962,11 +962,11 @@ func _play_landing_effect() -> void:
 		var squash_y: float = lerpf(0.4, 0.15, fall_t)  # Flatter on big falls
 		land_tween.tween_property(mesh, "scale",
 			Vector3(squash_xz, squash_y, squash_xz), 0.08) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_CUBIC)
 		# Bounce back to normal with elastic overshoot for a juicy recovery
 		land_tween.tween_property(mesh, "scale", Vector3.ONE, 0.22) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_ELASTIC)
 	# Dust puff at Zorp's feet — uses the death poof with a neutral dust color
 	# Scale the poof size with fall intensity for heavier landings
@@ -1487,10 +1487,10 @@ func _start_dash() -> void:
 	if mesh:
 		var squash_tween := create_tween()
 		squash_tween.tween_property(mesh, "scale", Vector3(1.4, 0.6, 1.4), 0.08) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_CUBIC)
 		squash_tween.tween_property(mesh, "scale", Vector3.ONE, 0.18) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_ELASTIC)
 
 	# ── Phase 8: Physics dash — enemies caught in dash path get knocked back

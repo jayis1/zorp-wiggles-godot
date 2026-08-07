@@ -204,7 +204,7 @@ func _process(delta: float) -> void:
 		var pop_tween := create_tween()
 		pop_tween.set_parallel(true)
 		pop_tween.tween_property(self, "scale", Vector3.ONE * 2.2, 0.12) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
 		if _material:
 			pop_tween.tween_property(_material, "albedo_color:a", 0.0, 0.12) \

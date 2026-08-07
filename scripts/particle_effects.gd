@@ -189,7 +189,7 @@ static func spawn_levelup_burst(parent: Node, pos: Vector3) -> void:
 	var ring_tween := ring.create_tween()
 	# Scale X and Z (the radius in the XZ plane), keep Y (thickness) at 1
 	ring_tween.tween_property(ring, "scale", Vector3(8, 1, 8), 0.5) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_CUBIC)
 	ring_tween.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.5) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
@@ -1206,7 +1206,7 @@ static func spawn_levelup_shockwave(parent: Node, pos: Vector3) -> void:
 	gold_light.global_position = pos + Vector3(0, 1, 0)
 	var gold_light_tween := gold_light.create_tween()
 	gold_light_tween.tween_property(gold_light, "light_energy", 0.0, 0.8) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_QUAD)
 	gold_light_tween.chain().tween_callback(gold_light.queue_free)
 

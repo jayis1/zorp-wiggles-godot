@@ -474,10 +474,10 @@ func _play_landing_effect() -> void:
 	if mesh:
 		var land_tween := create_tween()
 		land_tween.tween_property(mesh, "scale", Vector3(1.5, 0.4, 1.5), 0.08) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_CUBIC)
 		land_tween.tween_property(mesh, "scale", Vector3.ONE, 0.22) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_ELASTIC)
 	# Dust puff at P2's feet
 	ParticleEffects.spawn_death_poof(get_parent(), global_position + Vector3(0, 0.1, 0),
