@@ -171,6 +171,24 @@ func _ready() -> void:
 	#    narrows for danger) — this is a positive moment, so it zooms IN
 	#    (reduces FOV) to frame the celebration tighter.
 	GameManager.level_up.connect(_on_player_levelup_fov_punch)
+	# ── Heal FOV bloom ── connect to the player_healed signal so the camera
+	#    does a subtle positive FOV bloom when the player heals. This is the
+	#    feel-good counterpart to the damage FOV dip (narrow = danger) and
+	#    the level-up FOV punch (narrow = milestone): healing widens the FOV
+	#    slightly (~2°) for a brief "relief / opening up" sensation, as if
+	#    the camera takes a calming breath. The _process FOV return loop
+	#    eases it back to the default + speed baseline over ~0.5s. The
+	#    bloom is small so it doesn't hurt visibility — it's a subliminal
+	#    positive cue, not a dramatic effect.
+	GameManager.player_healed.connect(_on_player_heal_fov_bloom)
+
+# ── Heal FOV bloom ── Briefly widens the FOV by HEAL_FOV_BLOOM degrees on
+#    heal, then eases back. The _process FOV return loop handles the recovery.
+#    Widening (not narrowing) gives a "relief" read — the world opens up as
+#    HP is restored, the inverse of the damage "tunnel vision" dip.
+const HEAL_FOV_BLOOM: float = 2.0
+func _on_player_heal_fov_bloom(_amount: int) -> void:
+	camera.fov = camera.fov + HEAL_FOV_BLOOM
 
 # ── Level-up FOV punch ── Briefly reduces the FOV by LEVELUP_FOV_PUNCH
 #    degrees for a cinematic zoom-in, then eases back. The _process FOV

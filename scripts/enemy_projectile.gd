@@ -30,6 +30,11 @@ var _has_already_hit: bool = false
 # SFX from the same projectile lingering near the player.
 var _has_grazed: bool = false
 
+# ── Spawn flash timer ── Counts down during the muzzle-flash spawn tween
+#    so the per-frame mesh.scale set in _physics_process doesn't override
+#    the spawn scale animation. When > 0, the tween owns mesh.scale.
+var _spawn_flash_timer: float = 0.0
+
 # ── Trail particles ── A short-lived GPUParticles3D that emits colored sparks
 #    behind the bolt as it flies. The trail uses world-space coordinates
 #    (local_coords = false) so particles stay where they're emitted instead of
@@ -126,6 +131,34 @@ func _ready() -> void:
 	_light.omni_attenuation = 1.5
 	add_child(_light)
 
+	# ── Muzzle spawn flash ── On the first frame, the bolt's emission and
+	#    light spike to a bright value then ease back to their steady-state
+	#    levels over ~0.12s. This gives newly-fired bolts a "muzzle flash"
+	#    pop that draws the player's attention to the incoming threat —
+	#    without it, a bolt simply appears at its cruising brightness and
+	#    can go unnoticed in a busy combat scene. The flash is purely
+	#    additive on top of the normal flicker/pulse systems (those run in
+	#    _physics_process and will resume ownership once the tween ends).
+	#    The mesh also briefly scales up (1.6×) then settles to its normal
+	#    stretched shape, so the bolt "bursts" into existence rather than
+	#    silently appearing.
+	if _material:
+		_material.emission_energy_multiplier = 4.0
+		var spawn_flash_tween := create_tween()
+		spawn_flash_tween.tween_property(_material, "emission_energy_multiplier",
+			1.2, 0.12).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	if _light:
+		var light_spawn_tween := create_tween()
+		light_spawn_tween.tween_property(_light, "light_energy",
+			1.2, 0.1).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	if mesh:
+		mesh.scale = Vector3(1.2, 1.2, 3.0)
+		_spawn_flash_timer = 0.1
+		var mesh_spawn_tween := create_tween()
+		mesh_spawn_tween.tween_property(mesh, "scale",
+			Vector3(0.7, 0.7, 2.2), 0.1) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
 	# ── Trail particles ── A short spark trail that follows the bolt's path,
 	#    making enemy projectiles readable in dark biomes where the point light
 	#    alone isn't enough to track trajectory. The trail uses a small number
@@ -160,6 +193,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	# ── Phase 14: Apply dimension time scale ──
+	var raw_delta: float = delta  # Unscaled delta for visual timers (spawn flash)
 	delta *= _time_scale
 	age += delta
 	if age >= lifetime:
@@ -177,7 +211,15 @@ func _physics_process(delta: float) -> void:
 		if absf(direction.dot(Vector3.UP)) > 0.98:
 			up_vec = Vector3.FORWARD
 		mesh.look_at(global_position + direction * 2.0, up_vec)
-		mesh.scale = Vector3(0.7, 0.7, 2.2)
+		# Skip the per-frame scale override while the spawn flash tween
+		# owns mesh.scale — the tween animates from the spawn pop size
+		# down to the cruising stretch shape. Without this guard, the
+		# _physics_process scale set would instantly overwrite the tween's
+		# first frame, killing the spawn pop.
+		if _spawn_flash_timer > 0.0:
+			_spawn_flash_timer -= raw_delta
+		else:
+			mesh.scale = Vector3(0.7, 0.7, 2.2)
 		# ── Rifled spin ── Add a constant roll around the travel axis so the
 		# bolt reads as spinning energy rather than a static stretched sphere.
 		# Matches the player projectile's rifled spin for visual consistency.

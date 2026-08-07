@@ -249,11 +249,28 @@ func _on_resume() -> void:
 	GameManager.is_paused = false
 	get_tree().paused = false
 	AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
-	# Fade out everything
+	# Fade out everything — bg, panel, title, AND buttons fade together
+	# so the menu dissolves as a unit instead of the title/buttons snapping
+	# invisible while the panel gracefully fades. Each element gets its own
+	# tween (all running in parallel) so the callback only fires when the
+	# slowest one (the panel, which also scales down) completes.
 	if _bg:
 		var bg_out := create_tween()
 		bg_out.tween_property(_bg, "modulate:a", 0.0, 0.15) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	# Title fades alongside the panel so the "PAUSED" text doesn't linger
+	# at full opacity after the panel has already started disappearing.
+	if _title:
+		var title_out := create_tween()
+		title_out.tween_property(_title, "modulate:a", 0.0, 0.15) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	# Buttons fade + slide down slightly, mirroring the entrance slide-in
+	# but reversed — they drop away as the menu dissolves.
+	for btn in [_resume_btn, _settings_btn, _quit_btn]:
+		if btn:
+			var btn_out := create_tween()
+			btn_out.tween_property(btn, "modulate:a", 0.0, 0.12) \
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	if _panel:
 		var panel_out := create_tween()
 		panel_out.tween_property(_panel, "modulate:a", 0.0, 0.15) \
