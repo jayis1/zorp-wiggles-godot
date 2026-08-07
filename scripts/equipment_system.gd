@@ -215,7 +215,7 @@ func _spawn_consumable_juice(type: int) -> void:
 	if mesh and is_instance_valid(mesh):
 		var pop_tween := player.create_tween()
 		pop_tween.tween_property(mesh, "scale", Vector3(1.2, 1.2, 1.2), 0.06) \
-			.set_ease(Tween.EASE_OUT)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		pop_tween.tween_property(mesh, "scale", Vector3.ONE, 0.18) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 

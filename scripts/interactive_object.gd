@@ -179,7 +179,8 @@ func _apply_state_visual() -> void:
 			tween.tween_property(_material, "albedo_color:a", target_alpha, 0.5) \
 				.set_ease(Tween.EASE_IN_OUT)
 			tween.parallel().tween_property(_material, "emission_energy_multiplier",
-				0.0 if _is_active else 0.8, 0.5)
+				0.0 if _is_active else 0.8, 0.5) \
+				.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 			if _collision_shape:
 				_collision_shape.disabled = _is_active
 			if _light:
@@ -249,7 +250,8 @@ func interact() -> void:
 		glow_mat.emission_energy_multiplier = 4.0
 		var glow_tween := create_tween()
 		glow_tween.tween_interval(0.05)
-		glow_tween.tween_property(glow_mat, "emission_energy_multiplier", prev_e, 0.3)
+		glow_tween.tween_property(glow_mat, "emission_energy_multiplier", prev_e, 0.3) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Toggle all linked doors and hidden passages.
 	_toggle_linked()
 	toggled.emit(self, _is_active)
@@ -300,7 +302,8 @@ func take_damage(amount: int, _source_pos: Vector3 = Vector3.ZERO) -> void:
 	if _material:
 		_material.emission_energy_multiplier = 3.0
 		var t := create_tween()
-		t.tween_property(_material, "emission_energy_multiplier", 0.8, 0.2)
+		t.tween_property(_material, "emission_energy_multiplier", 0.8, 0.2) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Small dust puff on each hit — sells the wall taking damage.
 	var parent: Node = get_parent()
 	if parent and ParticleEffects:
@@ -318,7 +321,8 @@ func _destroy() -> void:
 	var tween := create_tween()
 	tween.tween_property(_body_mesh, "scale", Vector3.ZERO, 0.3) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	tween.parallel().tween_property(_material, "albedo_color:a", 0.0, 0.3)
+	tween.parallel().tween_property(_material, "albedo_color:a", 0.0, 0.3) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	if _collision_shape:
 		_collision_shape.disabled = true
 	# Particle burst.

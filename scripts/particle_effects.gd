@@ -191,7 +191,8 @@ static func spawn_levelup_burst(parent: Node, pos: Vector3) -> void:
 	ring_tween.tween_property(ring, "scale", Vector3(8, 1, 8), 0.5) \
 		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_CUBIC)
-	ring_tween.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.5)
+	ring_tween.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.5) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	ring_tween.chain().tween_callback(ring.queue_free)
 
 	# Upward sparkle particles
@@ -523,7 +524,8 @@ static func spawn_sky_beam(parent: Node, pos: Vector3, color: Color = Color(1.0,
 	# breathing — energy that exists *pulses*, it doesn't sit still.
 	var tween := beam.create_tween()
 	mat.albedo_color.a = 0.0
-	tween.tween_property(mat, "albedo_color:a", 0.6, 0.15)
+	tween.tween_property(mat, "albedo_color:a", 0.6, 0.15) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Hold phase: tween emission energy up and down a few times for the
 	# shimmer. We use a tween_method so the pulse is driven by the tween
 	# timeline (consistent regardless of frame rate), not _process.
@@ -534,7 +536,8 @@ static func spawn_sky_beam(parent: Node, pos: Vector3, color: Color = Color(1.0,
 			mat.emission_energy_multiplier = 2.0 + sin(t * TAU * 2.5) * 0.3,
 		0.0, 1.0, 0.4
 	).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(mat, "albedo_color:a", 0.0, 0.6)
+	tween.tween_property(mat, "albedo_color:a", 0.0, 0.6) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tween.tween_callback(beam.queue_free)
 
 	# Add sparkle particles at base

@@ -208,7 +208,8 @@ func start_dialogue() -> void:
 		_glow_light.light_energy = 2.0
 		var light_tween := create_tween()
 		light_tween.tween_interval(0.1)
-		light_tween.tween_property(_glow_light, "light_energy", prev_e, 0.4)
+		light_tween.tween_property(_glow_light, "light_energy", prev_e, 0.4) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Pick the dialogue topic pool.
 	var topic_key: String = archetype + ("_intro" if not _has_met else "_repeat")
 	var lines: Array = GameConstants.DIALOGUE_LINES.get(topic_key, ["..."])

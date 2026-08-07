@@ -332,7 +332,8 @@ func _start_cooldown() -> void:
 	if _hazard_light:
 		# Fade the light out.
 		var t := create_tween()
-		t.tween_property(_hazard_light, "light_energy", 0.0, 0.4)
+		t.tween_property(_hazard_light, "light_energy", 0.0, 0.4) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 func _update_cooldown(delta: float) -> void:
 	_timer -= delta
