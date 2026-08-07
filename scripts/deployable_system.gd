@@ -27,6 +27,10 @@ var _shield_bubble_hp: int = 0
 var _shield_bubble_max_hp: int = 0
 var _shield_bubble_active: bool = false
 
+# Cached player reference — avoids per-event get_first_node_in_group("player")
+# scans. Populated lazily and re-scanned only when stale (null or freed).
+var _cached_player: Node3D = null
+
 # ─── Public API ────────────────────────────────────────────────────────────────
 
 ## Returns true if a deployable of the given mod type is currently active.
@@ -72,6 +76,21 @@ func absorb_damage(amount: int) -> int:
 	var absorbed: int = min(amount, _shield_bubble_hp)
 	_shield_bubble_hp -= absorbed
 	shield_bubble_changed.emit(_shield_bubble_hp, _shield_bubble_max_hp)
+	# Enhancement Pack 41: Shield hit SFX + visual pulse on absorption
+	AudioManager.play_sfx(AudioManager.SFX_SHIELD_HIT)
+	# Visual: emission pulse on the bubble mesh when it absorbs a hit
+	var bubble: Node = _active_deployables.get(GameConstants.WeaponMod.SHIELD_BUBBLE)
+	if bubble and is_instance_valid(bubble):
+		# Find the MeshInstance3D child (the bubble visual)
+		for i in range(bubble.get_child_count()):
+			var child: Node = bubble.get_child(i)
+			if child is MeshInstance3D and child.material_override:
+				var mat: StandardMaterial3D = child.material_override
+				var orig_emi: float = mat.emission_energy_multiplier
+				var hit_tw := bubble.create_tween()
+				hit_tw.tween_property(mat, "emission_energy_multiplier", 5.0, 0.04)
+				hit_tw.tween_property(mat, "emission_energy_multiplier", orig_emi, 0.20).set_ease(Tween.EASE_OUT)
+				break
 	if _shield_bubble_hp <= 0:
 		_break_shield_bubble()
 	return amount - absorbed
@@ -114,6 +133,8 @@ func reflect_enemy_projectile(proj: Node, player_pos: Vector3) -> bool:
 	# Visual: reflection flash
 	ParticleEffects.spawn_explosion(proj.get_parent(), proj.global_position,
 		GameConstants.WEAPON_MOD_COLORS[GameConstants.WeaponMod.SHIELD_BUBBLE], 10, 0.25)
+	# Enhancement Pack 41: Reflect SFX — quick ricochet blip
+	AudioManager.play_sfx(AudioManager.SFX_SHIELD_REFLECT)
 	return true
 
 # ─── Shield Bubble ────────────────────────────────────────────────────────────
@@ -193,7 +214,7 @@ func _on_shield_bubble_body_entered(body: Node3D, bubble: Area3D) -> void:
 	if not _shield_bubble_active:
 		return
 	if body.is_in_group("enemy_projectiles"):
-		var player: Node3D = get_tree().get_first_node_in_group("player")
+		var player: Node3D = _get_player()
 		if player and is_instance_valid(player):
 			reflect_enemy_projectile(body, player.global_position)
 
@@ -205,10 +226,12 @@ func _on_shield_bubble_expired() -> void:
 func _break_shield_bubble() -> void:
 	_shield_bubble_active = false
 	_shield_bubble_hp = 0
+	# Enhancement Pack 41: Shield break SFX — shattering descending arpeggio
+	AudioManager.play_sfx(AudioManager.SFX_SHIELD_BREAK)
 	# Shatter effect
 	var bubble: Node = _active_deployables.get(GameConstants.WeaponMod.SHIELD_BUBBLE)
 	if bubble and is_instance_valid(bubble):
-		var player: Node3D = get_tree().get_first_node_in_group("player")
+		var player: Node3D = _get_player()
 		if player and is_instance_valid(player):
 			ParticleEffects.spawn_shield_break_shatter(player.get_parent(),
 				player.global_position, Color(0.3, 0.7, 1.0))
@@ -228,7 +251,8 @@ func _activate_turret_deploy(player: Node3D) -> bool:
 	player.get_parent().add_child(turret)
 	_active_deployables[GameConstants.WeaponMod.TURRET_DEPLOY] = turret
 	deployable_activated.emit(GameConstants.WeaponMod.TURRET_DEPLOY)
-	AudioManager.play_sfx(AudioManager.SFX_SHOOT)
+	# Enhancement Pack 41: Use utility deploy chime instead of generic shoot
+	AudioManager.play_sfx(AudioManager.SFX_SHOOT_UTILITY)
 	return true
 
 # ─── Gravity Flip Field ───────────────────────────────────────────────────────
@@ -258,6 +282,14 @@ func _activate_void_rift_cutter(player: Node3D) -> bool:
 	return true
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+
+## Cached player lookup — avoids get_first_node_in_group("player") scans on
+## every event. Re-scans only when the cache is stale (null or freed).
+func _get_player() -> Node3D:
+	if _cached_player and is_instance_valid(_cached_player):
+		return _cached_player
+	_cached_player = get_tree().get_first_node_in_group("player")
+	return _cached_player
 
 func _remove_deployable(mod_id: int) -> void:
 	var node: Node = _active_deployables.get(mod_id)
@@ -297,6 +329,7 @@ func _ready() -> void:
 
 func _on_game_restarted() -> void:
 	reset()
+	_cached_player = null
 
 func _on_player_died() -> void:
 	# Clean up deployables when the player dies
@@ -481,7 +514,8 @@ class TurretDeploy extends Node3D:
 		var flash_tw := flash.create_tween()
 		flash_tw.tween_property(flash, "light_energy", 0.0, 0.08)
 		flash_tw.tween_callback(flash.queue_free)
-		AudioManager.play_sfx(AudioManager.SFX_SHOOT)
+		# Enhancement Pack 41: Turret fire uses a softer, distinct sound
+		AudioManager.play_sfx_volume(AudioManager.SFX_SHOOT_ENERGY, 0.5)
 
 	func _on_bolt_hit_enemy(body: Node3D, bolt: Area3D) -> void:
 		if not bolt or not is_instance_valid(bolt):
@@ -495,6 +529,8 @@ class TurretDeploy extends Node3D:
 			DamageNumber.spawn(bolt.get_parent(), body.global_position, dmg, false, false)
 			ParticleEffects.spawn_explosion(bolt.get_parent(), bolt.global_position,
 				Color(0.7, 0.85, 0.3), 8, 0.2)
+			# Enhancement Pack 41: Turret bolt hit SFX
+			AudioManager.play_sfx_volume(AudioManager.SFX_ENEMY_HIT, 0.6)
 			bolt.queue_free()
 		elif not body.is_in_group("player") and not body.is_in_group("deployable_turret"):
 			# Hit terrain
@@ -510,9 +546,20 @@ class TurretDeploy extends Node3D:
 			var tw := create_tween()
 			tw.tween_property(_material, "emission_energy_multiplier", 1.0, 0.15)
 		if _hp <= 0:
-			_expire()
+			# Enhancement Pack 41: Turret destroyed SFX — metallic crunch
+			AudioManager.play_sfx(AudioManager.SFX_TURRET_DESTROYED)
+			_expire(true)
+		else:
+			# Enhancement Pack 41: Subtle hit SFX when the turret takes damage but survives
+			AudioManager.play_sfx_volume(AudioManager.SFX_ENEMY_HIT, 0.5)
 
-	func _expire() -> void:
+	func _expire(was_destroyed: bool = false) -> void:
+		# Enhancement Pack 41: Distinct SFX for destroyed vs natural expiration
+		if was_destroyed:
+			# SFX already played in take_damage() before calling _expire
+			pass
+		else:
+			AudioManager.play_sfx(AudioManager.SFX_TURRET_EXPIRED)
 		# Death poof
 		ParticleEffects.spawn_explosion(get_parent(), global_position + Vector3(0, 1.0, 0),
 			Color(0.7, 0.85, 0.3), 20, 0.4)
@@ -544,6 +591,7 @@ class GravityFlipField extends Node3D:
 	var _field_mesh: MeshInstance3D = null
 	var _field_mat: StandardMaterial3D = null
 	var _light: OmniLight3D = null
+	var _launch_sfx_played: bool = false  # Enhancement Pack 41: one-shot launch SFX
 
 	func setup(pos: Vector3) -> void:
 		global_position = pos
@@ -596,6 +644,7 @@ class GravityFlipField extends Node3D:
 			_apply_upward_force()
 
 	func _apply_upward_force() -> void:
+		var launched_any: bool = false
 		for enemy in GameManager.enemies:
 			if not is_instance_valid(enemy):
 				continue
@@ -613,6 +662,11 @@ class GravityFlipField extends Node3D:
 				# Visual: purple particles trail
 				ParticleEffects.spawn_explosion(get_parent(), enemy.global_position,
 					Color(0.6, 0.4, 1.0), 4, 0.1)
+				launched_any = true
+		# Enhancement Pack 41: Gravity launch SFX — upward whoosh when enemies are launched
+		if launched_any and not _launch_sfx_played:
+			AudioManager.play_sfx(AudioManager.SFX_GRAVITY_LAUNCH)
+			_launch_sfx_played = true
 
 	func _expire() -> void:
 		# Apply fall damage to launched enemies
@@ -636,6 +690,8 @@ class GravityFlipField extends Node3D:
 						GameConstants.GRAVITY_FLIP_FIELD_FALL_DAMAGE, false, false)
 					ParticleEffects.spawn_explosion(enemy.get_parent(), enemy.global_position,
 						Color(0.6, 0.4, 1.0), 12, 0.3)
+					# Enhancement Pack 41: Fall damage impact SFX
+					AudioManager.play_sfx_volume(AudioManager.SFX_LAND, 0.6)
 			)
 		_launched_enemies.clear()
 		# Fade out the field
@@ -758,6 +814,8 @@ class VoidRiftCutter extends Node3D:
 				# Void particle burst at the hit point
 				ParticleEffects.spawn_explosion(get_parent(), enemy.global_position,
 					Color(0.5, 0.2, 0.8), 10, 0.25)
+				# Enhancement Pack 41: Void slash SFX — ethereal blade cutting space
+				AudioManager.play_sfx_volume(AudioManager.SFX_VOID_SLASH, 0.7)
 				# Set cooldown
 				_enemy_cooldowns[enemy] = GameConstants.VOID_RIFT_CUTTER_TICK_INTERVAL
 

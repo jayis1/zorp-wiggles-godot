@@ -365,6 +365,43 @@ const SFX_GRAVITY_CHARGE: String = "gravity_charge"
 #    with no audio at all — the player had no cue that copies had spawned.
 const SFX_PHANTOM_SPAWN: String = "phantom_spawn"
 
+# ── Enhancement Pack 41: Deployable system feedback SFX ──
+# Shield bubble hit — a crisp metallic \"ting\" (1200 Hz, 0.06s, 0.18 vol)
+# that plays when the shield bubble absorbs incoming damage. Short and bright
+# so it reads as \"blocked!\" without competing with combat sounds. The high
+# metallic frequency conveys a hard energy shield deflecting a hit.
+const SFX_SHIELD_HIT: String = "shield_hit"
+# Shield bubble break — a shattering descending chime (C6→G5→C5→G4, 0.05s per
+# note, 0.30 vol) for when the shield bubble's HP is depleted. The cascading
+# downward arpeggio conveys \"the shield has shattered\" — a protective barrier
+# collapsing. Distinct from SFX_SHIELD (warm ascending deploy chime) so the
+# player distinguishes \"shield activated\" from \"shield destroyed.\"
+const SFX_SHIELD_BREAK: String = "shield_break"
+# Shield bubble reflect — a quick ricochet blip (1800 Hz, 0.04s, 0.15 vol) for
+# when the shield bubble reflects an enemy projectile back at the shooter. The
+# very high pitch conveys a deflection — something bouncing off a hard surface.
+# Quieter than the deploy/break sounds since reflects can happen in rapid
+# succession during projectile-heavy encounters.
+const SFX_SHIELD_REFLECT: String = "shield_reflect"
+# Turret destroyed — a metallic crunch (descending 300→150 Hz, 0.20s, 0.35 vol)
+# for when the player's deployed turret is destroyed by enemy fire. The low
+# descending tone conveys mechanical failure — gears grinding to a halt.
+const SFX_TURRET_DESTROYED: String = "turret_destroyed"
+# Turret expired — a gentle powering-down blip (600→300 Hz, 0.12s, 0.18 vol)
+# for when the turret's duration runs out naturally. Quieter and shorter than
+# the destroyed sound since natural expiration is less dramatic.
+const SFX_TURRET_EXPIRED: String = "turret_expired"
+# Gravity flip launch — an upward whoosh (0.30s, 0.30 vol) for when the Gravity
+# Flip Field launches enemies into the air. Reuses the whoosh generator with a
+# longer duration than SFX_DASH (0.18s) to convey a sustained upward force.
+const SFX_GRAVITY_LAUNCH: String = "gravity_launch"
+# Void rift slash — a sharp ethereal slash (descending 880→440 Hz, 0.10s, 0.18
+# vol) for when an enemy passes through the Void Rift Cutter and takes damage.
+# The descending tone conveys a blade cutting through space — a void blade
+# slicing reality. Quiet since multiple enemies can pass through in quick
+# succession.
+const SFX_VOID_SLASH: String = "void_slash"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -746,6 +783,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_STAGGER, SFX_MAGNET_HUM,
 	# Enhancement Pack 39: New SFX get pitch variation
 	SFX_GRAVITY_CHARGE, SFX_PHANTOM_SPAWN,
+	# Enhancement Pack 41: Deployable SFX get pitch variation
+	SFX_SHIELD_HIT, SFX_SHIELD_REFLECT, SFX_TURRET_EXPIRED, SFX_VOID_SLASH,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1264,6 +1303,22 @@ func _generate_all_sfx() -> void:
 	# Phantom spawn — ethereal augmented-triad chime (B4→D5→F#5) for the
 	# Echo Knight summoning its shadow copies.
 	_sfx_streams[SFX_PHANTOM_SPAWN] = _gen_chime([494.0, 587.0, 740.0], 0.18, 0.18)
+
+	# ── Enhancement Pack 41: Deployable system feedback SFX ──
+	# Shield bubble hit — crisp metallic ting (1200 Hz, 0.06s)
+	_sfx_streams[SFX_SHIELD_HIT] = _gen_blip(1200.0, 0.06, 0.18)
+	# Shield bubble break — shattering descending arpeggio (C6→G5→C5→G4)
+	_sfx_streams[SFX_SHIELD_BREAK] = _gen_arpeggio([1047.0, 784.0, 523.0, 392.0], 0.05, 0.30)
+	# Shield bubble reflect — quick ricochet blip (1800 Hz, 0.04s)
+	_sfx_streams[SFX_SHIELD_REFLECT] = _gen_blip(1800.0, 0.04, 0.15)
+	# Turret destroyed — metallic crunch (300→150 Hz, 0.20s)
+	_sfx_streams[SFX_TURRET_DESTROYED] = _gen_descending(300.0, 150.0, 0.20, 0.35)
+	# Turret expired — gentle powering-down blip (600→300 Hz, 0.12s)
+	_sfx_streams[SFX_TURRET_EXPIRED] = _gen_descending(600.0, 300.0, 0.12, 0.18)
+	# Gravity flip launch — upward whoosh (0.30s)
+	_sfx_streams[SFX_GRAVITY_LAUNCH] = _gen_whoosh(0.30, 0.30)
+	# Void rift slash — sharp descending slash (880→440 Hz, 0.10s)
+	_sfx_streams[SFX_VOID_SLASH] = _gen_descending(880.0, 440.0, 0.10, 0.18)
 
 
 func _generate_all_music() -> void:
