@@ -50,7 +50,14 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 			_teleport_behind_player()
 
 func _teleport_behind_player() -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# Use the cached player reference from the base class (populated by
+	# super._physics_process → _update_ai) instead of a fresh group scan.
+	# The Wisp calls super._physics_process every frame, so the cache is
+	# always current. Falls back to a one-shot scan only if the cache is
+	# stale (null or freed) — matching the pattern used across the codebase.
+	var player: Node3D = _cached_player
+	if not player or not is_instance_valid(player):
+		player = get_tree().get_first_node_in_group("player")
 	if not player:
 		return
 

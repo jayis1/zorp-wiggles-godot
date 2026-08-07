@@ -30,6 +30,15 @@ var _has_already_hit: bool = false
 # SFX from the same projectile lingering near the player.
 var _has_grazed: bool = false
 
+# ── Trail particles ── A short-lived GPUParticles3D that emits colored sparks
+#    behind the bolt as it flies. The trail uses world-space coordinates
+#    (local_coords = false) so particles stay where they're emitted instead of
+#    following the projectile, creating a proper "exhaust stream" trail.
+#    The process material is duplicated from the shared base so each
+#    projectile's trail matches its own color. The mesh is shared (no
+#    per-instance variation needed since the material handles the color).
+var _trail_particles: GPUParticles3D = null
+
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
 # ─── Shared Resources ──────────────────────────────────────────────────────────
@@ -47,6 +56,16 @@ static var _shared_mesh: SphereMesh = null
 #    shared-base-material pattern used by shockwave.gd and impact_burst.gd.
 static var _shared_material_base: StandardMaterial3D = null
 
+# ── Shared trail resources ── A lightweight GPUParticles3D trail follows each
+#    enemy bolt, leaving a short stream of colored sparks so the projectile's
+#    trajectory is readable even in dark biomes (Underground, Eclipse, Digital
+#    Grid). Player projectiles already have a 6-point mesh trail; enemy bolts
+#    had only a point light + stretch but no trail, making them harder to track
+#    in darkness. The trail uses shared process material + mesh (duplicated per
+#    instance only for color) so the per-shot allocation cost is minimal.
+static var _shared_trail_process_mat: ParticleProcessMaterial = null
+static var _shared_trail_mesh: SphereMesh = null
+
 static func _ensure_shared_resources() -> void:
 	if _shared_mesh == null:
 		_shared_mesh = SphereMesh.new()
@@ -63,6 +82,21 @@ static func _ensure_shared_resources() -> void:
 		_shared_material_base.rim_enabled = true
 		_shared_material_base.rim = 0.7
 		_shared_material_base.rim_tint = 0.9
+	if _shared_trail_process_mat == null:
+		_shared_trail_process_mat = ParticleProcessMaterial.new()
+		_shared_trail_process_mat.direction = Vector3.ZERO
+		_shared_trail_process_mat.spread = 8.0
+		_shared_trail_process_mat.gravity = Vector3.ZERO
+		_shared_trail_process_mat.initial_velocity_min = 0.0
+		_shared_trail_process_mat.initial_velocity_max = 0.3
+		_shared_trail_process_mat.scale_min = 0.1
+		_shared_trail_process_mat.scale_max = 0.25
+	if _shared_trail_mesh == null:
+		_shared_trail_mesh = SphereMesh.new()
+		_shared_trail_mesh.radius = 0.06
+		_shared_trail_mesh.height = 0.12
+		_shared_trail_mesh.radial_segments = 4
+		_shared_trail_mesh.rings = 2
 
 const IMPACT_SCENE := preload("res://scenes/entities/impact_burst.tscn")
 
@@ -91,6 +125,35 @@ func _ready() -> void:
 	_light.omni_range = 4.0
 	_light.omni_attenuation = 1.5
 	add_child(_light)
+
+	# ── Trail particles ── A short spark trail that follows the bolt's path,
+	#    making enemy projectiles readable in dark biomes where the point light
+	#    alone isn't enough to track trajectory. The trail uses a small number
+	#    of particles (12) with a short lifetime (0.25s) so it's a subtle
+	#    stream, not a dense cloud. World-space coordinates (local_coords =
+	#    false) ensure particles stay where emitted, creating a proper exhaust
+	#    trail. The process material is duplicated from the shared base and
+	#    tinted to match the projectile's color. The draw mesh is shared.
+	#    Performance: 12 particles × ~3s lifetime = ~36 active particles per
+	#    bolt, negligible vs. the existing 500-particle weather systems.
+	var trail_mat: ParticleProcessMaterial = _shared_trail_process_mat.duplicate() as ParticleProcessMaterial
+	trail_mat.color = projectile_color
+	# Fade ramp: full color → transparent over the particle lifetime
+	var ramp := Gradient.new()
+	ramp.add_point(0.0, projectile_color)
+	ramp.add_point(1.0, Color(projectile_color.r, projectile_color.g, projectile_color.b, 0.0))
+	var ramp_tex := GradientTexture1D.new()
+	ramp_tex.gradient = ramp
+	trail_mat.color_ramp = ramp_tex
+	_trail_particles = GPUParticles3D.new()
+	_trail_particles.amount = 12
+	_trail_particles.lifetime = 0.25
+	_trail_particles.one_shot = false
+	_trail_particles.emitting = true
+	_trail_particles.local_coords = false
+	_trail_particles.process_material = trail_mat
+	_trail_particles.draw_pass_1 = _shared_trail_mesh
+	add_child(_trail_particles)
 
 	# Add to group for tracking
 	add_to_group("enemy_projectiles")
@@ -188,6 +251,8 @@ func _on_body_entered(body: Node3D) -> void:
 		_on_hit_player(body)
 	elif not body.is_in_group("enemies"):
 		# Hit terrain/wall — small impact flash, no damage
+		if _trail_particles:
+			_trail_particles.emitting = false
 		_spawn_impact(projectile_color)
 		queue_free()
 
@@ -201,6 +266,10 @@ func _on_hit_player(target: Node3D = null) -> void:
 	if _has_already_hit:
 		return  # Prevent double-hit from distance check + body_entered
 	_has_already_hit = true
+	# Stop trail emission so lingering sparks fade naturally rather than
+	# continuing to emit from a freed projectile's last position.
+	if _trail_particles:
+		_trail_particles.emitting = false
 	# Default to P1 if no target specified (backward compatibility)
 	if target and target.is_in_group("player2"):
 		CoOpManager.p2_take_damage(damage, global_position)
@@ -236,6 +305,9 @@ func _spawn_impact(col: Color) -> void:
 ## Both the light AND the mesh alpha tween out together so the bolt
 ## visibly "dissipates" instead of just vanishing.
 func _fizzle_out() -> void:
+	# Stop trail emission so the stream ends with the bolt's dissipation.
+	if _trail_particles:
+		_trail_particles.emitting = false
 	# Tween the mesh alpha out alongside the light so the whole bolt
 	# fades as a unit. Previously the light tweened but the material
 	# alpha was snapped to 0.0 instantly — the mesh popped out while

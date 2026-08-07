@@ -180,6 +180,21 @@ func _physics_process(delta: float) -> void:
 					var knock_dir: Vector3 = (enemy_node.global_position - global_position).normalized()
 					knock_dir.y = 0
 					enemy_node.apply_knockback(knock_dir, GameConstants.KNOCKBACK_FORCE_EXPLOSION)
+				# ── Pulse wave hit spark ── A small 6-particle burst at each
+				# enemy's position when the wave connects, so the player sees
+				# the shockwave "punching" each enemy it reaches. The spark
+				# uses the pulse wave's cyan color, matching the ring visual.
+				# Without this, the wave expands silently through enemies —
+				# the damage numbers + hit flash on the enemy are the only
+				# feedback, which can be hard to read when multiple enemies
+				# are hit simultaneously. The spark gives each hit a distinct
+				# physical "impact" moment that traces the wave's expanding
+				# front, making the AoE feel like a real shockwave hitting
+				# each enemy in sequence rather than an invisible damage zone.
+				if ParticleEffects:
+					ParticleEffects.spawn_explosion(get_parent(),
+						enemy_node.global_position,
+						Color(0.2, 1.0, 0.8), 6, 0.15)
 	
 	# Remove when fully expanded
 	if radius >= max_radius:
