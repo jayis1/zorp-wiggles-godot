@@ -1594,6 +1594,24 @@ func _spawn_physics_corpse() -> void:
 	corpse_mat.albedo_color = Color(base_color.r, base_color.g, base_color.b, 0.7)
 	corpse_mat.emission = base_color * 0.1
 	corpse_mesh.material_override = corpse_mat
+	# ── Corpse spawn emission flash ── The corpse appears the instant the
+	#    enemy hides (visible = false). Without a visual bridge, the death
+	#    reads as "enemy vanishes → ragdoll appears" — a body swap rather
+	#    than a death. A brief emission flash on the corpse's material
+	#    (spiking to 3× the base color, easing back over 0.25s) sells the
+	#    transition as an "energy discharge" — the enemy's death releases
+	#    its remaining energy into the corpse, which flares then dims to
+	#    the corpse's dim emission baseline. This composes with the death
+	#    emission burst on the enemy's _material (which fires before
+	#    visible=false) and the death light flash (which illuminates the
+	#    area), creating a three-stage spectacle: enemy flashes → corpse
+	#    flashes → ambient light fades. The flash uses the corpse's own
+	#    material so it survives the enemy's queue_free.
+	var corpse_flash_tween := corpse.create_tween()
+	corpse_mat.emission_energy_multiplier = 3.0
+	corpse_flash_tween.tween_property(corpse_mat, "emission_energy_multiplier",
+		1.0, 0.25) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	corpse.add_child(corpse_mesh)
 
 	# Physics material with bounce for a lively tumble (shared resource)

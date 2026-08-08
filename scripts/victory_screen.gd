@@ -103,10 +103,12 @@ func _ready() -> void:
 	_quit_btn.pressed.connect(_on_quit)
 	_quit_btn.pivot_offset = Vector2(115.0, 25.0)
 	add_child(_quit_btn)
-	# Hover animations
+	# Hover + press + release animations (matches main menu / death screen / pause menu)
 	for btn in [_play_again_btn, _quit_btn]:
 		btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 		btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+		btn.button_down.connect(_on_button_press.bind(btn))
+		btn.button_up.connect(_on_button_release.bind(btn))
 
 
 # ─── Signal Handlers ──────────────────────────────────────────────────────────
@@ -446,6 +448,39 @@ func _on_button_hover(btn: Button, hovering: bool) -> void:
 	else:
 		t.tween_property(btn, "scale", Vector2.ONE, 0.15) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+# ── Press / release feedback ── Matches the main menu, death screen, and
+#    pause menu so all UI buttons across the game feel cohesive. The press
+#    scales down to 0.92x for a tactile "push" feel, and the release bounces
+#    back to the hover scale (1.06x) with an elastic spring — the same
+#    pattern used everywhere else. The entrance-animation guard (checking
+#    modulate.a) is included so the press/release doesn't fight the scale-in
+#    tween while the buttons are still animating in.
+func _on_button_press(btn: Button) -> void:
+	if not is_instance_valid(btn):
+		return
+	# Don't run press while the entrance animation is still playing
+	if btn.modulate.a < 0.9:
+		return
+	if _hover_tweens.has(btn) and is_instance_valid(_hover_tweens[btn] as Tween):
+		(_hover_tweens[btn] as Tween).kill()
+	var t: Tween = create_tween()
+	_hover_tweens[btn] = t
+	t.tween_property(btn, "scale", Vector2(0.92, 0.92), 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+func _on_button_release(btn: Button) -> void:
+	if not is_instance_valid(btn):
+		return
+	# Don't run release while the entrance animation is still playing
+	if btn.modulate.a < 0.9:
+		return
+	if _hover_tweens.has(btn) and is_instance_valid(_hover_tweens[btn] as Tween):
+		(_hover_tweens[btn] as Tween).kill()
+	var t: Tween = create_tween()
+	_hover_tweens[btn] = t
+	t.tween_property(btn, "scale", Vector2(1.06, 1.06), 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -1179,12 +1179,32 @@ func _on_combo_changed(count: int) -> void:
 		combo_text.text = "COMBO x%d" % count
 		combo_text.visible = true
 		# Color tiers: gold → orange → red
+		# ── Smooth color transition ── The combo text color used to snap
+		#    instantly at tier thresholds (10, 15), which felt mechanical —
+		#    the text was gold, then suddenly orange at exactly x10. Now we
+		#    tween the font_color override over 0.3s with an ease-out quad
+		#    curve so the color eases through the transition, mirroring the
+		#    combo timer bar's smoothstep color blending and the HP bar's
+		#    smooth color lerp. A tracked tween is killed before the new
+		#    one starts so rapid combo increments don't stack tweens.
+		var target_combo_color: Color
 		if count >= 15:
-			combo_text.add_theme_color_override("font_color", GameConstants.C_COMBO_RED)
+			target_combo_color = GameConstants.C_COMBO_RED
 		elif count >= 10:
-			combo_text.add_theme_color_override("font_color", GameConstants.C_COMBO_ORANGE)
+			target_combo_color = GameConstants.C_COMBO_ORANGE
 		else:
-			combo_text.add_theme_color_override("font_color", GameConstants.C_COMBO_GOLD)
+			target_combo_color = GameConstants.C_COMBO_GOLD
+		if combo_text:
+			if combo_text.has_meta("_combo_color_tween") and is_instance_valid(combo_text.get_meta("_combo_color_tween") as Tween):
+				(combo_text.get_meta("_combo_color_tween") as Tween).kill()
+			var color_tween := create_tween()
+			color_tween.tween_method(
+				func(c: Color):
+					combo_text.add_theme_color_override("font_color", c),
+				combo_text.get_theme_color("font_color") if combo_text.has_theme_color_override("font_color") else GameConstants.C_COMBO_GOLD,
+				target_combo_color, 0.3
+			).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			combo_text.set_meta("_combo_color_tween", color_tween)
 		# Punch-in scale pop on each combo increment — quick squash to 1.3x
 		# then elastic settle back to 1.0. Gives each combo tick a juicy
 		# "thwack" feel. Only plays if the label is already visible (not
@@ -1354,6 +1374,13 @@ func _on_game_restarted() -> void:
 	# would persist on the hidden label and resurface next combo.
 	combo_text.scale = Vector2.ONE
 	combo_text.modulate.a = 1.0
+	# Reset combo color tween + override so a fresh game starts at the gold
+	# baseline instead of carrying a stale red/orange from a high combo in
+	# the previous run.
+	if combo_text.has_meta("_combo_color_tween") and is_instance_valid(combo_text.get_meta("_combo_color_tween") as Tween):
+		(combo_text.get_meta("_combo_color_tween") as Tween).kill()
+	if combo_text.has_theme_color_override("font_color"):
+		combo_text.remove_theme_color_override("font_color")
 	level_up_text.visible = false
 	# Reset level text scale so a mid-pop corner tween doesn't carry a
 	# stale 1.35x scale into the new run.
