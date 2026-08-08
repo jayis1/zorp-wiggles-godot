@@ -1408,6 +1408,12 @@ func _update_slide(delta: float) -> void:
 		_trigger_camera_trauma(0.1, normal)
 		# Sparkle on bounce
 		ParticleEffects.spawn_dash_trail(get_parent(), global_position, Color(0.5, 0.8, 1.0))
+		# Audio feedback — muffled impact on wall bounce (Enhancement Pack 45).
+		# Previously the wall bounce had camera shake + sparkle particles but no
+		# audio — the player bounced off walls in silence. The noise-hit timbre
+		# reads as a physical "bonk" against terrain, distinct from the airy
+		# dash whoosh that's still fading from the dash start.
+		AudioManager.play_sfx(AudioManager.SFX_WALL_BOUNCE)
 
 	# End slide when velocity is too slow
 	if slide_velocity.length() < GameConstants.DASH_SLIDE_MIN_SPEED:

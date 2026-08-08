@@ -90,6 +90,13 @@ func _try_attack(player: Node3D) -> void:
 		tw.tween_property(_material, "emission_energy_multiplier", 1.5, CHARGE_TIME) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
+	# Audio feedback — rising crystalline hum during charge-up (Enhancement
+	# Pack 45). Previously the charge-up had only a visual emission brighten
+	# — the player had no audio cue to start dodging before the shard fired.
+	# The ascending pitch (440→880 Hz over 0.7s) conveys energy building
+	# toward release, giving the player ~0.7s of audio warning.
+	AudioManager.play_sfx(AudioManager.SFX_CRYSTAL_CHARGE)
+
 	# Reset attack flag after a delay (don't need lunge for ranged)
 	get_tree().create_timer(0.2).timeout.connect(_reset_attack_flag)
 

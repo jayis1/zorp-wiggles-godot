@@ -410,6 +410,8 @@ func _update_slide(delta: float) -> void:
 		if cam_rig and cam_rig.has_method("add_trauma"):
 			cam_rig.add_trauma(0.1)
 		ParticleEffects.spawn_dash_trail(get_parent(), global_position, Color(0.5, 0.8, 1.0))
+		# Audio feedback — wall bounce impact (Enhancement Pack 45, co-op parity).
+		AudioManager.play_sfx(AudioManager.SFX_WALL_BOUNCE)
 
 	if slide_velocity.length() < GameConstants.DASH_SLIDE_MIN_SPEED:
 		is_sliding = false

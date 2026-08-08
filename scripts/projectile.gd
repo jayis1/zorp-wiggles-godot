@@ -625,6 +625,12 @@ func _bounce_off_wall(_body: Node3D) -> void:
 		direction = (-direction + Vector3(0, 0.3, 0)).normalized()
 	# Small visual feedback
 	ParticleEffects.spawn_explosion(get_parent(), global_position, _mod_color, 8, 0.2)
+	# Audio feedback — bright metallic ricochet ping on each wall bounce
+	# (Enhancement Pack 45). Previously the Bouncing Bolt bounced off walls
+	# with only a small particle burst — the ricochet was silent, making the
+	# mod feel less satisfying. The high-pitched metallic ping is the audio
+	# shorthand for a laser bolt glancing off a hard surface.
+	AudioManager.play_sfx(AudioManager.SFX_RICOCHET)
 
 func _hit_enemy(enemy: Node3D) -> void:
 	# damage already includes level bonus and mod multiplier (set by player.gd on spawn)

@@ -413,6 +413,32 @@ const SFX_RETREAT: String = "retreat"
 #    weather systems layering on top of each other.
 const SFX_WEATHER_COMBO: String = "weather_combo"
 
+# ── Enhancement Pack 45: Missing combat & world interaction SFX ──
+# SFX_WALL_BOUNCE — a quick muffled impact + ricochet for when the player's
+# dash slide bounces off a wall. Short (0.08s) and moderate volume (0.20) so
+# it reads as a physical "bonk" without competing with the dash SFX. The
+# noise-hit timbre conveys a physical collision with terrain, distinct from
+# the airy dash whoosh. Previously the wall bounce had camera shake + sparkle
+# particles but no audio — the player bounced off walls in silence.
+const SFX_WALL_BOUNCE: String = "wall_bounce"
+# SFX_RICOCHET — a bright metallic ping for when the Bouncing Bolt weapon mod
+# bounces off a wall. Higher pitch (1400 Hz) and shorter (0.05s) than the dash
+# wall bounce since the ricochet is a projectile deflection, not a body
+# collision. The high metallic frequency reads as a laser bolt glancing off a
+# hard surface — the audio shorthand for "ricochet" in every shooter game.
+# Quiet (0.15) since the Bouncing Bolt can bounce up to 3 times in quick
+# succession.
+const SFX_RICOCHET: String = "ricochet"
+# SFX_CRYSTAL_CHARGE — a rising crystalline hum for the Crystal Guardian's
+# 0.8-second charge-up telegraph. Ascending pitch (440→880 Hz over 0.7s)
+# conveys energy building toward release — the player hears the charge
+# building and knows a shard is coming. Moderate volume (0.18) so it's
+# audible over ambient biome music but doesn't compete with combat. The
+# crystalline sine timbre matches the Crystal Guardian's ice-crystal theme.
+# Previously the charge-up had only a visual emission brighten — the player
+# had no audio cue to start dodging before the shard fired.
+const SFX_CRYSTAL_CHARGE: String = "crystal_charge"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -798,6 +824,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_SHIELD_HIT, SFX_SHIELD_REFLECT, SFX_TURRET_EXPIRED, SFX_VOID_SLASH,
 	# Enhancement Pack 44: AI state transition SFX get pitch variation
 	SFX_AMBUSH_TRIGGER, SFX_PACK_FRENZY, SFX_CALL_HELP, SFX_RETREAT, SFX_WEATHER_COMBO,
+	# Enhancement Pack 45: New SFX get pitch variation
+	SFX_WALL_BOUNCE, SFX_RICOCHET, SFX_CRYSTAL_CHARGE,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1363,6 +1391,23 @@ func _generate_all_sfx() -> void:
 	# "overlapping / unusual" quality distinct from any single weather sound.
 	# Moderate volume (0.22) since weather combos are rare and noteworthy.
 	_sfx_streams[SFX_WEATHER_COMBO] = _gen_arpeggio([523.0, 659.0, 784.0, 988.0, 1319.0], 0.05, 0.22)
+
+	# ── Enhancement Pack 45: Missing combat & world interaction SFX ──
+	# Wall bounce — a quick muffled impact (noise hit, 0.08s, 0.20 vol) for
+	# when the player's dash slide bounces off a wall. The noise-hit timbre
+	# reads as a physical "bonk" against terrain, distinct from the airy
+	# dash whoosh. Short so it doesn't compete with the ongoing dash sound.
+	_sfx_streams[SFX_WALL_BOUNCE] = _gen_noise_hit(0.08, 0.20)
+	# Ricochet — a bright metallic ping (1400 Hz, 0.05s, 0.15 vol) for when
+	# the Bouncing Bolt weapon mod deflects off a wall. The high crystalline
+	# frequency reads as a laser bolt glancing off a hard surface. Quiet so
+	# 3 rapid bounces don't stack into noise.
+	_sfx_streams[SFX_RICOCHET] = _gen_blip(1400.0, 0.05, 0.15)
+	# Crystal charge — a rising crystalline hum (440→880 Hz ascending,
+	# 0.70s, 0.18 vol) for the Crystal Guardian's charge-up telegraph.
+	# Uses the descending generator with reversed freqs to get an ascending
+	# pitch sweep — the sound of energy building toward release.
+	_sfx_streams[SFX_CRYSTAL_CHARGE] = _gen_descending(440.0, 880.0, 0.70, 0.18)
 
 
 func _generate_all_music() -> void:

@@ -202,6 +202,17 @@ func _on_body_entered(body: Node3D) -> void:
 	if ParticleEffects:
 		ParticleEffects.spawn_pickup_sparkle(get_parent(), global_position + Vector3(0, 3.0, 0),
 			GameConstants.SHRINE_CRYSTAL_COLOR)
+		# Green light beam — a brief vertical healing energy pillar (Enhancement
+		# Pack 45). Level-ups, boss deaths, and rare pickups all get sky beams;
+		# the healing shrine — one of the few positive world interactions — had
+		# scale pop + sparkle + SFX but no vertical light element. The beam is
+		# shorter (8m vs 12-30m for boss deaths/level-ups) so it reads as a
+		# personal healing moment, not a world-shaking event. The green color
+		# matches the shrine's crystal, making the heal visible from afar in
+		# dark biomes (Underground, Eclipse) where the sparkle alone is subtle.
+		if not GameModeManager or not GameModeManager.is_survival():
+			ParticleEffects.spawn_sky_beam(get_parent(), global_position,
+				GameConstants.SHRINE_CRYSTAL_COLOR, 8.0)
 
 ## Play the activation discharge: crystal scale-pop + light flash burst.
 ## The scale multiplier snaps to 1.5 (a sharp "snap" to the pop peak) then
