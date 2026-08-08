@@ -920,10 +920,10 @@ func _execute_attack(player: Node3D) -> void:
 			lunge_stretch_mc.tween_property(body_mesh, "scale",
 				Vector3.ONE * base_scale, 0.18) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
-				var restore_tween_mc := create_tween()
-				restore_tween_mc.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15) \
-				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-				get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
+		var restore_tween_mc := create_tween()
+		restore_tween_mc.tween_property(self, "scale", Vector3.ONE * base_scale, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
 		return
 	# ── Phase 19: Co-op — damage the correct player ──
 	# Check if the target is P2 (Zerp) by checking if it's in the player2 group
