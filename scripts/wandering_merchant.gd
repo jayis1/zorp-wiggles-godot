@@ -279,7 +279,8 @@ func _despawn(reason: String) -> void:
 	# Fade out + shrink, then queue_free.
 	var t := create_tween()
 	t.set_parallel(true)
-	t.tween_property(_material, "albedo_color:a", 0.0, 0.6)
+	t.tween_property(_material, "albedo_color:a", 0.0, 0.6) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	if _body_mesh:
 		t.tween_property(_body_mesh, "scale", Vector3(0.01, 0.01, 0.01), 0.6) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)

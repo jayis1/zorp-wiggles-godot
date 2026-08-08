@@ -216,9 +216,12 @@ func _create_ping_marker(pos: Vector3, ptype: int) -> Node3D:
 	fade_tween.tween_interval(PING_LIFETIME - PING_FADE_DURATION)
 	fade_tween.tween_property(label, "modulate:a", 0.0, PING_FADE_DURATION) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	fade_tween.parallel().tween_property(beam_mat, "albedo_color:a", 0.0, PING_FADE_DURATION)
-	fade_tween.parallel().tween_property(ring_mat, "albedo_color:a", 0.0, PING_FADE_DURATION)
-	fade_tween.parallel().tween_property(light, "light_energy", 0.0, PING_FADE_DURATION)
+	fade_tween.parallel().tween_property(beam_mat, "albedo_color:a", 0.0, PING_FADE_DURATION) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	fade_tween.parallel().tween_property(ring_mat, "albedo_color:a", 0.0, PING_FADE_DURATION) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	fade_tween.parallel().tween_property(light, "light_energy", 0.0, PING_FADE_DURATION) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	fade_tween.tween_callback(func():
 		if is_instance_valid(ping):
 			_pings.erase(ping)

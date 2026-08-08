@@ -227,10 +227,13 @@ func _trigger_trap() -> void:
 		lid_mat.emission_energy_multiplier = 3.0
 		var flash_tween := create_tween()
 		flash_tween.tween_interval(0.18)  # Brief red hold.
-		flash_tween.tween_property(lid_mat, "albedo_color", prev_albedo, 0.25)
-		flash_tween.parallel().tween_property(lid_mat, "emission", prev_emi, 0.25)
+		flash_tween.tween_property(lid_mat, "albedo_color", prev_albedo, 0.25) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		flash_tween.parallel().tween_property(lid_mat, "emission", prev_emi, 0.25) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		flash_tween.parallel().tween_property(lid_mat, "emission_energy_multiplier",
-			prev_emi_e, 0.25)
+			prev_emi_e, 0.25) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	if _lock and _lock.material_override:
 		var lock_mat: StandardMaterial3D = _lock.material_override
 		lock_mat.emission = flash_col

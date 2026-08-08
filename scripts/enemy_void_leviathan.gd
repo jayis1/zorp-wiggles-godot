@@ -230,7 +230,8 @@ func _enter_stage_3() -> void:
 	if _material:
 		var enrage_tween := create_tween()
 		enrage_tween.tween_property(_material, "albedo_color",
-			GameConstants.VOID_LEVIATHAN_ENRAGE_COLOR, 0.6)
+			GameConstants.VOID_LEVIATHAN_ENRAGE_COLOR, 0.6) \
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 		base_color = GameConstants.VOID_LEVIATHAN_ENRAGE_COLOR
 	# Keep current_color in sync with base_color so systems that save/restore
 	# it (mind control, variant tinting) use the enraged color.

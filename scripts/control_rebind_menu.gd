@@ -173,14 +173,17 @@ func show_menu() -> void:
 	_entrance_tween = create_tween()
 	_entrance_tween.tween_property(_bg, "modulate:a", 1.0, 0.15) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	_entrance_tween.parallel().tween_property(_panel, "modulate:a", 1.0, 0.12)
+	_entrance_tween.parallel().tween_property(_panel, "modulate:a", 1.0, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.parallel().tween_property(_panel, "scale", Vector2.ONE, 0.25) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	_entrance_tween.tween_property(_title, "modulate:a", 1.0, 0.15) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	_entrance_tween.parallel().tween_property(_hint_label, "modulate:a", 1.0, 0.15)
+	_entrance_tween.parallel().tween_property(_hint_label, "modulate:a", 1.0, 0.15) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	for btn in [_reset_btn, _back_btn]:
-		_entrance_tween.parallel().tween_property(btn, "modulate:a", 1.0, 0.15)
+		_entrance_tween.parallel().tween_property(btn, "modulate:a", 1.0, 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 
 func _on_key_clicked(action: String, btn: Button) -> void:
@@ -245,10 +248,13 @@ func _on_back() -> void:
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.parallel().tween_property(_panel, "scale", Vector2(0.9, 0.9), 0.15) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	_entrance_tween.parallel().tween_property(_title, "modulate:a", 0.0, 0.12)
-	_entrance_tween.parallel().tween_property(_hint_label, "modulate:a", 0.0, 0.12)
+	_entrance_tween.parallel().tween_property(_title, "modulate:a", 0.0, 0.12) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_entrance_tween.parallel().tween_property(_hint_label, "modulate:a", 0.0, 0.12) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	for btn in [_reset_btn, _back_btn]:
-		_entrance_tween.parallel().tween_property(btn, "modulate:a", 0.0, 0.12)
+		_entrance_tween.parallel().tween_property(btn, "modulate:a", 0.0, 0.12) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_entrance_tween.tween_callback(func():
 		visible = false
 		_animating_out = false

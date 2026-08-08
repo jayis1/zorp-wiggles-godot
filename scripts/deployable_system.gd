@@ -545,7 +545,8 @@ class TurretDeploy extends Node3D:
 		if _material:
 			_material.emission_energy_multiplier = 4.0
 			var tw := create_tween()
-			tw.tween_property(_material, "emission_energy_multiplier", 1.0, 0.15)
+			tw.tween_property(_material, "emission_energy_multiplier", 1.0, 0.15) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		if _hp <= 0:
 			# Enhancement Pack 41: Turret destroyed SFX — metallic crunch
 			AudioManager.play_sfx(AudioManager.SFX_TURRET_DESTROYED)
@@ -699,7 +700,8 @@ class GravityFlipField extends Node3D:
 		# Fade out the field
 		if _field_mat:
 			var fade_tw := create_tween()
-			fade_tw.tween_property(_field_mat, "albedo_color:a", 0.0, 0.3)
+			fade_tw.tween_property(_field_mat, "albedo_color:a", 0.0, 0.3) \
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 			fade_tw.tween_property(_light, "light_energy", 0.0, 0.3) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		# Big particle burst on collapse
@@ -826,10 +828,12 @@ class VoidRiftCutter extends Node3D:
 		# Close the rift with a collapse effect
 		if _rift_mat:
 			var fade_tw := create_tween()
-			fade_tw.tween_property(_rift_mat, "albedo_color:a", 0.0, 0.4)
-			fade_tw.parallel().tween_property(_rift_mat, "emission_energy_multiplier", 0.0, 0.4)
+			fade_tw.tween_property(_rift_mat, "albedo_color:a", 0.0, 0.4) \
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+			fade_tw.parallel().tween_property(_rift_mat, "emission_energy_multiplier", 0.0, 0.4) \
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 			fade_tw.parallel().tween_property(_light, "light_energy", 0.0, 0.4) \
-				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		# Particle burst
 		ParticleEffects.spawn_mega_explosion(get_parent(), global_position, Color(0.5, 0.2, 0.8))
 		# Camera shake

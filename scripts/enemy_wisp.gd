@@ -93,7 +93,8 @@ func _teleport_behind_player() -> void:
 		global_position = new_pos
 		_teleport_tween = create_tween()
 		_teleport_tween.tween_property(_material, "albedo_color:a",
-			_spawn_target_alpha, 0.3)
+			_spawn_target_alpha, 0.3) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		# Arrival particle burst at the new position — gives the player
 		# a visual cue of where the Wisp reappeared, critical for
 		# combat awareness since the Wisp teleports behind the player.

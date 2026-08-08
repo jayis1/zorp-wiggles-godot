@@ -1283,7 +1283,8 @@ func _spawn_black_hole(base_dmg: int) -> void:
 	pull_tween.tween_property(bh_mesh, "scale", Vector3(1.5, 1.5, 1.5), pull_duration) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Pulsing light
-	pull_tween.parallel().tween_property(bh_light, "light_energy", -4.0, pull_duration)
+	pull_tween.parallel().tween_property(bh_light, "light_energy", -4.0, pull_duration) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 	# Tick pull damage every 0.2s during the pull phase
 	var ticks: int = int(pull_duration / 0.2)
@@ -1392,7 +1393,8 @@ func _spawn_magnet_mine_detonation(base_dmg: int) -> void:
 	var pull_tween := mine_node.create_tween()
 	pull_tween.tween_property(mine_mesh, "scale", Vector3(1.8, 1.8, 1.8), pull_duration) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	pull_tween.parallel().tween_property(mine_light, "light_energy", 8.0, pull_duration)
+	pull_tween.parallel().tween_property(mine_light, "light_energy", 8.0, pull_duration) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 	# Tick pull enemies every 0.15s during the pull phase
 	var ticks: int = int(pull_duration / 0.15)
@@ -1504,7 +1506,8 @@ func _spawn_black_hole_launcher_collapse(base_dmg: int) -> void:
 	var pull_tween := singularity.create_tween()
 	pull_tween.tween_property(bh_mesh, "scale", Vector3(1.8, 1.8, 1.8), pull_duration) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	pull_tween.parallel().tween_property(bh_light, "light_energy", -6.0, pull_duration)
+	pull_tween.parallel().tween_property(bh_light, "light_energy", -6.0, pull_duration) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 	# Tick pull damage every 0.15s during the pull phase
 	var ticks: int = int(pull_duration / 0.15)
@@ -1730,6 +1733,7 @@ func _call_meteor_strike(base_dmg: int) -> void:
 	telegraph.global_position = impact_pos + Vector3(0, 0.1, 0)
 	# Pulse the telegraph during the fall time
 	var tg_tween := telegraph.create_tween()
+	tg_tween.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 	for _i in range(4):
 		tg_tween.tween_property(tg_mat, "emission_energy_multiplier", 0.5, 0.1)
 		tg_tween.tween_property(tg_mat, "emission_energy_multiplier", 2.5, 0.1)
@@ -1763,7 +1767,8 @@ func _call_meteor_strike(base_dmg: int) -> void:
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	# Spin the meteor as it falls
 	drop_tw.parallel().tween_property(meteor, "rotation_degrees:y",
-		720.0, GameConstants.METEOR_STRIKE_FALL_TIME)
+		720.0, GameConstants.METEOR_STRIKE_FALL_TIME) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 	# On impact: massive AoE damage + explosion + camera shake
 	drop_tw.tween_callback(func():
 		if not is_instance_valid(meteor):

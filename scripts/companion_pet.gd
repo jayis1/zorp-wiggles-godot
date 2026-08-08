@@ -1105,7 +1105,8 @@ func _trigger_emote(emote_id: int) -> void:
 		var old_emission: float = _mat.emission_energy_multiplier
 		_mat.emission_energy_multiplier = 3.0
 		var flash := create_tween()
-		flash.tween_property(_mat, "emission_energy_multiplier", old_emission, 0.3)
+		flash.tween_property(_mat, "emission_energy_multiplier", old_emission, 0.3) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# ── Enhancement Pack 16: Per-emote SFX ── Each emotion gets a distinct
 	# pitch so the player can hear the pet's mood without looking at it.
 	# HAPPY is bright/high (1.3×), ANGRY is deep/growl (0.6×), LOVE is warm
@@ -1318,8 +1319,10 @@ func take_damage(amount: int) -> void:
 		_mat.emission_energy_multiplier = 4.0
 		_mat.albedo_color = Color.WHITE
 		var tween := create_tween()
-		tween.tween_property(_mat, "emission_energy_multiplier", old_emission, 0.2)
-		tween.parallel().tween_property(_mat, "albedo_color", _stage_color(), 0.2)
+		tween.tween_property(_mat, "emission_energy_multiplier", old_emission, 0.2) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		tween.parallel().tween_property(_mat, "albedo_color", _stage_color(), 0.2) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Camera shake
 	var cam: Node3D = GameManager.camera_rig
 	if cam and cam.has_method("add_trauma"):

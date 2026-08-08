@@ -172,9 +172,11 @@ func _explode() -> void:
 	var boom_tween := create_tween()
 	boom_tween.set_parallel(true)
 	boom_tween.tween_property(self, "scale",
-		Vector3.ONE * base_scale * 3.0, 0.15)
+		Vector3.ONE * base_scale * 3.0, 0.15) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	if _material:
-		boom_tween.tween_property(_material, "albedo_color:a", 0.0, 0.15)
+		boom_tween.tween_property(_material, "albedo_color:a", 0.0, 0.15) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	boom_tween.chain().tween_callback(queue_free)
 
 	# Camera shake on explosion

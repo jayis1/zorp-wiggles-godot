@@ -1176,7 +1176,8 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		# Restore to current_color (not base_color) so mind-controlled enemies
 		# flash back to their MC color, enraged enemies to their enraged color, etc.
 		flash_tween.tween_property(_material, "albedo_color",
-			Color(current_color.r, current_color.g, current_color.b, _spawn_target_alpha), 0.15)
+			Color(current_color.r, current_color.g, current_color.b, _spawn_target_alpha), 0.15) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		flash_tween.tween_property(_material, "emission_energy_multiplier",
 			_prev_emission_energy, 0.15) \
 			.set_ease(Tween.EASE_OUT) \

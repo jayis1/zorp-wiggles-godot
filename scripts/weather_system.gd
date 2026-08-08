@@ -542,8 +542,10 @@ func _execute_lightning_strike(pos: Vector3) -> void:
 		parent.add_child(flash)
 		flash.global_position = pos + Vector3(0, 8, 0)
 		var tw: Tween = create_tween()
-		tw.tween_property(flash, "light_energy", 0.0, 0.4).set_trans(Tween.TRANS_QUAD)
-		tw.parallel().tween_property(flash, "omni_range", 5.0, 0.4)
+		tw.tween_property(flash, "light_energy", 0.0, 0.4).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(flash, "omni_range", 5.0, 0.4) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		tw.chain().tween_callback(flash.queue_free)
 		# Particle burst (electrical spark column)
 		ParticleEffects.spawn_explosion(parent, pos + Vector3(0, 2, 0), Color(0.6, 0.7, 1.0), 80, 0.6)
@@ -628,7 +630,8 @@ func _schedule_meteor_strike() -> void:
 		fall_tween.tween_property(meteor_mesh, "global_position", strike_pos, GameConstants.METEOR_WARN_TIME) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		# Spin the meteor as it falls
-		fall_tween.parallel().tween_property(meteor_mesh, "rotation:y", TAU * 3, GameConstants.METEOR_WARN_TIME)
+		fall_tween.parallel().tween_property(meteor_mesh, "rotation:y", TAU * 3, GameConstants.METEOR_WARN_TIME) \
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
 		# Trail particles
 		fall_tween.parallel().tween_callback(func():
 			if is_instance_valid(meteor_mesh) and randf() < 0.5:
@@ -650,8 +653,10 @@ func _execute_meteor_strike(pos: Vector3) -> void:
 		parent.add_child(flash)
 		flash.global_position = pos + Vector3(0, 6, 0)
 		var tw: Tween = create_tween()
-		tw.tween_property(flash, "light_energy", 0.0, 0.6).set_trans(Tween.TRANS_QUAD)
-		tw.parallel().tween_property(flash, "omni_range", 8.0, 0.6)
+		tw.tween_property(flash, "light_energy", 0.0, 0.6).set_trans(Tween.TRANS_QUAD) \
+			.set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(flash, "omni_range", 8.0, 0.6) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		tw.chain().tween_callback(flash.queue_free)
 		# Large explosion particles (bigger than lightning)
 		ParticleEffects.spawn_mega_explosion(parent, pos + Vector3(0, 2, 0), Color(1.0, 0.4, 0.1))

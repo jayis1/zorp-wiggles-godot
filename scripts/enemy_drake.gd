@@ -82,7 +82,8 @@ func _enter_enrage() -> void:
 	if _material:
 		var enrage_tween := create_tween()
 		enrage_tween.tween_property(_material, "albedo_color",
-			Color(1.0, 0.2, 0.0), 0.5)
+			Color(1.0, 0.2, 0.0), 0.5) \
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 		base_color = Color(1.0, 0.2, 0.0)
 	# Keep current_color in sync with base_color so systems that save/restore
 	# it (mind control, variant tinting) use the enraged color, not the

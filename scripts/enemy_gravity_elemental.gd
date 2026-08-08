@@ -276,7 +276,8 @@ func _die() -> void:
 		_field_mesh.reparent(scene_root)
 		_field_mesh.global_position = mesh_global_pos
 		var fade_tw := _field_mesh.create_tween()
-		fade_tw.tween_property(_field_material, "albedo_color:a", 0.0, 0.3)
+		fade_tw.tween_property(_field_material, "albedo_color:a", 0.0, 0.3) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		fade_tw.tween_callback(_field_mesh.queue_free)
 		_field_mesh = null
 	if _field_light:

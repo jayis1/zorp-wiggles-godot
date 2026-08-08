@@ -396,7 +396,8 @@ func _trigger_pack_frenzy(enemy: EnemyBase) -> void:
 				ally_base._material.albedo_color = flash_color
 				var flash_tween := ally_base.create_tween()
 				flash_tween.tween_property(ally_base._material, "albedo_color",
-					ally_base.base_color, GameConstants.AI_PACK_FRENZY_FLASH_DURATION)
+					ally_base.base_color, GameConstants.AI_PACK_FRENZY_FLASH_DURATION) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			frenzy_count += 1
 
 	if frenzy_count >= GameConstants.AI_PACK_FRENZY_MIN_ALLIES:
