@@ -868,8 +868,13 @@ func _try_start_weather_combo(primary_weather: int) -> void:
 	var combo_name: String = combo_info.get("name", "Unknown")
 	var primary_info: Dictionary = GameConstants.WEATHER_INFO.get(primary_weather, {})
 	var primary_name: String = primary_info.get("name", "Unknown")
-	# Audio — celebratory chime for the rare weather combo activation.
-	AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+	# Audio — dedicated weather combo chime conveying two systems layering.
+	# Previously reused SFX_COMBO_MILESTONE (the kill-streak sound), which was
+	# thematically misleading — the player would hear "kill streak" when a
+	# weather combo started, not "atmospheric event." The dedicated SFX has a
+	# wider 5-note augmented arpeggio that reads as "something unusual is
+	# happening in the sky" rather than "combat reward."
+	AudioManager.play_sfx(AudioManager.SFX_WEATHER_COMBO)
 	GameManager.add_message("🌟 Weather combo! %s + %s!" % [primary_name, combo_name])
 
 ## Phase 28: End the active weather combo.

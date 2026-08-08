@@ -404,6 +404,14 @@ func _trigger_pack_frenzy(enemy: EnemyBase) -> void:
 		ParticleEffects.spawn_explosion(enemy.get_parent(),
 			enemy.global_position + Vector3(0, 1, 0),
 			Color(1.0, 0.392, 0.196), 8, 0.5)
+		# ── Enhancement Pack 44: Pack frenzy SFX ── A dissonant descending
+		# cluster that conveys a group going berserk. Distinct from the
+		# single-enemy enrage growl (SFX_ENRAGE) so the player can tell by
+		# ear whether one enemy or a whole pack just went frenzy. The sound
+		# fires only when enough allies are actually affected (frenzy_count
+		# >= MIN_ALLIES), so it's a meaningful event, not a single enemy.
+		if AudioManager and AudioManager._sfx_streams.has(AudioManager.SFX_PACK_FRENZY):
+			AudioManager.play_sfx(AudioManager.SFX_PACK_FRENZY)
 
 # ─── Call for Help ────────────────────────────────────────────────────────────
 
@@ -447,6 +455,14 @@ func _alert_nearby_allies(enemy: EnemyBase) -> void:
 		ParticleEffects.spawn_explosion(enemy.get_parent(),
 			enemy.global_position + Vector3(0, 1.5, 0),
 			Color(1.0, 0.8, 0.2), 12, 0.6)
+		# ── Enhancement Pack 44: Call for help SFX ── A rapid urgent double-
+		# blip that reads as "distress signal." The player gets an audio
+		# cue that nearby enemies are being alerted, which is tactically
+		# important — the player needs to know that the fight is about to
+		# get bigger. Previously the call-for-help had only a HUD message
+		# + particle burst, both of which could be missed in busy combat.
+		if AudioManager and AudioManager._sfx_streams.has(AudioManager.SFX_CALL_HELP):
+			AudioManager.play_sfx(AudioManager.SFX_CALL_HELP)
 
 # ─── Ambush ───────────────────────────────────────────────────────────────────
 
@@ -468,6 +484,27 @@ func _update_ambush(delta: float, enemy: EnemyBase) -> void:
 				enemy.alert_indicator.visible = true
 				enemy.alert_indicator.text = "!"
 				enemy.alert_indicator_timer = 1.0
+			# ── Enhancement Pack 44: Ambush trigger SFX ── A sharp ascending
+			# blip that conveys "something was hiding and just lunged." The
+			# player gets an audio cue that a concealed enemy has sprung its
+			# trap, so they can react even if they weren't looking at the
+			# ambush point. Previously the ambush break had only a visual "!"
+			# indicator — no audio at all.
+			if AudioManager and AudioManager._sfx_streams.has(AudioManager.SFX_AMBUSH_TRIGGER):
+				AudioManager.play_sfx(AudioManager.SFX_AMBUSH_TRIGGER)
+			# ── Enhancement Pack 44: Ambush break emission flash ── A brief
+			# bright emission spike on the enemy so the player sees the
+			# ambush break even if they weren't looking directly at the
+			# "!" indicator. The flash eases back over 0.25s — long enough
+			# to register but short enough not to obscure the enemy's
+			# natural color.
+			if enemy._material and is_instance_valid(enemy._material):
+				var _orig_emis: float = enemy._material.emission_energy_multiplier
+				var ambush_tween := enemy.create_tween()
+				ambush_tween.tween_property(enemy._material, "emission_energy_multiplier",
+					6.0, 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				ambush_tween.tween_property(enemy._material, "emission_energy_multiplier",
+					_orig_emis, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	else:
 		# Try to start ambush if not on cooldown and player is far enough
 		if _ambush_cooldown <= 0:
@@ -570,6 +607,27 @@ func check_retreat(enemy: EnemyBase) -> void:
 		# Start retreating if HP drops below retreat threshold
 		if hp_ratio < GameConstants.AI_RETREAT_HP_THRESHOLD:
 			is_retreating = true
+			# ── Enhancement Pack 44: Retreat start SFX ── A whimpering
+			# descending whine that conveys an enemy losing its nerve. The
+			# player hears that an enemy is backing off, which is tactically
+			# useful — they know to press the advantage or switch targets.
+			# Very quiet since retreat is a subtle tactical shift. Only
+			# fires on the transition (not while retreating), so no spam.
+			if AudioManager and AudioManager._sfx_streams.has(AudioManager.SFX_RETREAT):
+				AudioManager.play_sfx(AudioManager.SFX_RETREAT)
+			# ── Enhancement Pack 44: Retreat visual cue ── A brief cool
+			# blue emission tint on the enemy so the player sees the
+			# retreat even in busy combat. Blue conveys "passive / backing
+			# off" — the opposite of the warm red enrage flash. Eases back
+			# over 0.4s (longer than the ambush flash since retreat is a
+			# sustained state change, not a sudden event).
+			if enemy._material and is_instance_valid(enemy._material):
+				var _ret_orig_emis: float = enemy._material.emission_energy_multiplier
+				var ret_tween := enemy.create_tween()
+				ret_tween.tween_property(enemy._material, "emission_energy_multiplier",
+					0.3, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				ret_tween.tween_property(enemy._material, "emission_energy_multiplier",
+					_ret_orig_emis, 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func is_fleeing() -> bool:
 	return is_retreating

@@ -402,6 +402,17 @@ const SFX_GRAVITY_LAUNCH: String = "gravity_launch"
 # succession.
 const SFX_VOID_SLASH: String = "void_slash"
 
+# ── Enhancement Pack 44: AI state transition SFX ── Dedicated audio cues for
+#    the four key enemy AI state changes that previously had visual-only feedback.
+#    Each sound is tuned to convey the specific tactical shift that just occurred.
+const SFX_AMBUSH_TRIGGER: String = "ambush_trigger"
+const SFX_PACK_FRENZY: String = "pack_frenzy"
+const SFX_CALL_HELP: String = "call_help"
+const SFX_RETREAT: String = "retreat"
+# ── Weather combo transition — a shimmering dual-layer chime that conveys two
+#    weather systems layering on top of each other.
+const SFX_WEATHER_COMBO: String = "weather_combo"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -785,6 +796,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_GRAVITY_CHARGE, SFX_PHANTOM_SPAWN,
 	# Enhancement Pack 41: Deployable SFX get pitch variation
 	SFX_SHIELD_HIT, SFX_SHIELD_REFLECT, SFX_TURRET_EXPIRED, SFX_VOID_SLASH,
+	# Enhancement Pack 44: AI state transition SFX get pitch variation
+	SFX_AMBUSH_TRIGGER, SFX_PACK_FRENZY, SFX_RETREAT, SFX_WEATHER_COMBO,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1319,6 +1332,37 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_GRAVITY_LAUNCH] = _gen_whoosh(0.30, 0.30)
 	# Void rift slash — sharp descending slash (880→440 Hz, 0.10s)
 	_sfx_streams[SFX_VOID_SLASH] = _gen_descending(880.0, 440.0, 0.10, 0.18)
+
+	# ── Enhancement Pack 44: AI state transition SFX ──
+	# Ambush trigger — a sudden sharp ascending blip (600→1200 Hz, 0.06s) that
+	# reads as "something was hiding and just lunged." The fast upward sweep conveys
+	# ambush — a concealed threat springing. Quiet (0.12) since ambushes trigger
+	# individually, but multiple nearby enemies can ambush simultaneously.
+	_sfx_streams[SFX_AMBUSH_TRIGGER] = _gen_descending(600.0, 1200.0, 0.06, 0.12)
+	# Pack frenzy — a dissonant descending cluster (440→220→110 Hz, 0.20s) that
+	# conveys a group suddenly going berserk. The layered descending tones read as
+	# "multiple threats enraging at once" — distinctly different from the single-
+	# enemy enrage growl (SFX_ENRAGE). Moderate volume (0.20) since it only fires
+	# when a pack member's frenzy triggers allies.
+	_sfx_streams[SFX_PACK_FRENZY] = _gen_chime([440.0, 220.0, 110.0], 0.20, 0.20)
+	# Call for help — a rapid urgent double-blip (880 Hz, two 0.04s pulses) that
+	# reads as "distress signal." The staccato double-pulse mimics a cry for
+	# attention — short, sharp, and urgent. Quiet (0.10) since it's informational,
+	# not dramatic — the player should notice allies being alerted, not be
+	# startled.
+	_sfx_streams[SFX_CALL_HELP] = _gen_blip(880.0, 0.04, 0.10)
+	# Retreat — a whimpering descending whine (330→165 Hz, 0.18s) that conveys
+	# an enemy losing its nerve. The descending pitch reads as "deflating" —
+	# the opposite of enrage. Very quiet (0.08) since retreat is a subtle tactical
+	# shift, not a dramatic event — the player should barely notice it
+	# subconsciously.
+	_sfx_streams[SFX_RETREAT] = _gen_descending(330.0, 165.0, 0.18, 0.08)
+	# Weather combo — a shimmering dual-layer ascending chime (C5→E5→G5→B5→E6)
+	# that conveys two weather systems layering on top of each other. The wider
+	# 5-note range and augmented triad (B5 = augmented fifth) gives it an
+	# "overlapping / unusual" quality distinct from any single weather sound.
+	# Moderate volume (0.22) since weather combos are rare and noteworthy.
+	_sfx_streams[SFX_WEATHER_COMBO] = _gen_arpeggio([523.0, 659.0, 784.0, 988.0, 1319.0], 0.05, 0.22)
 
 
 func _generate_all_music() -> void:
