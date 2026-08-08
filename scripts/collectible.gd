@@ -108,6 +108,18 @@ const TYPE_CONFIG := {
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 
+# ── Magnetic pull tilt ── While being magnetically vacuumed, the mesh tilts
+#    toward the pull direction (leaning into the vacuum) so the collectible
+#    reads as being dragged by an unseen force rather than just translating.
+#    The tilt is a rotation on the mesh's local X/Z axes biased toward the
+#    horizontal pull direction. It eases smoothly via exponential lerp so
+#    the tilt ramps up when the pull starts and settles back to upright when
+#    the pull ends. The max tilt is small (±0.3 rad ≈ ±17°) so it reads as a
+#    gentle lean, not a tumbling fall.
+var _pull_tilt_current: Vector3 = Vector3.ZERO  # Eased tilt (radians)
+const _PULL_TILT_MAX: float = 0.30  # Max tilt in radians (~17°)
+const _PULL_TILT_SMOOTH: float = 8.0  # How fast the tilt eases
+
 # ─── Shared Resources ──────────────────────────────────────────────────────────
 # Collectibles are spawned frequently (enemy drops, world scatter, rift exits).
 # Each type has a fixed mesh radius, so we cache one SphereMesh per type config
@@ -641,7 +653,31 @@ func _physics_process(delta: float) -> void:
 		var wobble_z: float = cos(bob_offset * 0.7 + PI * 0.25) * 0.12
 		global_position.x = base_pos_x + wobble_x
 		global_position.z = base_pos_z + wobble_z
-	
+
+	# ── Magnetic pull tilt ── Apply a mesh tilt toward the pull direction so
+	#    the collectible leans into the vacuum rather than floating upright.
+	#    The tilt target is computed from the horizontal pull direction and
+	#    eased frame-rate-independently. When not being pulled, the tilt
+	#    eases back to zero (upright) so the transition out of the pull is
+	#    smooth. Skipped during pop (the pickup tween owns mesh rotation).
+	if mesh_instance and not is_popping:
+		var tilt_target := Vector3.ZERO
+		if is_magnetic and player and is_instance_valid(player):
+			var pull_dir: Vector3 = (player.global_position - global_position)
+			pull_dir.y = 0.0
+			if pull_dir.length_squared() > 0.01:
+				pull_dir = pull_dir.normalized()
+				# Tilt on X axis (forward/back lean) and Z axis (side lean)
+				# proportional to the pull direction components.
+				tilt_target.x = -pull_dir.z * _PULL_TILT_MAX
+				tilt_target.z = pull_dir.x * _PULL_TILT_MAX
+		var tilt_weight: float = 1.0 - exp(-_PULL_TILT_SMOOTH * delta)
+		_pull_tilt_current = _pull_tilt_current.lerp(tilt_target, tilt_weight)
+		# Apply tilt on top of the Y-axis idle spin (rotate_y sets rotation.y)
+		# We only write X and Z so the spin isn't disrupted.
+		mesh_instance.rotation.x = _pull_tilt_current.x
+		mesh_instance.rotation.z = _pull_tilt_current.z
+
 	# Collect radius
 	if dist < GameConstants.COLLECT_RADIUS:
 		_collect()

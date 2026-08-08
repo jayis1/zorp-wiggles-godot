@@ -1646,6 +1646,37 @@ func _update_spawn_visuals(delta: float) -> void:
 	progress = clampf(progress, 0.0, 1.0)
 	var eased: float = progress * progress  # quadratic ease-in
 	_material.albedo_color.a = _spawn_target_alpha * eased
+	# ── Spawn grace "?" anticipation indicator ── During the grace period,
+	#    show a pulsing "?" above the enemy to communicate "materializing,
+	#    not yet active." This gives new players a clear visual cue that
+	#    the enemy is still spawning and can't attack yet — the "?" reads
+	#    as "unknown threat / incoming" while the later "!" reads as
+	#    "spotted you / attacking." The "?" pulses with a slow breathing
+	#    sine and fades in alongside the materialize effect. When the
+	#    grace period ends, the "?" is hidden so the activation ground
+	#    ring and the subsequent "!" (when the enemy detects the player)
+	#    own the indicator. The pulse uses the Label3D's modulate alpha
+	#    so it doesn't fight the visible toggle.
+	if alert_indicator and not is_dead:
+		if progress < 1.0:
+			# Still spawning — show pulsing "?"
+			if alert_indicator.text != "?":
+				alert_indicator.text = "?"
+				alert_indicator.modulate = Color(1.0, 0.8, 0.2, 0.0)  # amber, start invisible
+			alert_indicator.visible = true
+			# Pulse: alpha breathes 0.3..0.7 with a 2 Hz sine, scaled by
+			# materialize progress so the "?" fades in as the enemy appears.
+			var pulse_alpha: float = (0.3 + 0.4 * absf(sin(progress * PI * 4.0))) * eased
+			alert_indicator.modulate.a = pulse_alpha
+			# Subtle scale breathing (1.0 → 1.1 → 1.0) synced to the alpha pulse
+			var pulse_scale_val: float = 1.0 + 0.1 * absf(sin(progress * PI * 4.0))
+			alert_indicator.scale = Vector3.ONE * pulse_scale_val
+		else:
+			# Grace period just ended — hide the "?" if it's still showing
+			if alert_indicator.text == "?":
+				alert_indicator.visible = false
+				alert_indicator.modulate.a = 1.0
+				alert_indicator.scale = Vector3.ONE
 	# ── Spawn anticipation pulse ── In the final 25% of the grace period,
 	# the enemy does a quick scale pulse to telegraph "about to attack."
 	# This is classic anticipation — the enemy visibly "winds up" before

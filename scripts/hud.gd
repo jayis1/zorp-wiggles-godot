@@ -8,6 +8,7 @@ extends CanvasLayer
 @onready var hp_bar: ColorRect = $HPBarContainer/HPBar
 @onready var hp_bar_bg: ColorRect = $HPBarContainer/HPBarBG
 @onready var hp_text: Label = $HPBarContainer/HPText
+@onready var hp_bar_container: Panel = $HPBarContainer
 
 # ─── XP Bar ──────────────────────────────────────────────────────────────────
 @onready var xp_bar: ColorRect = $XPBarContainer/XPBar
@@ -174,6 +175,23 @@ const HP_GHOST_COLOR: Color = Color(1.0, 0.85, 0.4, 0.35)  # Warm white-gold, se
 var _hp_bar_heal_flash_timer: float = 0.0
 const HP_BAR_HEAL_FLASH_DURATION: float = 0.30  # Longer than damage — a gentle swell, not a pop
 const HP_HEAL_FLASH_COLOR: Color = Color(0.3, 1.0, 0.55)  # Mint green — distinct from the bar's green-yellow-red gradient
+
+# ── Low-HP bar danger pulse ── When the player's HP drops below 25%, the
+#    HP bar container pulses with a red glow (self_modulate), mirroring the
+#    boss enrage glow on the boss bar. The pulse uses a sine wave (3.5 Hz,
+#    slightly faster than the boss enrage's 2.5 Hz for more urgency) and
+#    the amplitude scales with how deep into danger the player is — subtle
+#    at exactly 25% HP, urgent at 5% HP. This gives the player a persistent
+#    UI-level danger cue that complements the player mesh heartbeat and
+#    the camera low-HP tension zoom — the HP bar itself communicates
+#    "you are dying" without requiring the player to read the bar value.
+#    The pulse layers on top of the damage flash (which is a one-shot white
+#    blend); the two don't fight because the flash decays to zero and the
+#    pulse modulates self_modulate (not the bar color).
+var _hp_danger_phase: float = 0.0
+var _hp_danger_active: bool = false
+const HP_DANGER_THRESHOLD: float = 0.25  # <25% HP = danger pulse
+const HP_DANGER_PULSE_SPEED: float = 3.5  # Hz — slightly faster than boss enrage for urgency
 
 # ── XP bar level-up flash ── When the player levels up, the XP bar wraps
 #    around (xp drops to the remainder). This is a celebratory moment, but the
@@ -809,6 +827,42 @@ func _process(delta: float) -> void:
 	else:
 		hp_bar.offset_left = 2.0
 
+	# ── Low-HP bar danger pulse ── When the player's HP ratio is below the
+	#    danger threshold, the HP bar container pulses with a red-tinted
+	#    self_modulate glow. The pulse amplitude scales with how deep into
+	#    danger the player is — at exactly 25% HP the pulse is a subtle
+	#    breathing tint, at 5% HP it's an urgent rhythmic flash. The pulse
+	#    uses a sine wave at HP_DANGER_PULSE_SPEED Hz (slightly faster than
+	#    the boss enrage glow for more urgency). When HP recovers above the
+	#    threshold, the glow eases out smoothly (not snapped off). The
+	#    pulse is skipped while the damage flash is active so the two don't
+	#    visually clash — the one-shot white flash takes priority over the
+	#    continuous red breathing on the hit frame.
+	if hp_bar_container:
+		var hp_ratio_now: float = _hp_bar_target_ratio
+		var should_pulse: bool = hp_ratio_now > 0.0 and hp_ratio_now <= HP_DANGER_THRESHOLD
+		if should_pulse:
+			_hp_danger_active = true
+			_hp_danger_phase += delta * HP_DANGER_PULSE_SPEED
+			# Depth: 0 at threshold (25% HP), 1 at 5% HP, clamped
+			var danger_depth: float = clampf((HP_DANGER_THRESHOLD - hp_ratio_now) / (HP_DANGER_THRESHOLD - 0.05), 0.0, 1.0)
+			# Base amplitude scales with depth: 0.12 (subtle) → 0.35 (urgent)
+			var base_amp: float = lerpf(0.12, 0.35, danger_depth)
+			var pulse_val: float = 0.5 + 0.5 * sin(_hp_danger_phase)
+			var glow: float = base_amp * pulse_val
+			# Ease the self_modulate toward the pulsing red glow (unless
+			# the damage flash is active — white flash takes priority)
+			if _hp_bar_flash_timer <= 0.0:
+				hp_bar_container.self_modulate = Color(1.0, 0.2, 0.15, 1.0).lerp(Color(0.6, 0.1, 0.05, 1.0), 1.0 - glow)
+		else:
+			if _hp_danger_active:
+				# Ease the glow back to neutral (self_modulate white = no tint)
+				var danger_weight: float = 1.0 - exp(-5.0 * delta)
+				hp_bar_container.self_modulate = hp_bar_container.self_modulate.lerp(Color.WHITE, danger_weight)
+				if hp_bar_container.self_modulate.is_equal_approx(Color.WHITE):
+					hp_bar_container.self_modulate = Color.WHITE
+					_hp_danger_active = false
+
 	# XP bar
 	var xp_bar_width: float = xp_bar_container.size.x - 4.0 if xp_bar_container.size.x > 0 else 396.0
 	var xp_current_ratio: float = xp_bar.size.x / xp_bar_width if xp_bar_width > 0 else 0.0
@@ -1311,6 +1365,11 @@ func _on_game_restarted() -> void:
 	_hp_bar_prev_ratio = 1.0
 	_hp_bar_flash_timer = 0.0
 	_hp_bar_heal_flash_timer = 0.0
+	# Reset low-HP danger pulse so a fresh game doesn't carry a stale red glow
+	_hp_danger_active = false
+	_hp_danger_phase = 0.0
+	if hp_bar_container:
+		hp_bar_container.self_modulate = Color.WHITE
 	if hp_bar:
 		hp_bar.offset_left = 2.0
 	# Reset HP ghost trail so a fresh game doesn't carry a stale chip-damage trail
