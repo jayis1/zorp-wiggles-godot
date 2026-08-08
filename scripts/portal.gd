@@ -256,6 +256,18 @@ func _create_box(pos: Vector3, scale: Vector3, col: Color) -> MeshInstance3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = col
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# Emission so the pillar markers glow in dark biomes. The portal rings
+	# and ground glow all have emission, but the four cardinal pillars —
+	# which are the portal's most visible structural element — were the
+	# only component without emission. In a dark biome (Underground,
+	# Eclipse) the unlit pillars read as black silhouettes against the
+	# dark sky, making the portal's structure invisible from afar while
+	# the glowing rings float in a void. A subtle emission (0.4×) gives
+	# the pillars presence in any lighting without overwhelming the
+	# brighter ring/ground-glow elements.
+	mat.emission_enabled = true
+	mat.emission = col * 0.4
+	mat.emission_energy_multiplier = 0.5
 	mi.material_override = mat
 	return mi
 

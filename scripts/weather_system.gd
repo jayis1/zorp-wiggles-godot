@@ -748,7 +748,7 @@ func _tick_magnetic_storm(delta: float) -> void:
 			parent.add_child(flash)
 			flash.global_position = player.global_position + Vector3(0, 3, 0)
 			var tw: Tween = create_tween()
-			tw.tween_property(flash, "light_energy", 0.0, 0.5).set_trans(Tween.TRANS_QUAD)
+			tw.tween_property(flash, "light_energy", 0.0, 0.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			tw.chain().tween_callback(flash.queue_free)
 			# Small camera shake for the pulse impact
 			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
@@ -790,7 +790,7 @@ func _tick_gravity_anomaly(delta: float) -> void:
 				parent.add_child(flash)
 				flash.global_position = player.global_position + Vector3(0, 3, 0)
 				var tw: Tween = create_tween()
-				tw.tween_property(flash, "light_energy", 0.0, 0.6).set_trans(Tween.TRANS_QUAD)
+				tw.tween_property(flash, "light_energy", 0.0, 0.6).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 				tw.chain().tween_callback(flash.queue_free)
 				if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 					GameManager.camera_rig.add_trauma(0.2)

@@ -46,6 +46,12 @@ var _body_mat: StandardMaterial3D = null
 var _cap_mat: StandardMaterial3D = null
 var _ring_mat: StandardMaterial3D = null
 var _ground_glow_mat: StandardMaterial3D = null
+# ── Rune materials ── Cached so _process can recolor the rune emission
+#    to match the active buff without per-frame .material_override lookups
+#    on 4 separate rune nodes. The runes are the monolith's most thematic
+#    visual element (glowing energy carvings) and should reflect the buff
+#    color the same way the cap, ring, and ground glow do.
+var _rune_mats: Array[StandardMaterial3D] = []
 
 func _ready() -> void:
 	_bob_offset = randf() * TAU
@@ -96,10 +102,27 @@ func _build_visuals() -> void:
 			Vector3(0.6, 2.5, 0.05),
 			Color(180.0 / 255.0, 140.0 / 255.0, 220.0 / 255.0)
 		)
+		# ── Rune emission ── The rune panels are described as glowing
+		#    markings on the monolith's sides, but the _create_box helper
+		#    doesn't add emission (the body box doesn't need it — it's a
+		#    stone-like structure). Adding emission to the runes here
+		#    makes the purple markings glow on their own, so they're
+		#    visible in dark biomes (crystal, snow, eclipse) and read as
+		#    mystical energy carvings rather than painted-on textures.
+		#    The emission is subtle (0.3×) so the runes don't outshine the
+		#    cap crystal — they're decorative accents, not the focal point.
+		var rune_mat: StandardMaterial3D = rune.material_override
+		if rune_mat:
+			rune_mat.emission_enabled = true
+			rune_mat.emission = Color(180.0 / 255.0, 140.0 / 255.0, 220.0 / 255.0) * 0.5
+			rune_mat.emission_energy_multiplier = 0.3
 		# Rotate rune to face outward
 		rune.rotate_y(rad)
 		_runes.append(rune)
 		add_child(rune)
+		# Cache the rune material for _process recoloring
+		if rune_mat:
+			_rune_mats.append(rune_mat)
 	
 	# Cache material references for _process — the _create_* helpers create
 	# StandardMaterial3D internally and assign them to material_override. We
@@ -140,9 +163,20 @@ func _process(delta: float) -> void:
 			var dim_bc: Color = Color(bc.r * 0.4, bc.g * 0.4, bc.b * 0.4)
 			if _body_mat:
 				_body_mat.albedo_color = dim_bc
+			# ── Rune dim recolor ── Dim the rune emission to match the buff
+			#    color (at 15% energy) so the runes still glow faintly in
+			#    the buff's hue during the cooldown — communicating "the
+			#    buff is active but the monolith is recharging."
+			for rmat in _rune_mats:
+				rmat.emission = bc * 0.3
+				rmat.emission_energy_multiplier = 0.15
 		else:
 			if _body_mat:
 				_body_mat.albedo_color = Color(60.0 / 255.0, 45.0 / 255.0, 80.0 / 255.0)
+			# No active buff — dim rune emission to dormant purple
+			for rmat in _rune_mats:
+				rmat.emission = Color(80.0 / 255.0, 60.0 / 255.0, 100.0 / 255.0) * 0.3
+				rmat.emission_energy_multiplier = 0.1
 	else:
 		# Active/ready state — glowing
 		if _active_buff >= 0:
@@ -154,6 +188,15 @@ func _process(delta: float) -> void:
 				_ring_mat.albedo_color = Color(bc.r, bc.g, bc.b, glow_a)
 			if _ground_glow_mat:
 				_ground_glow_mat.albedo_color = Color(bc.r, bc.g, bc.b, 40.0 / 255.0)
+			# ── Rune active recolor ── The runes glow in the buff's color
+			#    at full energy with a breathing pulse synced to the ring
+			#    (4 Hz sine) so the runes, ring, and cap all pulse together
+			#    as a cohesive visual — the monolith is "charged" with the
+			#    buff's energy, and every glowing element reflects it.
+			var rune_pulse: float = 0.3 + 0.2 * sin(_time * 4.0)
+			for rmat in _rune_mats:
+				rmat.emission = bc * 0.5
+				rmat.emission_energy_multiplier = rune_pulse
 		else:
 			# Default purple glow
 			var bright_a: float = (80.0 + 40.0 * sin(_time * 3.0)) / 255.0
@@ -165,6 +208,11 @@ func _process(delta: float) -> void:
 				_ground_glow_mat.albedo_color = Color(150.0 / 255.0, 100.0 / 255.0, 1.0, 30.0 / 255.0)
 			if _body_mat:
 				_body_mat.albedo_color = GameConstants.MONOLITH_BODY_COLOR
+			# Default rune glow — breathing purple, synced to the 3 Hz ring
+			var rune_breath: float = 0.25 + 0.15 * sin(_time * 3.0)
+			for rmat in _rune_mats:
+				rmat.emission = Color(180.0 / 255.0, 140.0 / 255.0, 1.0) * 0.5
+				rmat.emission_energy_multiplier = rune_breath
 
 func _on_body_entered(body: Node3D) -> void:
 	if not body.is_in_group("player"):
@@ -203,6 +251,15 @@ func _on_body_entered(body: Node3D) -> void:
 	# Flash body with buff color
 	if _body_mat:
 		_body_mat.albedo_color = buff_color
+	# ── Rune activation flash ── The runes spike to full emission energy
+	#    in the buff's color on activation, then the _process loop takes
+	#    over and breathes them at the buff color. This gives the activation
+	#    a "the runes lit up" moment — the monolith's carvings flare with
+	#    the buff's energy before settling into their breathing pulse,
+	#    mirroring the body flash but on the decorative rune panels.
+	for rmat in _rune_mats:
+		rmat.emission = buff_color * 0.5
+		rmat.emission_energy_multiplier = 1.0
 
 	# ── Phase 7: Buff activation visual effect ──
 	# Spawn an upward beam of particles in the buff color + light flash
@@ -298,6 +355,17 @@ func _create_sphere(pos: Vector3, radius: float, col: Color) -> MeshInstance3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = col
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# Emission so the cap crystal glows on its own in dark biomes (crystal,
+	# snow, eclipse). Without emission, the unlit cap is lit only by
+	# ambient light — in a dark biome it reads as a dark silhouette. The
+	# healing shrine crystal and portal rings both use emission for this
+	# reason; the monolith cap is the same visual archetype and should
+	# match. The _process pulse already tweens albedo_color for the buff
+	# tint, and the emission follows the albedo hue so the glow color
+	# tracks the buff color automatically.
+	mat.emission_enabled = true
+	mat.emission = col * 0.5
+	mat.emission_energy_multiplier = 1.0
 	mi.material_override = mat
 	return mi
 
@@ -312,6 +380,12 @@ func _create_ring(pos: Vector3, size: float, col: Color) -> MeshInstance3D:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Emission so the floating ring glows in dark biomes — matches the
+	# portal and healing shrine rings which both use emission. Without
+	# it, the transparent ring is nearly invisible against a dark sky.
+	mat.emission_enabled = true
+	mat.emission = col * 0.5
+	mat.emission_energy_multiplier = 0.8
 	mi.material_override = mat
 	return mi
 
@@ -326,5 +400,10 @@ func _create_ground_disc(pos: Vector3, size: float, col: Color) -> MeshInstance3
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Emission so the ground glow disc is visible in dark biomes —
+	# matches the portal and healing shrine ground glow.
+	mat.emission_enabled = true
+	mat.emission = col * 0.4
+	mat.emission_energy_multiplier = 0.6
 	mi.material_override = mat
 	return mi
