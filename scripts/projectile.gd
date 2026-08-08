@@ -37,6 +37,12 @@ const HOMING_REPATH_INTERVAL: float = 0.15  # Re-pick target 6.7x/sec
 # before the deferred queue_free() takes effect, letting a single non-piercing
 # bolt hit multiple enemies.
 var _is_consumed: bool = false
+# Guard against lifetime-expiry re-entrancy: when lifetime <= 0, the fizzle
+# path calls _impact_effect + queue_free, but queue_free is deferred so
+# _physics_process runs again next frame (lifetime still <= 0), re-entering
+# the fizzle path and spawning duplicate impact effects + extra queue_free
+# calls. This flag ensures the fizzle only fires once.
+var _has_fizzled: bool = false
 var _light: OmniLight3D = null
 var _mod_material: StandardMaterial3D = null  # Per-projectile material for mod color
 
@@ -218,6 +224,9 @@ func _physics_process(delta: float) -> void:
 	# Lifetime countdown
 	lifetime -= delta
 	if lifetime <= 0:
+		if _has_fizzled:
+			return  # Already fizzled — prevent duplicate impact effects
+		_has_fizzled = true
 		# Phase 24: Black Hole Launcher auto-collapses on lifetime expiry (if not already consumed)
 		if not _is_consumed and _weapon_mod == GameConstants.WeaponMod.BLACK_HOLE_LAUNCHER:
 			_spawn_black_hole_launcher_collapse(damage)

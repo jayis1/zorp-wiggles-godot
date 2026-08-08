@@ -797,7 +797,7 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	# Enhancement Pack 41: Deployable SFX get pitch variation
 	SFX_SHIELD_HIT, SFX_SHIELD_REFLECT, SFX_TURRET_EXPIRED, SFX_VOID_SLASH,
 	# Enhancement Pack 44: AI state transition SFX get pitch variation
-	SFX_AMBUSH_TRIGGER, SFX_PACK_FRENZY, SFX_RETREAT, SFX_WEATHER_COMBO,
+	SFX_AMBUSH_TRIGGER, SFX_PACK_FRENZY, SFX_CALL_HELP, SFX_RETREAT, SFX_WEATHER_COMBO,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 

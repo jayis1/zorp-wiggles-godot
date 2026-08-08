@@ -29,6 +29,13 @@ var _has_already_hit: bool = false
 # HIT_RADIUS, a subtle whoosh SFX plays. This flag prevents repeated graze
 # SFX from the same projectile lingering near the player.
 var _has_grazed: bool = false
+# Guard against _fizzle_out() re-entrancy: when age >= lifetime, _physics_process
+# calls _fizzle_out() which schedules queue_free via a 0.18s timer. Until the
+# node is actually freed, _physics_process keeps running and calling
+# _fizzle_out() every frame, creating duplicate fade tweens, duplicate particle
+# bursts, and multiple queue_free timer callbacks. This flag ensures it only
+# fires once.
+var _is_fizzling: bool = false
 
 # ── Spawn flash timer ── Counts down during the muzzle-flash spawn tween
 #    so the per-frame mesh.scale set in _physics_process doesn't override
@@ -347,6 +354,9 @@ func _spawn_impact(col: Color) -> void:
 ## Both the light AND the mesh alpha tween out together so the bolt
 ## visibly "dissipates" instead of just vanishing.
 func _fizzle_out() -> void:
+	if _is_fizzling:
+		return  # Already fizzling — prevent duplicate tweens/particles/timers
+	_is_fizzling = true
 	# Stop trail emission so the stream ends with the bolt's dissipation.
 	if _trail_particles:
 		_trail_particles.emitting = false
