@@ -199,8 +199,8 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 
 ## 📊 Stats
 
-- **64,000+ lines** of GDScript across 162 scripts
-- **224 files** (162 scripts + 49 scenes + 13 shaders)
+- **67,000+ lines** of GDScript across 163 scripts
+- **225 files** (163 scripts + 49 scenes + 13 shaders)
 - **21 enemy types** with unique AI (including 10 Phase 23 bosses/elites)
 - **36 weapon mods** craftable (20 original + 2 Enhancement + 2 Enhancement Pack 2 + 12 Phase 24)
 - **20 biomes** with procedural generation (12 original + 7 Phase 22 + 1 Underground)
@@ -212,7 +212,7 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 - **Local co-op** with Player 2 "Zerp"
 - **100+ procedural SFX** + 12 biome music tracks + dynamic music intensity
 - **8 procedural anomalous zone traits** with real gameplay effects (toxic haze, magma fissures, gravity well, echo chamber, glowing, crystal shard, mirror surface, rain indoor)
-- **224+ git commits** of development history
+- **321+ git commits** of development history
 
 ---
 

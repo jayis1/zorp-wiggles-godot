@@ -34,6 +34,7 @@ var _pending_dimension: int = GameConstants.Dimension.NORMAL  # Target during tr
 # Rift spawn management
 var _rift_spawn_timer: float = 15.0        # Initial delay before first rift
 var _active_rifts: Array[Node] = []        # Currently active rift portals
+var _cached_player: Node3D = null          # Cached player ref — avoids group scan in _try_spawn_rift
 
 # Time-slow tracking (for Engine.time_scale when needed)
 var _world_time_scale: float = 1.0
@@ -118,8 +119,9 @@ func _process(delta: float) -> void:
 func _try_spawn_rift() -> void:
 	if _active_rifts.size() >= GameConstants.RIFT_MAX_ACTIVE:
 		return
-
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _cached_player
 	if not player or not is_instance_valid(player):
 		return
 
@@ -477,3 +479,4 @@ func _on_game_restarted() -> void:
 	_player_time_scale = 1.0
 	_rift_spawn_timer = 15.0
 	_active_rifts.clear()
+	_cached_player = null

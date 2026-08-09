@@ -58,6 +58,7 @@ var _fetch_items: Array[Node3D] = []
 var _dummy_bolts: Array[Node3D] = []
 var _dummy_fire_timers: Array[float] = []
 var _game_parent: Node = null  # Node we parent waypoints/dummies to
+var _cached_player: Node3D = null  # Cached player ref — avoids per-frame group scans in update()
 
 
 func _ready() -> void:
@@ -351,7 +352,9 @@ func update(delta: float) -> void:
 
 
 func _update_dash_course(delta: float) -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _cached_player
 	if not player or not is_instance_valid(player):
 		cancel_game()
 		return
@@ -399,7 +402,9 @@ func _update_dash_course(delta: float) -> void:
 
 
 func _update_target_dodge(delta: float) -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _cached_player
 	if not player or not is_instance_valid(player):
 		cancel_game()
 		return
@@ -554,6 +559,7 @@ func reset() -> void:
 	_tp = 0
 	for i in range(_stat_levels.size()):
 		_stat_levels[i] = 0
+	_cached_player = null
 	tp_changed.emit(0)
 
 

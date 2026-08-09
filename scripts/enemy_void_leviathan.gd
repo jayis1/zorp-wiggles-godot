@@ -381,8 +381,12 @@ func _update_vacuum_pull(delta: float) -> void:
 					(p2 as CharacterBody3D).velocity += p2_pull * GameConstants.VOID_LEVIATHAN_VACUUM_FORCE * delta
 
 ## Get the target player (nearest valid, co-op aware).
+## Uses _cached_player from EnemyBase (populated by _update_ai in super._physics_process)
+## with a lazy fallback scan for calls before super runs (boss attacks fire before super).
 func _get_target_player() -> Node3D:
-	var p1: Node3D = get_tree().get_first_node_in_group("player")
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var p1: Node3D = _cached_player
 	if CoOpManager.is_coop_active() and CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
 		var p1_dist: float = global_position.distance_to(p1.global_position) if p1 else 99999.0
 		var p2_dist: float = global_position.distance_to(CoOpManager.p2_node.global_position)

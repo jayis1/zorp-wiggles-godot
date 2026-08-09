@@ -97,7 +97,9 @@ func _process(delta: float) -> void:
 		_schedule_next_spawn()
 
 func _try_spawn_world_boss() -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _cached_player
 	if not player:
 		return
 	# Pick a candidate boss type.
