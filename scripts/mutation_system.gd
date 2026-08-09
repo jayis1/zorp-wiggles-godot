@@ -261,25 +261,27 @@ func get_mutation_count() -> int:
 func has_combo() -> bool:
 	return _active_mutations.size() >= COMBO_THRESHOLD
 
-## Get fire resistance (0.0 to 1.0) from Lava mutation.
+## Get fire resistance (0.0 to 1.0) from Lava and/or Volcano mutations.
 func get_fire_resistance() -> float:
+	var res: float = 0.0
 	if has_mutation(Mutation.LAVA):
-		return 0.5 if has_combo() else 0.3
+		res = max(res, 0.5 if has_combo() else 0.3)
 	# Phase 22: Volcano mutation also grants heat resistance (stronger — full immunity with combo)
 	if has_mutation(Mutation.VOLCANO):
 		var vol: float = 0.6 if has_combo() else 0.4
-		return max(vol, 0.3 if has_mutation(Mutation.LAVA) else vol)
-	return 0.0
+		res = max(res, vol)
+	return res
 
-## Get damage reduction from Snow mutation (ice armor).
+## Get damage reduction from Snow mutation (ice armor) and/or Ancient mutation.
 func get_damage_reduction() -> float:
+	var res: float = 0.0
 	if has_mutation(Mutation.SNOW):
-		return 0.3 if has_combo() else 0.2
+		res = max(res, 0.3 if has_combo() else 0.2)
 	# Phase 22: Ancient mutation grants trap/relic damage reduction.
 	if has_mutation(Mutation.ANCIENT):
 		var anc: float = 0.25 if has_combo() else 0.15
-		return max(anc, 0.2 if has_mutation(Mutation.SNOW) else anc)
-	return 0.0
+		res = max(res, anc)
+	return res
 
 ## Check if enemies should be passive (Forest mutation).
 func enemies_passive() -> bool:

@@ -87,7 +87,6 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	# Track frame time
-	var frame_ms: float = Time.get_ticks_msec()
 	# We can't measure the current frame's time yet, so we use the delta
 	# from the previous frame (delta is the time since last _process call).
 	_frame_times.append(delta * 1000.0)
