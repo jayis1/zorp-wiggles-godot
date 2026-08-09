@@ -1508,14 +1508,21 @@ func _die() -> void:
 	# Phase 6: Death poof particles
 	ParticleEffects.spawn_death_poof(get_parent(), global_position, base_color, base_scale)
 
-	# ── Death shockwave ring for large enemies — a flat expanding ring that
-	#    gives bigger enemies a weighty, cinematic death impact. Small enemies
-	#    (Blobs, Wisps, Swarm Mites) just get the poof; larger foes (Sentinels,
-	#    Drakes, Crystal Guardians, Bombers) get the ring too. Ring radius
-	#    scales with enemy size so a Drake gets a bigger shockwave than a Bomber.
-	if base_scale >= 1.5:
-		var shockwave_radius: float = clampf(base_scale * 3.5, 4.0, 12.0)
-		ParticleEffects.spawn_death_shockwave(get_parent(), global_position, base_color, shockwave_radius)
+	# ── Death shockwave ring for all enemies — a flat expanding ring that
+	#    gives every kill a weighty, cinematic death impact. Previously
+	#    only large enemies (base_scale >= 1.5) got the ring; small enemies
+	#    (Blobs, Wisps, Swarm Mites) only got the poof, making their deaths
+	#    feel lighter than large enemies even though the kill is the same
+	#    gameplay event. Now ALL enemies get a ring, with the radius scaled
+	#    proportionally to the enemy's size so a Swarm Mite gets a tiny
+	#    1.5m ring while a Drake gets its full 7.7m ring. The minimum radius
+	#    ensures even the tiniest enemy gets a visible ring (1.5m is small
+	#    enough to not clutter mass clears but large enough to read as a
+	#    "thud" rather than a particle pop). This mirrors the pattern from
+	#    fighting games where every KO gets a shockwave regardless of
+	#    character size — the ring is the universal "you died" language.
+	var shockwave_radius: float = clampf(base_scale * 3.5, 1.5, 12.0)
+	ParticleEffects.spawn_death_shockwave(get_parent(), global_position, base_color, shockwave_radius)
 
 	# ── Death light flash ── A brief OmniLight3D that flashes the enemy's
 	#    color at the death point, then fades. Gives extra punch in dark biomes

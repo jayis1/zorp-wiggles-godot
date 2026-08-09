@@ -190,17 +190,55 @@ const HEAL_FOV_BLOOM: float = 2.0
 func _on_player_heal_fov_bloom(_amount: int) -> void:
 	camera.fov = camera.fov + HEAL_FOV_BLOOM
 
-# ── Level-up FOV punch ── Briefly reduces the FOV by LEVELUP_FOV_PUNCH
-#    degrees for a cinematic zoom-in, then eases back. The _process FOV
-#    return loop handles the ease-back via fov_return_speed. We set the
-#    camera.fov directly (below the default baseline) so the return loop
-#    smoothly eases it back up to default_fov + speed_fov_current. This
-#    mirrors the damage FOV dip's approach but in the opposite direction
-#    (zoom in vs zoom out) — a positive "shutter click" vs a negative
-#    "tunnel vision."
+## ── Level-up FOV punch ── Briefly reduces the FOV by LEVELUP_FOV_PUNCH
+##    degrees for a cinematic zoom-in, then eases back. The _process FOV
+##    return loop handles the ease-back via fov_return_speed. We set the
+##    camera.fov directly (below the default baseline) so the return loop
+##    smoothly eases it back up to default_fov + speed_fov_current. This
+##    mirrors the damage FOV dip's approach but in the opposite direction
+##    (zoom in vs zoom out) — a positive "shutter click" vs a negative
+##    "tunnel vision."
+## ── Level-up distance zoom ── In addition to the FOV punch, the camera
+##    briefly pulls closer (reduces orbit distance) so Zorp is framed
+##    tighter during the level-up celebration. This complements the FOV
+##    punch: FOV narrows the view, distance pull frames Zorp larger in
+##    frame. Together they create a cinematic "shutter click" that makes
+##    level-ups feel like a milestone moment — the camera leans in to
+##    celebrate with the player, then eases back to the normal orbit.
+##    The zoom-in uses a tween (not a direct _target_zoom_distance write)
+##    so it composes cleanly with the boss/low-HP zoom systems — the
+##    tween temporarily overrides _current_zoom_distance, then restores
+##    it so the _process zoom lerp resumes from the correct baseline. A
+##    tracked tween prevents stacking if the player levels up rapidly.
 const LEVELUP_FOV_PUNCH: float = 4.0
+const LEVELUP_ZOOM_IN_DISTANCE: float = 13.0  # Pulled-in distance during level-up
+const LEVELUP_ZOOM_DURATION: float = 0.5     # Ease-back duration
+var _levelup_zoom_tween: Tween = null
 func _on_player_levelup_fov_punch(_level: int) -> void:
 	camera.fov = maxf(camera.fov - LEVELUP_FOV_PUNCH, default_fov - LEVELUP_FOV_PUNCH)
+	# ── Distance zoom-in punch ── Briefly pull the camera closer to the
+	# player for a cinematic "lean in" on level-up. We tween
+	# _current_zoom_distance directly (not _target_zoom_distance) so the
+	# _process zoom lerp doesn't fight the tween — the tween owns the
+	# distance for the duration, then the _process lerp resumes. The
+	# snap-in is instant (the level-up moment should punch in immediately)
+	# and the ease-back uses ease-out cubic for a smooth settle. The
+	# restored value is set to _target_zoom_distance so it picks up
+	# whatever the current target is (boss zoom, low-HP zoom, or normal
+	# orbit) — this prevents the zoom-in from fighting those systems.
+	# Skipped during co-op (co-op zoom is dynamically computed from
+	# player spacing and shouldn't be overridden).
+	if not CoOpManager.is_coop_active():
+		if _levelup_zoom_tween and _levelup_zoom_tween.is_valid():
+			_levelup_zoom_tween.kill()
+		var restore_target: float = _target_zoom_distance
+		_current_zoom_distance = LEVELUP_ZOOM_IN_DISTANCE
+		_levelup_zoom_tween = create_tween()
+		_levelup_zoom_tween.tween_method(
+			func(d: float):
+				_current_zoom_distance = d,
+			LEVELUP_ZOOM_IN_DISTANCE, restore_target, LEVELUP_ZOOM_DURATION
+		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 func _process(delta: float) -> void:
 	if not _target_node or not is_instance_valid(_target_node):
@@ -291,8 +329,14 @@ func _process(delta: float) -> void:
 	global_position = Vector3(new_x, new_y, new_z)
 
 	# ── Dynamic zoom: smoothly lerp the camera's local Z toward the target distance
-	var zoom_weight: float = 1.0 - exp(-zoom_smoothing * delta)
-	_current_zoom_distance = lerpf(_current_zoom_distance, _target_zoom_distance, zoom_weight)
+	# Skip the zoom lerp while the level-up zoom tween is active — the tween
+	# owns _current_zoom_distance for the duration of the cinematic punch.
+	# Without this guard, the _process lerp would fight the tween, pulling
+	# the distance toward _target_zoom_distance while the tween tries to
+	# hold it at the punched-in value, causing a jittery compromise.
+	if not (_levelup_zoom_tween and _levelup_zoom_tween.is_valid()):
+		var zoom_weight: float = 1.0 - exp(-zoom_smoothing * delta)
+		_current_zoom_distance = lerpf(_current_zoom_distance, _target_zoom_distance, zoom_weight)
 
 	# Apply screen shake offset to the camera child node (shake layers on top of zoom)
 	_apply_screen_shake(delta)

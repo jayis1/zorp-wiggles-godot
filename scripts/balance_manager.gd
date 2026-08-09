@@ -82,13 +82,55 @@ func _ready() -> void:
 
 ## Returns the XP-curve multiplier for a given player level.
 ## Applied to the base xp_to_next value from game_constants.
+## ── Smoothstep transition bands ── The old step function had hard cliffs:
+##   level 5 → 0.90×, level 6 → 1.00× (an 11% jump in one level).
+##   level 15 → 1.00×, level 16 → 1.08× (an 8% jump in one level).
+##   level 30 → 1.08×, level 31 → 1.15× (a 7% jump in one level).
+## Each cliff creates a jarring difficulty spike where the XP requirement
+## surges for a single level then plateaus — the player feels a "wall" at
+## those transition levels. We now use a 4-level smoothstep transition band
+## centered on each boundary so the multiplier eases continuously:
+##   Early band (levels 1-4): flat 0.90× (no change — early-game momentum)
+##   Transition 1 (levels 5-8): smoothstep 0.90× → 1.00×
+##   Mid band (levels 9-14): flat 1.00× (no change)
+##   Transition 2 (levels 15-18): smoothstep 1.00× → 1.08×
+##   Late band (levels 19-28): flat 1.08× (no change)
+##   Transition 3 (levels 29-32): smoothstep 1.08× → 1.15×
+##   Endgame band (33+): flat 1.15×
+## The smoothstep (t² * (3 - 2t)) gives an S-curve so the transition starts
+## gently, accelerates through the middle, and eases out — no single level
+## bears the full weight of the difficulty step. The band width of 4 levels
+## means each transition is spread across ~4 hours of gameplay (at ~1
+## level per hour mid-game), so the ramp is imperceptible per-level but
+## the overall arc is preserved.
+const XP_TRANSITION_BAND: int = 4  # Levels per smoothstep transition
+
 func get_xp_curve_mult(level: int) -> float:
-	if level <= 5:
+	# Early band — flat, no transition needed
+	if level <= 4:
 		return XP_CURVE_EARLY_MULT
-	elif level <= 15:
+	# Transition 1: early → mid (levels 5-8)
+	if level <= 4 + XP_TRANSITION_BAND:
+		var t: float = float(level - 4) / float(XP_TRANSITION_BAND)
+		t = t * t * (3.0 - 2.0 * t)  # smoothstep
+		return lerpf(XP_CURVE_EARLY_MULT, XP_CURVE_MID_MULT, t)
+	# Mid band — flat
+	if level <= 14:
 		return XP_CURVE_MID_MULT
-	elif level <= 30:
+	# Transition 2: mid → late (levels 15-18)
+	if level <= 14 + XP_TRANSITION_BAND:
+		var t: float = float(level - 14) / float(XP_TRANSITION_BAND)
+		t = t * t * (3.0 - 2.0 * t)
+		return lerpf(XP_CURVE_MID_MULT, XP_CURVE_LATE_MULT, t)
+	# Late band — flat
+	if level <= 28:
 		return XP_CURVE_LATE_MULT
+	# Transition 3: late → endgame (levels 29-32)
+	if level <= 28 + XP_TRANSITION_BAND:
+		var t: float = float(level - 28) / float(XP_TRANSITION_BAND)
+		t = t * t * (3.0 - 2.0 * t)
+		return lerpf(XP_CURVE_LATE_MULT, XP_CURVE_ENDGAME_MULT, t)
+	# Endgame band — flat
 	return XP_CURVE_ENDGAME_MULT
 
 
