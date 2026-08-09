@@ -16,6 +16,8 @@ var _hovered_skill: String = ""  # Currently mouse-hovered skill key
 var _skill_rects: Dictionary = {}  # skill_key → Rect2 (for click detection)
 var _prestige_btn_rect: Rect2 = Rect2()
 var _close_btn_rect: Rect2 = Rect2()
+var _pulse_skill: String = ""  # Skill key that was just purchased (for pulse animation)
+var _pulse_timer: float = 0.0  # Countdown for the purchase pulse effect
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -29,10 +31,22 @@ func _on_sp_changed(_sp: int) -> void:
 	if _fade_alpha > 0.01 or _visible_flag:
 		queue_redraw()
 
-func _on_skill_purchased(_branch: int, _node_id: int, _level: int) -> void:
+func _on_skill_purchased(branch: int, node_id: int, level: int) -> void:
 	if _fade_alpha > 0.01 or _visible_flag:
 		queue_redraw()
-	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# Dedicated crystalline skill-unlock SFX — distinct from level-up
+	# so skill purchases have their own audio identity. The progression
+	# system also plays this SFX, but skill_tree plays it only when the
+	# panel is visible (the progression system handles the case where
+	# the purchase happens via other means).
+	if _visible_flag and AudioManager:
+		AudioManager.play_sfx(AudioManager.SFX_SKILL_UNLOCK)
+	# Trigger a visual pulse on the purchased skill node so the player
+	# sees which node lit up, even if they clicked rapidly. The pulse
+	# is a golden expanding glow ring that fades over 0.5s.
+	var skill_key: String = ProgressionSystem.get_branch_skills(branch)[node_id]
+	_pulse_skill = skill_key
+	_pulse_timer = 0.5
 
 func _on_prestige_changed(_level: int) -> void:
 	if _fade_alpha > 0.01 or _visible_flag:
@@ -50,9 +64,16 @@ func _process(delta: float) -> void:
 	# Smooth fade
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
+	# Tick the purchase pulse timer — keeps redrawing while the pulse
+	# is active so the golden glow ring animates smoothly.
+	if _pulse_timer > 0.0:
+		_pulse_timer -= delta
+		if _pulse_timer <= 0.0:
+			_pulse_timer = 0.0
+			_pulse_skill = ""
 	# Only accept input when visible enough
 	mouse_filter = Control.MOUSE_FILTER_STOP if _fade_alpha > 0.5 else Control.MOUSE_FILTER_IGNORE
-	if _fade_alpha > 0.01 or _visible_flag:
+	if _fade_alpha > 0.01 or _visible_flag or _pulse_timer > 0.0:
 		queue_redraw()
 
 func _gui_input(event: InputEvent) -> void:
@@ -225,6 +246,26 @@ func _draw_skill_node(font, skill_key: String, rect: Rect2, a: float, branch_col
 		border_color = Color(0.3, 0.35, 0.45, 0.4 * a)
 	var border_width: float = 2.0 if (can_buy or maxed or hovered) else 1.0
 	draw_rect(rect, border_color, false, border_width)
+	# Purchase pulse — a golden expanding glow ring that appears when
+	# a skill is purchased. The ring expands from the node's border
+	# outward and fades over 0.5s. Gives the player visual confirmation
+	# that their click registered, even if they clicked rapidly.
+	if _pulse_skill == skill_key and _pulse_timer > 0.0:
+		var pulse_progress: float = 1.0 - (_pulse_timer / 0.5)  # 0→1
+		var pulse_alpha: float = (1.0 - pulse_progress) * a  # Fades out
+		var pulse_expand: float = pulse_progress * 12.0  # Expands 12px
+		var pulse_rect := Rect2(
+			rect.position.x - pulse_expand,
+			rect.position.y - pulse_expand,
+			rect.size.x + pulse_expand * 2.0,
+			rect.size.y + pulse_expand * 2.0
+		)
+		# Golden glow matching the prestige/achievement color language
+		draw_rect(pulse_rect, Color(1.0, 0.85, 0.3, pulse_alpha * 0.6), false, 3.0)
+		# Inner bright flash on the first 30% of the pulse
+		if pulse_progress < 0.3:
+			var flash_alpha: float = (1.0 - pulse_progress / 0.3) * a * 0.3
+			draw_rect(rect, Color(1.0, 0.85, 0.3, flash_alpha), true)
 	# Hover highlight
 	if hovered and can_buy:
 		draw_rect(rect, Color(1.0, 1.0, 1.0, 0.08 * a), true)

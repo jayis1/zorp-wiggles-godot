@@ -225,13 +225,15 @@ func purchase_skill(skill_key: String) -> bool:
 	_save()
 	GameManager.add_message("⬆ Skill upgraded: %s → Rank %d" % [def["name"], _skill_ranks[skill_key]])
 	# ── Juice: SFX + camera trauma + particle burst on the player ──
-	# Skill purchases are infrequent (1 SP per level) so each one deserves
-	# a celebration moment. The ascending combo-milestone arpeggio pairs
-	# with a gentle 0.12 camera trauma (matching quest-completion weight)
-	# and a golden sparkle burst at the player's position so the upgrade
-	# feels physical even when the skill tree panel covers the viewport.
+	# Skill purchases are infrequent (1 SP per level) so each one
+	# deserves a celebration moment. The dedicated crystalline
+	# skill-unlock ping conveys "knowledge acquired," distinct from
+	# quest/mission chimes. Paired with a gentle 0.12 camera trauma
+	# and a golden sparkle burst at the player's position so the
+	# upgrade feels physical even when the skill tree panel covers
+	# the viewport.
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+		AudioManager.play_sfx(AudioManager.SFX_SKILL_UNLOCK)
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.12)

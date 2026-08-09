@@ -74,8 +74,10 @@ func submit_score(entry: Dictionary) -> bool:
 	if rank == 1:
 		new_record.emit(mode, entry)
 		# Celebratory chime for a new #1 record — a significant milestone.
+		# Uses the achievement sound since a new leaderboard record is an
+		# accomplishment, not a level-up or a victory fanfare.
 		if AudioManager:
-			AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+			AudioManager.play_sfx(AudioManager.SFX_ACHIEVEMENT)
 	score_submitted.emit(mode, rank, entry)
 	print_verbose("[Leaderboards] Submitted %s score: rank %d/%d" % [mode, rank, entries.size()])
 	return true

@@ -177,7 +177,11 @@ func _show() -> void:
 	# uses PROCESS_MODE_ALWAYS so its buttons remain clickable while paused).
 	get_tree().paused = true
 	GameManager.is_paused = true
-	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# Victory fanfare — a 6-note triumphant major arpeggio, the most
+	# elaborate SFX in the game. Reserved for completing Boss Rush,
+	# Speedrun, or Endless modes — the ultimate payoff. Distinct from
+	# SFX_LEVEL_UP which was themantically wrong for a victory screen.
+	AudioManager.play_sfx(AudioManager.SFX_VICTORY_FANFARE)
 
 func _show_milestone(wave: int) -> void:
 	# Brief celebration for endless milestone waves — auto-hides after 4s.

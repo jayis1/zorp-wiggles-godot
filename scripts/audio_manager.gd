@@ -466,6 +466,43 @@ const SFX_MIND_CONTROL: String = "mind_control"
 #    dramatic — the player already knows the timer is running.
 const SFX_MIND_CONTROL_END: String = "mind_control_end"
 
+# ── Enhancement Pack 48: Dedicated SFX for gameplay milestones ──
+# Previously these events reused SFX_LEVEL_UP or SFX_COMBO_MILESTONE,
+# which were thematically misleading — the player would hear "level up"
+# when an achievement unlocked, or "kill streak" when a quest completed.
+# Each new SFX has a distinct sonic identity matching its event.
+
+# SFX_ACHIEVEMENT — a triumphant 4-note major arpeggio (C5→E5→G5→C6,
+# 523→659→784→1047 Hz, 0.08s per note, 0.22 vol). The major triad
+# ascending through two octaves conveys "accomplishment unlocked" —
+# the classic fanfare interval. Distinct from SFX_LEVEL_UP (3-note)
+# so the player can tell an achievement from a level-up by ear.
+const SFX_ACHIEVEMENT: String = "achievement"
+
+# SFX_QUEST_COMPLETE — a bright 3-note rising chime (G4→C5→E5,
+# 392→523→659 Hz, 0.10s per note, 0.20 vol). The perfect fifth +
+# major third interval conveys "task fulfilled" — a satisfying
+# resolution. Distinct from SFX_COMBO_MILESTONE (2-note) so quest
+# completion doesn't sound like a combat streak.
+const SFX_QUEST_COMPLETE: String = "quest_complete"
+
+# SFX_SKILL_UNLOCK — a crystalline 2-note ascending ping (C6→G6,
+# 1047→1568 Hz, 0.07s per note, 0.18 vol). The high crystalline
+# register conveys "knowledge / skill acquired" — like a rune
+# activating. Short and punchy since skill purchases happen in a
+# menu where the player is reading, not in combat. Distinct from
+# SFX_LEVEL_UP so skill purchases don't sound like leveling.
+const SFX_SKILL_UNLOCK: String = "skill_unlock"
+
+# SFX_VICTORY_FANFARE — a 6-note triumphant fanfare (C5→E5→G5→C6→E6→G6,
+# 523→659→784→1047→1319→1568 Hz, 0.09s per note, 0.30 vol). The
+# extended 2-octave ascending major arpeggio is the most elaborate
+# SFX in the game — reserved for the ultimate payoff of completing
+# Boss Rush, Speedrun, or Endless modes. The cascading ascent conveys
+# "you did it — the run is won." Replaces SFX_LEVEL_UP which was
+# themantically wrong for a victory screen.
+const SFX_VICTORY_FANFARE: String = "victory_fanfare"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -855,6 +892,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_WALL_BOUNCE, SFX_RICOCHET, SFX_CRYSTAL_CHARGE,
 	# Enhancement Pack 48: Enemy windup + mind control SFX get pitch variation
 	SFX_ENEMY_WINDUP, SFX_MIND_CONTROL_END,
+	# Enhancement Pack 48: Milestone SFX get pitch variation
+	SFX_ACHIEVEMENT, SFX_QUEST_COMPLETE, SFX_SKILL_UNLOCK,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1455,6 +1494,16 @@ func _generate_all_sfx() -> void:
 	# 1319→880→659 Hz, 0.15s, 0.18 vol) — the reversed interval of the
 	# activate sound, conveying "the control is fading."
 	_sfx_streams[SFX_MIND_CONTROL_END] = _gen_arpeggio([1319.0, 880.0, 659.0], 0.05, 0.18)
+
+	# ── Enhancement Pack 48: Dedicated milestone SFX ──
+	# SFX_ACHIEVEMENT — triumphant 4-note major arpeggio (C5→E5→G5→C6)
+	_sfx_streams[SFX_ACHIEVEMENT] = _gen_arpeggio([523.0, 659.0, 784.0, 1047.0], 0.08, 0.22)
+	# SFX_QUEST_COMPLETE — bright 3-note rising chime (G4→C5→E5)
+	_sfx_streams[SFX_QUEST_COMPLETE] = _gen_arpeggio([392.0, 523.0, 659.0], 0.10, 0.20)
+	# SFX_SKILL_UNLOCK — crystalline 2-note ascending ping (C6→G6)
+	_sfx_streams[SFX_SKILL_UNLOCK] = _gen_arpeggio([1047.0, 1568.0], 0.07, 0.18)
+	# SFX_VICTORY_FANFARE — 6-note triumphant fanfare (C5→E5→G5→C6→E6→G6)
+	_sfx_streams[SFX_VICTORY_FANFARE] = _gen_arpeggio([523.0, 659.0, 784.0, 1047.0, 1319.0, 1568.0], 0.09, 0.30)
 
 
 func _generate_all_music() -> void:

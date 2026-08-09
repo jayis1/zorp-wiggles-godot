@@ -417,12 +417,12 @@ func _complete_quest(quest: ProceduralQuest) -> void:
 	quest_completed.emit(quest)
 	var msg: String = "✓ QUEST COMPLETE: %s (+%d XP, +%d score)" % [quest.title, quest.reward_xp, quest.reward_score]
 	GameManager.add_message(msg)
-	# Quest completion juice — same language as mission completion:
-	# pleasant arpeggio chime + gentle camera shake. Procedural quests
-	# can have modifiers (bonus XP/loot) making them more rewarding, so
-	# the feedback is the same — the reward itself communicates the tier.
+	# Quest completion juice — dedicated quest-complete chime + gentle
+	# camera shake. Procedural quests can have modifiers (bonus XP/loot)
+	# making them more rewarding, so the feedback is the same — the
+	# reward itself communicates the tier.
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+		AudioManager.play_sfx(AudioManager.SFX_QUEST_COMPLETE)
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.12)
 	# Generate a replacement quest after a short delay

@@ -169,11 +169,12 @@ func _complete_mission(mission: Mission) -> void:
 
 	mission_completed.emit(mission)
 	GameManager.add_message("✓ MISSION COMPLETE: %s (+%d XP, +%d score)" % [mission.title, mission.reward_xp, mission.reward_score])
-	# Mission completion juice — a pleasant chime + gentle camera shake
-	# to reward the player for completing an objective. Lighter than
-	# level-up (0.25) since missions complete more frequently.
+	# Mission completion juice — a dedicated quest-complete chime +
+	# gentle camera shake to reward the player for completing an
+	# objective. Lighter than level-up (0.25) since missions complete
+	# more frequently.
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+		AudioManager.play_sfx(AudioManager.SFX_QUEST_COMPLETE)
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.12)
 
