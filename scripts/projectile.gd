@@ -1161,7 +1161,8 @@ func _spawn_acid_pool(base_dmg: int) -> void:
 		)
 		tw.tween_interval(0.5)
 	# Fade out and free
-	tw.tween_property(pool_mat, "albedo_color:a", 0.0, 0.5)
+	tw.tween_property(pool_mat, "albedo_color:a", 0.0, 0.5) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tw.tween_callback(pool.queue_free)
 
 ## Returns the impact burst color for a hit based on crit/kill status.
@@ -1349,7 +1350,8 @@ func _spawn_black_hole(base_dmg: int) -> void:
 	# Shrink and fade the singularity after collapse
 	tick_tween.tween_property(bh_mesh, "scale", Vector3.ZERO, 0.2) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	tick_tween.tween_property(bh_mat, "albedo_color:a", 0.0, 0.2)
+	tick_tween.tween_property(bh_mat, "albedo_color:a", 0.0, 0.2) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tick_tween.tween_callback(singularity.queue_free)
 
 ## Enhancement: Magnet Mine — on impact, pull nearby enemies toward the detonation
@@ -1454,7 +1456,8 @@ func _spawn_magnet_mine_detonation(base_dmg: int) -> void:
 	# Shrink and fade the mine after detonation
 	tick_tween.tween_property(mine_mesh, "scale", Vector3.ZERO, 0.2) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	tick_tween.tween_property(mine_mat, "albedo_color:a", 0.0, 0.2)
+	tick_tween.tween_property(mine_mat, "albedo_color:a", 0.0, 0.2) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tick_tween.tween_callback(mine_node.queue_free)
 
 # ── Phase 24: New Weapon Mod Behaviors ───────────────────────────────────────
@@ -1569,7 +1572,8 @@ func _spawn_black_hole_launcher_collapse(base_dmg: int) -> void:
 	# Shrink and fade the singularity after collapse
 	tick_tween.tween_property(bh_mesh, "scale", Vector3.ZERO, 0.25) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	tick_tween.tween_property(bh_mat, "albedo_color:a", 0.0, 0.25)
+	tick_tween.tween_property(bh_mat, "albedo_color:a", 0.0, 0.25) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tick_tween.tween_callback(singularity.queue_free)
 
 ## Phase 24: Time Freeze Ray — freeze the enemy in time for 3 seconds. While
@@ -1946,7 +1950,8 @@ func _spawn_poison_nova_cloud(cloud_pos: Vector3, base_dmg: int) -> void:
 		)
 		tw.tween_interval(GameConstants.POISON_NOVA_CLOUD_TICK_INTERVAL)
 	# Fade out and free
-	tw.tween_property(cloud_mat, "albedo_color:a", 0.0, 0.5)
+	tw.tween_property(cloud_mat, "albedo_color:a", 0.0, 0.5) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	tw.tween_callback(cloud.queue_free)
 
 ## Phase 24: Mind Control Dart — mind controls the target enemy for 8 seconds.

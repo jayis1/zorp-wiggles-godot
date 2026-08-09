@@ -1610,7 +1610,8 @@ func despawn_fade(duration: float = 0.8) -> void:
 	if _material and body_mesh:
 		var t := create_tween()
 		t.set_parallel(true)
-		t.tween_property(_material, "albedo_color:a", 0.0, duration)
+		t.tween_property(_material, "albedo_color:a", 0.0, duration) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		t.tween_property(body_mesh, "scale", Vector3(0.01, 0.01, 0.01), duration) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 		t.chain().tween_callback(queue_free)

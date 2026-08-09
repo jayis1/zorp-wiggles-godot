@@ -88,7 +88,8 @@ func absorb_damage(amount: int) -> int:
 				var mat: StandardMaterial3D = child.material_override
 				var orig_emi: float = mat.emission_energy_multiplier
 				var hit_tw := bubble.create_tween()
-				hit_tw.tween_property(mat, "emission_energy_multiplier", 5.0, 0.04)
+				hit_tw.tween_property(mat, "emission_energy_multiplier", 5.0, 0.04) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 				hit_tw.tween_property(mat, "emission_energy_multiplier", orig_emi, 0.20).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 				break
 	if _shield_bubble_hp <= 0:

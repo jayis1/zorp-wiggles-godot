@@ -50,6 +50,11 @@ func _ready() -> void:
 	GameManager.level_up.connect(_on_level_up)
 	GameManager.biome_changed.connect(_on_biome_changed)
 	GameManager.enemy_killed.connect(_on_enemy_killed)
+	# Reset on game restart — MissionSystem is an autoload that persists
+	# across runs, so without this handler, missions from the previous run
+	# (including visited biomes and completed mission history) would
+	# persist into the new run, giving the player stale objectives.
+	GameManager.game_restarted.connect(_on_game_restarted)
 
 	# Generate initial missions
 	_generate_initial_missions()
@@ -285,3 +290,10 @@ func get_completed_count() -> int:
 
 func get_total_pickups() -> int:
 	return GameManager.player_total_pickups
+
+# ─── Game Restart ─────────────────────────────────────────────────────────────
+func _on_game_restarted() -> void:
+	_active_missions.clear()
+	_completed_missions.clear()
+	_visited_biomes.clear()
+	_generate_initial_missions()
