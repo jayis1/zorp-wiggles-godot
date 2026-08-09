@@ -398,6 +398,13 @@ func _apply_screen_shake(delta: float) -> void:
 		# of the rattle. This is the standard "1/f-ish noise" trick used in
 		# Vlambeer-style juice.
 		var t: float = Time.get_ticks_msec() * 0.05
+		# ── Asymmetric axes ── Vertical (Y) shake is slightly stronger than
+		# horizontal (X) — real camera impacts recoil more vertically than
+		# laterally (hands absorb horizontal kick, vertical is harder to
+		# stabilize). A 1.15× Y multiplier makes hits feel weightier without
+		# being obviously skewed. The X axis stays at 1.0 so horizontal
+		# reading stays clean for aiming. This mirrors the asymmetric
+		# "recoil bias" used in Vlambeer-style juice (Nuclear Throne).
 		var noise_x: float = (
 			sin(t + _shake_seed.x) * 0.65
 			+ sin(t * 3.7 + _shake_seed.x * 1.7) * 0.25
@@ -407,7 +414,7 @@ func _apply_screen_shake(delta: float) -> void:
 			sin(t * 1.3 + _shake_seed.y) * 0.65
 			+ sin(t * 4.1 + _shake_seed.y * 2.3) * 0.25
 			+ sin(t * 0.51 + _shake_seed.y * 0.6) * 0.10
-		) * max_shake_offset * shake_amount
+		) * max_shake_offset * shake_amount * 1.15  # Vertical bias for organic recoil
 		var rot_z: float = (
 			sin(t * 0.9 + _shake_seed.z) * 0.65
 			+ sin(t * 3.3 + _shake_seed.z * 1.9) * 0.25

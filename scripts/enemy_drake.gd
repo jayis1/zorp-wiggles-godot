@@ -1,7 +1,7 @@
 ## Zorp Wiggles — Plasma Drake (Boss)
 ## Multi-phase boss with enrage, fire breath, and charge attacks.
-## Phase 1 (>30% HP): normal chase + fire breath
-## Phase 2 (<30% HP): enrage — faster, stronger, charges at player
+## Phase 1 (>25% HP): normal chase + fire breath
+## Phase 2 (<25% HP): enrage — faster, stronger, charges at player
 
 extends EnemyBase
 

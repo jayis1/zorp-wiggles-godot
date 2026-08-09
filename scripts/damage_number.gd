@@ -163,6 +163,16 @@ func _process(delta: float) -> void:
 	# a high-frequency sine (28 Hz) so it reads as a rapid "impact vibration"
 	# rather than a slow sway. Normal (non-crit) hits skip this entirely to
 	# preserve visual hierarchy — only big hits vibrate.
+	# ── Burst velocity ── Crit and kill numbers also get a brief outward
+	#    "shoot" during the first 80ms after pop-in completes. The burst
+	#    applies an amplified velocity in the drift direction, giving big
+	#    hits an explosive outward read — the number doesn't just float
+	#    gently, it *launches* from the hit point before settling into
+	#    the normal drift. The burst decays exponentially over 80ms so
+	#    it composes cleanly with the existing drift and jitter. Boss
+	#    kills get a stronger burst for extra cinematic weight. This is
+	#    the "impact pop" language from fighting games (Street Fighter V,
+	#    Skullgirls) where big-hit numbers visibly launch outward.
 	if (is_crit or is_kill) and popin_timer <= 0.0:
 		# Boss kills get a stronger, longer jitter for extra impact.
 		var jitter_scale: float = 1.7 if is_boss else 1.0
@@ -171,6 +181,21 @@ func _process(delta: float) -> void:
 		var since_popin: float = clampf(
 			(max_lifetime - lifetime) - GameConstants.DMG_NUMBER_POPIN_DURATION,
 			0.0, jitter_window)
+		# ── Burst velocity ── During the first 80ms after pop-in, apply an
+		#    amplified outward velocity in the drift direction. The burst
+		#    envelope decays exponentially (1 - exp(-t/0.03)) so ~63% of
+		#    the burst fires in the first 30ms and eases out by 80ms.
+		#    This makes big hits feel like they explode outward from the
+		#    impact point, then settle into the normal float drift.
+		var burst_window: float = 0.08
+		var burst_mult: float = 3.5 if is_boss else 2.5
+		if since_popin < burst_window:
+			# Exponential decay: strong at t=0, near-zero by t=80ms
+			var burst_env: float = exp(-since_popin / 0.03)
+			var burst_x: float = _drift_x * burst_mult * burst_env
+			var burst_z: float = _drift_z * burst_mult * burst_env
+			global_position.x += burst_x * delta * 10.0
+			global_position.z += burst_z * delta * 10.0
 		if since_popin < jitter_window:
 			var env: float = 1.0 - (since_popin / jitter_window)  # 1 → 0 linear decay
 			var env_eased: float = env * env  # quadratic so it starts strong

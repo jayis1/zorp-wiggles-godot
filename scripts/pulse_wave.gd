@@ -8,7 +8,7 @@ var radius: float = 0.0
 var _prev_radius: float = 0.0  # Previous-frame radius for band-skip detection
 var max_radius: float = GameConstants.PULSE_WAVE_RADIUS
 var damage: int = GameConstants.PULSE_WAVE_DAMAGE
-var expand_speed: float = 30.0
+var expand_speed: float = GameConstants.PULSE_WAVE_EXPAND_SPEED
 var has_hit: Dictionary = {}  # Track which enemies we've already hit
 var _light: OmniLight3D = null
 var _material: StandardMaterial3D = null
@@ -76,6 +76,12 @@ func _ready() -> void:
 	_light.omni_range = 8.0
 	_light.omni_attenuation = 1.5
 	add_child(_light)
+
+## Set the pulse wave damage (used by player for level-scaled damage).
+## The player computes damage as base + level * bonus and passes it here
+## so the pulse wave hits with the correct level-scaled value.
+func set_damage(new_damage: int) -> void:
+	damage = new_damage
 
 # ── Phase 19: Co-op mega pulse wave — override radius/damage ──
 func set_mega_params(mega_radius: float, mega_damage: int) -> void:
@@ -179,7 +185,7 @@ func _physics_process(delta: float) -> void:
 				if enemy_node.has_method("apply_knockback"):
 					var knock_dir: Vector3 = (enemy_node.global_position - global_position).normalized()
 					knock_dir.y = 0
-					enemy_node.apply_knockback(knock_dir, GameConstants.KNOCKBACK_FORCE_EXPLOSION)
+					enemy_node.apply_knockback(knock_dir, GameConstants.PULSE_WAVE_PUSH_FORCE)
 				# ── Pulse wave hit spark ── A small 6-particle burst at each
 				# enemy's position when the wave connects, so the player sees
 				# the shockwave "punching" each enemy it reaches. The spark

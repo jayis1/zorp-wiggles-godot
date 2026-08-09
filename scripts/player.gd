@@ -2265,6 +2265,11 @@ func _use_pulse_wave() -> void:
 	var pulse: Node3D = PULSE_WAVE_SCENE.instantiate()
 	get_parent().add_child(pulse)
 	pulse.global_position = global_position
+	# Level-scaled damage: base + level * bonus (matches original game.py)
+	if pulse.has_method("set_damage"):
+		pulse.set_damage(int(GameConstants.PULSE_WAVE_DAMAGE + GameManager.player_level * GameConstants.PULSE_WAVE_LEVEL_DAMAGE_BONUS))
+	else:
+		pulse.damage = int(GameConstants.PULSE_WAVE_DAMAGE + GameManager.player_level * GameConstants.PULSE_WAVE_LEVEL_DAMAGE_BONUS)
 	# Camera shake on pulse wave
 	_trigger_camera_trauma(0.25)
 	# ── FOV punch on cast ── A quick inward FOV dip (negative kick) so the

@@ -887,7 +887,23 @@ func _collect() -> void:
 	var spiral_start_pos: Vector3 = global_position
 	var spiral_radius_start: float = clampf(
 		global_position.distance_to(spiral_player_pos), 0.5, 3.0)
+	# ── Pickup anticipation ── A brief 40ms scale dip to 0.85× before the
+	# spiral orbit fires. This creates a classic anticipation beat — the
+	# item "pulls inward" as if being sucked toward the player before the
+	# vortex catch. Without this, the item snaps from idle float directly
+	# into the spiral orbit, which reads as a teleport into motion. The
+	# dip is tiny (15% shrink) and very short (40ms) so it reads as a
+	# subliminal "gather" beat, not a visible shrink — the eye perceives
+	# the spiral as starting "from a compressed state" which makes the
+	# subsequent expansion feel more energetic. Skipped during tumble
+	# mode (the RigidBody owns scale during the bounce).
+	var _anticip_scale: float = mesh_instance.scale.x if mesh_instance else 1.0
 	var tween := create_tween()
+	# Phase 0: anticipation dip (40ms shrink to 0.85×)
+	if mesh_instance and not _is_tumbling:
+		tween.tween_property(mesh_instance, "scale",
+			Vector3.ONE * _anticip_scale * 0.85, 0.04) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	# Phase 1: spiral orbit + rise (0.18s) — one full rotation as we lift
 	tween.tween_method(
 		func(t: float):

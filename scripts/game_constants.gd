@@ -20,9 +20,9 @@ const PLAYER_INVULN_DURATION: float = 0.5
 const PLAYER_BLINK_RATE: float = 20.0
 const PLAYER_START_XP: int = 80
 const PLAYER_START_HP: int = 120
-const PLAYER_DASH_SPEED: float = 40.0
-const PLAYER_DASH_DURATION: float = 0.15
-const PLAYER_DASH_COOLDOWN: float = 1.5
+const PLAYER_DASH_SPEED: float = 60.0
+const PLAYER_DASH_DURATION: float = 0.2
+const PLAYER_DASH_COOLDOWN: float = 1.8
 const PLAYER_DASH_INVULN_DURATION: float = 0.3
 const PLAYER_LEVEL_XP_MULT: float = 1.35
 const PLAYER_LEVEL_HP_BONUS: int = 12
@@ -69,9 +69,12 @@ const ENEMY_ATTACK_LUNGE_SIZE_BASE: float = 1.0
 const ENEMY_ATTACK_LUNGE_SIZE_MULT_MIN: float = 0.3
 
 # ─── Pulse Wave (Q ability) ──────────────────────────────────────────────────
-const PULSE_WAVE_COOLDOWN: float = 8.0
-const PULSE_WAVE_RADIUS: float = 18.0
-const PULSE_WAVE_DAMAGE: int = 60
+const PULSE_WAVE_COOLDOWN: float = 7.0
+const PULSE_WAVE_RADIUS: float = 10.0
+const PULSE_WAVE_DAMAGE: int = 10
+const PULSE_WAVE_LEVEL_DAMAGE_BONUS: float = 1.5
+const PULSE_WAVE_EXPAND_SPEED: float = 25.0
+const PULSE_WAVE_PUSH_FORCE: float = 18.0
 
 # ─── Camera ──────────────────────────────────────────────────────────────────
 const CAMERA_DISTANCE: float = 22.0
@@ -203,7 +206,7 @@ const STARBURST_SHOCKWAVE_MAX_RADIUS: float = 8.0
 # ─── Void Bomber ──────────────────────────────────────────────────────────────
 const VOID_BOMBER_EXPLOSION_RADIUS: float = 5.5
 const VOID_BOMBER_EXPLOSION_DAMAGE: int = 40
-const VOID_BOMBER_FUSE_DURATION: float = 1.5
+const VOID_BOMBER_FUSE_DURATION: float = 1.4
 const VOID_BOMBER_FUSE_TRIGGER_RANGE: float = 6.0
 
 # ─── Spore Spitter ────────────────────────────────────────────────────────────
@@ -226,8 +229,8 @@ const ENEMY_PROJECTILE_GRAZE_RADIUS: float = 2.8
 const ENEMY_PROJECTILE_AURA_PULSE_SPEED: float = 10.0
 
 # ─── Plasma Drake (Boss) ──────────────────────────────────────────────────────
-const DRAKE_ENRAGE_HP_THRESHOLD: float = 0.3
-const DRAKE_ENRAGE_SPEED_MULT: float = 1.5
+const DRAKE_ENRAGE_HP_THRESHOLD: float = 0.25
+const DRAKE_ENRAGE_SPEED_MULT: float = 1.35
 const DRAKE_ENRAGE_DAMAGE_MULT: float = 1.3
 const DRAKE_FIRE_BREATH_COOLDOWN: float = 5.0
 const DRAKE_FIRE_BREATH_RANGE: float = 15.0
@@ -241,23 +244,23 @@ const DRAKE_CHARGE_DAMAGE: int = 35
 # Tiny, very fast, very low HP enemy that spawns in packs. Individually weak
 # but they swarm the player from multiple directions, creating pressure.
 const SWARM_MITE_HP: int = 12
-const SWARM_MITE_SPEED: float = 9.0
-const SWARM_MITE_DAMAGE: int = 4
-const SWARM_MITE_SCALE: float = 0.35
+const SWARM_MITE_SPEED: float = 7.0
+const SWARM_MITE_DAMAGE: int = 3
+const SWARM_MITE_SCALE: float = 0.5
 const SWARM_MITE_XP: int = 6
 const SWARM_MITE_SCORE: int = 25
 const SWARM_MITE_PACK_SIZE_MIN: int = 3
 const SWARM_MITE_PACK_SIZE_MAX: int = 6
 const SWARM_MITE_PACK_SPAWN_CHANCE: float = 0.4  # 40% of mite spawns are packs
-const SWARM_MITE_COLOR: Color = Color(0.85, 0.35, 0.1)  # Orange-brown
+const SWARM_MITE_COLOR: Color = Color(150.0 / 255.0, 200.0 / 255.0, 50.0 / 255.0)  # Yellow-green
 
 # ─── Enhancement: Crystal Guardian ────────────────────────────────────────────
 # Slow, high-HP, ranged enemy that fires crystal shard projectiles.
 # Tanky but predictable — kiting is the counter-strategy.
 const CRYSTAL_GUARDIAN_HP: int = 180
-const CRYSTAL_GUARDIAN_SPEED: float = 1.8
-const CRYSTAL_GUARDIAN_DAMAGE: int = 18
-const CRYSTAL_GUARDIAN_SCALE: float = 1.6
+const CRYSTAL_GUARDIAN_SPEED: float = 2.2
+const CRYSTAL_GUARDIAN_DAMAGE: int = 38
+const CRYSTAL_GUARDIAN_SCALE: float = 1.8
 const CRYSTAL_GUARDIAN_XP: int = 60
 const CRYSTAL_GUARDIAN_SCORE: int = 200
 const CRYSTAL_GUARDIAN_DETECT_RANGE: float = 30.0
