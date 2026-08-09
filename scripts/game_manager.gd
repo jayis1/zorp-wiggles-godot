@@ -759,6 +759,13 @@ func restart_game() -> void:
 	# ── Clear the DamageNumber free-list pool so stale instances from the
 	#    previous run don't linger in the static pool between scene loads. ─
 	DamageNumber.clear_pool()
+	# ── Reset the static mind-control counter so a new run starts clean. ─
+	# Without this, if mind-controlled enemies were alive when the previous
+	# run ended (player death → scene teardown), the counter would stay > 0
+	# and every enemy in the new run would unnecessarily scan for MC traitors
+	# every frame. The scene tree frees all enemies on restart, so no
+	# _end_mind_control calls fire to decrement the counter naturally.
+	EnemyBase._active_mc_count = 0
 	_start_game()
 	game_restarted.emit()
 

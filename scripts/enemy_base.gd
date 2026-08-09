@@ -141,6 +141,18 @@ var _mind_control_timer: float = 0.0
 var _mind_control_original_color: Color = Color.RED
 var _mind_control_target: Node3D = null  # Current enemy being chased/attacked
 
+# ── Static active mind-control counter ── Tracks how many enemies are
+#    currently mind-controlled. `_find_nearest_mind_controlled_enemy()` is
+#    called in `_update_ai` on EVERY non-controlled enemy EVERY physics frame,
+#    iterating the full `GameManager.enemies` array each time. When no enemies
+#    are mind-controlled (the common case — mind control is a rare, temporary
+#    ability), every one of those scans wastes an O(n) loop that always
+#    returns null. The static counter lets `_update_ai` skip the call entirely
+#    when the count is zero, eliminating the per-frame O(n²) scan during the
+#    ~99% of gameplay where no mind-controlled enemies exist. The counter is
+#    incremented in `start_mind_control()` and decremented in `_end_mind_control()`.
+static var _active_mc_count: int = 0
+
 # ─── Node References ─────────────────────────────────────────────────────────
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var alert_indicator: Label3D = $AlertIndicator
@@ -407,7 +419,16 @@ func _update_ai(delta: float) -> void:
 	# double-edged sword: the controlled enemy fights for you, but it also
 	# draws aggro from other enemies (both spreading damage and protecting
 	# the player). We check for the nearest MC enemy within detect_range.
-	var mc_target: Node3D = _find_nearest_mind_controlled_enemy()
+	# ── Static counter guard ── When no enemies are mind-controlled (the
+	# common case — mind control is a rare, temporary ability), the O(n)
+	# scan in _find_nearest_mind_controlled_enemy always returns null.
+	# The _active_mc_count counter lets us skip the call entirely when zero,
+	# eliminating a per-frame O(n²) scan across all enemies during the ~99%
+	# of gameplay where no MC traitors exist. Only when the count is > 0 do
+	# we actually scan.
+	var mc_target: Node3D = null
+	if _active_mc_count > 0:
+		mc_target = _find_nearest_mind_controlled_enemy()
 	if mc_target:
 		var mc_dist: float = global_position.distance_to(mc_target.global_position)
 		# Use default ambush mult (1.0) here — the ambush multiplier is
@@ -802,6 +823,9 @@ func start_mind_control() -> void:
 	_mind_control_timer = GameConstants.MIND_CONTROL_DURATION
 	_mind_control_original_color = current_color
 	_mind_control_target = null
+	# Increment the static counter so non-controlled enemies know to scan
+	# for MC traitors. See _update_ai's guard on _find_nearest_mind_controlled_enemy.
+	_active_mc_count += 1
 	# Visual: shift to magenta-pink hypnosis color with bright emission.
 	# Sync current_color so _flash_hit() restores to the mind-control color
 	# (not base_color) when the enemy takes damage while controlled.
@@ -813,6 +837,16 @@ func start_mind_control() -> void:
 	# Particle burst on mind control
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.MIND_CONTROL_COLOR, 16, 0.4)
+	# ── Mind control activate SFX ── An ethereal ascending shimmer that
+	# pairs with the particle burst + color shift + pulsing light, giving
+	# the mind-control activation a complete audiovisual identity. The
+	# shimmering ascending interval conveys "this enemy is now on your
+	# side" — a magical, mind-bending transformation. Volume attenuates
+	# with distance so off-screen MC activations don't play at full volume.
+	var _mc_vol: float = _compute_dist_atten(
+		global_position.distance_to(GameManager.player.global_position) \
+		if GameManager.player and is_instance_valid(GameManager.player) else 0.0)
+	AudioManager.play_sfx_volume(AudioManager.SFX_MIND_CONTROL, _mc_vol * 0.25)
 	# Add a pulsing magenta light
 	var mc_light := OmniLight3D.new()
 	mc_light.light_color = GameConstants.MIND_CONTROL_COLOR
@@ -838,6 +872,9 @@ func _end_mind_control() -> void:
 	is_mind_controlled = false
 	_mind_control_timer = 0.0
 	_mind_control_target = null
+	# Decrement the static counter. Guard against going negative for safety
+	# (e.g. if _end_mind_control is called twice due to death + timer expiry).
+	_active_mc_count = maxi(0, _active_mc_count - 1)
 	# Restore color + sync current_color so subsequent hit-flashes restore
 	# to the original color, not the mind-control color.
 	current_color = _mind_control_original_color
@@ -852,6 +889,16 @@ func _end_mind_control() -> void:
 	# Shatter effect
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.MIND_CONTROL_COLOR, 12, 0.3)
+	# ── Mind control expire SFX ── A soft descending shimmer (the reversed
+	# interval of the activate sound) that conveys "the control is fading."
+	# Pairs with the shatter particles to give the expiration a complete
+	# audiovisual identity, mirroring the activation moment in reverse.
+	# Volume attenuates with distance so off-screen expirations are subtle.
+	var _mc_end_vol: float = _compute_dist_atten(
+		global_position.distance_to(GameManager.player.global_position) \
+		if GameManager.player and is_instance_valid(GameManager.player) else 0.0)
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_MIND_CONTROL_END,
+		1.0, _mc_end_vol * 0.18)
 
 func _try_attack(player: Node3D) -> void:
 	if attack_cooldown_timer > 0:
@@ -1036,6 +1083,16 @@ func _ramp_windup_emission() -> void:
 		1.0 + GameConstants.ENEMY_ATTACK_WINDUP_BRIGHTNESS,
 		GameConstants.ENEMY_ATTACK_WINDUP_TIME
 	).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	# ── Windup SFX ── A subtle rising tone that gives the attack windup an
+	# audio identity, complementing the existing visual telegraph (silhouette
+	# squash + emission glow ramp). The player *hears* the charge-up building
+	# and can start dodging before the lunge fires. Pitch scales with enemy
+	# size (same model as the hit/death SFX) so larger enemies get a deeper,
+	# more threatening charge — a Drake's windup reads as a heavy rumble
+	# while a Blob's reads as a light chirp. Very quiet (0.12 base volume)
+	# so simultaneous windups during swarm encounters don't stack into noise.
+	var windup_pitch: float = clampf(1.3 - base_scale * 0.2, 0.6, 1.3)
+	AudioManager.play_sfx_pitched(AudioManager.SFX_ENEMY_WINDUP, windup_pitch)
 
 ## Restore emission energy to the pre-windup value. Called at the start of
 ## _execute_attack / _execute_attack_on_enemy. Uses the cached value rather
@@ -1319,6 +1376,9 @@ func _die() -> void:
 		is_mind_controlled = false
 		_mind_control_timer = 0.0
 		_mind_control_target = null
+		# Decrement the static MC counter (the death path bypasses
+		# _end_mind_control so we handle the decrement here).
+		_active_mc_count = maxi(0, _active_mc_count - 1)
 		var mc_light := get_node_or_null("MCMindLight")
 		if mc_light:
 			mc_light.queue_free()

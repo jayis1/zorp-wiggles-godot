@@ -439,6 +439,33 @@ const SFX_RICOCHET: String = "ricochet"
 # had no audio cue to start dodging before the shard fired.
 const SFX_CRYSTAL_CHARGE: String = "crystal_charge"
 
+# ── Enemy attack windup SFX ── A short rising tone (220→440 Hz, 0.14s, 0.12 vol)
+#    that plays when an enemy begins its attack windup. The enemy attack already
+#    has a visual telegraph (silhouette squash + emission glow ramp) but no
+#    audio — the player had no cue to start dodging until the lunge fired. This
+#    subtle rising tone gives the windup an audio identity so the player *hears*
+#    the charge-up building, not just sees it. Very quiet (0.12) since multiple
+#    enemies can wind up simultaneously during swarm encounters; the tone is
+#    meant to register subconsciously as "incoming attack" without competing
+#    with combat SFX. Pitch scales per-enemy (set via play_sfx_pitched in
+#    enemy_base.gd) so larger enemies get a deeper, more threatening charge.
+const SFX_ENEMY_WINDUP: String = "enemy_windup"
+
+# ── Mind control activate SFX ── An ethereal ascending shimmer (E5→A5→E6,
+#    659→880→1319 Hz, 0.18s, 0.25 vol) for when an enemy comes under mind
+#    control. The shimmering ascending interval conveys "this enemy is now
+#    on your side" — a magical, mind-bending transformation. Distinct from
+#    SFX_PET_EMOTE (880 Hz blip) and SFX_HEAL (two-note chime) so the player
+#    can identify the mind-control activation by ear alone.
+const SFX_MIND_CONTROL: String = "mind_control"
+
+# ── Mind control expire SFX ── A soft descending shimmer (E6→A5→E5,
+#    1319→880→659 Hz, 0.15s, 0.18 vol) for when mind control wears off —
+#    the reversed interval of the activate sound, conveying "the control
+#    is fading." Quieter than the activate sound since expiration is less
+#    dramatic — the player already knows the timer is running.
+const SFX_MIND_CONTROL_END: String = "mind_control_end"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -826,6 +853,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_AMBUSH_TRIGGER, SFX_PACK_FRENZY, SFX_CALL_HELP, SFX_RETREAT, SFX_WEATHER_COMBO,
 	# Enhancement Pack 45: New SFX get pitch variation
 	SFX_WALL_BOUNCE, SFX_RICOCHET, SFX_CRYSTAL_CHARGE,
+	# Enhancement Pack 48: Enemy windup + mind control SFX get pitch variation
+	SFX_ENEMY_WINDUP, SFX_MIND_CONTROL_END,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1408,6 +1437,24 @@ func _generate_all_sfx() -> void:
 	# Uses the descending generator with reversed freqs to get an ascending
 	# pitch sweep — the sound of energy building toward release.
 	_sfx_streams[SFX_CRYSTAL_CHARGE] = _gen_descending(440.0, 880.0, 0.70, 0.18)
+
+	# ── Enhancement Pack 48: Enemy attack windup SFX ── A short rising tone
+	# (220→440 Hz, 0.14s, 0.12 vol). The ascending pitch conveys energy
+	# building toward release — the audio cue for "an enemy is about to
+	# attack, start dodging." Uses the descending generator with reversed
+	# freqs to get an ascending pitch sweep. Very quiet so multiple
+	# simultaneous windups don't stack into noise during swarm encounters.
+	_sfx_streams[SFX_ENEMY_WINDUP] = _gen_descending(220.0, 440.0, 0.14, 0.12)
+
+	# ── Mind control activate SFX ── An ethereal ascending shimmer
+	# (E5→A5→E6, 659→880→1319 Hz, 0.18s, 0.25 vol). The shimmering ascending
+	# interval conveys a magical, mind-bending transformation.
+	_sfx_streams[SFX_MIND_CONTROL] = _gen_arpeggio([659.0, 880.0, 1319.0], 0.06, 0.25)
+
+	# ── Mind control expire SFX ── A soft descending shimmer (E6→A5→E5,
+	# 1319→880→659 Hz, 0.15s, 0.18 vol) — the reversed interval of the
+	# activate sound, conveying "the control is fading."
+	_sfx_streams[SFX_MIND_CONTROL_END] = _gen_arpeggio([1319.0, 880.0, 659.0], 0.05, 0.18)
 
 
 func _generate_all_music() -> void:
