@@ -529,6 +529,9 @@ func _on_body_entered(body: Node3D) -> void:
 			return
 		_hit_enemy(body)
 	elif body.is_in_group("destructibles"):
+		# Enhancement: Spectral Beam — phases through destructibles (like walls/terrain)
+		if _weapon_mod == GameConstants.WeaponMod.SPECTRAL_BEAM:
+			return
 		# Hit a destructible prop — damage it
 		if body.has_method("take_damage_from"):
 			body.take_damage_from(damage, global_position)
@@ -536,6 +539,9 @@ func _on_body_entered(body: Node3D) -> void:
 		_is_consumed = true
 		queue_free()
 	elif body.is_in_group("interactive_object"):
+		# Enhancement: Spectral Beam — phases through interactive objects (like breakable walls)
+		if _weapon_mod == GameConstants.WeaponMod.SPECTRAL_BEAM:
+			return
 		# ── Phase 26: Breakable walls take damage from projectiles ──
 		if body.has_method("take_damage"):
 			body.take_damage(damage, global_position)
