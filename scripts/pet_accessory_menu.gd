@@ -62,6 +62,9 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
+var _prev_hovered_accessory: int = -1
+var _prev_hovered_slot: int = -1
+
 func _gui_input(event: InputEvent) -> void:
 	if not _visible_flag or _fade_alpha < 0.5:
 		return
@@ -78,6 +81,14 @@ func _gui_input(event: InputEvent) -> void:
 		for slot in _unequip_rects:
 			if _unequip_rects[slot].has_point(mouse_pos):
 				_hovered_slot = slot
+		# Hover SFX — play a subtle blip when the cursor enters a new
+		# interactive element, matching all other _draw-based menus
+		# (equipment, trade, skill tree, mode selector, etc.).
+		if _hovered_accessory != _prev_hovered_accessory or _hovered_slot != _prev_hovered_slot:
+			if _hovered_accessory >= 0 or _hovered_slot >= 0:
+				AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+		_prev_hovered_accessory = _hovered_accessory
+		_prev_hovered_slot = _hovered_slot
 		queue_redraw()
 	elif event is InputEventMouseButton and event.pressed:
 		var mouse_pos: Vector2 = event.position
@@ -88,16 +99,19 @@ func _gui_input(event: InputEvent) -> void:
 		# Craft buttons
 		for id in _craft_rects:
 			if _craft_rects[id].has_point(mouse_pos):
+				AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 				PetAccessorySystem.craft_accessory(id)
 				return
 		# Equip buttons
 		for id in _equip_rects:
 			if _equip_rects[id].has_point(mouse_pos):
+				AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 				PetAccessorySystem.equip_accessory(id)
 				return
 		# Unequip buttons
 		for slot in _unequip_rects:
 			if _unequip_rects[slot].has_point(mouse_pos):
+				AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 				PetAccessorySystem.unequip_slot(slot)
 				return
 

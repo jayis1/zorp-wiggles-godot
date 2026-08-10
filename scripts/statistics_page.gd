@@ -154,6 +154,11 @@ func _draw_session_tab(font, rect: Rect2, a: float) -> void:
 		["Bosses Defeated", str(int(s.get("bosses_defeated", 0)))],
 		["Mods Crafted", str(int(s.get("mods_crafted", 0)))],
 		["Weather Events", str(int(s.get("weather_events", 0)))],
+		["Wildlife Caught", str(int(s.get("wildlife_caught", 0)))],
+		["Treasure Chests", str(int(s.get("treasure_chests_opened", 0)))],
+		["Lore Stones Read", str(int(s.get("lore_stones_read", 0)))],
+		["Merchant Trades", str(int(s.get("merchant_trades", 0)))],
+		["Fast Travels", str(int(s.get("fast_travels", 0)))],
 	]
 	for line in lines:
 		_draw_stat_line(font, line[0], line[1], col_x, y, val_x, a)
@@ -197,6 +202,23 @@ func _draw_lifetime_tab(font, rect: Rect2, a: float) -> void:
 		["Best Survival Time", Statistics.format_time(float(l.get("best_survival_time", 0.0)))],
 	]
 	for line in best_lines:
+		_draw_stat_line(font, line[0], line[1], col_x, y, val_x, a)
+		y += line_h
+	# ── Phase 26+ world life & progression stats ──
+	y += 10
+	_draw_section_header(font, "World & Progression", rect.position.x + 20, y, a)
+	y += 35
+	var world_lines: Array = [
+		["Wildlife Caught", str(int(l.get("wildlife_caught", 0)))],
+		["Treasure Chests Opened", str(int(l.get("treasure_chests_opened", 0)))],
+		["Lore Stones Read", str(int(l.get("lore_stones_read", 0)))],
+		["Merchant Trades", str(int(l.get("merchant_trades", 0)))],
+		["Fast Travels", str(int(l.get("fast_travels", 0)))],
+		["World Bosses Defeated", str(int(l.get("world_bosses_defeated", 0)))],
+		["Daily Challenges Done", str(int(l.get("daily_challenges_completed", 0)))],
+		["Weekly Challenges Done", str(int(l.get("weekly_challenges_completed", 0)))],
+	]
+	for line in world_lines:
 		_draw_stat_line(font, line[0], line[1], col_x, y, val_x, a)
 		y += line_h
 
@@ -307,5 +329,7 @@ func _get_collectible_name(type_id: int) -> String:
 		3: "Nebula Dust", 4: "Space Gloop", 5: "XP Orb",
 		6: "Health Fragment", 7: "Shield Crystal", 8: "Fireball Scroll",
 		9: "Regen Crystal", 10: "Magnet Core", 11: "Toxic Extract",
+		12: "Ember Stone", 13: "Frost Stone", 14: "Spark Stone",
+		15: "Void Stone", 16: "Leaf Stone",
 	}
 	return names.get(type_id, "Item %d" % type_id)
