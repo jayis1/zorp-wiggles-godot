@@ -171,10 +171,12 @@ func _update_p1_downed(delta: float) -> void:
 			var dist: float = CoOpManager.p2_node.global_position.distance_to(player.global_position)
 			if dist <= GameConstants.COOP_REVIVE_RANGE and Input.is_action_pressed("p2_revive"):
 				p1_revive_progress += GameConstants.COOP_DOWNED_REVIVE_PROGRESS_TICK * 60.0 * delta
+				CoOpManager.revive_progress_changed.emit(p1_revive_progress)
 				if p1_revive_progress >= 1.0:
 					_revive_p1()
 			else:
 				p1_revive_progress = max(0.0, p1_revive_progress - delta * 0.5)
+				CoOpManager.revive_progress_changed.emit(p1_revive_progress)
 
 func _revive_p1() -> void:
 	player_is_alive = true
@@ -183,6 +185,7 @@ func _revive_p1() -> void:
 	player_invuln_timer = GameConstants.COOP_REVIVE_INVULN_DURATION
 	p1_downed_timer = 0.0
 	p1_revive_progress = 0.0
+	CoOpManager.revive_progress_changed.emit(0.0)
 	hp_changed.emit(player_hp, player_max_hp)
 	add_message("✨ Zorp revived by %s! Back in action!" % GameConstants.P2_NAME)
 	# Audio feedback — revive fanfare, matching P2's revive in co_op_manager.

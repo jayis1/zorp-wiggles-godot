@@ -400,4 +400,4 @@ func _create_rain_indoor_particles(player: Node3D) -> void:
 func _clear_rain_indoor() -> void:
 	if _rain_indoor_particles and is_instance_valid(_rain_indoor_particles):
 		_rain_indoor_particles.queue_free()
-		_rain_indoor_particles = null
+	_rain_indoor_particles = null
