@@ -30,6 +30,21 @@ func _ready() -> void:
 	layer = 90  # Above most UI but below pause menu
 	_build_ui()
 	_set_visible(false)
+	if GameManager and not GameManager.game_restarted.is_connected(_on_game_restarted):
+		GameManager.game_restarted.connect(_on_game_restarted)
+
+func _on_game_restarted() -> void:
+	# If dialogue is active during restart, force-close it immediately
+	# (skipping the exit animation since the scene is being torn down).
+	_is_active = false
+	_fully_revealed = true
+	_npc = null
+	_lines = []
+	_line_index = 0
+	_displayed_chars = 0
+	_char_timer = 0.0
+	_auto_timer = 0.0
+	_set_visible(false)
 
 func _build_ui() -> void:
 	# Semi-transparent full-screen dim backdrop (click-through).

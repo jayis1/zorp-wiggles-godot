@@ -26,6 +26,12 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	add_to_group("procedural_boss_generator")
+	if GameManager and not GameManager.game_restarted.is_connected(_on_game_restarted):
+		GameManager.game_restarted.connect(_on_game_restarted)
+
+func _on_game_restarted() -> void:
+	# Re-seed RNG from the new world seed for deterministic boss generation.
+	_rng.seed = GameManager.world_seed if GameManager else randi()
 
 # Generate a procedural boss near the player. Returns the spawned node.
 func generate_boss(player_level: int) -> Node:

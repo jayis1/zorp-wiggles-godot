@@ -22,6 +22,20 @@ var _world_node: Node = null
 # Baked navigation mesh data
 var _nav_mesh: NavigationMesh = null
 
+# ─── Lifecycle ────────────────────────────────────────────────────────────────
+
+func _ready() -> void:
+	if GameManager and not GameManager.game_restarted.is_connected(_on_game_restarted):
+		GameManager.game_restarted.connect(_on_game_restarted)
+
+func _on_game_restarted() -> void:
+	# Clear stale references — the nav region is a child of the world node
+	# which is freed on scene reload, so we just null our references.
+	_nav_region = null
+	_is_baked = false
+	_world_node = null
+	_nav_mesh = null
+
 # ─── Public API ───────────────────────────────────────────────────────────────
 
 ## Build a navigation region from the world's static geometry.

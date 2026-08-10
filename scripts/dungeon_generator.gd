@@ -36,8 +36,25 @@ var _entrance_nodes: Array[Dictionary] = []  # each: {ring_mat, beam, beam_mat, 
 
 func _ready() -> void:
 	add_to_group("dungeon_generator")
+	if GameManager and not GameManager.game_restarted.is_connected(_on_game_restarted):
+		GameManager.game_restarted.connect(_on_game_restarted)
 	# Build dungeons after the world generator finishes. We defer so the
 	# scene tree is fully ready before we start adding nodes.
+	call_deferred("_generate_all_dungeons")
+
+func _on_game_restarted() -> void:
+	# Clear active dungeon interior if player was inside one.
+	if _active_root and is_instance_valid(_active_root):
+		_active_root.queue_free()
+	_active_root = null
+	_active_dungeon_id = -1
+	# Free all entrance portal nodes (children of this autoload).
+	for child in get_children():
+		if child is Node3D and child.name.begins_with("DungeonEntrance_"):
+			child.queue_free()
+	_entrance_nodes.clear()
+	_dungeons.clear()
+	# Re-generate dungeons for the new run (deferred so scene is ready).
 	call_deferred("_generate_all_dungeons")
 
 func get_dungeons() -> Array[Dictionary]:

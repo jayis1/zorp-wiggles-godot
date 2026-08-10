@@ -56,6 +56,14 @@ var _create_retries: int = 0
 func _ready() -> void:
 	# Defer UI creation until the HUD exists
 	call_deferred("_create_tooltip_ui")
+	if GameManager and not GameManager.game_restarted.is_connected(_on_game_restarted):
+		GameManager.game_restarted.connect(_on_game_restarted)
+
+func _on_game_restarted() -> void:
+	hide_tooltip()
+	_delay_timer = 0.0
+	_has_pending = false
+	_is_visible = false
 
 
 func _process(delta: float) -> void:

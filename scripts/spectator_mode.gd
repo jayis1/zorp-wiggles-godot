@@ -59,6 +59,13 @@ signal spectating_stopped()
 
 func _ready() -> void:
 	set_process_mode(Node.PROCESS_MODE_ALWAYS)
+	if GameManager and not GameManager.game_restarted.is_connected(_on_game_restarted):
+		GameManager.game_restarted.connect(_on_game_restarted)
+
+func _on_game_restarted() -> void:
+	# If spectating during restart, force-stop to clean up camera + HUD + pause.
+	if _spectating:
+		stop_spectating()
 
 func _process(delta: float) -> void:
 	if not _spectating:

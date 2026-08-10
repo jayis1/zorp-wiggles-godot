@@ -32,6 +32,18 @@ signal trap_triggered(damage: int, pos: Vector3)
 
 func _ready() -> void:
 	GameManager.biome_changed.connect(_on_biome_changed)
+	if GameManager and not GameManager.game_restarted.is_connected(_on_game_restarted):
+		GameManager.game_restarted.connect(_on_game_restarted)
+
+func _on_game_restarted() -> void:
+	_clear_traps()
+	_cached_player = null
+	_heat_tick_timer = 0.0
+	_wind_timer = 0.0
+	_wind_direction = Vector3.ZERO
+	_trap_damage_timer = 0.0
+	_current_biome = GameConstants.Biome.GRASS
+	_player_in_new_biome = false
 
 func _on_biome_changed(biome_id: int) -> void:
 	_current_biome = biome_id
