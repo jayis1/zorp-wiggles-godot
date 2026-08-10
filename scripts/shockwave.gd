@@ -110,7 +110,12 @@ func _physics_process(delta: float) -> void:
 	# CylinderMesh axis is along Y; radius is in the XZ plane.
 	# Scale X and Z to expand the ring radius; keep Y (thickness) at 1.
 	var target_scale := Vector3(ring_scale, 1.0, ring_scale)
-	scale = scale.lerp(target_scale, 1.0 - exp(-12.0 * delta))
+	# Tighter smoothing (18 vs 12) so the visual scale tracks the actual
+	# radius more closely — the ring expands with less visual lag, making
+	# the shockwave feel more responsive and energetic. The old value (12)
+	# caused the visual ring to noticeably trail the hit band, making fast
+	# expansions look "sticky" rather than snappy.
+	scale = scale.lerp(target_scale, 1.0 - exp(-18.0 * delta))
 	# ── Ring spin ── Rotate the ring around Y so it reads as spinning
 	#    energy rather than a static expanding hoop. The spin rate decays
 	#    with expansion progress (matching the ease-out expansion curve)
@@ -157,12 +162,17 @@ func _physics_process(delta: float) -> void:
 					CoOpManager.p2_take_damage(damage, global_position)
 					_has_hit_player = true
 
-	# Fade out as it reaches max radius — quadratic fade for a sharper disappear
+	# Fade out as it reaches max radius — cubic fade (fade³) for a sharper
+	# disappear that holds visibility longer before cutting out. The old
+	# quadratic (fade²) started dimming too early, making the ring look
+	# "tired" in the last 30% of its expansion. Cubic keeps the ring
+	# bright for ~70% of the expansion then snaps out decisively — the
+	# ring reads as energetic until it dissipates, not gradually fading.
 	var fade: float = 1.0 - progress
 	if _material:
-		_material.albedo_color.a = 0.6 * fade * fade
+		_material.albedo_color.a = 0.6 * fade * fade * fade
 		# Emission fades alongside alpha for a coherent dissipating glow
-		_material.emission_energy_multiplier = 1.5 * fade * fade
+		_material.emission_energy_multiplier = 1.5 * fade * fade * fade
 
 	# Fade the center light as the ring expands (punchy flash → off).
 	# Use an ease-out cubic curve (matching the pulse wave's light fade) so

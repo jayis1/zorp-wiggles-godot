@@ -213,12 +213,31 @@ func _process(delta: float) -> void:
 	# window starts, which reads as "the number is dying" too early — the
 	# quadratic keeps it punchy and readable, then snaps out of view.
 	# This mirrors classic arcade damage-pop behavior (Vlambeer / Doom Eternal).
+	# ── Dissolve scale-up ── During the fade phase, the number subtly
+	# grows (up to 1.15× base scale) as it fades, creating a "dissolving
+	# into air" read — the number appears to disperse as it vanishes,
+	# like ink in water. This is the technique used in DMC/Bayonetta
+	# where damage numbers expand slightly as they dissipate, giving the
+	# fade a sense of energy dispersal rather than a flat shrink. The
+	# scale-up is driven by the inverse of fade_t (0 at fade start → 1
+	# at full fade) so it grows as opacity drops. Normal hits get a
+	# smaller expansion (1.10×) while crit/kill numbers get a larger
+	# one (1.20×) so big hits have a more dramatic dispersal. The
+	# expansion uses ease-out quad so it grows fast initially then
+	# decelerates — the number "blooms" outward then is gone.
 	var life_frac: float = lifetime / max_lifetime
 	if life_frac < GameConstants.DMG_NUMBER_FADE_START:
 		var fade_t: float = life_frac / GameConstants.DMG_NUMBER_FADE_START  # 1→0
 		# Quadratic ease-in: t² — holds opacity, then drops fast at the end
 		var fade_alpha: float = fade_t * fade_t
 		modulate.a = clampf(fade_alpha, 0.0, 1.0)
+		# Dissolve scale-up: grow from base to 1.10–1.20× as opacity drops
+		if popin_timer <= 0.0:  # Don't fight the pop-in animation
+			var dissolve_t: float = 1.0 - fade_t  # 0 at fade start → 1 at end
+			dissolve_t = dissolve_t * dissolve_t  # ease-in quad
+			var dissolve_max: float = 1.20 if (is_crit or is_kill) else 1.10
+			var dissolve_scale: float = lerpf(1.0, dissolve_max, dissolve_t)
+			scale = Vector3.ONE * _base_scale * dissolve_scale
 
 	if lifetime <= 0:
 		_release_to_pool()

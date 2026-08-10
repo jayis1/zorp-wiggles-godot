@@ -89,6 +89,16 @@ func _play() -> void:
 		light_col = impact_color
 	_light.light_color = light_col
 	# Animate: scale up + fade out, then deactivate
+	# ── Two-stage scale: initial snap then overshoot expansion ──
+	# The old single-tween from 0.3→2.0 over 0.25s felt like a smooth glide
+	# rather than a punchy impact. A two-stage approach creates a sharper
+	# "flash then bloom" read:
+	#   Stage 1 (40ms): snap from 0.3 to 0.8 — near-instant initial pop
+	#     that reads as the "contact frame" of the hit.
+	#   Stage 2 (210ms): overshoot from 0.8 to 2.0 with TRANS_BACK — the
+	#     bloom expands past its target and settles, the classic juice curve.
+	# The snap uses TRANS_CUBIC + EASE_OUT for a decisive, non-elastic pop
+	# (no overshoot on the snap — overshoot belongs to the bloom stage).
 	scale = Vector3.ONE * 0.3
 	# Kill any in-progress main tween so calling _play() twice (e.g. for
 	# non-pooled instances where _ready auto-plays then caller calls _play
@@ -96,25 +106,30 @@ func _play() -> void:
 	if _main_tween and _main_tween.is_valid():
 		_main_tween.kill()
 	_main_tween = create_tween()
-	_main_tween.set_parallel(true)
-	# TRANS_BACK gives a slight overshoot on the scale-up — the burst pops
-	# past its target size and settles back, which reads as a punchy "snap"
-	# impact rather than a smooth glide. This is the standard juice curve
-	# for hit sparks (e.g. Vlambeer's Nuclear Throne impacts). EASE_OUT
-	# so the overshoot happens at the end of the rise, not the start.
-	_main_tween.tween_property(self, "scale", Vector3.ONE * 2.0, 0.25) \
+	# Stage 1: initial snap (40ms, no overshoot) — sequential, runs first
+	_main_tween.tween_property(self, "scale", Vector3.ONE * 0.8, 0.04) \
+		.set_ease(Tween.EASE_OUT) \
+		.set_trans(Tween.TRANS_CUBIC)
+	# Stage 2: bloom with overshoot (210ms, TRANS_BACK for the pop-past)
+	# This starts after Stage 1 completes (sequential by default).
+	_main_tween.tween_property(self, "scale", Vector3.ONE * 2.0, 0.21) \
 		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_BACK)
+	# Fade alpha — runs in parallel with Stage 2 (the bloom), using
+	# ease-in quad for a gradual-then-quick dissolve that keeps the
+	# burst readable until the last moment.
 	if _material:
-		_main_tween.tween_property(_material, "albedo_color:a", 0.0, 0.25) \
+		_main_tween.parallel().tween_property(_material, "albedo_color:a", 0.0, 0.25) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	# Light fades faster than the sphere for a snappy flash.
-	# Reuse the light: snap to full intensity then tween to 0.
-	_light.light_energy = 2.5
+	# Light: brighter initial pop (3.5 vs 2.5) + faster fade (80ms vs 120ms)
+	# for a sharper, more intense flash that reads as an instantaneous
+	# energy discharge rather than a soft glow. The shorter duration also
+	# reduces the per-impact light cost during rapid-fire combat.
+	_light.light_energy = 3.5
 	if _light_tween and _light_tween.is_valid():
 		_light_tween.kill()
 	_light_tween = _light.create_tween()
-	_light_tween.tween_property(_light, "light_energy", 0.0, 0.12) \
+	_light_tween.tween_property(_light, "light_energy", 0.0, 0.08) \
 		.set_ease(Tween.EASE_OUT) \
 		.set_trans(Tween.TRANS_QUAD)
 	_main_tween.chain().tween_callback(_deactivate)
@@ -132,7 +147,7 @@ func _deactivate() -> void:
 ## is clean for reuse. The caller should set impact_color then call _play()
 ## after acquire() returns.
 func _pool_reset() -> void:
-	scale = Vector3.ONE * 0.3
+	scale = Vector3.ONE * 0.3  # Match the _play() starting scale
 	if _material:
 		_material.albedo_color.a = 0.8
 	impact_color = Color(0.0, 0.0, 0.0, -1.0)  # Reset to default (no override)
