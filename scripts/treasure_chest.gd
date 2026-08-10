@@ -295,6 +295,17 @@ func _create_box(pos: Vector3, sz: Vector3, col: Color) -> MeshInstance3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = col
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# Subtle emission so the chest body + lid are visible in dark biomes
+	# (Underground, Eclipse). Without emission, the unlit box faces are
+	# lit only by ambient light — in a dark biome they read as black
+	# silhouettes. Only the tiny lock glows, making the chest's structure
+	# invisible from afar. A low emission (0.25×) keeps the body darker
+	# than the glowing lock so the lock still reads as the focal point
+	# while the chest's silhouette is visible. Matches the monolith and
+	# portal pillar emission pattern.
+	mat.emission_enabled = true
+	mat.emission = col * 0.25
+	mat.emission_energy_multiplier = 0.4
 	mi.material_override = mat
 	return mi
 
@@ -309,5 +320,13 @@ func _create_ground_disc(pos: Vector3, sz: float, col: Color) -> MeshInstance3D:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Emission so the golden ground glow is visible in dark biomes —
+	# matches the lore stone, monolith, healing shrine, and portal
+	# ground glow which all add emission for dark-biome visibility.
+	# Without it, the transparent disc is invisible against dark terrain
+	# until the player is very close, reducing the chest's discoverability.
+	mat.emission_enabled = true
+	mat.emission = col * 0.4
+	mat.emission_energy_multiplier = 0.5
 	mi.material_override = mat
 	return mi

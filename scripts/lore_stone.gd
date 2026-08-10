@@ -181,6 +181,13 @@ func _create_sphere(pos: Vector3, radius: float, col: Color) -> MeshInstance3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = col
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# Emission so the cap glows in dark biomes — matches the monolith cap,
+	# healing shrine crystal, and portal rings which all use emission for
+	# dark-biome visibility. Without it, the unlit cap is a dark sphere in
+	# Underground/Eclipse, making the lore stone's top invisible from afar.
+	mat.emission_enabled = true
+	mat.emission = col * 0.5
+	mat.emission_energy_multiplier = 0.8
 	mi.material_override = mat
 	return mi
 
@@ -214,5 +221,12 @@ func _create_ground_disc(pos: Vector3, sz: float, col: Color) -> MeshInstance3D:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Emission so the ground glow disc is visible in dark biomes —
+	# matches the monolith, healing shrine, and portal ground glow which
+	# all add emission. Without it, the transparent disc is invisible
+	# against dark terrain in Underground/Eclipse.
+	mat.emission_enabled = true
+	mat.emission = col * 0.4
+	mat.emission_energy_multiplier = 0.6
 	mi.material_override = mat
 	return mi

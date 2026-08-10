@@ -140,14 +140,19 @@ func _physics_process(delta: float) -> void:
 		var spin_decay: float = 1.0 - 0.7 * progress  # Fast at cast, slower at edge
 		_ring_spin_phase += delta * RING_SPIN_SPEED * spin_decay
 		ring_mesh.rotation.y = _ring_spin_phase
-		# Fade out as it expands — ease-in so it stays visible early then fades fast
+		# Fade out as it expands — cubic fade (fade³) holds brightness for
+		# ~70% of the expansion then snaps out decisively. The old quadratic
+		# (fade²) started dimming too early, making the ring look "tired" in
+		# the last 30% of expansion. Cubic matches the shockwave's fade
+		# curve so both expanding-ring effects share a consistent visual
+		# language — the pulse wave reads as energetic until it dissipates,
+		# not gradually fading from the halfway point. The emission energy
+		# also fades with the same cubic curve so the glow diminishes
+		# coherently as the shockwave dissipates.
 		var alpha := 1.0 - progress
-		alpha = alpha * alpha  # Quadratic fade for a sharper disappear at the edge
+		alpha = alpha * alpha * alpha  # Cubic fade for a sharper, more energetic disappear
 		if _material:
 			_material.albedo_color.a = alpha * 0.6
-			# Emission energy also fades with the ring so the glow diminishes
-			# naturally as the shockwave dissipates — more visually coherent than
-			# keeping full emission while the ring fades to transparent.
 			_material.emission_energy_multiplier = 1.5 * alpha
 
 	# Fade the center light as the wave expands (punchy flash → gentle glow → off).
