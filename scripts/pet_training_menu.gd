@@ -135,7 +135,17 @@ func _update_hover(mouse_pos: Vector2) -> void:
 func _draw() -> void:
 	if _fade_alpha < 0.01:
 		return
-	var alpha: float = _fade_alpha
+	# Ease the fade alpha with cubic interpolation — every other _draw()-based
+	# menu in the game (trade menu, equipment menu, quest log, skill tree, fast
+	# travel) applies ease_out_cubic on open and ease_in_cubic on close for a
+	# snappy-then-settle feel. The pet training menu was the only one using raw
+	# linear _fade_alpha, making its open/close feel mechanical by comparison.
+	var eased: float
+	if _visible_flag:
+		eased = 1.0 - pow(1.0 - _fade_alpha, 3.0)  # ease-out cubic (open)
+	else:
+		eased = _fade_alpha * _fade_alpha * _fade_alpha  # ease-in cubic (close)
+	var alpha: float = eased
 	var screen_size: Vector2 = get_rect().size
 	if screen_size.x < 10:
 		screen_size = Vector2(1280, 720)

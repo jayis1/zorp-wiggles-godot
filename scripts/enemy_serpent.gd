@@ -79,6 +79,14 @@ func _update_segments(delta: float) -> void:
 			segment_nodes[i].global_position = segment_positions[i + 1]
 
 func _die() -> void:
+	# Plasma scatter burst — the serpent is the only standard enemy with no
+	# thematic death particles. Every other enemy type has a bespoke burst
+	# (Crystal Wraith → shatter, Plasma Stalker → plasma burst, Time Warden
+	# → temporal burst, etc.) but the serpent relied solely on the generic
+	# base-class death poof. A plasma-themed explosion in the serpent's
+	# signature cyan-green brings it in line with the rest of the roster.
+	ParticleEffects.spawn_explosion(get_parent(), global_position,
+		base_color, 24, 0.5)
 	# Scatter segments into mini-enemies before death
 	for i in range(segment_nodes.size()):
 		var seg := segment_nodes[i]

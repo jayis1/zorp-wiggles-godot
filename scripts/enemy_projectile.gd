@@ -319,6 +319,16 @@ func _on_hit_player(target: Node3D = null) -> void:
 	# continuing to emit from a freed projectile's last position.
 	if _trail_particles:
 		_trail_particles.emitting = false
+	# Impact SFX — the projectile already plays SFX_GRAZE on near-miss (a
+	# whoosh sound), but the actual hit had no projectile-specific audio.
+	# The player only heard the generic SFX_DAMAGE from take_damage(), which
+	# fires once even when multiple projectiles hit simultaneously. A
+	# dedicated impact thunk at moderate volume gives each hit a distinct
+	# audio cue, especially when several bolts connect at once and the damage
+	# SFX only plays once. Uses play_sfx_volume at 0.6 so it doesn't
+	# overpower the damage sound or stack into noise during projectile-heavy
+	# encounters (Spore Spitters, Crystal Guardians, Drakes, Mirror Mimics).
+	AudioManager.play_sfx_volume(AudioManager.SFX_ENEMY_HIT, 0.6)
 	# Default to P1 if no target specified (backward compatibility)
 	if target and target.is_in_group("player2"):
 		CoOpManager.p2_take_damage(damage, global_position)

@@ -35,6 +35,10 @@ const NORMAL_COLOR: Color = Color(0.15, 0.1, 0.25, 0.6)
 func _ready() -> void:
 	_build_ui()
 	visible = false
+	# Start invisible + scaled down for the entrance animation
+	modulate.a = 0.0
+	_bg_panel.scale = Vector2(0.85, 0.85)
+	_bg_panel.pivot_offset = Vector2(get_viewport_rect().size.x * 0.5, get_viewport_rect().size.y * 0.5)
 	if WeaponModFusion:
 		WeaponModFusion.fusion_created.connect(_on_fusion_changed)
 		WeaponModFusion.fusion_removed.connect(_on_fusion_changed)
@@ -187,6 +191,21 @@ func _build_ui() -> void:
 
 func show_menu() -> void:
 	visible = true
+	# Entrance animation — panel scales up from 0.85× with an ease-out-back
+	# curve (slight overshoot for a satisfying pop-in) and fades in from
+	# transparent. Matches the pause menu's _animate_pause_in pattern so the
+	# fusion menu doesn't hard-cut while every other menu in the game has a
+	# smooth entrance. The bg_panel pivot is set to screen center so the
+	# scale originates from the middle of the panel, not the top-left corner.
+	_bg_panel.pivot_offset = Vector2(get_viewport_rect().size.x * 0.5, get_viewport_rect().size.y * 0.5)
+	modulate.a = 0.0
+	_bg_panel.scale = Vector2(0.85, 0.85)
+	var enter_tween := create_tween()
+	enter_tween.set_parallel(true)
+	enter_tween.tween_property(self, "modulate:a", 1.0, 0.20) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	enter_tween.tween_property(_bg_panel, "scale", Vector2.ONE, 0.30) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	_refresh_cost_label()
 	_refresh_fused_list()
 	_refresh_selection_highlights()
@@ -196,7 +215,17 @@ func show_menu() -> void:
 		AudioManager.play_sfx(AudioManager.SFX_UI_CLICK)
 
 func hide_menu() -> void:
-	visible = false
+	# Exit animation — fade out + scale down slightly, then hide. Matches
+	# the pause menu's exit animation pattern (fade + slight shrink). The
+	# tween's completion callback sets visible=false so the panel is
+	# interactive until the animation finishes, then cleanly hidden.
+	var exit_tween := create_tween()
+	exit_tween.set_parallel(true)
+	exit_tween.tween_property(self, "modulate:a", 0.0, 0.18) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	exit_tween.tween_property(_bg_panel, "scale", Vector2(0.92, 0.92), 0.18) \
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	exit_tween.chain().tween_callback(func(): visible = false)
 	_selected.clear()
 	if _fuse_button:
 		_fuse_button.disabled = true

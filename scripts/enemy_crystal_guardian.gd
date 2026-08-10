@@ -137,6 +137,16 @@ func _fire_crystal_shard() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_SHOOT_FREEZE)  # Ice-chime fits crystal theme
 
 func _die() -> void:
-	# Crystal Guardians shatter into crystal fragment particles on death
-	# (extra visual flavor — more particles than a normal death poof)
+	# Crystal Guardians shatter into crystal fragment particles on death.
+	# The comment used to claim particles but the code had none — just a bare
+	# super._die() call. Now we spawn a thematic crystal-shatter burst (matching
+	# the Crystal Wraith's death effect) plus the shield-break fragment particles
+	# for sharp crystal-edge visuals, and play the breakable SFX for a satisfying
+	# crystalline crack sound. Brings the guardian in line with every other
+	# crystal-themed enemy.
+	ParticleEffects.spawn_explosion(get_parent(), global_position,
+		GameConstants.CRYSTAL_GUARDIAN_SHARD_COLOR, 24, 0.5)
+	ParticleEffects.spawn_shield_break_shatter(get_parent(), global_position,
+		GameConstants.CRYSTAL_GUARDIAN_SHARD_COLOR)
+	AudioManager.play_sfx(AudioManager.SFX_BREAKABLE)
 	super._die()
