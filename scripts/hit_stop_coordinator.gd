@@ -26,7 +26,14 @@
 
 extends Node
 
-# ── Active freezes ── Each entry is { "scale": float, "expire_at": float }
+## Emitted when a new freeze is requested. The HUD listens to play a brief
+## white screen flash synchronized with the hit-stop — the visual counterpart
+## to the Engine.time_scale dip, so the freeze reads as a cinematic "punch"
+## rather than just a momentary stutter. The argument is the freeze scale
+## (lower = stronger freeze), so the HUD can scale the flash intensity.
+signal freeze_requested(scale: float)
+
+# ── Active freezes ─ Each entry is { "scale": float, "expire_at": float }
 # We track the real-time deadline (Time.get_ticks_msec() + duration_ms) so
 # we don't rely on per-freeze timers that could be killed by node freeing.
 var _active_freezes: Array[Dictionary] = []
@@ -87,6 +94,10 @@ func request_freeze(scale: float, duration: float) -> void:
 	if strongest < _current_applied_scale:
 		Engine.time_scale = strongest
 		_current_applied_scale = strongest
+	# Emit the signal so the HUD can play a synchronized visual flash.
+	# The flash intensity is inversely proportional to the freeze scale
+	# (deeper freeze = brighter flash), capped to keep it subtle.
+	freeze_requested.emit(clampf(scale, 0.0, 1.0))
 
 ## Emergency reset — restores Engine.time_scale to 1.0 immediately and clears
 ## all active freezes. Called on game restart, death replay, etc.

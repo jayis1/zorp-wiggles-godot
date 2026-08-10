@@ -812,6 +812,20 @@ func _collect() -> void:
 	var config: Dictionary = TYPE_CONFIG.get(collectible_type, TYPE_CONFIG[GameConstants.CollectibleType.XP_ORB])
 	ParticleEffects.spawn_pickup_sparkle(get_parent(), global_position, config["color"])
 
+	# ── Pickup ring shockwave ── A small expanding ground ring in the
+	#    collectible's color that bursts outward from the pickup point,
+	#    giving the collection a visible "impact" on the world — the
+	#    item doesn't just vanish, it releases a burst of energy as it's
+	#    absorbed. This mirrors the enemy death shockwave and the spawn
+	#    materialization ring, creating a shared visual language: rings
+	#    = energy events. The ring is small (2m for common, 3.5m for
+	#    rare) so it reads as a personal "catch" effect rather than a
+	#    screen-filling explosion. Skipped in the mirror dimension
+	#    (hostile collectibles) since the collection path returns early.
+	ParticleEffects.spawn_spawn_ring(
+		get_parent(), global_position, config["color"],
+		3.5 if _is_rare() else 2.0)
+
 	# ── Player pickup feedback pulse ── A subtle scale pop on the player
 	#    mesh when collecting an item, so pickups feel tactile — Zorp
 	#    briefly "absorbs" the item with a small grow + emission flash

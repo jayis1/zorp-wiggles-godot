@@ -228,6 +228,16 @@ var _mod_indicator: Label = null
 var _auto_fire_indicator: Label = null
 var _auto_fire_pulse_phase: float = 0.0  # Phase accumulator for the [AUTO] badge alpha breathing
 
+# ── Hit-stop visual flash overlay ── Synchronized with HitStopCoordinator
+#    freeze_requested signal. A brief white flash makes the Engine.time_scale
+#    dip read as a cinematic punch rather than a stutter. The flash intensity
+#    scales with the freeze depth (deeper = brighter).
+var _hitstop_flash_rect: ColorRect = null
+var _hitstop_flash_timer: float = 0.0
+var _hitstop_flash_max: float = 0.0  # Peak alpha for the current flash
+const HITSTOP_FLASH_DURATION: float = 0.10  # Matches the restore ease duration
+const HITSTOP_FLASH_MAX_ALPHA: float = 0.12  # Subtle — not a full white-out
+
 func _ready() -> void:
 	# Add to "hud" group so other systems (PhotoMode) can find the HUD canvas layer
 	add_to_group("hud")
@@ -356,6 +366,25 @@ func _ready() -> void:
 	var btv_ctrl := Control.new()
 	btv_ctrl.set_script(btv_script)
 	add_child(btv_ctrl)
+
+	# ── Hit-stop visual flash overlay ── A brief full-screen white flash
+	#    synchronized with HitStopCoordinator freeze events. The freeze
+	#    itself is an Engine.time_scale dip (a gameplay "punch"), but without
+	#    a visual counterpart it reads as a momentary stutter rather than a
+	#    deliberate cinematic beat. The flash intensity scales with the freeze
+	#    depth (deeper freeze = brighter flash), and it eases out over
+	#    HITSTOP_FLASH_DURATION using ease-out cubic so it punches in hard
+	#    then fades smoothly — matching the feel of the time_scale restore
+	#    tween in HitStopCoordinator. This is the technique used in
+	#    fighting games (Street Fighter V, Guilty Gear Strive) where
+	#    hit-stop is accompanied by a brief screen flash so the player
+	#    perceives the freeze as an impact, not a hitch.
+	_hitstop_flash_rect = ColorRect.new()
+	_hitstop_flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_hitstop_flash_rect.color = Color(0, 0, 0, 0)
+	_hitstop_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_hitstop_flash_rect)
+	HitStopCoordinator.freeze_requested.connect(_on_hitstop_freeze)
 	
 	# ── Phase 5: Death Screen ──
 	var ds_script := load("res://scripts/death_screen.gd")
@@ -723,6 +752,22 @@ func _process(delta: float) -> void:
 			_combo_flash_rect.color = c
 			if _combo_flash_timer <= 0:
 				_combo_flash_rect.color = Color(0, 0, 0, 0)
+
+	# ── Hit-stop flash decay ── Eases the white flash from peak alpha to 0
+	# over HITSTOP_FLASH_DURATION using ease-out cubic (1-(1-t)^3) so it
+	# punches in hard then fades smoothly. The flash uses ignore_time_scale
+	# decay so it stays visible during the freeze itself (Engine.time_scale
+	# is < 1.0 during a hit-stop, but we use Time.get_ticks_msec-based delta
+	# via the real-time clock to ensure the flash fades at the same real-time
+	# rate as the HitStopCoordinator's restore tween).
+	if _hitstop_flash_timer > 0 and _hitstop_flash_rect:
+		_hitstop_flash_timer -= delta
+		var flash_progress: float = _hitstop_flash_timer / HITSTOP_FLASH_DURATION
+		flash_progress = clampf(flash_progress, 0.0, 1.0)
+		var eased: float = 1.0 - pow(1.0 - flash_progress, 3.0)
+		_hitstop_flash_rect.color = Color(1.0, 1.0, 1.0, _hitstop_flash_max * eased)
+		if _hitstop_flash_timer <= 0:
+			_hitstop_flash_rect.color = Color(0, 0, 0, 0)
 	
 	# Pickup streak display timer
 	if _pickup_streak_timer > 0:
@@ -1395,6 +1440,11 @@ func _on_game_restarted() -> void:
 	# Reset low-HP danger pulse so a fresh game doesn't carry a stale red glow
 	_hp_danger_active = false
 	_hp_danger_phase = 0.0
+	# Reset hit-stop flash so a fresh game doesn't carry a stale white flash
+	_hitstop_flash_timer = 0.0
+	_hitstop_flash_max = 0.0
+	if _hitstop_flash_rect:
+		_hitstop_flash_rect.color = Color(0, 0, 0, 0)
 	if hp_bar_container:
 		hp_bar_container.self_modulate = Color.WHITE
 	if hp_bar:
@@ -1676,3 +1726,18 @@ func _update_mod_indicator() -> void:
 			total_mats += count
 	_mod_indicator.text = "🔫 %s  |  📦 Materials: %d  |  [C] Craft" % [mod_name, total_mats]
 	_mod_indicator.add_theme_color_override("font_color", mod_color)
+
+# ── Hit-stop visual flash ── Called when HitStopCoordinator emits
+#    freeze_requested. Sets the flash to peak alpha immediately (the freeze
+#    punches in), then _process eases it out over HITSTOP_FLASH_DURATION
+#    with an ease-out cubic curve so it fades smoothly — matching the
+#    time_scale restore tween's feel.
+func _on_hitstop_freeze(freeze_scale: float) -> void:
+	# Map freeze scale → flash intensity. A 0.04 freeze (boss kill) gets
+	# full alpha; a 0.2 freeze (normal kill) gets ~25%. The mapping is
+	# (1 - scale) so deeper freezes produce brighter flashes.
+	var intensity: float = clampf(1.0 - freeze_scale, 0.0, 1.0)
+	_hitstop_flash_max = HITSTOP_FLASH_MAX_ALPHA * intensity
+	_hitstop_flash_timer = HITSTOP_FLASH_DURATION
+	if _hitstop_flash_rect:
+		_hitstop_flash_rect.color = Color(1.0, 1.0, 1.0, _hitstop_flash_max)

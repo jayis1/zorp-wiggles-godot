@@ -1683,6 +1683,20 @@ func _spawn_physics_corpse() -> void:
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	corpse.add_child(corpse_mesh)
 
+	# ── Corpse scale-pop ── The corpse spawns at 0.5× base_scale and pops
+	# to full scale with a TRANS_BACK overshoot over 0.15s. This gives the
+	# death-to-corpse transition an explosive "burst outward" read — the
+	# enemy doesn't just swap to a ragdoll, it pops into one with energy.
+	# The overshoot (going past 1.0 then settling back) sells the death
+	# as a release of energy, mirroring the death emission burst and
+	# death shockwave. Without this, the corpse appears at full scale
+	# instantly, which reads as a body swap rather than an explosive death.
+	corpse_mesh.scale = Vector3.ONE * base_scale * 0.5
+	var corpse_pop_tween := corpse.create_tween()
+	corpse_pop_tween.tween_property(corpse_mesh, "scale",
+		Vector3.ONE * base_scale, 0.15) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+
 	# Physics material with bounce for a lively tumble (shared resource)
 	corpse.physics_material_override = _shared_corpse_phys_mat
 
