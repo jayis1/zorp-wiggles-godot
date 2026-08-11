@@ -17,6 +17,16 @@ var _fade_alpha: float = 0.0
 var _current_tab: int = 0
 const TAB_NAMES: Array[String] = ["Session", "Lifetime", "Combat", "Exploration"]
 const TAB_ICONS: Array[String] = ["📊", "♾", "⚔", "🧭"]
+# ── Mouse interactivity ── The tab bar and close button are drawn with
+#    _draw(), so we track their screen-space Rect2s during _draw and test
+#    against them in _gui_input. The _hovered_tab drives a highlighted
+#    background (matching the equipment menu's tab hover), and clicking a
+#    tab switches to it. The close button (top-right) dismisses the panel.
+var _tab_rects: Array[Rect2] = []
+var _close_btn_rect: Rect2 = Rect2()
+var _hovered_tab: int = -1
+var _prev_hovered_tab: int = -1
+
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -57,7 +67,48 @@ func _process(delta: float) -> void:
 	var target: float = 1.0 if _visible_flag else 0.0
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
 	if _fade_alpha > 0.01 or _visible_flag:
+		# Accept mouse input only when the panel is sufficiently visible
+		mouse_filter = Control.MOUSE_FILTER_STOP if _fade_alpha > 0.5 else Control.MOUSE_FILTER_IGNORE
 		queue_redraw()
+
+func _gui_input(event: InputEvent) -> void:
+
+
+	if not _visible_flag or _fade_alpha < 0.5:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		var mouse_pos: Vector2 = event.position
+		# Close button
+		if _close_btn_rect.has_point(mouse_pos):
+			_visible_flag = false
+			if AudioManager:
+				AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
+			get_viewport().set_input_as_handled()
+			return
+		# Tab headers
+		for i in range(_tab_rects.size()):
+			if _tab_rects[i].has_point(mouse_pos):
+				if i != _current_tab:
+					_current_tab = i
+					_prev_tab = i
+					if AudioManager:
+						AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0 + i * 0.05)
+				get_viewport().set_input_as_handled()
+				return
+	elif event is InputEventMouseMotion:
+		var mouse_pos: Vector2 = event.position
+		var new_hover: int = -1
+		for i in range(_tab_rects.size()):
+			if _tab_rects[i].has_point(mouse_pos):
+				new_hover = i
+				break
+		if new_hover != _hovered_tab:
+			if new_hover >= 0:
+				if AudioManager:
+					AudioManager.play_sfx(AudioManager.SFX_UI_HOVER)
+			_hovered_tab = new_hover
+			_prev_hovered_tab = new_hover
+			queue_redraw()
 
 func _draw() -> void:
 	if _fade_alpha < 0.01:
@@ -95,15 +146,24 @@ func _draw() -> void:
 	var title_y: float = panel_y + 35
 	_draw_centered_text(font, "📊 STATISTICS", Vector2(screen.x / 2.0, title_y), 28,
 		Color(0.4, 0.8, 1.0, a))
+	_tab_rects.clear()
+	# Close button (top-right)
+	var close_w: float = 80.0
+	_close_btn_rect = Rect2(panel_x + panel_w - close_w - 20, panel_y + 15, close_w, 30)
+	_draw_button(font, _close_btn_rect, "✖ Close", a)
+
 	# Tab bar
 	var tab_y: float = panel_y + 60
 	var tab_w: float = (panel_w - 40) / float(TAB_NAMES.size())
 	for i in range(TAB_NAMES.size()):
 		var tx: float = panel_x + 20 + i * tab_w
 		var tab_rect := Rect2(tx, tab_y, tab_w - 4, 36)
+		_tab_rects.append(tab_rect)
 		var tab_bg: Color
 		if i == _current_tab:
 			tab_bg = Color(0.2, 0.4, 0.7, 0.6 * a)
+		elif i == _hovered_tab:
+			tab_bg = Color(0.15, 0.25, 0.45, 0.5 * a)
 		else:
 			tab_bg = Color(0.1, 0.12, 0.2, 0.4 * a)
 		draw_rect(tab_rect, tab_bg, true)
@@ -126,7 +186,7 @@ func _draw() -> void:
 		2: _draw_combat_tab(font, content_rect, a)
 		3: _draw_exploration_tab(font, content_rect, a)
 	# Footer hint
-	_draw_centered_text(font, "[1-4] Switch Tabs  |  [F2] Close",
+	_draw_centered_text(font, "[1-4] Switch Tabs  |  Click tabs  |  [F2] Close",
 		Vector2(screen.x / 2.0, panel_y + panel_h - 15), 13,
 		Color(0.5, 0.55, 0.7, 0.7 * a))
 
@@ -304,6 +364,14 @@ func _draw_stat_line(font, label: String, value: String, col_x: float, y: float,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.75, 0.78, 0.85, a))
 	font.draw_string(get_canvas_item(), Vector2(val_x, y + 18), value,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(1.0, 0.9, 0.4, a))
+
+func _draw_button(font, rect: Rect2, text: String, a: float) -> void:
+	draw_rect(rect, Color(0.2, 0.15, 0.3, 0.8 * a), true)
+	draw_rect(rect, Color(0.5, 0.4, 0.7, 0.6 * a), false, 1.0)
+	var text_size: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)
+	font.draw_string(get_canvas_item(),
+		Vector2(rect.position.x + (rect.size.x - text_size.x) / 2.0, rect.position.y + rect.size.y / 2.0 + text_size.y / 2.0),
+		text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.9, 0.85, 1.0, a))
 
 func _draw_centered_text(font, text: String, pos: Vector2, font_size: int, color: Color) -> void:
 	var text_size: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)

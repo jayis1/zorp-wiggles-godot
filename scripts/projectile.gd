@@ -1893,7 +1893,8 @@ func _spawn_poison_nova(base_dmg: int) -> void:
 				elif enemy.has_method("take_damage"):
 					enemy.take_damage(GameConstants.POISON_NOVA_RING_DAMAGE)
 				hit_enemies.append(enemy)
-	, 0.0, 1.0, expand_duration)
+		, 0.0, 1.0, expand_duration) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	expand_tw.tween_callback(ring.queue_free)
 	# Fade the light
 	var light_tw := nova_light.create_tween()

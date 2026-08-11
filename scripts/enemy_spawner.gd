@@ -40,6 +40,14 @@ static func _get_cached_scene(enemy_type: int) -> PackedScene:
 # _reset_spawn_timer can reuse it without a second pass.
 var _last_nearby_count: int = 0
 
+# ── Cached player reference ── _try_spawn() is called on every spawn tick
+#    (~every 1-3s depending on difficulty). Each call did a
+#    get_first_node_in_group("player") — a scene-tree group scan. We now
+#    cache the player reference and lazily re-acquire it if it becomes
+#    invalid (player died, scene changed, etc.). The cache is cleared in
+#    _on_game_restarted so a new run doesn't reuse a stale reference.
+var _cached_player: Node3D = null
+
 # Precached spawn-warning scene (loaded once, reused for every spawn).
 static var _cached_spawn_warning: PackedScene = null
 
@@ -144,6 +152,14 @@ const ENEMY_TYPE_NAMES: Dictionary = {
 
 func _ready() -> void:
 	spawn_timer = 2.0  # Initial delay before first spawn
+	# Clear cached player on game restart so a new run doesn't reuse a
+	# stale reference to the freed player node.
+	GameManager.game_restarted.connect(_on_game_restarted)
+
+func _on_game_restarted() -> void:
+	_cached_player = null
+	pending_spawns.clear()
+	spawn_timer = 2.0
 
 func _process(delta: float) -> void:
 	if GameManager.is_paused:
@@ -202,8 +218,10 @@ func _try_spawn() -> void:
 	if pending_spawns.size() >= spawn_cap:
 		return
 
-	# Check nearby density throttle
-	var player: Node3D = get_tree().get_first_node_in_group("player")
+	# Check nearby density throttle (cached player ref — avoids per-tick group scan)
+	if not _cached_player or not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player")
+	var player: Node3D = _cached_player
 	if not player:
 		return
 
