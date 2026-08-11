@@ -633,8 +633,16 @@ func _level_up() -> void:
 	else:
 		player_xp_to_next = int(GameConstants.PLAYER_LEVEL_XP_CURVE_BASE * pow(GameConstants.PLAYER_LEVEL_XP_CURVE_EXP, player_level - 1))
 	level_up.emit(player_level)
-	# ── Co-op parity: P2 also gets a level-up visual celebration ──
+	# ── Co-op parity: P2 also gets a level-up visual celebration + HP bonus + heal ──
+	# P2 shares P1's level, so P2's max_hp should also increase by the same
+	# hp_bonus and P2 should also be healed. Without this, P2 falls behind in
+	# survivability as the game progresses — P1 gets +12 HP per level (plus
+	# tier bonus) and a heal, while P2 stays at the base P2_HP for the entire run.
 	if CoOpManager and CoOpManager.p2_active:
+		CoOpManager.p2_max_hp += hp_bonus
+		var p2_heal: int = max(40, int(CoOpManager.p2_max_hp * GameConstants.PLAYER_LEVEL_HEAL_PERCENT))
+		CoOpManager.p2_hp = min(CoOpManager.p2_max_hp, CoOpManager.p2_hp + p2_heal)
+		CoOpManager.p2_hp_changed.emit(CoOpManager.p2_hp, CoOpManager.p2_max_hp)
 		CoOpManager.p2_levelup.emit(player_level)
 	# Inform player of stat increases
 	GameManager.add_message("⬆ Level %d! HP: %d (+%d) | DMG: +%d | Speed: +%.1f" % [

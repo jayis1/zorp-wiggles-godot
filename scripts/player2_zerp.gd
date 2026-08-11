@@ -310,8 +310,12 @@ func _handle_movement(delta: float) -> void:
 			_in_time_warden_field = false
 			AudioManager.play_sfx_pitched(AudioManager.SFX_TIME_SLOW_ENTER, 1.3)
 
+	# ── Phase 7: Tier-based speed bonus (+0.5 m/s per 5 levels) ──
+	# P2 shares P1's level, so P2 should also get the per-tier speed bonus.
+	var tier: int = (GameManager.player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
+	var base_speed: float = GameConstants.PLAYER_SPEED + tier * GameConstants.PLAYER_LEVEL_SPEED_TIER_BONUS
 	if move_direction.length_squared() > 0.01:
-		velocity = move_direction * GameConstants.PLAYER_SPEED * speed_mult
+		velocity = move_direction * base_speed * speed_mult
 		velocity.y = 0
 	else:
 		# Frame-rate independent deceleration via exponential smoothing
@@ -671,7 +675,11 @@ func _spawn_projectile() -> void:
 		mod_dmg_mult *= WorldModifierSystem.get_player_damage_mult()
 		mod_dmg_mult *= WorldModifierSystem.get_berserker_damage_mult()
 
-	var base_dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + GameManager.player_level * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS
+	# Base damage scales with player level (matches P1: level * bonus + tier bonus)
+	# ── Phase 7: Tier-based damage scaling (+1 per 5 levels) ──
+	var tier: int = (GameManager.player_level - 1) / GameConstants.PLAYER_LEVEL_DIFFICULTY_INTERVAL
+	var level_dmg: int = GameManager.player_level * GameConstants.PROJECTILE_LEVEL_DAMAGE_BONUS + tier * GameConstants.PLAYER_LEVEL_DMG_TIER_BONUS
+	var base_dmg: int = GameConstants.PROJECTILE_BASE_DAMAGE + level_dmg
 	var mod_dmg: int = int(base_dmg * mod_dmg_mult)
 	var mod_speed: float = GameConstants.PROJECTILE_SPEED * mod_speed_mult
 
