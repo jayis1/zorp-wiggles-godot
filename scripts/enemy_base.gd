@@ -58,6 +58,10 @@ var _windup_scale_tween: Tween = null
 # even if the windup was interrupted by a hit-flash that also touches
 # emission_energy_multiplier.
 var _windup_prev_emission: float = 1.0
+# ── Windup pitch ── Cached per-enemy pitch for the windup SFX so the
+#    lunge SFX in _execute_attack / _execute_attack_on_enemy can reuse
+#    the same pitch for a consistent per-enemy audio identity.
+var _windup_pitch: float = 1.0
 # ── Hit squash tween ── Tracks the body_mesh hit squash tween so the idle
 #    breathing code can check if it's still running (the elastic rebound
 #    lasts longer than _hit_flash_timer, so without this check the idle
@@ -761,6 +765,11 @@ func _try_attack_enemy(target: Node3D) -> void:
 	# Uses the ENEMY_ATTACK_WINDUP_BRIGHTNESS constant (previously unused) as
 	# the peak multiplier. Restored in _execute_attack_on_enemy().
 	_ramp_windup_emission()
+	# ── Windup SFX ── Play the same rising charge tone as the normal attack
+	# windup so the mind-controlled enemy's attack has the same audio cycle:
+	# rising charge → striking release (SFX_ENEMY_LUNGE in _execute_attack_on_enemy).
+	_windup_pitch = clampf(1.3 - base_scale * 0.2, 0.6, 1.3)
+	AudioManager.play_sfx_pitched(AudioManager.SFX_ENEMY_WINDUP, _windup_pitch)
 
 ## Execute the attack on an enemy (mind control version)
 func _execute_attack_on_enemy(target: Node3D) -> void:
@@ -770,6 +779,13 @@ func _execute_attack_on_enemy(target: Node3D) -> void:
 	if not target or not is_instance_valid(target):
 		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
 		return
+	# ── Enhancement Pack 53: Enemy lunge strike SFX ── same as the normal
+	#    _execute_attack — the lunge release needs the same audio feedback
+	#    whether the target is the player or a mind-controlled traitor.
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_ENEMY_LUNGE,
+		_windup_pitch, _compute_dist_atten(
+			global_position.distance_to(GameManager.player.global_position)
+			if GameManager.player and is_instance_valid(GameManager.player) else 0.0))
 	# Deal damage to the enemy target
 	if target.has_method("take_damage_from"):
 		target.take_damage_from(damage, global_position)
@@ -933,6 +949,19 @@ func _execute_attack(player: Node3D) -> void:
 	is_windup = false
 	_windup_scale_tween = null  # Tween completed, clear reference
 	_restore_windup_emission()
+	# ── Enhancement Pack 53: Enemy lunge strike SFX ── A sharp descending
+	#    whoosh for the attack release — the lunge moment after windup.
+	#    Pairs with SFX_ENEMY_WINDUP (the rising charge tone) to complete
+	#    the full attack audio cycle: rising charge → striking release.
+	#    Volume attenuates with distance so off-screen attacks are subtle.
+	#    Pitch scales with enemy size (deeper for larger enemies) via the
+	#    existing _windup_pitch field which is already set per-enemy.
+	#    Only fires for attacks that actually execute (not cancelled by
+	#    target death during windup), matching the visual lunge timing.
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_ENEMY_LUNGE,
+		_windup_pitch, _compute_dist_atten(
+			global_position.distance_to(GameManager.player.global_position)
+			if GameManager.player and is_instance_valid(GameManager.player) else 0.0))
 	# The windup tween calls this via tween_callback after ENEMY_ATTACK_WINDUP_TIME.
 	# The bound `player` reference may have been freed during that delay (especially
 	# P2 in co-op, who can drop out or bleed out mid-windup). Bail out safely.
@@ -1092,6 +1121,7 @@ func _ramp_windup_emission() -> void:
 	# while a Blob's reads as a light chirp. Very quiet (0.12 base volume)
 	# so simultaneous windups during swarm encounters don't stack into noise.
 	var windup_pitch: float = clampf(1.3 - base_scale * 0.2, 0.6, 1.3)
+	_windup_pitch = windup_pitch  # cache for _execute_attack lunge SFX
 	AudioManager.play_sfx_pitched(AudioManager.SFX_ENEMY_WINDUP, windup_pitch)
 
 ## Restore emission energy to the pre-windup value. Called at the start of

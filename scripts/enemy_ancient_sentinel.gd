@@ -478,8 +478,8 @@ func _enter_enrage() -> void:
 	# Keep current_color in sync with base_color so systems that save/restore
 	# it (mind control, variant tinting) use the enraged color.
 	current_color = base_color
-	# Audio — ancient mechanical roar for the enrage phase.
-	AudioManager.play_sfx_pitched(AudioManager.SFX_BOSS_SPAWN, 0.5)
+	# Audio — dedicated boss enrage roar for the enrage phase.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_ENRAGE)
 	# ── Enhancement Pack 38: Boss phase transition screen flash ──
 	GameManager.boss_phase_changed.emit(Color(0.2, 0.5, 0.8, 1.0))
 	GameManager.add_message("Ancient Sentinel awakens — ENRAGE!")

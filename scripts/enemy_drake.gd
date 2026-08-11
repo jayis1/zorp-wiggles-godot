@@ -89,8 +89,8 @@ func _enter_enrage() -> void:
 	# it (mind control, variant tinting) use the enraged color, not the
 	# pre-enrage color that current_color was initialised with.
 	current_color = base_color
-	# Audio — threatening roar on enrage.
-	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
+	# Audio — dedicated boss enrage roar for the enrage phase.
+	AudioManager.play_sfx(AudioManager.SFX_BOSS_ENRAGE)
 	# ── Enhancement Pack 38: Boss phase transition screen flash ──
 	GameManager.boss_phase_changed.emit(Color(1.0, 0.2, 0.0, 1.0))
 	GameManager.add_message("Plasma Drake is enraged!")

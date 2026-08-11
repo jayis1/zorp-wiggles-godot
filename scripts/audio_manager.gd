@@ -503,6 +503,43 @@ const SFX_SKILL_UNLOCK: String = "skill_unlock"
 # themantically wrong for a victory screen.
 const SFX_VICTORY_FANFARE: String = "victory_fanfare"
 
+# ── Enhancement Pack 53: Enemy lunge strike SFX ── A sharp impact whoosh
+#    (descending 500→200 Hz, 0.08s, 0.15 vol) that plays when an enemy
+#    executes its melee lunge — the release moment after the windup.
+#    Previously the windup had SFX_ENEMY_WINDUP but the actual strike
+#    was silent. The descending pitch conveys a committed forward
+#    lunge — a predator leaping. Short and quiet so swarms don't stack
+#    into noise. Distinct from SFX_ENEMY_WINDUP (ascending, quieter) so
+#    the player hears the full attack cycle: rising charge → striking
+#    release. Added to _PITCH_VARIATION_SFX for natural detuning.
+const SFX_ENEMY_LUNGE: String = "enemy_lunge"
+
+# ── Enhancement Pack 53: Boss enrage SFX ── A colossal two-stage roar
+#    (deep descending 80→40 Hz growl, 0.45s, 0.40 vol) that plays when
+#    a boss enters its enrage phase. Previously all 3 bosses (Drake,
+#    Void Leviathan, Ancient Sentinel) reused SFX_BOSS_SPAWN at different
+#    pitches — the spawn rumble at 0.7× / 0.5× pitch was a hack that
+#    sounded muffled. This dedicated SFX is longer than SFX_BOSS_SPAWN
+#    (0.45s vs 0.6s spawn), starts lower (80 Hz vs 60 Hz), and has a
+#    steeper descent (80→40 vs 60→60 sustained) to convey "escalating
+#    rage" rather than "ominous entrance." The lower terminal frequency
+#    (40 Hz) gives it a visceral chest-rumble quality. Excluded from
+#    pitch variation since enrage is a rare, dramatic event.
+const SFX_BOSS_ENRAGE: String = "boss_enrage"
+
+# ── Enhancement Pack 53: Weather transition SFX ── A gentle atmospheric
+#    crossfade whoosh (0.35s, 0.18 vol) that plays when the weather
+#    changes. Previously weather transitions reused SFX_RIFT (a
+#    dimension-rift whoosh at 0.35 vol) — thematically misleading since
+#    the player would hear "dimensional rift opening" when it was just
+#    rain clearing. This dedicated SFX is quieter (0.18 vs 0.35) since
+#    weather changes are informational, not dramatic. Uses a soft
+#    ascending-then-descending sweep (300→500→300 Hz) to convey
+#    "atmosphere shifting" — a gentle breeze rather than a reality
+#    tear. Added to _PITCH_VARIATION_SFX for subtle per-weather
+#    variation so the same whoosh doesn't repeat identically.
+const SFX_WEATHER_SHIFT: String = "weather_shift"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -894,6 +931,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_ENEMY_WINDUP, SFX_MIND_CONTROL_END,
 	# Enhancement Pack 48: Milestone SFX get pitch variation
 	SFX_ACHIEVEMENT, SFX_QUEST_COMPLETE, SFX_SKILL_UNLOCK,
+	# Enhancement Pack 53: Enemy lunge + weather shift get pitch variation
+	SFX_ENEMY_LUNGE, SFX_WEATHER_SHIFT,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1504,6 +1543,27 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_SKILL_UNLOCK] = _gen_arpeggio([1047.0, 1568.0], 0.07, 0.18)
 	# SFX_VICTORY_FANFARE — 6-note triumphant fanfare (C5→E5→G5→C6→E6→G6)
 	_sfx_streams[SFX_VICTORY_FANFARE] = _gen_arpeggio([523.0, 659.0, 784.0, 1047.0, 1319.0, 1568.0], 0.09, 0.30)
+
+	# ── Enhancement Pack 53: Enemy lunge strike SFX ── A sharp descending
+	# impact whoosh (500→200 Hz, 0.08s, 0.15 vol) for the melee lunge
+	# release — the strike moment after windup. The descending pitch
+	# conveys a committed forward lunge. Short and quiet so swarms don't
+	# stack. Uses _gen_descending for a fast predatory sweep.
+	_sfx_streams[SFX_ENEMY_LUNGE] = _gen_descending(500.0, 200.0, 0.08, 0.15)
+
+	# ── Enhancement Pack 53: Boss enrage SFX ── A colossal deep descending
+	# growl (80→40 Hz, 0.45s, 0.40 vol) for when a boss enters enrage.
+	# Steeper and lower than SFX_BOSS_SPAWN (60→60 Hz sustained, 0.6s) to
+	# convey escalating rage rather than an ominous entrance. The low 40 Hz
+	# terminal gives a visceral chest-rumble.
+	_sfx_streams[SFX_BOSS_ENRAGE] = _gen_descending(80.0, 40.0, 0.45, 0.40)
+
+	# ── Enhancement Pack 53: Weather transition SFX ── A gentle atmospheric
+	# sweep (300→500→300 Hz, 0.35s, 0.18 vol) for weather changes. Uses a
+	# chime with ascending then descending notes to convey "atmosphere
+	# shifting" — a gentle breeze, not a reality tear (SFX_RIFT). Quieter
+	# than SFX_RIFT (0.35 vol) since weather changes are informational.
+	_sfx_streams[SFX_WEATHER_SHIFT] = _gen_chime([300.0, 500.0, 300.0], 0.12, 0.18)
 
 
 func _generate_all_music() -> void:
