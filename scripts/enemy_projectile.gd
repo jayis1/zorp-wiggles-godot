@@ -77,6 +77,14 @@ static var _shared_material_base: StandardMaterial3D = null
 #    instance only for color) so the per-shot allocation cost is minimal.
 static var _shared_trail_process_mat: ParticleProcessMaterial = null
 static var _shared_trail_mesh: SphereMesh = null
+# ── Shared trail fade ramp ── A single white→transparent gradient shared
+# across ALL enemy projectile trails. Since the ParticleProcessMaterial's
+# `color` property already sets the per-projectile base color, the
+# color_ramp only needs to control the alpha fade (1 → 0). White(1,1,1,a)
+# multiplied by the projectile color yields (r,g,b,a) — the correct
+# colored fade. This eliminates per-shot Gradient + GradientTexture1D
+# allocation during heavy projectile combat.
+static var _shared_trail_fade_ramp: GradientTexture1D = null
 
 static func _ensure_shared_resources() -> void:
 	if _shared_mesh == null:
@@ -109,6 +117,14 @@ static func _ensure_shared_resources() -> void:
 		_shared_trail_mesh.height = 0.12
 		_shared_trail_mesh.radial_segments = 4
 		_shared_trail_mesh.rings = 2
+	if _shared_trail_fade_ramp == null:
+		# White → transparent. The GPU multiplies this ramp's RGB by the
+		# per-projectile color, so white(1,1,1,a) × color = (r,g,b,a).
+		var fade_grad := Gradient.new()
+		fade_grad.add_point(0.0, Color(1.0, 1.0, 1.0, 1.0))
+		fade_grad.add_point(1.0, Color(1.0, 1.0, 1.0, 0.0))
+		_shared_trail_fade_ramp = GradientTexture1D.new()
+		_shared_trail_fade_ramp.gradient = fade_grad
 
 const IMPACT_SCENE := preload("res://scenes/entities/impact_burst.tscn")
 
@@ -178,13 +194,18 @@ func _ready() -> void:
 	#    bolt, negligible vs. the existing 500-particle weather systems.
 	var trail_mat: ParticleProcessMaterial = _shared_trail_process_mat.duplicate() as ParticleProcessMaterial
 	trail_mat.color = projectile_color
-	# Fade ramp: full color → transparent over the particle lifetime
-	var ramp := Gradient.new()
-	ramp.add_point(0.0, projectile_color)
-	ramp.add_point(1.0, Color(projectile_color.r, projectile_color.g, projectile_color.b, 0.0))
-	var ramp_tex := GradientTexture1D.new()
-	ramp_tex.gradient = ramp
-	trail_mat.color_ramp = ramp_tex
+	# ── Shared fade ramp ── The trail's color_ramp was previously allocated
+	# per shot: a new Gradient + GradientTexture1D, both with the
+	# projectile's color at 1.0 alpha and the same color at 0.0 alpha. Since
+	# ParticleProcessMaterial.color already sets the particle's base color,
+	# the ramp only needs to control the alpha fade (1 → 0). A single
+	# shared white→transparent ramp works with any color — the GPU
+	# multiplies the ramp's RGB by the particle color, so white(1,1,1,a)
+	# × projectile_color = projectile_color with alpha a. This eliminates
+	# the per-shot Gradient + GradientTexture1D allocation (2 objects ×
+	# every enemy projectile fired), reducing GC churn during heavy
+	# projectile combat (Spore Spitters, Crystal Guardians, Drakes).
+	trail_mat.color_ramp = _shared_trail_fade_ramp
 	_trail_particles = GPUParticles3D.new()
 	_trail_particles.amount = 12
 	_trail_particles.lifetime = 0.25

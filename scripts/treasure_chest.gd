@@ -152,6 +152,25 @@ func _open_chest() -> void:
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.2)
+	# ── Open light burst ── A brief golden light flash that spikes to 4.0
+	# energy on the open frame then eases back to the proximity glow level
+	# over 0.4s. Without this, the chest opening has no light feedback —
+	# the light stays at its proximity level (0–1.2) and the lid animation
+	# + particle burst are the only "treasure!" cues. The flash gives the
+	# opening a luminous "ta-da!" moment, especially impactful in dark
+	# biomes (Underground, Eclipse) where the chest's golden glow is the
+	# primary light source. Uses ease-out cubic for a decisive flash that
+	# settles smoothly, matching the treasure-related visual language.
+	if _light:
+		_light.light_energy = 4.0
+		var open_light_tween := create_tween()
+		open_light_tween.tween_property(_light, "light_energy", 0.8, 0.4) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		# Widen the range briefly so the flash illuminates a larger area.
+		_light.omni_range = 8.0
+		var range_tween := create_tween()
+		range_tween.tween_property(_light, "omni_range", 4.0, 0.5) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# Trapped chests: telegraph flash, then deal damage + spawn a Swarm Mite.
 	if _trapped:
 		_trigger_trap()

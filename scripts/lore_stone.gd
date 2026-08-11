@@ -128,6 +128,26 @@ func _read_lore() -> void:
 	GameManager.add_message("📜 LORE: %s" % text)
 	# Audio feedback — deep mystical chime.
 	AudioManager.play_sfx(AudioManager.SFX_LORE)
+	# ── Rune revelation flash ── A brief white-hot emission spike on the
+	# rune face so the "knowledge revealed" moment has visual weight.
+	# Without this, the rune keeps its idle 0.6+0.4*sin pulse throughout
+	# the read animation — the lore is revealed but the stone doesn't react.
+	# The emission jumps to 8x energy and the rune color shifts toward
+	# white (70% lerp), then eases back to the pre-read color over 0.35s
+	# with ease-out cubic so the flash is a deliberate "illumination"
+	# that fades as the stone crumbles away. The _process pulse loop is
+	# skipped after _read=true, so the eased value won't be overwritten.
+	if _rune and _rune.material_override:
+		var rune_mat: StandardMaterial3D = _rune.material_override
+		var prev_emi: Color = rune_mat.emission
+		var prev_emi_e: float = rune_mat.emission_energy_multiplier
+		rune_mat.emission = GameConstants.LORE_STONE_GLOW_COLOR.lerp(Color(1.0, 1.0, 1.0), 0.7)
+		rune_mat.emission_energy_multiplier = 8.0
+		var rune_flash_tween := create_tween()
+		rune_flash_tween.tween_property(rune_mat, "emission_energy_multiplier", prev_emi_e, 0.35) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		rune_flash_tween.parallel().tween_property(rune_mat, "emission", prev_emi, 0.35) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	# XP reward.
 	GameManager.gain_xp(GameConstants.LORE_STONE_XP_REWARD)
 	# Camera shake for feedback.
