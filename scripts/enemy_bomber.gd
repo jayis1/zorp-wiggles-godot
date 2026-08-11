@@ -186,7 +186,7 @@ func _explode() -> void:
 	is_dead = true
 	# ── Phase 19: Co-op — credit P2 if they killed the bomber ──
 	var killer_name: String = GameConstants.P2_NAME if _killed_by_p2 else "Zorp"
-	GameManager.register_kill(enemy_name, killer_name)
+	GameManager.register_kill(enemy_name, killer_name, _killed_by_crit)
 	GameManager.gain_xp(xp_reward)
 	if _killed_by_p2:
 		CoOpManager.p2_add_score(score_reward)

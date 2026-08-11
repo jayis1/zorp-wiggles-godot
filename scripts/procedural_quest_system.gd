@@ -467,7 +467,7 @@ func _expire_stale_quests(delta: float) -> void:
 
 # ─── Signal Handlers ───────────────────────────────────────────────────────────
 
-func _on_enemy_killed(enemy_name: String, _killer_name: String) -> void:
+func _on_enemy_killed(enemy_name: String, _killer_name: String, _is_crit_kill: bool = false) -> void:
 	# Track KILL_TYPE quests
 	for quest in _active_quests:
 		if quest.completed or quest.expired:

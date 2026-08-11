@@ -257,7 +257,7 @@ func _generate_random_mission() -> void:
 	GameManager.add_message("✦ New Mission: %s" % m.title)
 
 # ─── Signal Handlers ──────────────────────────────────────────────────────────
-func _on_enemy_killed(_enemy_name: String, _killer_name: String) -> void:
+func _on_enemy_killed(_enemy_name: String, _killer_name: String, _is_crit_kill: bool = false) -> void:
 	# Kill missions are tracked via _process using GameManager.player_kills
 	pass
 

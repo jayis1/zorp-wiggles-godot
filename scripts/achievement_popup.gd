@@ -201,7 +201,7 @@ func _define_achievements() -> void:
 var _visited_biomes: Dictionary = {}  # biome_id -> true
 
 # ─── Signal Handlers ──────────────────────────────────────────────────────────
-func _on_enemy_killed(_enemy_name: String, _killer_name: String) -> void:
+func _on_enemy_killed(_enemy_name: String, _killer_name: String, _is_crit_kill: bool = false) -> void:
 	_unlock("first_kill")
 	_check_progress_achievements()
 

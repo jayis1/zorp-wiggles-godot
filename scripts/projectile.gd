@@ -695,6 +695,11 @@ func _hit_enemy(enemy: Node3D) -> void:
 	if enemy.has_method("take_damage_from") or enemy.has_method("take_damage"):
 		if "hp" in enemy and "max_hp" in enemy:
 			will_kill = total_damage >= enemy.hp
+		# ── Enhancement Pack 54: Mark enemy for crit kill feed highlight ──
+		# If this will be a killing blow AND it was a crit, set the flag on the
+		# enemy before damage is applied so _die() can pass it to register_kill.
+		if will_kill and is_crit and enemy.has_method("set_crit_kill"):
+			enemy.set_crit_kill()
 		# ── Hit-stop on kill blows: even heftier freeze for the killing hit ──
 		# Boss kills (high max_hp or large base_scale) get the longer, deeper
 		# freeze so the moment reads as a cinematic beat, not just another pop.

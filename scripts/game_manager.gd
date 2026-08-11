@@ -66,7 +66,7 @@ signal crit_chain_activated(chain: int)
 signal critical_hit(mod_color: Color)
 signal enemy_spawned_near(pos: Vector3, enemy_type: int)
 signal damage_taken_from(source_pos: Vector3)  # Phase 5: damage direction indicator
-signal enemy_killed(enemy_name: String, killer_name: String)  # Phase 5: kill feed
+signal enemy_killed(enemy_name: String, killer_name: String, is_crit_kill: bool)  # Phase 5: kill feed + Enhancement Pack 54: crit kill flag
 signal biome_changed(biome_id: int)  # Phase 5: biome indicator
 signal p1_downed()  # Phase 19: P1 downed in co-op (can be revived by P2)
 # ── Enhancement Pack 38: Boss phase transition screen flash ── Emitted by
@@ -681,7 +681,7 @@ func add_score(amount: int) -> void:
 	# Each milestone fires once per run (tracked via _last_score_milestone).
 	_check_score_milestone()
 
-func register_kill(enemy_name: String = "", killer_name: String = "Zorp") -> void:
+func register_kill(enemy_name: String = "", killer_name: String = "Zorp", is_crit_kill: bool = false) -> void:
 	player_kills += 1
 	player_combo += 1
 	# ── Phase 19: Co-op shared combo — longer window when P2 is active ──
@@ -692,7 +692,7 @@ func register_kill(enemy_name: String = "", killer_name: String = "Zorp") -> voi
 		player_best_combo = player_combo
 	combo_changed.emit(player_combo)
 	add_score(100)
-	enemy_killed.emit(enemy_name, killer_name)
+	enemy_killed.emit(enemy_name, killer_name, is_crit_kill)
 	
 	# Combo milestone check (every COMBO_MILESTONE_INTERVAL kills)
 	if player_combo > 0 and player_combo % GameConstants.COMBO_MILESTONE_INTERVAL == 0:

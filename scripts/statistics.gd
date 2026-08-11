@@ -214,7 +214,7 @@ func _inc_dict_lifetime(dict_key: String, sub_key: String, amount: int = 1) -> v
 
 # ─── Signal Handlers ──────────────────────────────────────────────────────────
 
-func _on_enemy_killed(enemy_name: String, _killer_name: String) -> void:
+func _on_enemy_killed(enemy_name: String, _killer_name: String, _is_crit_kill: bool = false) -> void:
 	_add_session("kills", 1.0)
 	_add_lifetime("total_kills", 1.0)
 	_inc_dict_session("enemies_by_type", enemy_name)

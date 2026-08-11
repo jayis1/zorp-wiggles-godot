@@ -30,7 +30,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 12. **Local Co-op** — Player 2 "Zerp" drops in anytime, shared camera with dynamic zoom, enemy scaling, shared combo, revive system, mega pulse wave sync, 7 co-op achievements
 
 ### Audio & Polish
-- 108 procedurally generated sound effects (no external audio files needed)
+- 111 procedurally generated sound effects (no external audio files needed)
 - 12 per-biome ambient music tracks + boss fight music
 - Dynamic music intensity — 5 tiers (Calm/Engaged/Heated/Intense/Frenzied) that scale with the combo counter (pitch + volume)
 - Trauma-based screen shake, input buffering, hit-stop freeze frames
@@ -52,6 +52,8 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 - **Near-Miss Graze SFX** — enemy projectiles passing close to the player without hitting play a subtle whoosh, adding tension and spatial awareness during projectile-heavy encounters
 - **Boss Intro Card** — dramatic full-screen boss name overlay that slides in when a boss spawns (gold text, dark panel, red border, "⚠ BOSS" / "☠ MEGA-BOSS" / "🌍 WORLD BOSS" subtitle), holds for ~2 seconds, then slides out — a cinematic "title card" moment for boss appearances
 - **Critical Hit Screen-Edge Flash** — a brief gold-colored screen-edge glow on critical hits, tinted to the weapon mod's color (fire=orange, ice=cyan, void=purple); adds a peripheral visual feedback layer beyond the damage number + hit-stop
+- **Death Screen New Record Badge** — golden "★ NEW RECORD! ★" badge with scale-in overshoot when a run sets a new #1 leaderboard record, plus "Leaderboard Rank: #X" showing where the run placed; rank uses gold for top-3, blue-white for 4+
+- **Kill Feed Crit Highlighting** — critical hit kills in the kill feed are shown in gold with a ✦ prefix, matching the crit damage number color language so precision kills are instantly identifiable
 
 ### Missions & Progression
 - Mission system (collect, kill, explore, boss missions)

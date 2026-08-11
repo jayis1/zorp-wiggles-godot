@@ -136,6 +136,10 @@ var _time_scale: float = 1.0
 
 # ── Phase 19: Co-op — track which player killed this enemy ──
 var _killed_by_p2: bool = false
+# ── Enhancement Pack 54: Critical kill tracking for kill feed highlighting ──
+# Set by the projectile when the killing blow was a critical hit, so the kill
+# feed can display crit kills in gold with a ✦ prefix.
+var _killed_by_crit: bool = false
 
 # ── Phase 24: Mind Control — when controlled, enemy fights for the player ──
 # The controlled enemy retargets to attack other enemies instead of the player.
@@ -1392,6 +1396,12 @@ func set_time_scale(scale: float) -> void:
 func set_p2_hit() -> void:
 	_killed_by_p2 = true
 
+# ── Enhancement Pack 54: Mark this enemy as killed by a critical hit ──
+# Called by the projectile when the killing blow was a crit, so the kill feed
+# can highlight the entry in gold.
+func set_crit_kill() -> void:
+	_killed_by_crit = true
+
 func _die() -> void:
 	is_dead = true
 	# ── Kill any in-flight hit squash tween so it doesn't reference the
@@ -1416,7 +1426,8 @@ func _die() -> void:
 	if PerformanceOptimizer:
 		PerformanceOptimizer.unregister_lod_target(self)
 	var killer_name: String = GameConstants.P2_NAME if _killed_by_p2 else "Zorp"
-	GameManager.register_kill(enemy_name, killer_name)
+	# ── Enhancement Pack 54: Pass crit kill flag to register_kill ──
+	GameManager.register_kill(enemy_name, killer_name, _killed_by_crit)
 	GameManager.gain_xp(xp_reward)
 	if _killed_by_p2:
 		CoOpManager.p2_add_score(score_reward)

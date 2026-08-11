@@ -223,7 +223,7 @@ func _die() -> void:
 	# Boss defeated signal
 	GameManager.boss_defeated.emit(self)
 	GameManager.clear_current_boss()
-	GameManager.register_kill(enemy_name, "Zorp")
+	GameManager.register_kill(enemy_name, "Zorp", _killed_by_crit)
 	GameManager.gain_xp(150)  # Mini-boss XP reward
 	GameManager.add_score(500)
 	GameManager.add_message("🌑 Shadow Clone defeated! +500 score")

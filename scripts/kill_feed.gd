@@ -14,6 +14,7 @@ class KillEntry:
 	var alpha: float
 	var y_offset: float
 	var entrance_t: float  # 0..1 eased entrance progress
+	var is_crit_kill: bool = false  # Enhancement Pack 54: crit kill highlighting
 	# ── Exit slide ── When an entry is about to expire (last 0.35s), it
 	#    slides right off-screen with an accelerating ease-in curve, mirroring
 	#    the entrance slide-down in reverse. This reads as the kill "leaving"
@@ -38,9 +39,18 @@ func _ready() -> void:
 	# Connect to kill feed signal
 	GameManager.enemy_killed.connect(_on_enemy_killed)
 
-func _on_enemy_killed(enemy_name: String, killer_name: String) -> void:
+func _on_enemy_killed(enemy_name: String, killer_name: String, is_crit_kill: bool = false) -> void:
 	var entry := KillEntry.new()
-	entry.text = "%s ▸ %s" % [killer_name, enemy_name]
+	# ── Enhancement Pack 54: Critical kill highlighting ──
+	# Crit kills get a gold ✦ prefix and are drawn in gold color so the player
+	# can distinguish precision kills from regular kills at a glance. The gold
+	# color matches the crit damage number and crit screen flash, creating a
+	# consistent "critical hit" color language across the HUD.
+	if is_crit_kill:
+		entry.text = "✦ %s ▸ %s" % [killer_name, enemy_name]
+	else:
+		entry.text = "%s ▸ %s" % [killer_name, enemy_name]
+	entry.is_crit_kill = is_crit_kill
 	entry.timer = GameConstants.KILL_FEED_LIFETIME
 	entry.alpha = 0.0  # Start at 0 and ease in for a soft entrance
 	entry.y_offset = -20.0  # Slide in from above
@@ -133,10 +143,20 @@ func _draw() -> void:
 			entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, shadow_color)
 
 		# Draw text with kill feed color
-		var color := Color(GameConstants.KILL_FEED_COLOR.r,
-			GameConstants.KILL_FEED_COLOR.g,
-			GameConstants.KILL_FEED_COLOR.b,
-			GameConstants.KILL_FEED_COLOR.a * entry.alpha)
+		# ── Enhancement Pack 54: Crit kills in gold ──
+		# Critical kill entries use a gold color matching the crit damage
+		# numbers (Color(1.0, 0.85, 0.3)), so the player can instantly spot
+		# their precision kills in the feed. Non-crit entries keep the
+		# standard kill feed color.
+		var base_feed_color: Color
+		if entry.is_crit_kill:
+			base_feed_color = Color(1.0, 0.85, 0.3, 1.0)  # Gold for crit kills
+		else:
+			base_feed_color = GameConstants.KILL_FEED_COLOR
+		var color := Color(base_feed_color.r,
+			base_feed_color.g,
+			base_feed_color.b,
+			base_feed_color.a * entry.alpha)
 		font.draw_string(get_canvas_item(),
 			Vector2(x, y + text_size.y + entry.y_offset),
 			entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)

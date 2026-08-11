@@ -21,6 +21,12 @@ var _is_shown: bool = false
 var _stat_anim_timer: float = 0.0
 var _displayed_score: int = 0  # For score roll-up animation
 var _time_survived: float = 0.0
+# ── Enhancement Pack 54: New record badge + leaderboard rank ──
+var _is_new_record: bool = false  # True if this run set a new #1 leaderboard record
+var _leaderboard_rank: int = -1  # Rank achieved on the leaderboard (-1 = not ranked)
+var _record_badge_alpha: float = 0.0  # Badge fade-in alpha
+var _record_badge_scale: float = 0.5  # Badge scale-in from 0.5 → 1.0 with overshoot
+var _rank_alpha: float = 0.0  # Rank line fade-in alpha
 # Phase 20: Try Again button
 var _try_again_btn: Button = null
 var _quit_btn: Button = null
@@ -35,6 +41,14 @@ func _ready() -> void:
 	# Connect to player death signal
 	GameManager.player_died.connect(_on_player_died)
 	GameManager.game_restarted.connect(_on_game_restarted)
+	# ── Enhancement Pack 54: Listen for leaderboard score submission ──
+	# The Leaderboards autoload submits the score on player_died and emits
+	# score_submitted with the rank. We connect here to capture the rank and
+	# new-record status for display on the death screen. The signal fires
+	# after the leaderboards' own _on_player_died handler processes the score.
+	if Leaderboards:
+		Leaderboards.score_submitted.connect(_on_score_submitted)
+		Leaderboards.new_record.connect(_on_new_record)
 	# Phase 20: Create Try Again and Quit buttons
 	_try_again_btn = Button.new()
 	_try_again_btn.offset_left = 390.0
@@ -83,6 +97,12 @@ func _on_player_died() -> void:
 	_stat_anim_timer = 0.0
 	_displayed_score = 0
 	_time_survived = GameManager.game_time
+	# ── Enhancement Pack 54: Reset record badge + rank state ──
+	_is_new_record = false
+	_leaderboard_rank = -1
+	_record_badge_alpha = 0.0
+	_record_badge_scale = 0.5
+	_rank_alpha = 0.0
 	# Phase 20: Show buttons after fade-in (delayed via _process)
 	# Reset button visual state so the entrance animation plays cleanly
 	_try_again_btn.visible = false
@@ -95,10 +115,27 @@ func _on_player_died() -> void:
 	get_tree().paused = false
 	GameManager.is_paused = false
 
+# ── Enhancement Pack 54: Leaderboard score submission handler ──
+# Called when the Leaderboards autoload finishes submitting the player's score.
+# Captures the rank for display on the death screen.
+func _on_score_submitted(mode: String, rank: int, entry: Dictionary) -> void:
+	_leaderboard_rank = rank
+
+# ── Enhancement Pack 54: New record handler ──
+# Called when the submitted score is a new #1 record for the game mode.
+func _on_new_record(mode: String, entry: Dictionary) -> void:
+	_is_new_record = true
+
 func _on_game_restarted() -> void:
 	_is_shown = false
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# ── Enhancement Pack 54: Reset record/rank state ──
+	_is_new_record = false
+	_leaderboard_rank = -1
+	_record_badge_alpha = 0.0
+	_record_badge_scale = 0.5
+	_rank_alpha = 0.0
 	if _try_again_btn:
 		_try_again_btn.visible = false
 		_try_again_btn.scale = Vector2.ONE  # Reset for next death
@@ -154,6 +191,24 @@ func _process(delta: float) -> void:
 		_displayed_score = int(lerpf(_displayed_score, target_score, 1.0 - exp(-5.0 * delta)))
 		if abs(_displayed_score - target_score) < 5:
 			_displayed_score = target_score
+
+	# ── Enhancement Pack 54: New record badge + rank animation ──
+	# The badge appears after the stats (delayed to 1.3s) with a scale-in
+	# overshoot. The rank line appears slightly after the badge (1.5s).
+	if _is_new_record and _stat_anim_timer > 1.3:
+		var badge_t: float = clampf((_stat_anim_timer - 1.3) / 0.4, 0.0, 1.0)
+		_record_badge_alpha = badge_t
+		# Scale-in with ease-out-back overshoot (same curve as the title)
+		if badge_t > 0.0 and badge_t < 1.0:
+			var c1: float = 1.70158
+			var c3: float = c1 + 1.0
+			var tm: float = badge_t - 1.0
+			_record_badge_scale = 1.0 + c3 * tm * tm * tm + c1 * tm * tm
+		elif badge_t >= 1.0:
+			_record_badge_scale = 1.0
+	# Rank line fades in after the badge (1.5s start, 0.4s ramp)
+	if _leaderboard_rank > 0 and _stat_anim_timer > 1.5:
+		_rank_alpha = clampf((_stat_anim_timer - 1.5) / 0.4, 0.0, 1.0)
 
 	# Phase 20: Show buttons when prompt fades in — with a staggered scale-in
 	# entrance animation (fade + scale up from 0.8 with overshoot). This makes
@@ -301,6 +356,34 @@ func _draw() -> void:
 		if GameModeManager:
 			mode_name = GameModeManager.get_mode_name()
 		_draw_stat_line("Game Mode", mode_name, center.x, stat_y, label_color, stat_color)
+
+	# ── Enhancement Pack 54: New Record badge ──
+	# A golden "★ NEW RECORD! ★" badge appears below the stats when the player
+	# achieves a new #1 leaderboard record for their game mode. The badge uses
+	# the gold color language (1.0, 0.85, 0.3) shared by prestige, achievements,
+	# maxed skills, and crit damage numbers. It scales in with an ease-out-back
+	# overshoot (same curve as the title) for a celebratory pop-in.
+	if _is_new_record and _record_badge_alpha > 0.01:
+		var badge_color := Color(1.0, 0.85, 0.3, _record_badge_alpha)
+		var badge_text: String = "★ NEW RECORD! ★"
+		var badge_font_size: int = int(round(28 * clampf(_record_badge_scale, 0.5, 1.2)))
+		var badge_pos := Vector2(center.x, center.y + 95)
+		# Draw a subtle glow shadow behind the badge for emphasis
+		var glow_color := Color(1.0, 0.85, 0.3, _record_badge_alpha * 0.3)
+		_draw_centered_text(badge_text, Vector2(badge_pos.x + 2, badge_pos.y + 2), badge_font_size, glow_color)
+		_draw_centered_text(badge_text, badge_pos, badge_font_size, badge_color)
+
+	# ── Enhancement Pack 54: Leaderboard rank display ──
+	# Shows "Leaderboard Rank: #X" below the stats (or below the badge if a new
+	# record was set). The rank gives the player context about how this run
+	# compares to their past runs. Only shown if the score was ranked (rank > 0).
+	if _leaderboard_rank > 0 and _rank_alpha > 0.01:
+		var rank_y: float = center.y + 115
+		if _is_new_record:
+			rank_y = center.y + 125  # Offset below the badge
+		var rank_label_color := Color(0.6, 0.65, 0.8, _rank_alpha)
+		var rank_value_color := Color(1.0, 0.85, 0.3, _rank_alpha) if _leaderboard_rank <= 3 else Color(0.8, 0.85, 1.0, _rank_alpha)
+		_draw_stat_line("Leaderboard Rank", "#%d" % _leaderboard_rank, center.x, rank_y, rank_label_color, rank_value_color)
 
 	# Draw restart prompt
 	if _prompt_alpha > 0.01:
