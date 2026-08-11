@@ -51,6 +51,29 @@ var _look_ahead_offset: Vector3 = Vector3.ZERO
 @export var dash_fov_kick: float = GameConstants.CAMERA_DASH_FOV_KICK
 @export var default_fov: float = GameConstants.CAMERA_DEFAULT_FOV
 @export var fov_return_speed: float = GameConstants.CAMERA_FOV_RETURN_SPEED
+## ── Differentiated FOV return speeds ── Previously ALL FOV events (dash
+##    kick, damage dip, level-up punch, heal bloom) eased back to baseline
+##    at the same `fov_return_speed`. This missed a key game-feel opportunity:
+##    each event has a different emotional valence that calls for a different
+##    recovery pace. Now each event sets a `_fov_return_mode` that the
+##    _process return loop reads to pick the appropriate speed:
+##    • DASH_KICK — returns FAST (snappy — the dash is over, the speed
+##      sensation should end quickly so the player feels "back to normal")
+##    • DAMAGE_DIP — returns SLOW (lingering — the "tunnel vision" should
+##      ease away gradually, reinforcing the sense of danger after a hit)
+##    • LEVELUP_PUNCH — returns MEDIUM (celebratory settle, not too fast)
+##    • HEAL_BLOOM — returns MEDIUM-SLOW (gentle, the relief lingers)
+##    • NONE — the default `fov_return_speed` (baseline behavior)
+##    The multipliers are tuned so the dash returns ~2x faster (snappy),
+##    the damage dip returns ~0.5x slower (lingering), and the level-up
+##    and heal return at ~0.75x (gentle settle). The _process loop reads
+##    the mode each frame and applies the corresponding speed.
+enum FovReturnMode { NONE, DASH_KICK, DAMAGE_DIP, LEVELUP_PUNCH, HEAL_BLOOM }
+var _fov_return_mode: int = FovReturnMode.NONE
+const FOV_RETURN_DASH_MULT: float = 2.0       # Dash kick returns 2x faster (snappy)
+const FOV_RETURN_DAMAGE_MULT: float = 0.5     # Damage dip returns 0.5x speed (lingering)
+const FOV_RETURN_LEVELUP_MULT: float = 0.75   # Level-up punch returns 0.75x (gentle settle)
+const FOV_RETURN_HEAL_MULT: float = 0.65      # Heal bloom returns 0.65x (soft linger)
 
 ## ── Low-HP tension zoom ── When the player's HP drops below the threshold,
 ## the camera subtly zooms in (reduces orbit distance) to frame Zorp tighter
@@ -189,6 +212,9 @@ func _ready() -> void:
 const HEAL_FOV_BLOOM: float = 2.0
 func _on_player_heal_fov_bloom(_amount: int) -> void:
 	camera.fov = camera.fov + HEAL_FOV_BLOOM
+	# Set the return mode so the heal bloom eases back at a gentle,
+	# medium-slow pace — the relief lingers rather than snapping away.
+	_fov_return_mode = FovReturnMode.HEAL_BLOOM
 
 ## ── Level-up FOV punch ── Briefly reduces the FOV by LEVELUP_FOV_PUNCH
 ##    degrees for a cinematic zoom-in, then eases back. The _process FOV
@@ -216,6 +242,9 @@ const LEVELUP_ZOOM_DURATION: float = 0.5     # Ease-back duration
 var _levelup_zoom_tween: Tween = null
 func _on_player_levelup_fov_punch(_level: int) -> void:
 	camera.fov = maxf(camera.fov - LEVELUP_FOV_PUNCH, default_fov - LEVELUP_FOV_PUNCH)
+	# Set the return mode so the level-up punch eases back at a gentle,
+	# celebratory pace — the cinematic zoom settles softly, not snappily.
+	_fov_return_mode = FovReturnMode.LEVELUP_PUNCH
 	# ── Distance zoom-in punch ── Briefly pull the camera closer to the
 	# player for a cinematic "lean in" on level-up. We tween
 	# _current_zoom_distance directly (not _target_zoom_distance) so the
@@ -411,8 +440,31 @@ func _process(delta: float) -> void:
 	_speed_fov_current = lerpf(_speed_fov_current, speed_fov_target, sf_weight)
 	var fov_baseline: float = default_fov + _speed_fov_current
 	if abs(camera.fov - fov_baseline) > 0.01:
-		var fov_weight: float = 1.0 - exp(-fov_return_speed * delta)
+		# ── Differentiated FOV return speed ── Each FOV event sets a return
+		# mode that determines how fast the FOV eases back to baseline. The
+		# dash kick returns fast (snappy), the damage dip returns slow
+		# (lingering danger), the level-up returns medium (celebratory settle),
+		# and the heal bloom returns medium-slow (soft relief). The mode is
+		# cleared to NONE once the FOV converges close to baseline so normal
+		# speed-FOV adjustments use the default return speed.
+		var effective_return_speed: float = fov_return_speed
+		match _fov_return_mode:
+			FovReturnMode.DASH_KICK:
+				effective_return_speed *= FOV_RETURN_DASH_MULT
+			FovReturnMode.DAMAGE_DIP:
+				effective_return_speed *= FOV_RETURN_DAMAGE_MULT
+			FovReturnMode.LEVELUP_PUNCH:
+				effective_return_speed *= FOV_RETURN_LEVELUP_MULT
+			FovReturnMode.HEAL_BLOOM:
+				effective_return_speed *= FOV_RETURN_HEAL_MULT
+			FovReturnMode.NONE:
+				pass
+		var fov_weight: float = 1.0 - exp(-effective_return_speed * delta)
 		camera.fov = lerpf(camera.fov, fov_baseline, fov_weight)
+		# Clear the return mode once the FOV has converged to baseline so
+		# subsequent speed-FOV drift uses the default return speed.
+		if abs(camera.fov - fov_baseline) < 0.05:
+			_fov_return_mode = FovReturnMode.NONE
 
 func _apply_screen_shake(delta: float) -> void:
 	# Decay trauma — exponential decay for a more organic shake feel.
@@ -514,8 +566,12 @@ func add_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> void:
 
 ## Kick the camera FOV up by `kick_amount` degrees for a speed sensation.
 ## Called on dash. The FOV then eases back to `default_fov` in _process.
+## Sets the DASH_KICK return mode so the FOV returns FAST (snappy) — the
+## dash is over, the speed sensation should end quickly so the player
+## feels "back to normal" rather than slowly easing out of the rush.
 func kick_fov(kick_amount: float) -> void:
 	camera.fov = default_fov + kick_amount
+	_fov_return_mode = FovReturnMode.DASH_KICK
 
 ## Damage FOV dip — briefly narrows the FOV by `dip_amount` degrees when the
 ## player takes damage, creating a "tunnel vision" danger effect that eases
@@ -533,6 +589,10 @@ func _on_player_damage_fov_dip(_source_pos: Vector3) -> void:
 	# We subtract from the current FOV (not default_fov) so the dip composes
 	# correctly with an active speed-FOV offset (e.g. dashing while hit).
 	camera.fov = maxf(camera.fov - DAMAGE_FOV_DIP, default_fov - DAMAGE_FOV_DIP)
+	# Set the return mode so the damage dip eases back SLOWLY — the
+	# "tunnel vision" should linger, reinforcing the sense of danger
+	# after a hit rather than snapping away immediately.
+	_fov_return_mode = FovReturnMode.DAMAGE_DIP
 
 func set_camera_yaw(yaw_deg: float) -> void:
 	# Set the target yaw — _process eases the actual rotation toward this.

@@ -919,10 +919,21 @@ func _collect() -> void:
 			Vector3.ONE * _anticip_scale * 0.85, 0.04) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	# Phase 1: spiral orbit + rise (0.18s) — one full rotation as we lift
+	# ── Spiral radius ease-in quadratic ── The radius previously decayed
+	#    linearly (1 - t*0.7), which reads as a mechanical "constant-speed
+	#    shrink." A vacuum/singularity effect should ACCELERATE inward —
+	#    the item lingers at its outer radius briefly, then snaps inward
+	#    as it's "sucked in." Ease-in quadratic (t²) on the decay factor
+	#    achieves this: at t=0.5 the radius has only shrunk ~17.5% (vs
+	#    35% linear), but at t=1.0 it's shrunk the full 70%. The item
+	#    hangs at the outer edge, then WHIPS into the player — a more
+	#    dynamic, energetic vortex read. The total shrink is the same
+	#    (70% of start radius), just redistributed in time.
 	tween.tween_method(
 		func(t: float):
 			var angle: float = t * TAU
-			var radius: float = spiral_radius_start * (1.0 - t * 0.7)
+			var decay_t: float = t * t  # ease-in quadratic — accelerates inward
+			var radius: float = spiral_radius_start * (1.0 - decay_t * 0.7)
 			global_position = spiral_player_pos + Vector3(
 				cos(angle) * radius,
 				spiral_start_pos.y - spiral_player_pos.y + 0.8 * t,

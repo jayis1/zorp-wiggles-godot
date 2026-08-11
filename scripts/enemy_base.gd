@@ -1244,11 +1244,23 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 
 	# Hit flash — white albedo + emission spike for a punchy combat read.
 	# The albedo snaps to white and the emission energy kicks up, then both
-	# ease back over 0.15s. The combined effect is a bright "strobed" flash
-	# that reads even in dark biomes.
+	# ease back over the flash duration. The combined effect is a bright
+	# "strobed" flash that reads even in dark biomes.
+	# ── Size-scaled flash duration ── Previously ALL enemies used the same
+	#    0.15s flash regardless of size. A Swarm Mite (base_scale 0.5)
+	#    and a Drake (base_scale 2.5) flashed for the same duration, which
+	#    made large enemies feel no weightier than small ones on the hit
+	#    frame. Now the flash duration scales with base_scale: small
+	#    enemies (0.5) get a snappy 0.10s flash, normal enemies (1.0) get
+	#    the baseline 0.15s, and large enemies (2.0+) get up to 0.22s.
+	#    This gives large enemies a weightier, more deliberate hit read
+	#    while keeping small enemies snappy — the flash duration itself
+	#    communicates the enemy's mass. The scale is clamped so bosses
+	#    don't get excessively long flashes that obscure the hit.
 	# NOTE: Preserve the original alpha (_spawn_target_alpha) so semi-transparent
 	# enemies (Void Wisp, etc.) don't briefly become fully opaque during the flash.
-	_hit_flash_timer = 0.15
+	var _hit_flash_dur: float = clampf(0.10 + base_scale * 0.05, 0.10, 0.22)
+	_hit_flash_timer = _hit_flash_dur
 	if _material:
 		# Kill any in-flight windup emission tween so the hit-flash owns the
 		# emission_energy_multiplier exclusively during its 0.15s window.
@@ -1266,11 +1278,15 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 		flash_tween.set_parallel(true)
 		# Restore to current_color (not base_color) so mind-controlled enemies
 		# flash back to their MC color, enraged enemies to their enraged color, etc.
+		# The tween duration matches _hit_flash_dur so the visual flash and the
+		# timer stay in sync — the albedo/emission ease-back completes at the
+		# same moment the timer expires, preventing the idle breathing code from
+		# overwriting the material before the flash tween finishes.
 		flash_tween.tween_property(_material, "albedo_color",
-			Color(current_color.r, current_color.g, current_color.b, _spawn_target_alpha), 0.15) \
+			Color(current_color.r, current_color.g, current_color.b, _spawn_target_alpha), _hit_flash_dur) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		flash_tween.tween_property(_material, "emission_energy_multiplier",
-			_prev_emission_energy, 0.15) \
+			_prev_emission_energy, _hit_flash_dur) \
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
 
