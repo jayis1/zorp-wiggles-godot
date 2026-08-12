@@ -351,7 +351,8 @@ func _make_pattern_script(patterns: Array, _base_damage: int) -> GDScript:
 	src += "	boss.speed *= 2.0\n"
 	src += "	var boosted_speed = boss.speed\n"
 	src += "	var tween = boss.create_tween()\n"
-	src += "	tween.tween_property(boss, \"speed\", pre_charge_speed, 1.5)\n"
+	src += "	tween.tween_property(boss, \"speed\", pre_charge_speed, 1.5) \\\n"
+	src += "		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)\n"
 	src += "	tween.tween_callback(func(): boss.speed = pre_charge_speed)\n"
 	src += "\n"
 	src += "func _projectile_fan(boss: EnemyBase) -> void:\n"
@@ -469,7 +470,8 @@ func _make_pattern_script(patterns: Array, _base_damage: int) -> GDScript:
 	src += "	light.position = boss.global_position\n"
 	src += "	get_tree().current_scene.add_child(light)\n"
 	src += "	var tween = light.create_tween()\n"
-	src += "	tween.tween_property(light, \"light_energy\", 0.0, 0.3)\n"
+	src += "	tween.tween_property(light, \"light_energy\", 0.0, 0.3) \\\n"
+	src += "		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)\n"
 	src += "	tween.tween_callback(light.queue_free)\n"
 	var script := GDScript.new()
 	script.source_code = src

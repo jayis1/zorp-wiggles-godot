@@ -34,3 +34,14 @@ func _ready() -> void:
 	if _material:
 		_material.emission = base_color * 0.5
 		_material.emission_energy_multiplier = 1.8
+
+# Swarm Mite death: a small orange "bug pop" burst — gives the tiniest enemy
+# a thematic death effect matching the rest of the roster. Every other enemy
+# type has a bespoke death particle burst; the mite relied solely on the
+# generic base-class poof. A 10-particle orange burst conveys a tiny bug
+# bursting — small and quick, matching the mite's "dies in 1-2 hits" nature.
+func _die() -> void:
+	var parent := get_parent()
+	if parent and ParticleEffects:
+		ParticleEffects.spawn_explosion(parent, global_position, base_color, 10, 0.25)
+	super._die()
