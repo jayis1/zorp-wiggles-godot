@@ -746,7 +746,7 @@ func _collect() -> void:
 		var pickup_flash_tween := create_tween()
 		pickup_flash_tween.tween_property(_mat, "emission_energy_multiplier",
 			1.0, 0.15) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	# Remove from GameManager's collectible list to prevent the array from growing
 	# with invalid references over time (performance leak).
 	GameManager.collectibles.erase(self)
@@ -869,7 +869,7 @@ func _collect() -> void:
 		if pickup_light:
 			var light_fade := pickup_light.create_tween()
 			light_fade.tween_property(pickup_light, "light_energy", 0.0, 0.25) \
-				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	else:
 		# Fallback: standalone light (non-pooled path)
 		var pickup_light := OmniLight3D.new()
@@ -881,7 +881,7 @@ func _collect() -> void:
 		pickup_light.global_position = global_position
 		var light_fade := pickup_light.create_tween()
 		light_fade.tween_property(pickup_light, "light_energy", 0.0, 0.25) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		light_fade.tween_callback(pickup_light.queue_free)
 
 	# Rare items get a sky beam

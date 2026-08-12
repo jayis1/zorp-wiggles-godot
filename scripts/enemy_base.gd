@@ -1585,6 +1585,11 @@ func _die() -> void:
 	#    color at the death point, then fades. Gives extra punch in dark biomes
 	#    where the particle burst alone can be hard to see. Intensity scales
 	#    with enemy size so a Drake gets a bigger flash than a Blob.
+	#    Uses TRANS_CUBIC (was TRANS_QUAD) so the light holds bright for
+	#    ~70% of the duration then snaps out, matching the death shockwave
+	#    ring's cubic fade. This gives the death flash more weight — the
+	#    enemy's color lingers at full intensity briefly before vanishing,
+	#    reading as a "last gasp" of energy rather than a uniform dim.
 	#    POOLING: Uses the PerformanceOptimizer transient light pool instead
 	#    of creating/freeing a new OmniLight3D per death. The pool handles
 	#    the light lifecycle — we just tween the energy and the pool
@@ -1604,7 +1609,7 @@ func _die() -> void:
 			var light_tween := death_light.create_tween()
 			light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
 				.set_ease(Tween.EASE_OUT) \
-				.set_trans(Tween.TRANS_QUAD)
+				.set_trans(Tween.TRANS_CUBIC)
 	else:
 		# Fallback: create a standalone light (non-pooled path)
 		var death_light := OmniLight3D.new()
@@ -1617,7 +1622,7 @@ func _die() -> void:
 		var light_tween := death_light.create_tween()
 		light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
 			.set_ease(Tween.EASE_OUT) \
-			.set_trans(Tween.TRANS_QUAD)
+			.set_trans(Tween.TRANS_CUBIC)
 		light_tween.tween_callback(death_light.queue_free)
 
 	# ── Phase 8: Enemy corpse physics ── Spawn a RigidBody3D proxy corpse

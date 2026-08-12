@@ -198,7 +198,15 @@ func _process(delta: float) -> void:
 			global_position.z += burst_z * delta * 10.0
 		if since_popin < jitter_window:
 			var env: float = 1.0 - (since_popin / jitter_window)  # 1 → 0 linear decay
-			var env_eased: float = env * env  # quadratic so it starts strong
+			# Ease-out cubic: holds strong at the start then snaps out. The
+			# previous quadratic (env * env) actually decayed FASTER at the
+			# start (at 50% through the window, jitter was already at 25%),
+			# which is the opposite of "starts strong" — the jitter became
+			# barely visible right after the hit landed. Ease-out cubic keeps
+			# the jitter vigorous for ~70% of the window (at 50% through,
+			# jitter is still at 87.5%) then snaps to zero, matching the
+			# "explosive impact that dissipates" read from Vlambeer-style juice.
+			var env_eased: float = 1.0 - pow(1.0 - env, 3.0)
 			var jitter_amp: float = 0.18 * env_eased * jitter_scale  # Max ~18cm sideways
 			# Incoherent X/Z frequencies so the wobble isn't a clean circle
 			var wob_x: float = sin(since_popin * 28.0) * jitter_amp
