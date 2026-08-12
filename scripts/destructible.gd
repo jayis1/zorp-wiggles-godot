@@ -13,6 +13,33 @@ class_name Destructible
 
 signal destroyed(pos: Vector3)
 
+# Shared fragment material cache — all fragments with the same color share one
+# material. 8 fragments per destructible × many destructibles = significant savings.
+static var _frag_mat_cache: Dictionary = {}  # color_html → StandardMaterial3D
+
+# Shared physics material for fragments — bounce + friction, identical for all.
+static var _shared_frag_phys: PhysicsMaterial = null
+
+static func _get_frag_phys_material() -> PhysicsMaterial:
+	if _shared_frag_phys:
+		return _shared_frag_phys
+	_shared_frag_phys = PhysicsMaterial.new()
+	_shared_frag_phys.bounce = 0.4
+	_shared_frag_phys.friction = 0.6
+	return _shared_frag_phys
+
+static func _get_frag_material(col: Color) -> StandardMaterial3D:
+	var key: String = col.to_html()
+	if _frag_mat_cache.has(key):
+		return _frag_mat_cache[key]
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = col
+	mat.roughness = 0.4
+	mat.emission_enabled = true
+	mat.emission = col * 0.2
+	_frag_mat_cache[key] = mat
+	return mat
+
 # ─── Config (set by spawner) ───────────────────────────────────────────────────
 @export var prop_name: String = "Crate"
 @export var hp: int = GameConstants.DESTRUCTIBLE_HP
@@ -189,19 +216,11 @@ func _spawn_fragment(index: int) -> void:
 	var frag_mesh := BoxMesh.new()
 	frag_mesh.size = Vector3(0.18, 0.18, 0.18)
 	mesh_inst.mesh = frag_mesh
-	var fmat := StandardMaterial3D.new()
-	fmat.albedo_color = fragment_color
-	fmat.roughness = 0.4
-	fmat.emission_enabled = true
-	fmat.emission = fragment_color * 0.2
-	mesh_inst.material_override = fmat
+	mesh_inst.material_override = _get_frag_material(fragment_color)
 	frag.add_child(mesh_inst)
 
-	# Physics material with bounce
-	var phys_mat := PhysicsMaterial.new()
-	phys_mat.bounce = 0.4
-	phys_mat.friction = 0.6
-	frag.physics_material_override = phys_mat
+	# Physics material with bounce (shared across all fragments)
+	frag.physics_material_override = _get_frag_phys_material()
 
 	get_parent().add_child(frag)
 	frag.global_position = global_position + Vector3(

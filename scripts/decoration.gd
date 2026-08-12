@@ -12,6 +12,54 @@ var _decorations: Array[MeshInstance3D] = []
 var _water_overlays: Array[MeshInstance3D] = []
 var _lava_overlays: Array[MeshInstance3D] = []
 
+# ─── Shared material cache ───────────────────────────────────────────────────
+# Decorations are static, unlit meshes that never change at runtime. Caching
+# materials by their visual properties means all trees share one trunk material,
+# all crystal-cyan boxes share one, etc. A typical world has 300-500 decorations,
+# so this eliminates 250-400 redundant StandardMaterial3D allocations.
+static var _mat_cache: Dictionary = {}  # key → StandardMaterial3D
+
+## Build a cache key from the visual properties that define a unique material.
+static func _mat_key(albedo: Color, transparent: bool, emission: Color, emission_energy: float) -> String:
+	return "%s|%d|%s|%f" % [albedo.to_html(), int(transparent), emission.to_html(), emission_energy]
+
+## Retrieve or create a cached unlit StandardMaterial3D.
+static func _get_material(albedo: Color, transparent: bool = false,
+		emission_col: Color = Color.BLACK, emission_energy: float = 0.0) -> StandardMaterial3D:
+	var key: String = _mat_key(albedo, transparent, emission_col, emission_energy)
+	if _mat_cache.has(key):
+		return _mat_cache[key]
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = albedo
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if transparent:
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	if emission_energy > 0.0:
+		mat.emission_enabled = true
+		mat.emission = emission_col
+		mat.emission_energy_multiplier = emission_energy
+	_mat_cache[key] = mat
+	return mat
+
+# Shared water shader material — all water tiles use identical shader params.
+static var _shared_water_mat: ShaderMaterial = null
+
+static func _get_water_material() -> ShaderMaterial:
+	if _shared_water_mat:
+		return _shared_water_mat
+	var water_shader: Shader = load("res://assets/shaders/water_surface.gdshader")
+	if not water_shader:
+		return null
+	_shared_water_mat = ShaderMaterial.new()
+	_shared_water_mat.shader = water_shader
+	_shared_water_mat.set_shader_parameter("water_color", Vector3(0.1, 0.35, 0.7))
+	_shared_water_mat.set_shader_parameter("deep_color", Vector3(0.02, 0.05, 0.2))
+	_shared_water_mat.set_shader_parameter("transparency", 0.55)
+	_shared_water_mat.set_shader_parameter("flow_speed", 0.6)
+	_shared_water_mat.set_shader_parameter("wave_height", 0.04)
+	_shared_water_mat.set_shader_parameter("wave_frequency", 5.0)
+	return _shared_water_mat
+
 # Mushroom cap color choices (neon alien mushrooms)
 const MUSHROOM_CAP_COLORS: Array[Color] = [
 	Color(1.0, 50.0 / 255.0, 120.0 / 255.0),   # neon pink
@@ -298,17 +346,8 @@ func _spawn_water_overlay(wx: float, wz: float) -> void:
 		GameConstants.WATER_OVERLAY_COLOR
 	)
 	# Phase 9: Apply animated water surface shader for realistic ripples
-	var water_shader: Shader = load("res://assets/shaders/water_surface.gdshader")
-	if water_shader:
-		var mat := ShaderMaterial.new()
-		mat.shader = water_shader
-		mat.set_shader_parameter("water_color", Vector3(0.1, 0.35, 0.7))
-		mat.set_shader_parameter("deep_color", Vector3(0.02, 0.05, 0.2))
-		mat.set_shader_parameter("transparency", 0.55)
-		mat.set_shader_parameter("flow_speed", 0.6)
-		mat.set_shader_parameter("wave_height", 0.04)
-		mat.set_shader_parameter("wave_frequency", 5.0)
-		overlay.material_override = mat
+	# Uses a shared ShaderMaterial — all water tiles have identical params.
+	overlay.material_override = _get_water_material()
 	_water_overlays.append(overlay)
 	add_child(overlay)
 
@@ -332,11 +371,8 @@ func _spawn_deep_ocean_overlay(wx: float, wz: float) -> void:
 		GameConstants.TILE_SCALE,
 		Color(5.0 / 255.0, 25.0 / 255.0, 80.0 / 255.0, 130.0 / 255.0)
 	)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(5.0 / 255.0, 25.0 / 255.0, 80.0 / 255.0, 0.55)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	overlay.material_override = mat
+	overlay.material_override = _get_material(
+		Color(5.0 / 255.0, 25.0 / 255.0, 80.0 / 255.0, 0.55), true)
 	_water_overlays.append(overlay)
 	add_child(overlay)
 
@@ -354,13 +390,7 @@ func _spawn_bioluminescent(wx: float, wz: float) -> void:
 		col
 	)
 	# Make it emissive so it actually glows in the dark.
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = col
-	mat.emission_enabled = true
-	mat.emission = col
-	mat.emission_energy_multiplier = 2.5
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	orb.material_override = mat
+	orb.material_override = _get_material(col, false, col, 2.5)
 	_decorations.append(orb)
 	add_child(orb)
 
@@ -371,14 +401,9 @@ func _spawn_volcano_overlay(wx: float, wz: float) -> void:
 		GameConstants.TILE_SCALE,
 		GameConstants.VOLCANO_CORE_GLOW_COLOR
 	)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = GameConstants.VOLCANO_CORE_GLOW_COLOR
-	mat.emission_enabled = true
-	mat.emission = Color(1.0, 0.4, 0.05)
-	mat.emission_energy_multiplier = 1.5
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	overlay.material_override = mat
+	overlay.material_override = _get_material(
+		GameConstants.VOLCANO_CORE_GLOW_COLOR, true,
+		Color(1.0, 0.4, 0.05), 1.5)
 	_lava_overlays.append(overlay)
 	add_child(overlay)
 
@@ -389,13 +414,9 @@ func _spawn_lava_vent(wx: float, wz: float) -> void:
 		Vector3(0.8, 2.0, 0.8),
 		Color(1.0, 0.3, 0.05)
 	)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.5, 0.1, 0.0)
-	mat.emission_enabled = true
-	mat.emission = Color(1.0, 0.4, 0.05)
-	mat.emission_energy_multiplier = 3.0
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	vent.material_override = mat
+	vent.material_override = _get_material(
+		Color(0.5, 0.1, 0.0), false,
+		Color(1.0, 0.4, 0.05), 3.0)
 	_decorations.append(vent)
 	add_child(vent)
 
@@ -406,11 +427,8 @@ func _spawn_sky_platform(wx: float, wz: float) -> void:
 		Vector3(randf_range(2.0, 4.0), 0.4, randf_range(2.0, 4.0)),
 		GameConstants.SKY_CITADEL_CLOUD_COLOR
 	)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = GameConstants.SKY_CITADEL_CLOUD_COLOR
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	platform.material_override = mat
+	platform.material_override = _get_material(
+		GameConstants.SKY_CITADEL_CLOUD_COLOR, true)
 	_decorations.append(platform)
 	add_child(platform)
 
@@ -431,15 +449,11 @@ func _spawn_digital_glitch(wx: float, wz: float) -> void:
 		Vector3(0.7, 0.7, 0.7),
 		GameConstants.DIGITAL_GRID_NEON_COLOR
 	)
-	var mat := StandardMaterial3D.new()
 	# Alternate between cyan and pink for cyberpunk duality.
 	var use_pink := randf() < 0.5
-	mat.albedo_color = Color(0.05, 0.05, 0.1)
-	mat.emission_enabled = true
-	mat.emission = GameConstants.DIGITAL_GRID_PINK_COLOR if use_pink else GameConstants.DIGITAL_GRID_NEON_COLOR
-	mat.emission_energy_multiplier = 2.0
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	cube.material_override = mat
+	var emis_col: Color = GameConstants.DIGITAL_GRID_PINK_COLOR if use_pink else GameConstants.DIGITAL_GRID_NEON_COLOR
+	cube.material_override = _get_material(
+		Color(0.05, 0.05, 0.1), false, emis_col, 2.0)
 	_decorations.append(cube)
 	add_child(cube)
 
@@ -458,13 +472,8 @@ func _spawn_crystal_cavern_cluster(wx: float, wz: float) -> void:
 			Vector3(0.4, height, 0.4),
 			prism_color
 		)
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = prism_color
-		mat.emission_enabled = true
-		mat.emission = prism_color
-		mat.emission_energy_multiplier = 1.5
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		crystal.material_override = mat
+		crystal.material_override = _get_material(
+			prism_color, false, prism_color, 1.5)
 		_decorations.append(crystal)
 		add_child(crystal)
 
@@ -524,13 +533,7 @@ func _spawn_underground_glow(wx: float, wz: float) -> void:
 		randf_range(0.4, 0.8),
 		col
 	)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = col
-	mat.emission_enabled = true
-	mat.emission = col
-	mat.emission_energy_multiplier = 2.5
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	cap.material_override = mat
+	cap.material_override = _get_material(col, false, col, 2.5)
 	_decorations.append(cap)
 	add_child(cap)
 
@@ -545,10 +548,7 @@ func _create_box(pos: Vector3, scale: Vector3, col: Color) -> MeshInstance3D:
 	# BoxMesh depth equals width, so scale Z to match scale.z when it differs.
 	if scale.x > 0.0 and scale.z != scale.x:
 		mi.scale.z = scale.z / scale.x
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = col
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mi.material_override = mat
+	mi.material_override = _get_material(col, col.a < 1.0)
 	return mi
 
 func _create_sphere(pos: Vector3, radius: float, col: Color) -> MeshInstance3D:
@@ -558,10 +558,7 @@ func _create_sphere(pos: Vector3, radius: float, col: Color) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = sphere_mesh
 	mi.position = pos
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = col
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mi.material_override = mat
+	mi.material_override = _get_material(col, col.a < 1.0)
 	return mi
 
 func _create_ground_quad(pos: Vector3, size: float, col: Color) -> MeshInstance3D:
@@ -571,9 +568,5 @@ func _create_ground_quad(pos: Vector3, size: float, col: Color) -> MeshInstance3
 	mi.mesh = plane_mesh
 	mi.position = pos
 	# PlaneMesh is already horizontal (XZ plane), perfect for ground overlays
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = col
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if col.a < 1.0 else BaseMaterial3D.TRANSPARENCY_DISABLED
-	mi.material_override = mat
+	mi.material_override = _get_material(col, col.a < 1.0)
 	return mi
