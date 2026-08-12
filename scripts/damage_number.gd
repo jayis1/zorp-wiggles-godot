@@ -149,7 +149,20 @@ func _process(delta: float) -> void:
 		scale = Vector3.ONE * _base_scale
 
 	# Rise upward + drift
-	var rise_amount := GameConstants.DMG_NUMBER_RISE_SPEED * delta
+	# ── Decelerating rise ── The rise speed decays over the number's lifetime
+	#    using an ease-out curve (1 - life_frac²). At spawn the number shoots
+	#    upward at full speed (the impact "launches" it), then decelerates as
+	#    it floats, settling near zero by the time the fade begins. This
+	#    replaces the previous constant-speed rise which read as mechanical —
+	#    the number drifted upward at the same rate throughout its life,
+	#    making it feel like a scrolling text element rather than a physical
+	#    impact that loses momentum. The deceleration is proportional to
+	#    life_frac (1 at spawn → 0 at death), so the speed smoothly tapers.
+	#    The drift (horizontal) stays constant since it's already small and
+	#    random — the deceleration is only on the vertical "pop up" axis.
+	var life_frac_rise: float = lifetime / max_lifetime
+	var rise_mult: float = life_frac_rise * life_frac_rise  # ease-out quad
+	var rise_amount := GameConstants.DMG_NUMBER_RISE_SPEED * rise_mult * delta
 	global_position.y += rise_amount
 	global_position.x += _drift_x * delta
 	global_position.z += _drift_z * delta

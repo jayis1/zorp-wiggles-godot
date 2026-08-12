@@ -76,6 +76,25 @@ var _shoot_held: bool = false       # True while the left mouse button is held d
 var _pulse_buffer_timer: float = 0.0
 const PULSE_BUFFER_WINDOW: float = 0.18  # Seconds to remember pulse wave press
 
+# ── Interact input buffer: if the player presses T (interact) slightly before
+#    being in range of an NPC or switch, the press is buffered and retried each
+#    physics frame until an interactable is in range or the buffer expires.
+#    This mirrors the dash/shoot/pulse buffers so ALL player actions feel
+#    equally responsive — without it, pressing T a few frames too early while
+#    walking toward an NPC silently drops the input, which feels unresponsive
+#    compared to the buffered dash and shoot.
+var _interact_buffer_timer: float = 0.0
+const INTERACT_BUFFER_WINDOW: float = 0.20  # Seconds to remember interact press
+
+# ── Deploy ability input buffer: same concept for the V key. If the player
+#    presses V during the shoot cooldown (deploy shares the cooldown), the
+#    deploy fires as soon as the cooldown is ready. This makes the deployable
+#    ability feel as responsive as shooting — without it, pressing V a hair
+#    too early silently drops the input, which is inconsistent with the
+#    buffered shoot and dash.
+var _deploy_buffer_timer: float = 0.0
+const DEPLOY_BUFFER_WINDOW: float = 0.15  # Seconds to remember deploy press
+
 # ── Coyote time for dash: if the dash cooldown expired very recently (within
 #    this window), a dash press fires immediately even if pressed a hair too
 #    early. This bridges the gap between the player's perception of "cooldown
@@ -395,6 +414,9 @@ func _on_game_restarted_player() -> void:
 	_pickup_emit_tween = null
 	# Enhancement Pack 39: Reset Time Warden field tracking on restart
 	_in_time_warden_field = false
+	# Clear input buffers so a press from the previous run doesn't carry over
+	_interact_buffer_timer = 0.0
+	_deploy_buffer_timer = 0.0
 
 func _on_player_levelup_pet_emote(_level: int) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
@@ -620,6 +642,33 @@ func _physics_process(delta: float) -> void:
 		if pulse_wave_cooldown_timer <= 0 and _pulse_buffer_timer > 0:
 			_pulse_buffer_timer = 0.0
 			_use_pulse_wave()
+	# ── Interact buffer: retry the interact each frame while buffered. The
+	#    buffer is set when the player presses T (see _unhandled_input). If
+	#    an interactable is now in range, _try_interact fires and the buffer
+	#    is consumed. This handles the case where the player pressed T a few
+	#    frames before walking into range — the press is remembered and
+	#    retried until it connects or the window expires.
+	if _interact_buffer_timer > 0:
+		_interact_buffer_timer -= delta
+		# Only retry if not paused and alive (conditions may have changed)
+		if not GameManager.is_paused and GameManager.player_is_alive:
+			# Skip retry if a dialogue panel opened (it handles interact itself)
+			if not (DialoguePanel and DialoguePanel.is_active()):
+				_try_interact()
+				# _try_interact doesn't return success/failure, but if an
+				# NPC was found it will have opened a dialogue panel. Check
+				# that to decide whether to consume the buffer.
+				if DialoguePanel and DialoguePanel.is_active():
+					_interact_buffer_timer = 0.0
+	# ── Deploy buffer: retry the deploy ability when the cooldown is ready.
+	#    The buffer is set when the player presses V during the shoot cooldown.
+	#    Once the cooldown expires, the deploy fires and the buffer is consumed.
+	if _deploy_buffer_timer > 0:
+		_deploy_buffer_timer -= delta
+		if shoot_cooldown_timer <= 0 and _deploy_buffer_timer > 0:
+			if not GameManager.is_paused and GameManager.player_is_alive:
+				_deploy_buffer_timer = 0.0
+				_try_deploy_ability()
 	
 	# ── Phase 8: If sliding, the slide handler does its own move_and_slide
 	if is_sliding:
@@ -1883,14 +1932,27 @@ func _unhandled_input(event: InputEvent) -> void:
 		_use_pet_stone()
 
 	# ── Phase 26: Interact key (T) — talk to NPCs, activate switches ──
+	# Buffer the press so a press slightly before being in range retries on
+	# the next physics frames (see _physics_process). If an interactable is
+	# already in range, _try_interact fires immediately.
 	if event.is_action_pressed("interact") and not GameManager.is_paused and GameManager.player_is_alive:
 		_try_interact()
+		# If nothing was found, buffer the press for retry within the window.
+		# _try_interact returns void, so we set the buffer unconditionally —
+		# the _physics_process retry loop will attempt the interaction each
+		# frame and consume the buffer when it succeeds or expires.
+		_interact_buffer_timer = INTERACT_BUFFER_WINDOW
 	
 	# ── Phase 24: Deploy ability (V key) — activate the equipped deployable weapon mod ──
 	# When a deployable mod (Shield Bubble, Turret, Gravity Flip, Void Rift) is equipped,
 	# pressing V triggers the deployable effect instead of firing a projectile.
+	# If the shoot cooldown is active, the press is buffered and retried in
+	# _physics_process — same pattern as shoot/dash/pulse buffers.
 	if event.is_action_pressed("deploy_ability") and not GameManager.is_paused and GameManager.player_is_alive:
-		_try_deploy_ability()
+		if shoot_cooldown_timer <= 0:
+			_try_deploy_ability()
+		else:
+			_deploy_buffer_timer = DEPLOY_BUFFER_WINDOW
 
 	# ── Phase 26: Fast travel menu (B key) — open the waypoint teleport panel ──
 	# Toggles the FastTravelMenu HUD child. Only opens if at least one waypoint
