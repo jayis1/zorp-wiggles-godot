@@ -1919,7 +1919,7 @@ func _update_visuals(delta: float) -> void:
 		#    window, causing a visible pop as the elastic rebound is
 		#    cut short. The tracked tween reference is checked for
 		#    validity so completed tweens (which auto-free) don't block.
-		if not is_dead and not is_attacking and _hit_flash_timer <= 0 \
+		if not is_dead and not is_attacking and not is_windup and _hit_flash_timer <= 0 \
 				and not (_hit_squash_tween and _hit_squash_tween.is_valid()):
 			_idle_breath_phase += delta * _idle_breath_speed
 			var breath_y: float = sin(_idle_breath_phase) * _IDLE_BREATH_Y_AMP
