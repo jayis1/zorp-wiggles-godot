@@ -479,6 +479,10 @@ func _tick_acid_rain(delta: float) -> void:
 		dmg = int(dmg * (1.0 - GameConstants.ACID_RAIN_SHELTER_REDUCTION))
 	if exposed or dmg > 0:
 		GameManager.take_damage(dmg, player.global_position + Vector3(0, 20, 0))
+		# ── Enhancement Pack 58: Acid sizzle SFX ── a brief corrosive
+		# sizzle for the acid rain's per-tick damage. Only plays when the
+		# player is actually taking damage, not when fully sheltered.
+		AudioManager.play_sfx(AudioManager.SFX_ACID_SIZZLE)
 	# Damage enemies too (acid rain is indiscriminate)
 	for enemy in GameManager.enemies:
 		if is_instance_valid(enemy) and "is_dead" in enemy and not enemy.is_dead:
@@ -703,6 +707,11 @@ func _tick_sandstorm(delta: float) -> void:
 		dmg = int(dmg * (1.0 - GameConstants.SANDSTORM_SHELTER_REDUCTION))
 	if exposed or dmg > 0:
 		GameManager.take_damage(dmg, player.global_position + Vector3(0, 20, 0))
+		# ── Enhancement Pack 58: Sand scour SFX ── a brief abrasive hiss
+		# for the sandstorm's per-tick damage. Very quiet (0.08 vol) since
+		# the tick fires every 1s. Only plays when the player is actually
+		# taking damage (exposed or reduced damage), not when fully sheltered.
+		AudioManager.play_sfx(AudioManager.SFX_SAND_SCOUR)
 	# Damage enemies too (sand is indiscriminate)
 	for enemy in GameManager.enemies:
 		if is_instance_valid(enemy) and "is_dead" in enemy and not enemy.is_dead:
@@ -741,6 +750,11 @@ func _tick_magnetic_storm(delta: float) -> void:
 		_emp_disable_timer = GameConstants.MAGNETIC_STORM_EMP_DISABLE_DURATION
 		emp_pulse_triggered.emit()
 		GameManager.add_message("⚡ Magnetic EMP! Dashing disabled for %.1fs!" % GameConstants.MAGNETIC_STORM_EMP_DISABLE_DURATION)
+		# ── Enhancement Pack 58: Dedicated EMP pulse SFX ── previously the EMP
+		# had a visual flash + camera shake but no audio. A sharp electronic
+		# buzz (SFX_EMP_PULSE) gives the dash-disabling pulse a distinct sonic
+		# identity — the player hears their dash electronics short-circuiting.
+		AudioManager.play_sfx(AudioManager.SFX_EMP_PULSE)
 		# Visual: brief blue-white light flash at the player's position
 		var player: CharacterBody3D = _get_player()
 		var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
@@ -769,7 +783,10 @@ func _tick_gravity_anomaly(delta: float) -> void:
 			_gravity_anomaly_force = 0.0
 			gravity_shift_ended.emit()
 			# Audio — settling chime as gravity returns to normal.
-			AudioManager.play_sfx_pitched(AudioManager.SFX_MUTATION, 0.6)
+			# Previously reused SFX_MUTATION at 0.6× pitch; now uses the
+			# dedicated SFX_GRAVITY_SHIFT at a lower pitch for the "settle"
+			# half of the shift, giving both moments the same sonic identity.
+			AudioManager.play_sfx_pitched(AudioManager.SFX_GRAVITY_SHIFT, 0.7)
 			GameManager.add_message("🌀 Gravity normalizes.")
 	else:
 		_gravity_shift_timer -= delta
@@ -783,6 +800,12 @@ func _tick_gravity_anomaly(delta: float) -> void:
 			gravity_shift_started.emit(direction)
 			var dir_name: String = "UPWARD" if direction < 0 else "DOWNWARD"
 			GameManager.add_message("🌀 Gravity anomaly! Shift %s for %.1fs!" % [dir_name, GameConstants.GRAVITY_ANOMALY_SHIFT_DURATION])
+			# ── Enhancement Pack 58: Dedicated gravity shift SFX ── previously
+			# the shift-start had a visual flash + camera shake but no audio.
+			# SFX_GRAVITY_SHIFT conveys the physical "lurch" of gravity
+			# reversing. Pitched up for upward shift, down for downward.
+			AudioManager.play_sfx_pitched(AudioManager.SFX_GRAVITY_SHIFT,
+				1.2 if direction < 0 else 0.8)
 			# Visual: violet light pulse
 			var player: CharacterBody3D = _get_player()
 			var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene

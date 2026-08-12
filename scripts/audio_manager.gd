@@ -540,6 +540,31 @@ const SFX_BOSS_ENRAGE: String = "boss_enrage"
 #    variation so the same whoosh doesn't repeat identically.
 const SFX_WEATHER_SHIFT: String = "weather_shift"
 
+# ── Enhancement Pack 58: Weather hazard SFX ── Dedicated sounds for three
+#    weather hazard events that previously had no audio or reused generic SFX.
+#    EMP pulse — a sharp electronic buzz (1000→200 Hz descending, 0.15s, 0.30
+#    vol) for the magnetic storm's dash-disabling pulse. The descending
+#    electronic sweep conveys a system short-circuit — the player's dash
+#    electronics being fried. Moderate volume since the EMP is a significant
+#    gameplay event that the player needs to notice immediately.
+const SFX_EMP_PULSE: String = "emp_pulse"
+# Gravity shift — a deep wavering whomp (60→120→60 Hz, 0.25s, 0.28 vol) for
+# the gravity anomaly weather's periodic shift. The rising-then-falling pitch
+# conveys gravity reversing direction — a physical "lurch" sensation. Distinct
+# from SFX_MUTATION (440→554→659 Hz ascending chime) which was previously
+# reused at 0.6× pitch. Moderate volume since the shift affects movement.
+const SFX_GRAVITY_SHIFT: String = "gravity_shift"
+# Sand scour — a brief abrasive hiss (noise hit, 0.06s, 0.08 vol) for the
+# sandstorm's per-tick damage. Very short and quiet since the tick fires every
+# 1s and multiple ticks shouldn't stack into noise. The noise-hit timbre
+# conveys sand grinding against the player's body.
+const SFX_SAND_SCOUR: String = "sand_scour"
+# Acid rain sizzle — a brief corrosive sizzle (noise hit, 0.06s, 0.08 vol)
+# for the acid rain's per-tick damage. Same short+quiet pattern as the sand
+# scour since the tick fires every 1s. The noise-hit timbre conveys acid
+# eating through the player's surface — a chemical rather than abrasive hiss.
+const SFX_ACID_SIZZLE: String = "acid_sizzle"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -933,6 +958,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_ACHIEVEMENT, SFX_QUEST_COMPLETE, SFX_SKILL_UNLOCK,
 	# Enhancement Pack 53: Enemy lunge + weather shift get pitch variation
 	SFX_ENEMY_LUNGE, SFX_WEATHER_SHIFT,
+	# Enhancement Pack 58: Weather hazard SFX get pitch variation
+	SFX_GRAVITY_SHIFT, SFX_SAND_SCOUR, SFX_ACID_SIZZLE,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1564,6 +1591,28 @@ func _generate_all_sfx() -> void:
 	# shifting" — a gentle breeze, not a reality tear (SFX_RIFT). Quieter
 	# than SFX_RIFT (0.35 vol) since weather changes are informational.
 	_sfx_streams[SFX_WEATHER_SHIFT] = _gen_chime([300.0, 500.0, 300.0], 0.12, 0.18)
+
+	# ── Enhancement Pack 58: Weather hazard SFX ──
+	# EMP pulse — a sharp electronic buzz (1000→200 Hz descending, 0.15s,
+	# 0.30 vol). The fast descending sweep conveys a system short-circuit —
+	# the player's dash electronics being disrupted. Moderate volume since
+	# the EMP is a significant gameplay event.
+	_sfx_streams[SFX_EMP_PULSE] = _gen_descending(1000.0, 200.0, 0.15, 0.30)
+	# Gravity shift — a deep wavering whomp using a chime with
+	# rising-then-falling notes (60→120→60 Hz, 0.25s, 0.28 vol). The
+	# rising-then-falling pitch conveys gravity reversing direction — a
+	# physical "lurch" sensation. Distinct from SFX_MUTATION which was
+	# previously reused at 0.6× pitch.
+	_sfx_streams[SFX_GRAVITY_SHIFT] = _gen_chime([60.0, 120.0, 60.0], 0.08, 0.28)
+	# Sand scour — a brief abrasive hiss (noise hit, 0.06s, 0.08 vol) for
+	# the sandstorm's per-tick damage. Very short and quiet since the tick
+	# fires every 1s and shouldn't stack into noise.
+	_sfx_streams[SFX_SAND_SCOUR] = _gen_noise_hit(0.06, 0.08)
+	# Acid rain sizzle — a brief corrosive sizzle (noise hit, 0.06s, 0.08
+	# vol) for the acid rain's per-tick damage. Same short+quiet pattern as
+	# the sand scour. The noise-hit timbre conveys acid eating through the
+	# player's surface.
+	_sfx_streams[SFX_ACID_SIZZLE] = _gen_noise_hit(0.06, 0.08)
 
 
 func _generate_all_music() -> void:
