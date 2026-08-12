@@ -2226,8 +2226,18 @@ func _spawn_single_projectile(shoot_dir: Vector3, dmg: int, spd: float, col: Col
 	if _muzzle_tween and _muzzle_tween.is_valid():
 		_muzzle_tween.kill()
 	_muzzle_tween = _muzzle_light.create_tween()
+	# ── TRANS_CUBIC (was TRANS_QUAD) ── The muzzle flash is an energy
+	#    discharge — the gun blasting a bolt into existence. The impact
+	#    burst's light flash (when the bolt HITS something) already uses
+	#    TRANS_CUBIC for a "hold bright then snap out" read. The muzzle
+	#    flash should share that language: the light holds at peak
+	#    brilliance for ~70% of the 60ms duration then snaps to zero,
+	#    reading as a sharp "blast" of light rather than a gentle quadratic
+	#    dim. At 9 shots/sec this keeps each shot's flash crisp and
+	#    distinct — the cubic curve ensures the light doesn't linger
+	#    into the next shot's frame the way a quadratic tail would.
 	_muzzle_tween.tween_property(_muzzle_light, "light_energy", 0.0, 0.06) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 	# Subtle camera micro-recoil on each shot — a tiny trauma kick that makes
 	# shooting feel punchy without being distracting. At ~9 shots/sec this stays

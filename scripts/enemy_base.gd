@@ -1740,9 +1740,18 @@ func _spawn_physics_corpse() -> void:
 	#    material so it survives the enemy's queue_free.
 	var corpse_flash_tween := corpse.create_tween()
 	corpse_mat.emission_energy_multiplier = 3.0
+	# ── TRANS_CUBIC (was TRANS_QUAD) ── Matches the death light flash's
+	#    cubic easing for a consistent three-stage death spectacle: the
+	#    enemy's own emission burst (cubic), the death light flash (cubic),
+	#    and now the corpse's spawn flash (cubic) all share the same
+	#    "hold bright then snap out" curve. With TRANS_QUAD the corpse
+	#    flash dimmed uniformly, reading as a gentle fade rather than the
+	#    intended "energy discharge" that should hold at peak brilliance
+	#    briefly then snap — the corpse flares hot, holds for a beat,
+	#    then drops to its dim baseline, matching the enemy's death flash.
 	corpse_flash_tween.tween_property(corpse_mat, "emission_energy_multiplier",
 		1.0, 0.25) \
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	corpse.add_child(corpse_mesh)
 
 	# ── Corpse scale-pop ── The corpse spawns at 0.5× base_scale and pops
@@ -1802,12 +1811,25 @@ func _update_timers(delta: float) -> void:
 		_hit_flash_timer -= delta
 
 func _update_spawn_visuals(delta: float) -> void:
-	# Material fade-in during spawn grace period (quadratic ease-in for smooth appearance)
+	# Material fade-in during spawn grace period.
+	# ── Ease-out cubic (1-(1-t)³) ── Previously used quadratic ease-in (t²)
+	#    which starts slow and accelerates — the enemy barely visible for the
+	#    first half of the grace period then snaps in at the end. This reads
+	#    as a gradual, hesitant fade rather than an energetic materialization.
+	#    Ease-out cubic inverts the feel: the enemy appears QUICKLY at the
+	#    start (~72% visible at 50% through the grace period) then decelerates
+	#    as it approaches full opacity. This matches the spawn warning ring's
+	#    anticipation flash (which also snaps bright then eases) and the
+	#    overall "energy condensing into matter" read — the enemy materializes
+	#    decisively, then settles into existence rather than slowly fading in.
+	#    The "?" indicator's pulse alpha is also scaled by `eased`, so the
+	#    question mark now becomes visible promptly alongside the enemy body
+	#    instead of lagging behind it.
 	if not _material:
 		return
 	var progress: float = 1.0 - (spawn_grace_timer / GameConstants.ENEMY_SPAWN_GRACE_PERIOD)
 	progress = clampf(progress, 0.0, 1.0)
-	var eased: float = progress * progress  # quadratic ease-in
+	var eased: float = 1.0 - pow(1.0 - progress, 3.0)  # ease-out cubic
 	_material.albedo_color.a = _spawn_target_alpha * eased
 	# ── Spawn grace "?" anticipation indicator ── During the grace period,
 	#    show a pulsing "?" above the enemy to communicate "materializing,
