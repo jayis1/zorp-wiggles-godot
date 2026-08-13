@@ -33,6 +33,14 @@ var _config: Dictionary = {}
 var _time: float = 0.0
 var _toxic_tick_timer: float = 0.0
 
+# ── Ice frost trail timer ── Spawns small frost particles while the player
+#    slides on ice, giving the slide a visual "skating" trail. The timer
+#    controls how often a frost sparkle spawns (every ~0.08s).
+var _ice_frost_timer: float = 0.0
+const ICE_FROST_INTERVAL: float = 0.08
+# Cache the physics delta for the ice frost timer (set in _process)
+var _physics_delta: float = 0.0
+
 # ─── Visual nodes ─────────────────────────────────────────────────────────────
 var _telegraph_mesh: MeshInstance3D
 var _hazard_mesh: MeshInstance3D
@@ -163,6 +171,7 @@ func _process(delta: float) -> void:
 	if GameManager.is_paused:
 		return
 	_time += delta
+	_physics_delta = delta  # Cached for ice frost timer in _apply_ice_slide
 	match _state:
 		State.IDLE:
 			_update_idle(delta)
@@ -374,9 +383,14 @@ func _apply_knockback(target: Node3D, center: Vector3, force: float) -> void:
 	(target as CharacterBody3D).velocity += dir * force
 
 func _apply_ice_slide() -> void:
-	# Apply a sliding force to the player when standing on the ice patch.
-	# This adds to the player's current velocity in their movement direction,
-	# making them slide uncontrollably for the duration.
+	# Apply a slippery slide effect to the player when standing on the ice patch.
+	# Instead of pushing outward from center (which felt like a fan, not ice),
+	# we amplify the player's existing horizontal velocity so they keep sliding
+	# in their current movement direction with reduced friction — the classic
+	# "ice physics" feel. If the player is standing still, a very small outward
+	# drift is applied so they slowly slide off the patch (preventing them from
+	# standing safely on ice indefinitely). A frost particle trail spawns at
+	# intervals to give the slide a visual "skating" read.
 	if not _cached_player or not is_instance_valid(_cached_player):
 		_cached_player = GameManager.player
 	if not _cached_player:
@@ -384,12 +398,39 @@ func _apply_ice_slide() -> void:
 	var dist: float = _cached_player.global_position.distance_to(global_position)
 	if dist > radius:
 		return
-	# Push the player outward from the center, simulating slipping.
-	var slide_dir: Vector3 = (_cached_player.global_position - global_position)
-	slide_dir.y = 0.0
-	if slide_dir.length() < 0.1:
-		slide_dir = Vector3(randf_range(-1, 1), 0, randf_range(-1, 1))
-	slide_dir = slide_dir.normalized()
-	if _cached_player is CharacterBody3D:
-		# Steady outward slide force — the player slides away from center.
-		(_cached_player as CharacterBody3D).velocity += slide_dir * 4.0
+	if not (_cached_player is CharacterBody3D):
+		return
+	var cb := _cached_player as CharacterBody3D
+	var horiz_vel := Vector2(cb.velocity.x, cb.velocity.z)
+	# If the player is moving, amplify their existing momentum (ice = less
+	# friction = more slide). The amplification factor is small per frame but
+	# compounds across physics ticks, creating a gradual acceleration that
+	# feels like losing traction on ice. The max speed is capped so the slide
+	# doesn't become uncontrollable.
+	if horiz_vel.length() > 0.5:
+		# Amplify existing momentum — 3% per frame at 60fps ≈ 82%/sec
+		var amplification: float = 1.03
+		# Cap the amplified speed so the slide doesn't runaway
+		var max_slide_speed: float = GameConstants.PLAYER_SPEED * 1.6
+		var new_horiz := horiz_vel * amplification
+		if new_horiz.length() > max_slide_speed:
+			new_horiz = new_horiz.normalized() * max_slide_speed
+		cb.velocity.x = new_horiz.x
+		cb.velocity.z = new_horiz.y
+		# Frost trail particles while sliding at speed
+		_ice_frost_timer -= _physics_delta
+		if _ice_frost_timer <= 0.0 and ParticleEffects:
+			ParticleEffects.spawn_pickup_sparkle(
+				get_parent(),
+				cb.global_position + Vector3(0, 0.2, 0),
+				Color(0.7, 0.9, 1.0))
+			_ice_frost_timer = ICE_FROST_INTERVAL
+	else:
+		# Player is nearly stationary — apply a tiny outward drift so they
+		# can't stand safely on the ice. Much weaker than the old push.
+		var slide_dir: Vector3 = (cb.global_position - global_position)
+		slide_dir.y = 0.0
+		if slide_dir.length() < 0.1:
+			slide_dir = Vector3(randf_range(-1, 1), 0, randf_range(-1, 1))
+		slide_dir = slide_dir.normalized()
+		cb.velocity += slide_dir * 1.5  # Gentle drift (was 4.0 — too forceful)

@@ -48,8 +48,33 @@ func _on_damage_taken_from(source_pos: Vector3) -> void:
 	var dz: float = source_pos.z - player.global_position.z
 	# atan2(dx, -dz) gives angle with 0 = source directly ahead (-Z)
 	var angle: float = atan2(dx, -dz)
-	# Add a new indicator; if the pool is full, replace the oldest (smallest
-	# timer) so the freshest direction is always visible.
+	# ── Angle refresh ── If there's already an indicator pointing in nearly
+	#    the same direction (within ANGLE_REFRESH_THRESHOLD radians ≈ 30°),
+	#    refresh it instead of creating a new one. This makes repeated hits
+	#    from the same enemy read as escalating danger — the arrow re-punches
+	#    its scale pop and resets its lifetime, so the indicator grows more
+	#    urgent with each successive hit rather than being silently replaced
+	#    by an identical arrow. Without this, fighting a single enemy that
+	#    hits you 3× in a row would create and discard 3 arrows at the same
+	#    angle, each starting from full scale-pop — it reads as flickering
+	#    rather than escalating. With refresh, the arrow pulses with each
+	#    hit, communicating "this direction is still a threat."
+	const ANGLE_REFRESH_THRESHOLD: float = 0.52  # ~30 degrees
+	for i in range(_indicators.size()):
+		var existing_angle: float = _indicators[i]["angle"]
+		# Compute the shortest angular delta (handles wrap-around)
+		var angle_diff: float = absf(angle_difference(existing_angle, angle))
+		if angle_diff < ANGLE_REFRESH_THRESHOLD:
+			# Refresh: reset timer, re-punch scale, update angle to the
+			# latest hit's exact direction (in case the enemy moved slightly)
+			_indicators[i]["timer"] = GameConstants.DAMAGE_INDICATOR_DURATION
+			_indicators[i]["alpha"] = GameConstants.DAMAGE_INDICATOR_MAX_ALPHA
+			_indicators[i]["scale_pop"] = SCALE_POP_PEAK
+			_indicators[i]["pop_elapsed"] = 0.0
+			_indicators[i]["angle"] = angle
+			return
+	# No matching indicator — add a new one. If the pool is full, replace the
+	# oldest (smallest timer) so the freshest direction is always visible.
 	var indicator := {
 		"angle": angle,
 		"timer": GameConstants.DAMAGE_INDICATOR_DURATION,

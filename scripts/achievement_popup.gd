@@ -432,6 +432,21 @@ func _draw() -> void:
 		var this_height: float = panel_height + (16.0 if has_bar else 0.0)
 		var panel_x: float = size.x - panel_width + entry.slide_x
 
+		# ── Gold glow pulse behind the panel ── A subtle gold radial glow
+		#    that pulses behind the popup during its "staying" phase, giving
+		#    the achievement a warm celebratory shimmer. The pulse uses a
+		#    slow sine (1.2 Hz) so it reads as a gentle breathing glow, not
+		#    a strobe. Only active while the popup is fully on-screen
+		#    (slide_x ≈ 0) so the glow doesn't bleed during the slide
+		#    animation. The glow is drawn as a semi-transparent gold rect
+		#    slightly larger than the panel, with the pulse modulating its
+		#    alpha so it waxes and wanes.
+		if entry.alpha > 0.8:
+			var glow_pulse: float = 0.5 + 0.5 * sin(entry.timer * 1.2 * TAU)
+			var glow_alpha: float = 0.06 + 0.04 * glow_pulse
+			var glow_col := Color(1.0, 0.843, 0.0, glow_alpha * entry.alpha)
+			draw_rect(Rect2(panel_x - 3, y - 3, panel_width + 6, this_height + 6), glow_col, true)
+
 		# Draw panel background
 		var bg := Color(0.05, 0.05, 0.12, 0.85 * entry.alpha)
 		draw_rect(Rect2(panel_x, y, panel_width, this_height), bg, true)
