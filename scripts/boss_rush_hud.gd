@@ -17,6 +17,11 @@ var _fade_alpha: float = 0.0
 var _current_boss_name: String = ""
 var _completed: bool = false
 var _completed_anim: float = 0.0
+# ── Boss-change flash ── When a new boss spawns in Boss Rush, _boss_flash
+# snaps to 1.0 and decays to 0 over ~0.6s. While > 0, the boss text is drawn
+# larger and brighter with a red-gold tint, and the pill border glows —
+# giving the boss transition a dramatic "next challenger" pulse in the HUD.
+var _boss_flash: float = 0.0
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_CENTER_TOP)
@@ -34,6 +39,7 @@ func _on_restarted() -> void:
 	_current_boss_name = ""
 	_completed = false
 	_completed_anim = 0.0
+	_boss_flash = 0.0
 
 func _on_boss_index(index: int, _total: int) -> void:
 	# Look up the boss name from the queue
@@ -42,6 +48,8 @@ func _on_boss_index(index: int, _total: int) -> void:
 		var boss_type: int = queue[index]
 		# Map enemy type to a display name
 		_current_boss_name = _boss_display_name(boss_type)
+	# Trigger the boss-change flash
+	_boss_flash = 1.0
 
 func _boss_display_name(boss_type: int) -> String:
 	# The EnemyTypeData.TYPES dictionary is keyed by name string, not enum int,
@@ -64,6 +72,10 @@ func _process(delta: float) -> void:
 	_fade_alpha = move_toward(_fade_alpha, target, delta * 6.0)
 	if _completed and _completed_anim < 1.0:
 		_completed_anim = minf(1.0, _completed_anim + delta * 2.5)
+	# Decay the boss flash with ease-out cubic for a natural falloff
+	if _boss_flash > 0.0:
+		_boss_flash = maxf(0.0, _boss_flash - delta * 1.8)
+		queue_redraw()
 	if _fade_alpha > 0.01:
 		queue_redraw()
 
@@ -85,18 +97,38 @@ func _draw() -> void:
 	var boss_text: String = "💀 Boss %d/%d" % [display_index, total]
 	if _current_boss_name != "" and not _completed:
 		boss_text += ": " + _current_boss_name
-	var boss_size: Vector2 = font.get_string_size(boss_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 18)
+	# Boss flash intensity — ease-out cubic for natural decel
+	var flash: float = _boss_flash * _boss_flash * (3.0 - 2.0 * _boss_flash)
+	# Scale font up slightly during flash (18 → 24 at peak)
+	var boss_font_size: int = int(18 + flash * 6.0)
+	var boss_size: Vector2 = font.get_string_size(boss_text, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_font_size)
 	# Background pill
 	var pill_w: float = maxf(boss_size.x + 40.0, 200.0)
 	var pill_h: float = 40.0
 	var pill_rect := Rect2(center_x - pill_w / 2.0, 0.0, pill_w, pill_h)
-	draw_rect(pill_rect, Color(0.08, 0.02, 0.03, 0.75 * a), true)
-	draw_rect(pill_rect, Color(1.0, 0.3, 0.3, 0.6 * a), false, 1.5)
-	# Boss text (red-orange)
+	# Pill fill brightens during flash
+	var pill_fill_a: float = 0.75 + flash * 0.2
+	draw_rect(pill_rect, Color(0.08, 0.02, 0.03, pill_fill_a * a), true)
+	# Border glows red-gold during flash, red normally
+	var border_color: Color = Color(
+		lerpf(1.0, 1.0, flash),
+		lerpf(0.3, 0.5, flash),
+		lerpf(0.3, 0.25, flash),
+		(0.6 + flash * 0.4) * a
+	)
+	var border_width: float = 1.5 + flash * 1.5
+	draw_rect(pill_rect, border_color, false, border_width)
+	# Boss text — red-gold tint during flash, red-orange normally
+	var text_color: Color = Color(
+		lerpf(1.0, 1.0, flash),
+		lerpf(0.5, 0.7, flash),
+		lerpf(0.4, 0.3, flash),
+		a
+	)
 	font.draw_string(get_canvas_item(),
 		Vector2(center_x - boss_size.x / 2.0, 26.0),
-		boss_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 18,
-		Color(1.0, 0.5, 0.4, a))
+		boss_text, HORIZONTAL_ALIGNMENT_LEFT, -1, boss_font_size,
+		text_color)
 	# Timer
 	var timer_text: String = "⏱ %s" % _format_time(GameModeManager.get_boss_rush_total_time())
 	var timer_size: Vector2 = font.get_string_size(timer_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)

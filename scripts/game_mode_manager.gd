@@ -427,10 +427,32 @@ func _update_endless(delta: float) -> void:
 		_wave_timer = ENDLESS_WAVE_INTERVAL
 		wave_changed.emit(_wave)
 		GameManager.add_message("♾ Wave %d! Enemies grow stronger..." % _wave)
-		# Small camera shake to mark the wave transition
+		# Camera shake — scales up on milestone waves (every 5th)
+		var is_milestone: bool = _wave % 5 == 0
+		var trauma: float = 0.4 if is_milestone else 0.25
 		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
-			GameManager.camera_rig.add_trauma(0.25)
+			GameManager.camera_rig.add_trauma(trauma)
 		AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+		# ── Milestone wave hit-stop ── every 5th wave (5, 10, 15, 20...)
+		#    gets a brief freeze-frame so the escalating difficulty lands
+		#    with weight. Wave 5 is when enemies start getting noticeably
+		#    tougher (+50% HP, +30% damage, +15% speed cumulatively), and
+		#    the freeze gives the player a moment to register the shift.
+		#    100ms at 0.12x — slightly shorter than boss rush completion
+		#    since this is a recurring event, not a one-time clear.
+		if is_milestone and HitStopCoordinator:
+			HitStopCoordinator.request_freeze(0.12, 0.1)
+		# ── Milestone wave particle burst ── every 5th wave spawns a golden
+		#    shockwave + sparkle burst at the player's position, matching the
+		#    level-up visual language. Non-milestone waves rely on the camera
+		#    shake + SFX alone (keeping the particle budget in check for the
+		#    frequent transitions).
+		if is_milestone and GameManager.player and is_instance_valid(GameManager.player):
+			var player_pos: Vector3 = GameManager.player.global_position
+			if ParticleEffects:
+				ParticleEffects.spawn_levelup_shockwave(GameManager.player.get_parent(), player_pos)
+				ParticleEffects.spawn_pickup_sparkle(GameManager.player.get_parent(),
+					player_pos + Vector3(0, 1.0, 0), Color(1.0, 0.85, 0.3))
 
 func _update_boss_rush(delta: float) -> void:
 	if _boss_rush_completed:
@@ -552,6 +574,28 @@ func _finish_boss_rush() -> void:
 	if Statistics:
 		Statistics.set_lifetime_max("boss_rush_pb_time", _boss_rush_total_time)
 	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# ── Boss Rush completion juice ── celebratory camera shake matching
+	#    the speedrun completion's 0.4 trauma. Defeating all 5 bosses
+	#    back-to-back is a major accomplishment — the camera should
+	#    celebrate with the same intensity as a speedrun completion.
+	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+		GameManager.camera_rig.add_trauma(0.4)
+	# ── Hit-stop freeze-frame ── a brief world freeze (100ms at 0.12x scale)
+	#    so the completion moment lands with weight, mirroring the level-up
+	#    and crit hit-stop language. Slightly longer than the level-up
+	#    freeze (80ms at 0.15x) because completing all bosses is rarer and
+	#    more significant than a single level-up.
+	if HitStopCoordinator:
+		HitStopCoordinator.request_freeze(0.12, 0.1)
+	# ── Boss Rush completion particle burst ── golden shockwave + sparkle
+	#    at the player's position, matching the level-up visual language.
+	#    Completing all 5 bosses is a triumphant moment — the particle
+	#    burst gives it the same visual celebration as a level-up.
+	if GameManager.player and is_instance_valid(GameManager.player):
+		var br_player_pos: Vector3 = GameManager.player.global_position
+		if ParticleEffects:
+			ParticleEffects.spawn_levelup_shockwave(GameManager.player.get_parent(), br_player_pos)
+			ParticleEffects.spawn_combo_fireworks(GameManager.player.get_parent(), br_player_pos, 5)
 
 # ─── Speedrun: biome split tracking ───────────────────────────────────────────
 
@@ -596,6 +640,17 @@ func _finish_speedrun() -> void:
 	# matching the other mode-completion feedback.
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.4)
+	# ── Hit-stop freeze-frame ── matching the boss rush completion's
+	#    100ms at 0.12x freeze. Completing a speedrun is equally significant.
+	if HitStopCoordinator:
+		HitStopCoordinator.request_freeze(0.12, 0.1)
+	# ── Speedrun completion particle burst ── matching the boss rush
+	#    completion's golden shockwave + fireworks.
+	if GameManager.player and is_instance_valid(GameManager.player):
+		var sr_player_pos: Vector3 = GameManager.player.global_position
+		if ParticleEffects:
+			ParticleEffects.spawn_levelup_shockwave(GameManager.player.get_parent(), sr_player_pos)
+			ParticleEffects.spawn_combo_fireworks(GameManager.player.get_parent(), sr_player_pos, 5)
 
 # ─── Signal Handlers ───────────────────────────────────────────────────────────
 

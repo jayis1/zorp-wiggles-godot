@@ -30,7 +30,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 12. **Local Co-op** — Player 2 "Zerp" drops in anytime, shared camera with dynamic zoom, enemy scaling, shared combo, revive system, mega pulse wave sync, 7 co-op achievements
 
 ### Audio & Polish
-- 111 procedurally generated sound effects (no external audio files needed)
+- 115 procedurally generated sound effects (no external audio files needed)
 - 12 per-biome ambient music tracks + boss fight music
 - Dynamic music intensity — 5 tiers (Calm/Engaged/Heated/Intense/Frenzied) that scale with the combo counter (pitch + volume)
 - Trauma-based screen shake, input buffering, hit-stop freeze frames
