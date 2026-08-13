@@ -565,6 +565,44 @@ const SFX_SAND_SCOUR: String = "sand_scour"
 # eating through the player's surface — a chemical rather than abrasive hiss.
 const SFX_ACID_SIZZLE: String = "acid_sizzle"
 
+# ── Enhancement Pack 60: Endgame milestone SFX ── Dedicated sounds for major
+#    endgame unlock/completion events that previously reused SFX_LEVEL_UP or
+#    SFX_COMBO_MILESTONE, making every major milestone sound the same. Each
+#    new SFX has a distinct sonic identity matching the magnitude of its event.
+
+# SFX_ENDGAME_UNLOCK — a colossal 5-note deep fanfare (C3→G3→C4→E4→G4,
+# 130.81→196→262→330→392 Hz, 0.10s per note, 0.35 vol). Starts two octaves
+# below the achievement fanfare to convey "a massive new power tier has
+# opened" — the deep register reads as something fundamental shifting in
+# the game's structure. NG+ and NG++ are the biggest difficulty milestones
+# in the game (unlocking 2×/3× enemy stats, rare-only loot, permadeath),
+# so they deserve a sound that conveys "the game has escalated" rather
+# than "you gained a level." The ascending major triad from a deep bass
+# root conveys upward expansion from a heavy foundation — power growing
+# from a darker base. Excluded from pitch variation since unlocks are
+# rare, dramatic events that should sound consistent.
+const SFX_ENDGAME_UNLOCK: String = "endgame_unlock"
+
+# SFX_DUNGEON_CLEAR — a bright 4-note rising chime (D5→G5→B5→D6,
+# 587→784→988→1175 Hz, 0.08s per note, 0.28 vol). The D major arpeggio
+# ascending through two octaves conveys "a challenge has been conquered"
+# — brighter and more open than SFX_QUEST_COMPLETE (G4→C5→E5) since
+# clearing a full dungeon (with boss + traps + reward chest) is a bigger
+# accomplishment than a single quest. Distinct from SFX_LEVEL_UP
+# (C→E→G→C arpeggio) so dungeon clears don't sound like leveling.
+# Also used for Ancient Vault unlocks — another major exploration milestone.
+# Added to _PITCH_VARIATION_SFX for natural micro-detuning.
+const SFX_DUNGEON_CLEAR: String = "dungeon_clear"
+
+# SFX_GAUNTLET_CLEAR — a punchy 3-note triumphant blip (C5→E5→C6,
+# 523→659→1047 Hz, 0.06s per note, 0.22 vol). The octave leap (C5→C6) in
+# the third note gives it a "victory hop" quality — shorter and punchier
+# than SFX_DUNGEON_CLEAR since clearing one gauntlet biome is a smaller
+# milestone than clearing a full dungeon. Replaces SFX_COMBO_MILESTONE
+# (the kill-streak sound) so gauntlet biome clears don't sound like
+# combat streaks. Added to _PITCH_VARIATION_SFX for natural micro-detuning.
+const SFX_GAUNTLET_CLEAR: String = "gauntlet_clear"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -960,6 +998,9 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_ENEMY_LUNGE, SFX_WEATHER_SHIFT,
 	# Enhancement Pack 58: Weather hazard SFX get pitch variation
 	SFX_GRAVITY_SHIFT, SFX_SAND_SCOUR, SFX_ACID_SIZZLE,
+	# Enhancement Pack 60: Endgame milestone SFX get pitch variation
+	# (SFX_ENDGAME_UNLOCK excluded — rare dramatic event should sound consistent)
+	SFX_DUNGEON_CLEAR, SFX_GAUNTLET_CLEAR,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1613,6 +1654,17 @@ func _generate_all_sfx() -> void:
 	# the sand scour. The noise-hit timbre conveys acid eating through the
 	# player's surface.
 	_sfx_streams[SFX_ACID_SIZZLE] = _gen_noise_hit(0.06, 0.08)
+	# ── Enhancement Pack 60: Endgame milestone SFX ──
+	# Endgame unlock — deep 5-note fanfare from C3 (two octaves below middle C).
+	# The deep bass start conveys a fundamental power shift. Uses the arpeggio
+	# generator with a slow note rate (0.10s) for weight and gravitas.
+	_sfx_streams[SFX_ENDGAME_UNLOCK] = _gen_arpeggio([130.81, 196.0, 262.0, 330.0, 392.0], 0.10, 0.35)
+	# Dungeon clear — bright D major arpeggio ascending through two octaves.
+	# Brighter than SFX_QUEST_COMPLETE and distinct from SFX_LEVEL_UP (C major).
+	_sfx_streams[SFX_DUNGEON_CLEAR] = _gen_arpeggio([587.0, 784.0, 988.0, 1175.0], 0.08, 0.28)
+	# Gauntlet biome clear — punchy 3-note with an octave leap for a "victory hop."
+	# Shorter than dungeon clear since it's a smaller milestone.
+	_sfx_streams[SFX_GAUNTLET_CLEAR] = _gen_arpeggio([523.0, 659.0, 1047.0], 0.06, 0.22)
 
 
 func _generate_all_music() -> void:

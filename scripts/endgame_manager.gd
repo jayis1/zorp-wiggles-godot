@@ -146,7 +146,11 @@ func _check_unlocks() -> void:
 			# ── Enhancement: NG unlock juice ── celebratory SFX + camera
 			# trauma for the endgame unlock milestone. Previously the
 			# biggest difficulty unlock had only a text message.
-			AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+			# ── Enhancement Pack 60: dedicated SFX_ENDGAME_UNLOCK replaces
+			# reused SFX_LEVEL_UP — NG+ is a fundamental difficulty shift,
+			# not a level-up. The deep fanfare conveys "the game has
+			# escalated" rather than "you gained a level."
+			AudioManager.play_sfx(AudioManager.SFX_ENDGAME_UNLOCK)
 			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 				GameManager.camera_rig.add_trauma(0.35)
 			_save_unlocks()
@@ -156,7 +160,8 @@ func _check_unlocks() -> void:
 			GameManager.add_message("💀 NG++ UNLOCKED! All bosses roam, no minimap, permadeath option.")
 			# Heavier feedback for NG++ — it's the hardest tier unlock.
 			AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
-			AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+			# ── Enhancement Pack 60: SFX_ENDGAME_UNLOCK replaces SFX_LEVEL_UP
+			AudioManager.play_sfx(AudioManager.SFX_ENDGAME_UNLOCK)
 			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 				GameManager.camera_rig.add_trauma(0.5)
 			_save_unlocks()
@@ -309,7 +314,10 @@ func _update_gauntlet(delta: float) -> void:
 		else:
 			GameManager.gain_xp(80)
 			GameManager.add_message("✦ Gauntlet %d cleared! +80 XP" % (_gauntlet_index + 1))
-			AudioManager.play_sfx(AudioManager.SFX_COMBO_MILESTONE)
+			# ── Enhancement Pack 60: dedicated SFX_GAUNTLET_CLEAR replaces
+			# reused SFX_COMBO_MILESTONE — gauntlet biome clears are
+			# exploration milestones, not combat kill streaks.
+			AudioManager.play_sfx(AudioManager.SFX_GAUNTLET_CLEAR)
 			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 				GameManager.camera_rig.add_trauma(0.15)
 		_gauntlet_index += 1
@@ -435,9 +443,11 @@ func _finish_boss_gauntlet() -> void:
 	GameManager.add_message("🏆 BOSS GAUNTLET COMPLETE! Total time: %.1fs" % _boss_gauntlet_total_time)
 	# ── Enhancement: Boss Gauntlet completion juice ── the hardest mode in
 	# the game gets the strongest celebratory feedback: boss-defeated fanfare
-	# + level-up chime + 0.5 camera trauma (matching prestige weight).
+	# + endgame unlock deep fanfare + 0.5 camera trauma (matching prestige weight).
+	# ── Enhancement Pack 60: SFX_ENDGAME_UNLOCK replaces SFX_LEVEL_UP —
+	# completing the hardest boss sequence is an endgame milestone, not a level-up.
 	AudioManager.play_sfx(AudioManager.SFX_BOSS_DEFEATED)
-	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	AudioManager.play_sfx(AudioManager.SFX_ENDGAME_UNLOCK)
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.5)
 	if Statistics:
@@ -794,7 +804,9 @@ func try_open_vault(root: Node) -> void:
 	_spawn_vault_puzzle(root)
 	GameManager.add_message("✦ Ancient Vault unlocked! Solve the rune puzzle to claim the legendary loot.")
 	# Dramatic SFX + camera shake for the unlock moment.
-	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# ── Enhancement Pack 60: SFX_DUNGEON_CLEAR replaces SFX_LEVEL_UP —
+	# unlocking an ancient vault is an exploration milestone, not a level-up.
+	AudioManager.play_sfx(AudioManager.SFX_DUNGEON_CLEAR)
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(0.4)
@@ -954,6 +966,10 @@ func _on_vault_guardian_died(_enemy: Node) -> void:
 	GameManager.add_message("🏆 Ancient Vault Guardian defeated! Legendary loot claimed!")
 	AudioManager.play_sfx(AudioManager.SFX_BOSS_DEFEATED)
 	AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
+	# ── Enhancement Pack 60: SFX_DUNGEON_CLEAR — vault cleared is the ultimate
+	# exploration milestone, deserving the dungeon-clear fanfare on top of
+	# the boss-defeated and chest-open sounds.
+	AudioManager.play_sfx(AudioManager.SFX_DUNGEON_CLEAR)
 	# ── Enhancement: Vault guardian death juice ── camera trauma + fireworks
 	# for the ultimate endgame victory. Clearing the Ancient Vault is one of
 	# the hardest achievements in the game (requires 10 lore stones + a
@@ -1073,7 +1089,10 @@ func _check_loot_cave_clear() -> void:
 			# Audio + camera juice for clearing a loot cave — previously only
 			# a text message. Uses SFX_CHEST_OPEN (treasure celebration) and
 			# a moderate 0.3 camera trauma to match dungeon-clear weight.
+			# ── Enhancement Pack 60: also plays SFX_DUNGEON_CLEAR — clearing a
+			# loot cave (elite guards + rare loot) is an exploration milestone.
 			AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
+			AudioManager.play_sfx(AudioManager.SFX_DUNGEON_CLEAR)
 			var lc_cam: Node3D = GameManager.camera_rig
 			if lc_cam and lc_cam.has_method("add_trauma"):
 				lc_cam.add_trauma(0.3)

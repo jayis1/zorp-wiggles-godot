@@ -517,3 +517,12 @@ func reset() -> void:
 	_coop_mega_pulses = 0
 	_coop_milestones_unlocked.clear()
 	_drop_out_hold_timer = 0.0
+	# ── Enhancement Pack 60: reset remaining P2 state that could persist
+	# across runs. While p2_active=false prevents these from being used
+	# before the next drop-in (which re-initializes them), clearing them
+	# ensures clean state and prevents any edge case where stale values
+	# leak into a new run before P2 drops in.
+	p2_hp = 0
+	p2_max_hp = 0
+	p2_score = 0
+	_p2_regen_accumulator = 0.0

@@ -574,7 +574,9 @@ func _on_reward_chest_opened(_chest: Node, _trapped: bool, dungeon_id: int) -> v
 	GameManager.add_message("🏆 Dungeon cleared! +%d XP, +%d score" % [GameConstants.DUNGEON_REWARD_XP, GameConstants.DUNGEON_REWARD_SCORE])
 	# ── Enhancement: Dungeon-clear juice ── celebratory chime + camera
 	# shake, matching the Gauntlet/Boss Rush completion feedback.
-	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
+	# ── Enhancement Pack 60: SFX_DUNGEON_CLEAR replaces SFX_LEVEL_UP —
+	# clearing a dungeon is an exploration milestone, not a level-up.
+	AudioManager.play_sfx(AudioManager.SFX_DUNGEON_CLEAR)
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.35)
 
