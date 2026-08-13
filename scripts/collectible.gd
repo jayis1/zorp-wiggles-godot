@@ -1020,6 +1020,17 @@ func _collect() -> void:
 		#    items so common XP orbs don't make the camera breathe constantly.
 		if GameManager.camera_rig and GameManager.camera_rig.has_method("kick_fov"):
 			GameManager.camera_rig.kick_fov(3.0)
+		# ── Micro camera shake on rare pickup ── A tiny trauma bump (0.03)
+		#    so rare pickups have a tactile camera "thrill" to match the FOV
+		#    kick and the rare chime. This is well below the shoot micro-recoil
+		#    (0.015) threshold and far below the dash (0.15), so it reads as a
+		#    gentle "shiver of excitement" rather than an impact. Only fires
+		#    for rare items — common pickups don't shake the camera so mass
+		#    XP orb collection stays calm. Pet evolution stones get a slightly
+		#    bigger bump (0.05) since they're the most valuable drops.
+		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
+			var rare_trauma: float = 0.05 if is_pet_stone else 0.03
+			GameManager.camera_rig.add_trauma(rare_trauma)
 	else:
 		# ── Value-based pitch for common pickups ── Higher-value common items
 		#    (star fruit, health fragments) get a slightly higher pitch than

@@ -80,6 +80,14 @@ var _spawn_target_alpha: float = 1.0
 #    the enemy's transition from idle/wandering to active combat.
 var _first_hit_triggered: bool = false
 
+# ── Low-HP threshold crossing flash ── Fires once when the enemy first
+#    drops below 25% HP. A brief red emission spike + scale wobble that
+#    reads as "this enemy is in critical danger" — a one-time transition
+#    cue distinct from the continuous low-HP albedo pulse. This gives the
+#    player a visceral "I've got them on the ropes" moment, while the
+#    ongoing pulse communicates the sustained danger state.
+var _low_hp_triggered: bool = false
+
 # ─── Wandering ────────────────────────────────────────────────────────────────
 var wander_dir: Vector3 = Vector3.ZERO
 var wander_timer: float = 3.0
@@ -780,6 +788,8 @@ func _execute_attack_on_enemy(target: Node3D) -> void:
 	is_windup = false
 	_windup_scale_tween = null  # Tween completed, clear reference
 	_restore_windup_emission()
+	# Clear the windup ground telegraph ring — the attack is firing.
+	_clear_windup_telegraph()
 	if not target or not is_instance_valid(target):
 		get_tree().create_timer(0.1).timeout.connect(_reset_attack_flag)
 		return
@@ -948,11 +958,26 @@ func _try_attack(player: Node3D) -> void:
 	# so the charge-up is readable as a glow, not just a silhouette squash.
 	# Restored in _execute_attack().
 	_ramp_windup_emission()
+	# ── Windup ground telegraph ring ── For large enemies (base_scale >= 1.5),
+	#    spawn a pulsing ground ring at the enemy's feet during the windup so
+	#    the player has a clear visual cue to dodge. The ring is a flat circle
+	#    that fades in during the windup, then snaps out when the attack fires.
+	#    This gives slow, heavy enemies a readable "danger zone" indicator —
+	#    the player can see exactly where the attack will originate and time
+	#    their dash. Small enemies skip this (their windup is already fast
+	#    enough that a ring would be more clutter than clarity). The ring
+	#    uses the enemy's current_color so it matches the enemy's visual
+	#    identity, and is sized to the attack range + lunge distance.
+	if base_scale >= 1.5 and get_parent():
+		_spawn_windup_telegraph_ring()
 
 func _execute_attack(player: Node3D) -> void:
 	is_windup = false
 	_windup_scale_tween = null  # Tween completed, clear reference
 	_restore_windup_emission()
+	# Clear the windup ground telegraph ring — the attack is firing, so
+	# the "danger zone" indicator should snap out.
+	_clear_windup_telegraph()
 	# ── Enhancement Pack 53: Enemy lunge strike SFX ── A sharp descending
 	#    whoosh for the attack release — the lunge moment after windup.
 	#    Pairs with SFX_ENEMY_WINDUP (the rising charge tone) to complete
@@ -1204,6 +1229,38 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 	# caller. Since we can't access the caller here, P2 projectiles call
 	# set_p2_hit() before take_damage_from().
 	hp -= amount
+	# ── Low-HP threshold crossing flash ── Fires once when the enemy first
+	#    drops below 25% HP, giving the player a "critical hit" moment. A
+	#    brief red emission spike (→ 5.0, eases to baseline over 0.25s) +
+	#    a quick scale wobble (snap small → elastic bounce) reads as the
+	#    enemy recoiling from the critical blow. This is a one-time
+	#    transition cue — the continuous low-HP albedo pulse in
+	#    _update_visuals handles the ongoing danger state. Skipped for
+	#    enemies that spawn already below 25% (no "crossing" moment).
+	if not _low_hp_triggered and hp > 0 and hp < max_hp * 0.25:
+		_low_hp_triggered = true
+		if _material:
+			_material.emission = Color(1.0, 0.05, 0.05)
+			_material.emission_energy_multiplier = 5.0
+			var lowhp_emit_tween := create_tween()
+			lowhp_emit_tween.tween_property(_material, "emission_energy_multiplier",
+				1.0, 0.25) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			lowhp_emit_tween.parallel().tween_property(_material, "emission",
+				current_color * 0.4, 0.3) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		# Quick scale wobble — snap small then elastic bounce back
+		if body_mesh and not is_windup and not is_dead:
+			if _hit_squash_tween and _hit_squash_tween.is_valid():
+				_hit_squash_tween.kill()
+			var lowhp_scale_tween := create_tween()
+			_hit_squash_tween = lowhp_scale_tween
+			lowhp_scale_tween.tween_property(body_mesh, "scale",
+				Vector3.ONE * base_scale * 0.85, 0.05) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			lowhp_scale_tween.tween_property(body_mesh, "scale",
+				Vector3.ONE * base_scale, 0.20) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	# ── First-hit aggro flash ── Fires once, the first time the enemy
 	#    takes damage (transitions from full HP to damaged). Spawns a
 	#    small expanding ring in the enemy's color at the enemy's position,
@@ -1364,6 +1421,9 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 			_windup_scale_tween = null
 		# Restore windup emission immediately
 		_restore_windup_emission()
+		# Clear the windup ground telegraph ring — the attack was
+		# interrupted, so the "danger zone" indicator should vanish.
+		_clear_windup_telegraph()
 		# Stagger visual — a quick recoil scale wobble (snap small →
 		# bounce back with elastic) distinct from the hit squash. The
 		# body_mesh briefly squashes horizontally and stretches
@@ -1420,6 +1480,9 @@ func set_crit_kill() -> void:
 
 func _die() -> void:
 	is_dead = true
+	# Clear the windup telegraph ring if active — the enemy is dying, so
+	# any in-progress telegraph should vanish rather than linger.
+	_clear_windup_telegraph()
 	# ── Kill any in-flight hit squash tween so it doesn't reference the
 	#    body_mesh after it's hidden/freed. The tween auto-frees on
 	#    completion but may still be running the elastic rebound when
@@ -1987,6 +2050,78 @@ func _trigger_camera_trauma(amount: float, bias_dir: Vector3 = Vector3.ZERO) -> 
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
 		cam_rig.add_trauma(amount, bias_dir)
+
+## ── Windup ground telegraph ring ── Spawns a flat ground ring at the enemy's
+## feet that pulses during the attack windup, giving the player a clear
+## "danger zone" visual cue. The ring fades in over the windup duration,
+## pulses at ~8 Hz to draw the eye, and snaps out when the attack fires
+## (killed by _clear_windup_telegraph in _execute_attack and the stagger path).
+## The ring radius is sized to attack_range + lunge_distance so it covers
+## the actual threat area. Uses the enemy's current_color for visual identity.
+## Only called for large enemies (base_scale >= 1.5) — small enemies have
+## fast windups where a ring would be visual noise rather than a cue.
+var _windup_telegraph_ring: MeshInstance3D = null
+var _windup_telegraph_mat: StandardMaterial3D = null
+func _spawn_windup_telegraph_ring() -> void:
+	var parent_node: Node = get_parent()
+	if not parent_node:
+		return
+	var ring := MeshInstance3D.new()
+	var ring_mesh := CylinderMesh.new()
+	var telegraph_radius: float = attack_range + GameConstants.ENEMY_ATTACK_LUNGE_DISTANCE
+	ring_mesh.top_radius = telegraph_radius
+	ring_mesh.bottom_radius = telegraph_radius
+	ring_mesh.height = 0.05
+	ring_mesh.radial_segments = 24
+	ring_mesh.rings = 1
+	ring.mesh = ring_mesh
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(current_color.r, current_color.g, current_color.b, 0.0)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.emission_enabled = true
+	mat.emission = current_color * 0.6
+	mat.emission_energy_multiplier = 0.0
+	ring.material_override = mat
+	parent_node.add_child(ring)
+	ring.global_position = global_position + Vector3(0, 0.03, 0)
+	_windup_telegraph_ring = ring
+	_windup_telegraph_mat = mat
+	# Fade in the ring alpha + emission over the windup duration so it
+	# grows in visibility as the windup charges. The alpha targets 0.35
+	# (semi-transparent) and the emission targets 1.5 (a steady glow).
+	var telegraph_tween := ring.create_tween()
+	telegraph_tween.set_parallel(true)
+	telegraph_tween.tween_property(mat, "albedo_color:a", 0.35,
+		GameConstants.ENEMY_ATTACK_WINDUP_TIME) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	telegraph_tween.tween_property(mat, "emission_energy_multiplier", 1.5,
+		GameConstants.ENEMY_ATTACK_WINDUP_TIME) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+## Clear the windup telegraph ring — called when the attack fires (in
+## _execute_attack) or when the windup is interrupted by a stagger. The
+## ring snaps out quickly (0.08s) so it reads as "danger over" the moment
+## the attack releases, rather than lingering after the threat has passed.
+func _clear_windup_telegraph() -> void:
+	if not _windup_telegraph_ring or not is_instance_valid(_windup_telegraph_ring):
+		_windup_telegraph_ring = null
+		_windup_telegraph_mat = null
+		return
+	var ring := _windup_telegraph_ring
+	var mat := _windup_telegraph_mat
+	_windup_telegraph_ring = null
+	_windup_telegraph_mat = null
+	if mat:
+		var fade_tween := ring.create_tween()
+		fade_tween.set_parallel(true)
+		fade_tween.tween_property(mat, "albedo_color:a", 0.0, 0.08) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		fade_tween.tween_property(mat, "emission_energy_multiplier", 0.0, 0.08) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		fade_tween.chain().tween_callback(ring.queue_free)
+	else:
+		ring.queue_free()
 
 # ── Distance attenuation helper ── Returns a volume multiplier (0.15–1.0)
 #    based on distance to the player. Uses the same smoothstep model as the
