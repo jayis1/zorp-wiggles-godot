@@ -645,3 +645,17 @@ func _on_boss_defeated(_boss: Node) -> void:
 	# setting _low_hp_zoom_active = false would cause a one-frame flash
 	# at orbit_distance before the tension zoom eases back in, which
 	# reads worse than a smooth ease from boss_zoom → low_hp_zoom.
+	# ── Boss defeat relief punch ── A brief celebratory FOV widen +
+	#    gentle trauma conveys the "pressure released" moment when a
+	#    boss dies. The FOV kick is wider than level-up (10° vs 8°) so
+	#    it reads as a bigger event, and the trauma (0.3) is slightly
+	#    above the level-up rumble (0.25) — defeating a boss is the
+	#    most significant combat milestone. The FOV uses the LEVELUP_PUNCH
+	#    return mode (gentle celebratory settle at 0.75× speed) so the
+	#    widened view lingers briefly as the zoom eases back from
+	#    boss_zoom to orbit_distance, reinforcing the "danger is over"
+	#    transition. This composes with the boss music stop + SFX_BOSS_DEFEATED
+	#    so the player gets audio + visual + camera relief all at once.
+	kick_fov(10.0)
+	_fov_return_mode = FovReturnMode.LEVELUP_PUNCH
+	add_trauma(0.3)

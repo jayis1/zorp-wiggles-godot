@@ -334,6 +334,17 @@ func _ready() -> void:
 	if WeaponModSystem and not WeaponModSystem.mod_equipped.is_connected(_on_mod_equipped_flash):
 		WeaponModSystem.mod_equipped.connect(_on_mod_equipped_flash)
 
+	# ── Equipment equip emission flash ── When the player equips an armor
+	#    piece, Zorp's model briefly flashes in the set's color so the
+	#    player gets immediate visual feedback that their gear changed.
+	#    The flash uses the EQUIP_SET_COLORS palette (Plasma=orange,
+	#    Crystal=blue, Void=purple, Ancient=gold) so the player can tell
+	#    at a glance which set they just equipped. The flash is shorter
+	#    than the weapon mod flash (0.20s vs 0.30s) since equipment is a
+	#    less dramatic change than a weapon swap.
+	if EquipmentSystem and not EquipmentSystem.piece_equipped.is_connected(_on_equipment_equipped_flash):
+		EquipmentSystem.piece_equipped.connect(_on_equipment_equipped_flash)
+
 
 # ── Phase 27: Pet emote reaction callbacks ──
 # These trigger emotes on the active pet in response to player events.
@@ -1223,6 +1234,41 @@ func _on_mod_equipped_flash(mod_id: int) -> void:
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_mod_equip_tween.parallel().tween_property(_player_material, "emission",
 		base_color * 0.4, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+# ── Equipment equip emission flash ── When the player equips an armor piece,
+#    Zorp's model briefly flashes in the equipped set's color so the player
+#    gets immediate visual feedback that their gear changed — even mid-combat
+#    when the equipment menu isn't visible. The flash uses the
+#    EQUIP_SET_COLORS palette (Plasma=orange, Crystal=blue, Void=purple,
+#    Ancient=gold) so the player can tell at a glance which set they just
+#    equipped. The flash is shorter and less intense than the weapon mod
+#    flash (1.6 energy over 0.20s vs 2.0 over 0.30s) since equipment is a
+#    less dramatic change than a weapon swap. No mesh scale pop — equipping
+#    armor is a gear change, not a physical event, matching the weapon mod
+#    equip's emission-only language.
+var _equip_flash_tween: Tween = null
+func _on_equipment_equipped_flash(slot: int, piece_id: int) -> void:
+	if not _player_material:
+		return
+	# Determine the set color for the equipped piece
+	var flash_color: Color = Color(0.7, 0.7, 0.7)  # Default grey
+	# Find which set this piece belongs to
+	for set_id in GameConstants.EQUIP_SET_PIECES.keys():
+		if piece_id in GameConstants.EQUIP_SET_PIECES[set_id]:
+			flash_color = GameConstants.EQUIP_SET_COLORS[set_id]
+			break
+	# Kill any in-progress equip flash tween so rapid swaps restart cleanly
+	if _equip_flash_tween and _equip_flash_tween.is_valid():
+		_equip_flash_tween.kill()
+	_player_material.emission = flash_color
+	_player_material.emission_energy_multiplier = 1.6
+	_equip_flash_tween = create_tween()
+	_equip_flash_tween.tween_property(_player_material, "emission_energy_multiplier",
+		1.0, 0.20) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_equip_flash_tween.parallel().tween_property(_player_material, "emission",
+		base_color * 0.4, 0.25) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 # ── Pickup feedback pulse ── When the player collects an item, Zorp's mesh

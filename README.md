@@ -159,7 +159,7 @@ zorp-wiggles-godot/
 │   ├── collectible.gd            # Pickup items with magnetic pull
 │   ├── projectile.gd             # Player laser projectile
 │   ├── pulse_wave.gd             # Q ability AoE ring
-│   ├── weapon_mod_system.gd      # 20 weapon mods (autoload)
+│   ├── weapon_mod_system.gd      # 36 weapon mods (autoload)
 │   ├── crafting_menu.gd          # Weapon mod crafting UI
 │   ├── mutation_system.gd        # Biome mutation system (autoload)
 │   ├── dimension_system.gd       # Dimensional rifts (autoload)
@@ -173,7 +173,7 @@ zorp-wiggles-godot/
 │   ├── animation_system.gd       # AnimationPlayer library
 │   ├── navigation_manager.gd     # NavMesh generation (autoload)
 │   ├── co_op_manager.gd          # Co-op system (autoload)
-│   └── ...                       # 159 scripts total
+│   └── ...                       # 163 scripts total
 ├── assets/
 │   └── shaders/                  # 13 custom .gdshader files
 ├── CONVERSION_TRACKER.md         # Development progress tracker
@@ -212,7 +212,7 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 - **5 pet evolution paths** (Fire/Ice/Electric/Void/Nature) with 3 stages each + fusion system
 - **10 game modes** (Normal, Endless, Boss Rush, Speedrun, PvP, Survival, Gauntlet, Boss Gauntlet, Daily Challenge, Weekly Challenge)
 - **Local co-op** with Player 2 "Zerp"
-- **108 procedural SFX** + 12 biome music tracks + dynamic music intensity
+- **118 procedural SFX** + 12 biome music tracks + dynamic music intensity
 - **8 procedural anomalous zone traits** with real gameplay effects (toxic haze, magma fissures, gravity well, echo chamber, glowing, crystal shard, mirror surface, rain indoor)
 - **321+ git commits** of development history
 

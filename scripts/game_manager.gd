@@ -644,6 +644,16 @@ func _level_up() -> void:
 		CoOpManager.p2_hp = min(CoOpManager.p2_max_hp, CoOpManager.p2_hp + p2_heal)
 		CoOpManager.p2_hp_changed.emit(CoOpManager.p2_hp, CoOpManager.p2_max_hp)
 		CoOpManager.p2_levelup.emit(player_level)
+		# ── Co-op parity: P2 also gets the golden shockwave ring at their
+		#    position. P1 gets spawn_levelup_shockwave below; without this
+		#    P2 only gets the scale pop + emission flash from
+		#    player2_zerp.gd but no expanding golden ring — a visible
+		#    disparity when both players level up simultaneously and only
+		#    P1's position erupts with a shockwave.
+		if CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node):
+			ParticleEffects.spawn_levelup_shockwave(
+				CoOpManager.p2_node.get_parent(),
+				CoOpManager.p2_node.global_position)
 	# Inform player of stat increases
 	GameManager.add_message("⬆ Level %d! HP: %d (+%d) | DMG: +%d | Speed: +%.1f" % [
 		player_level, player_max_hp, hp_bonus,
