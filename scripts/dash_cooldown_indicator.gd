@@ -82,13 +82,31 @@ func _draw() -> void:
 
 	# Draw the cooldown arc
 	if _cooldown_ratio < 1.0:
-		# Still charging — draw gray arc
-		var color := GameConstants.DASH_COOLDOWN_CHARGING_COLOR
-		_draw_arc(_center, _radius, _cooldown_ratio, color)
+		# ── Charging anticipation glow ── When the cooldown is >85% complete,
+		# the charging arc gradually shifts from the cool gray charging color
+		# toward the ready green, creating a "warming up" visual that
+		# communicates the dash is about to become available. Without this,
+		# the transition from gray → green is a hard snap at 100% — the player
+		# has no visual anticipation of readiness. The blend ramps from 0 at
+		# 85% to ~0.6 at 99%, so the arc visibly warms toward green in the
+		# final moments of the cooldown. This pairs with the ready chime +
+		# ring pop for a multi-layered "ready" cue.
+		var charge_color := GameConstants.DASH_COOLDOWN_CHARGING_COLOR
+		if _cooldown_ratio > 0.85:
+			var warm_t: float = (_cooldown_ratio - 0.85) / 0.15
+			warm_t = clampf(warm_t, 0.0, 1.0)
+			# Smoothstep for a gentle S-curve onset
+			warm_t = warm_t * warm_t * (3.0 - 2.0 * warm_t)
+			charge_color = charge_color.lerp(GameConstants.DASH_COOLDOWN_READY_COLOR, warm_t * 0.6)
+		_draw_arc(_center, _radius, _cooldown_ratio, charge_color)
 		# Draw outer ring border (charging path)
 		draw_arc(_center, _radius, 0, TAU, 32, Color(0.3, 0.4, 0.5, 0.6), 1.5)
-		# Dimmed icon (charging)
-		icon_color = Color(0.4, 0.4, 0.4, 0.5)
+		# Dimmed icon (charging), brightening slightly as it nears ready
+		var icon_warm: float = 0.0
+		if _cooldown_ratio > 0.85:
+			icon_warm = clampf((_cooldown_ratio - 0.85) / 0.15, 0.0, 1.0)
+			icon_warm = icon_warm * icon_warm * (3.0 - 2.0 * icon_warm)
+		icon_color = Color(0.4, 0.4, 0.4, lerpf(0.5, 0.8, icon_warm))
 	else:
 		# Ready — draw full green ring with pulse.
 		# The ring scale is boosted by _ready_ring_scale on the first ready

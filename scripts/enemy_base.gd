@@ -1655,7 +1655,7 @@ func _die() -> void:
 		var death_emit_tween := create_tween()
 		death_emit_tween.tween_property(_material, "emission_energy_multiplier",
 			0.0, 0.2) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 	# Hide the original enemy immediately — the corpse takes over visually
 	visible = false

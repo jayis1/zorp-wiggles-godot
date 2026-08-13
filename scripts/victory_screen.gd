@@ -255,15 +255,35 @@ func _process(delta: float) -> void:
 		_rank_scale = 1.0
 	_stats_alpha = clampf((_stat_anim_timer - 0.6) / 0.5, 0.0, 1.0)
 	_buttons_alpha = clampf((_stat_anim_timer - 1.2) / 0.4, 0.0, 1.0)
-	# Show buttons once they've started fading in
-	if _buttons_alpha > 0.05 and _play_again_btn:
+	# Show buttons once they've started fading in — with a proper tween-based
+	# entrance animation (fade + scale-in with ease-out-back overshoot) matching
+	# the death screen and pause menu. Previously the buttons used a flat lerp
+	# from 0.8→1.0 with _buttons_alpha, which had no overshoot and felt passive
+	# for a victory celebration. Now each button gets its own tracked tween
+	# with a staggered delay so they pop in with a celebratory bounce.
+	if _buttons_alpha > 0.05 and _play_again_btn and not _play_again_btn.visible:
 		_play_again_btn.visible = true
-		_play_again_btn.modulate.a = _buttons_alpha
-		_play_again_btn.scale = Vector2(0.8, 0.8).lerp(Vector2.ONE, _buttons_alpha)
+		_animate_victory_button_in(_play_again_btn, 0.0)
+	if _buttons_alpha > 0.05 and _quit_btn and not _quit_btn.visible:
 		_quit_btn.visible = true
-		_quit_btn.modulate.a = _buttons_alpha
-		_quit_btn.scale = Vector2(0.8, 0.8).lerp(Vector2.ONE, _buttons_alpha)
+		_animate_victory_button_in(_quit_btn, 0.08)
 	queue_redraw()
+
+## Entrance animation for victory-screen buttons: fade in + scale up from 0.8
+## with an ease-out-back overshoot, matching the death screen's button entrance.
+## The stagger delay offsets the second button so they don't pop in simultaneously.
+## Uses a tracked tween per button so rapid show/hide cycles don't stack.
+func _animate_victory_button_in(btn: Button, delay: float) -> void:
+	if not is_instance_valid(btn):
+		return
+	btn.modulate.a = 0.0
+	btn.scale = Vector2(0.8, 0.8)
+	var tween := create_tween()
+	tween.tween_interval(delay)
+	tween.tween_property(btn, "modulate:a", 1.0, 0.25) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tween.parallel().tween_property(btn, "scale", Vector2.ONE, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 
 # ── Phase 35: Input handling audit — keyboard shortcuts for victory screen ──
