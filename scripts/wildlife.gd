@@ -200,6 +200,20 @@ func _catch() -> void:
 	var parent: Node = get_parent()
 	if parent and ParticleEffects:
 		ParticleEffects.spawn_pickup_sparkle(parent, global_position + Vector3(0, 0.5, 0), species_color)
+	# ── Brief species-colored light flash ── a short OmniLight at the
+	#    catch point so the "poof" is visible in dark biomes (Underground,
+	#    Eclipse, Digital Grid) where the sparkle particles alone can be
+	#    subtle. Self-managing tween → queue_free.
+	var catch_light := OmniLight3D.new()
+	catch_light.light_color = species_color
+	catch_light.light_energy = 3.0
+	catch_light.omni_range = 5.0
+	parent.add_child(catch_light)
+	catch_light.global_position = global_position + Vector3(0, 0.5, 0)
+	var cl_tween := catch_light.create_tween()
+	cl_tween.tween_property(catch_light, "light_energy", 0.0, 0.25) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	cl_tween.tween_callback(catch_light.queue_free)
 	# Death poof (species-colored) for a satisfying "poof" catch.
 	if parent and ParticleEffects:
 		ParticleEffects.spawn_death_poof(parent, global_position, species_color, species_scale)

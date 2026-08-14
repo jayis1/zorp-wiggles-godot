@@ -178,6 +178,15 @@ func _open_chest() -> void:
 	var parent: Node = get_parent()
 	if parent and ParticleEffects:
 		ParticleEffects.spawn_combo_fireworks(parent, global_position + Vector3(0, 1, 0), 2)
+	# ── Light fade-out ── the OmniLight fades to zero alongside the sink
+	#    + shrink so the golden glow doesn't pop out when the chest is
+	#    freed. The light fades over 0.5s (matching the sink duration)
+	#    so the glow diminishes as the chest disappears underground.
+	if _light:
+		var chest_light_fade := _light.create_tween()
+		chest_light_fade.tween_interval(0.5)  # Match the lid animation wait.
+		chest_light_fade.tween_property(_light, "light_energy", 0.0, 0.5) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	# Fade out + sink, then queue_free.
 	var fade_tween := create_tween()
 	fade_tween.tween_interval(0.5)  # Let the lid animation play first.

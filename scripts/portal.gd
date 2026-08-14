@@ -163,6 +163,14 @@ func _on_body_entered(body: Node3D) -> void:
 			out_tween.tween_callback(func():
 				# Snap to destination
 				player.global_position = partner_position + Vector3(0, 0.5, 0)
+				# ── Arrival particle burst ── a small cyan sparkle at the
+				#    destination so the arrival has a physical "energy
+				#    materialization" visual, matching the departure burst.
+				var arrive_parent: Node = player.get_parent()
+				if arrive_parent and ParticleEffects:
+					ParticleEffects.spawn_pickup_sparkle(arrive_parent,
+						partner_position + Vector3(0, 1.0, 0),
+						GameConstants.PORTAL_INNER_COLOR)
 				# Teleport-in: scale back up with elastic overshoot
 				player_mesh.scale = Vector3(0.001, 0.001, 0.001)
 				var in_tween := player_mesh.create_tween()
@@ -184,8 +192,31 @@ func _on_body_entered(body: Node3D) -> void:
 
 		teleport_used.emit(self, partner_position)
 		GameManager.add_message("Portal teleport!")
-		# Audio feedback — rift whoosh on teleport.
-		AudioManager.play_sfx(AudioManager.SFX_RIFT)
+		# Audio feedback — fast-travel whoosh on teleport (not SFX_RIFT which
+		# is the dimensional-rift sound; portals are inter-biome travel, not
+		# dimension shifts — matches dungeon/fast-travel/waypoint audio).
+		AudioManager.play_sfx(AudioManager.SFX_FAST_TRAVEL)
+		# ── Departure particle burst ── a small cyan explosion at the
+		#    origin portal so the departure has a physical "energy
+		#    discharge" visual, not just an emission flash on the rings.
+		#    Pairs with the arrival scale-up at the destination.
+		var depart_parent: Node = get_parent()
+		if depart_parent and ParticleEffects:
+			ParticleEffects.spawn_explosion(depart_parent, global_position + Vector3(0, 2.0, 0),
+				GameConstants.PORTAL_INNER_COLOR, 16, 0.4)
+		# ── Departure light flash ── a brief cyan OmniLight at the origin
+		#    portal so the departure is visible in dark biomes where the
+		#    emission flash alone may be subtle. Self-managing tween → free.
+		var depart_light := OmniLight3D.new()
+		depart_light.light_color = GameConstants.PORTAL_INNER_COLOR
+		depart_light.light_energy = 5.0
+		depart_light.omni_range = 10.0
+		depart_parent.add_child(depart_light)
+		depart_light.global_position = global_position + Vector3(0, 2.0, 0)
+		var dl_tween := depart_light.create_tween()
+		dl_tween.tween_property(depart_light, "light_energy", 0.0, 0.4) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		dl_tween.tween_callback(depart_light.queue_free)
 
 	# Screen shake on teleport
 	var cam_rig: Node3D = GameManager.camera_rig

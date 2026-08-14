@@ -15,6 +15,7 @@ var _age: float = 0.0
 var _pulse_phase: float = 0.0
 var _mat: ShaderMaterial = null
 var _cached_player: Node3D = null
+var _glow_light: OmniLight3D = null
 
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
@@ -67,11 +68,11 @@ func _ready() -> void:
 		mesh_instance.material_override = mat
 
 	# Add a point light for real-time glow
-	var light := OmniLight3D.new()
-	light.light_color = GameConstants.DIMENSION_COLORS.get(target_dimension, Color.WHITE)
-	light.light_energy = 2.0
-	light.omni_range = 8.0
-	add_child(light)
+	_glow_light = OmniLight3D.new()
+	_glow_light.light_color = GameConstants.DIMENSION_COLORS.get(target_dimension, Color.WHITE)
+	_glow_light.light_energy = 2.0
+	_glow_light.omni_range = 8.0
+	add_child(_glow_light)
 
 	# Start with a spawn animation — scale up from near-zero (not exactly
 	# zero, which creates a degenerate basis that logs "det == 0" errors).
@@ -137,6 +138,15 @@ func _dissolve_and_expire() -> void:
 	if is_expired:
 		return
 	is_expired = true
+
+	# Fade the glow light out before the scale-down so the light doesn't
+	# pop out when the node is freed. The light fades over 0.3s (slightly
+	# shorter than the 0.4s scale dissolve) so the glow diminishes as the
+	# rift shrinks, reading as "energy dissipating" rather than a pop.
+	if _glow_light:
+		var light_fade := _glow_light.create_tween()
+		light_fade.tween_property(_glow_light, "light_energy", 0.0, 0.3) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 	# Dissolve animation — scale down + fade
 	var dissolve_tween := create_tween()

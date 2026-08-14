@@ -1801,3 +1801,29 @@ Phase 8 (Physics) and Phase 9 (Shaders) TODO items completed. Phase 8: Enemy cor
 
 ### Poison Cloud Fallback Timer Safety (`poison_cloud.gd`)
 - **Fallback `queue_free()` now stops `_tick_timer`** — the `else` branch of `_on_expire()` (taken when `_cloud_mat` is invalid) called `queue_free()` without stopping the `_tick_timer`. If the tick timer's `timeout` signal fired after the node was freed but before deletion, it could trigger `_on_tick()` on a freed instance. The normal path (line 74-75) already stops the timer; the fallback path now matches.
+
+## Enhancement Pack 64 — World Object Light Fade & Portal Audio-Visual Polish
+
+### Portal SFX Consistency Fix (`portal.gd`)
+- **SFX_RIFT to SFX_FAST_TRAVEL** — the inter-biome Portal used SFX_RIFT (the dimensional-rift sound) for its teleport whoosh. Portals are inter-biome travel mechanisms, not dimension shifts. Now uses SFX_FAST_TRAVEL for consistent travel audio identity across all travel mechanics (dungeons, fast travel, waypoints).
+
+### Portal Departure Particle Burst (`portal.gd`)
+- **Cyan explosion at origin on teleport** — 16-particle cyan explosion at the origin portal center on teleport, giving the departure a physical energy discharge visual. Previously the departure had only an emission flash on the rings.
+
+### Portal Arrival Particle Burst (`portal.gd`)
+- **Cyan sparkle at destination on arrival** — pickup sparkle at the destination position inside the arrival callback, giving the arrival a materialization visual matching the departure burst.
+
+### Portal Departure Light Flash (`portal.gd`)
+- **Cyan OmniLight flash at origin** — brief 5.0 energy cyan OmniLight at origin portal center, fades over 0.4s (ease-out quadratic), illuminating the departure in dark biomes where emission alone is subtle.
+
+### Dimensional Rift Glow Light Fade-Out (`dimensional_rift.gd`)
+- **OmniLight fades on dissolve** — the rift glow light now fades to zero over 0.3s (ease-in quadratic) before the node is freed, reading as energy dissipating rather than a hard light pop. Previously the light popped out instantly at queue_free.
+
+### Wildlife Catch Light Flash (`wildlife.gd`)
+- **Species-colored OmniLight on catch** — brief 3.0 energy species-colored OmniLight at the catch point, fades over 0.25s (ease-out quadratic), illuminating the catch in dark biomes where sparkle particles alone are subtle.
+
+### Lore Stone Glow Light Fade-Out (`lore_stone.gd`)
+- **OmniLight fades on read/dissolve** — the stone glow light fades to zero over 0.4s (ease-in quadratic) alongside the dissolve animation, reading as ancient energy dissipating rather than a hard light pop.
+
+### Treasure Chest Light Fade-Out (`treasure_chest.gd`)
+- **OmniLight fades on open/sink** — the chest light fades to zero over 0.5s (ease-in quadratic) matching the sink duration, reading as treasure light fading rather than a hard pop.

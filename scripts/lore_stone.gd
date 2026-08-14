@@ -159,6 +159,15 @@ func _read_lore() -> void:
 	var parent: Node = get_parent()
 	if parent and ParticleEffects:
 		ParticleEffects.spawn_levelup_burst(parent, global_position)
+	# ── Glow light fade-out ── the OmniLight fades to zero alongside the
+	#    shrink + lift so the glow doesn't pop out when the stone is freed.
+	#    The light fades over 0.4s (matching the shrink duration) so the
+	#    glow diminishes as the stone crumbles — reading as "energy
+	#    dissipating" rather than a hard light pop.
+	if _light:
+		var lore_light_fade := _light.create_tween()
+		lore_light_fade.tween_property(_light, "light_energy", 0.0, 0.4) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	# Fade out + shrink animation, then queue_free.
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3.ONE * 1.3, 0.2) \
