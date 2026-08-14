@@ -67,7 +67,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	# Track distance traveled (needs player position)
-	if GameManager and GameManager.player and GameManager.player_is_alive:
+	# Guard with is_instance_valid — during scene transitions (e.g.
+	# SaveSystem.load_and_restart), the old player node is freed before
+	# GameManager.player is updated, so the reference can be stale.
+	if GameManager and GameManager.player and is_instance_valid(GameManager.player) and GameManager.player_is_alive:
 		var pos: Vector3 = GameManager.player.global_position
 		if not _player_pos_initialized:
 			_last_player_pos = pos
