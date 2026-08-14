@@ -437,12 +437,21 @@ func _physics_process(delta: float) -> void:
 				_mat.emission_energy_multiplier = lerpf(0.3, 3.0, flicker_env) * intensity
 		else:
 			# Fade out and free — scale down + alpha to zero over 0.4s
+			# ── Cubic easing unification ── The scale tween already used
+			#    TRANS_CUBIC but the material alpha used TRANS_QUAD, creating
+			#    a visual mismatch: the opacity faded uniformly while the
+			#    scale held its shape for ~70% then snapped down. Now both
+			#    use TRANS_CUBIC with EASE_IN so the collectible holds its
+			#    full opacity and size for most of the fade, then snaps out
+			#    as a unit — a cohesive "dissolution" read that matches the
+			#    enemy death flash, projectile fizzle, and pickup flash
+			#    which all share the cubic "hold then snap" language.
 			if not _despawn_fade_tween or not _despawn_fade_tween.is_valid():
 				_despawn_fade_tween = create_tween()
 				_despawn_fade_tween.set_parallel(true)
 				if _mat:
 					_despawn_fade_tween.tween_property(_mat, "albedo_color:a", 0.0, 0.4) \
-						.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+						.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 				_despawn_fade_tween.tween_property(self, "scale", Vector3.ZERO, 0.4) \
 					.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 				_despawn_fade_tween.chain().tween_callback(_despawn_free)

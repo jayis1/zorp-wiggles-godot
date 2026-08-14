@@ -166,21 +166,29 @@ func _ready() -> void:
 	#    stretched shape, so the bolt "bursts" into existence rather than
 	#    silently appearing.
 	if _material:
+		# ── Cubic easing for spawn flash ── The player projectile's muzzle
+		#    flash was upgraded to TRANS_CUBIC so each shot "holds bright then
+		#    snaps out" — the energy discharge reads as a crisp burst, not a
+		#    gentle glow. Enemy projectiles are the same visual language (a
+		#    bolt bursting into existence) but used TRANS_QUAD, which fades
+		#    uniformly and lingers slightly into the first flight frame. Now
+		#    TRANS_CUBIC matches the player projectile so both sides of combat
+		#    share the same energy-discharge feel.
 		_material.emission_energy_multiplier = 4.0
 		var spawn_flash_tween := create_tween()
 		spawn_flash_tween.tween_property(_material, "emission_energy_multiplier",
-			1.2, 0.12).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			1.2, 0.12).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	if _light:
 		var light_spawn_tween := create_tween()
 		light_spawn_tween.tween_property(_light, "light_energy",
-			1.2, 0.1).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			1.2, 0.1).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	if mesh:
 		mesh.scale = Vector3(1.2, 1.2, 3.0)
 		_spawn_flash_timer = 0.1
 		var mesh_spawn_tween := create_tween()
 		mesh_spawn_tween.tween_property(mesh, "scale",
 			Vector3(0.7, 0.7, 2.2), 0.1) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 	# ── Trail particles ── A short spark trail that follows the bolt's path,
 	#    making enemy projectiles readable in dark biomes where the point light
@@ -395,14 +403,22 @@ func _fizzle_out() -> void:
 	# fades as a unit. Previously the light tweened but the material
 	# alpha was snapped to 0.0 instantly — the mesh popped out while
 	# the light was still fading, which looked like a bug.
+	# ── Cubic easing for fizzle fade ── The bolt's death is an energy
+	#    discharge (the bolt "runs out of power" and dissipates), which
+	#    should hold bright then snap out — the same cubic curve used by
+	#    the death light flash, corpse emission flash, and player muzzle
+	#    flash. TRANS_QUAD faded uniformly, making the fizzle read as a
+	#    gentle dim rather than a decisive energy death. TRANS_CUBIC holds
+	#    the alpha near full for ~70% of the duration then snaps to zero,
+	#    matching every other energy-discharge effect in the game.
 	if _material:
 		var mat_fade := create_tween()
 		mat_fade.tween_property(_material, "albedo_color:a", 0.0, 0.15) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	if _light:
 		var fade_tween := create_tween()
 		fade_tween.tween_property(_light, "light_energy", 0.0, 0.15) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	# Small fizzle particle puff
 	ParticleEffects.spawn_explosion(get_parent(), global_position, projectile_color, 6, 0.15)
 	# Free after the fade completes so the visual is fully visible

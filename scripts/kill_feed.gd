@@ -15,6 +15,14 @@ class KillEntry:
 	var y_offset: float
 	var entrance_t: float  # 0..1 eased entrance progress
 	var is_crit_kill: bool = false  # Enhancement Pack 54: crit kill highlighting
+	# ── Scale pop-in ── The entry scales from 0.85 to 1.0 during its
+	#    entrance with an ease-out-back curve, giving each kill a subtle
+	#    "pop" feel that matches the damage number pop-in and achievement
+	#    popup scale language. Without this, the entry only fades + slides
+	#    — it reads as informational text appearing rather than a juicy kill
+	#    notification. The scale drives the drawn font size so the text
+	#    visibly grows as it enters.
+	var scale: float = 0.85
 	# ── Exit slide ── When an entry is about to expire (last 0.35s), it
 	#    slides right off-screen with an accelerating ease-in curve, mirroring
 	#    the entrance slide-down in reverse. This reads as the kill "leaving"
@@ -72,10 +80,24 @@ func _process(delta: float) -> void:
 		#    snapping to full opacity. The slide-down y_offset is already
 		#    eased; this adds the matching alpha ease. Matches the
 		#    achievement-popup and boss-bar entrance language.
+		# ── Scale pop-in ── During the same entrance window, the entry's
+		#    scale eases from 0.85 → 1.0 using an ease-out-back curve (slight
+		#    overshoot past 1.0 then settle). This gives each kill a subtle
+		#    "pop" that matches the damage number pop-in, making the feed feel
+		#    like a series of juicy kill notifications rather than a passive
+		#    scrolling log. The standard ease-out-back formula
+		#    1 + c3*(t-1)^3 + c1*(t-1)^2 (c1=1.70158, c3=c1+1) overshoots ~7%
+		#    past 1.0 then settles — the same curve used by the death screen
+		#    title and achievement badge.
 		if entry.entrance_t < 1.0:
 			entry.entrance_t = minf(entry.entrance_t + delta / 0.25, 1.0)
 			var eased: float = 1.0 - pow(1.0 - entry.entrance_t, 3.0)
 			entry.alpha = eased
+			# Scale pop-in via ease-out-back
+			var c1: float = 1.70158
+			var c3: float = c1 + 1.0
+			var tm: float = entry.entrance_t - 1.0
+			entry.scale = 1.0 + c3 * tm * tm * tm + c1 * tm * tm
 		# Fade out in the last second (overrides the entrance alpha). Uses
 		# ease-in quad (life_frac²) so the text holds near-full opacity for
 		# most of its life, then fades out gently at the end — matching the
@@ -125,11 +147,24 @@ func _draw() -> void:
 
 	for i in range(_entries.size()):
 		var entry: KillEntry = _entries[i]
-		var text_size := font.get_string_size(entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+		# ── Scaled font size ── The entry's scale (0.85 → 1.0 during
+		#    entrance) drives the drawn font size so the text visibly grows
+		#    as it pops in. This is the simplest way to scale text drawn
+		#    via font.draw_string without a Transform2D. The font size is
+		#    clamped to a minimum of 8 so very small scales don't break.
+		var scaled_font_size: int = max(8, int(float(font_size) * entry.scale))
+		var text_size := font.get_string_size(entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, scaled_font_size)
 
 		# Right-align the text, offset by the exit slide so the entry
 		# accelerates off the right edge as it expires.
-		var x: float = size.x - text_size.x - 10 + entry.exit_slide_x
+		# The scale affects the text width, so we account for it in the
+		# right-align x position: center the scaled text within the
+		# original-width slot so the pop-in grows from the center outward
+		# rather than anchoring to the right edge (which would make the
+		# text appear to slide left as it grows).
+		var unscaled_size := font.get_string_size(entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+		var scale_diff: float = (unscaled_size.x - text_size.x) * 0.5
+		var x: float = size.x - unscaled_size.x - 10 + entry.exit_slide_x + scale_diff
 
 		# Skip drawing if the entry has fully slid off-screen
 		if entry.exit_slide_x >= entry.EXIT_SLIDE_DISTANCE and entry.alpha < 0.01:
@@ -140,7 +175,7 @@ func _draw() -> void:
 		var shadow_color := Color(0, 0, 0, entry.alpha * 0.5)
 		font.draw_string(get_canvas_item(),
 			Vector2(x + 2, y + text_size.y + 2 + entry.y_offset),
-			entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, shadow_color)
+			entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, scaled_font_size, shadow_color)
 
 		# Draw text with kill feed color
 		# ── Enhancement Pack 54: Crit kills in gold ──
@@ -159,6 +194,6 @@ func _draw() -> void:
 			base_feed_color.a * entry.alpha)
 		font.draw_string(get_canvas_item(),
 			Vector2(x, y + text_size.y + entry.y_offset),
-			entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+			entry.text, HORIZONTAL_ALIGNMENT_LEFT, -1, scaled_font_size, color)
 
 		y += line_height
