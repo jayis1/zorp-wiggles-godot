@@ -1104,11 +1104,39 @@ func _process(delta: float) -> void:
 			var pulse_env: float = 0.5 + 0.5 * sin(_boss_enrage_phase)
 			# Red glow intensity: subtle (0.15) at 25% HP → urgent (0.45) at 5% HP
 			var glow_intensity: float = lerpf(0.15, 0.45, enrage_depth) * pulse_env
-			boss_hp_container.self_modulate = Color(1.0, 0.2, 0.15, clampf(1.0 + glow_intensity, 0.0, 1.0))
+			# ── Bug fix: the old code set alpha to clampf(1.0 + glow_intensity,
+			#    0.0, 1.0) which always clamped to 1.0 (glow_intensity is always
+			#    ≥ 0), making the pulse completely invisible — the self_modulate
+			#    was a constant Color(1.0, 0.2, 0.15, 1.0) regardless of the
+			#    pulse phase or enrage depth. Now we lerp the RGB between a dim
+			#    red (resting/trough) and a bright red (pulse peak) so the glow
+			#    actually breathes. The glow_intensity is normalized to 0..1
+			#    using the max possible value (0.45) as the divisor, then used
+			#    as the lerp factor. At the pulse trough the container is dim
+			#    red, at the peak it's bright red — matching the HP bar danger
+			#    pulse's lerp approach (which works correctly).
+			var glow_t: float = clampf(glow_intensity / 0.45, 0.0, 1.0)
+			boss_hp_container.self_modulate = Color(0.6, 0.1, 0.05, 1.0).lerp(
+				Color(1.0, 0.2, 0.15, 1.0), glow_t)
 		else:
 			if _boss_enrage_active:
 				_boss_enrage_active = false
-				boss_hp_container.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+				# ── Smooth ease-out from enrage glow ── Previously snapped
+				#    self_modulate from dim red back to white instantly, which
+				#    read as a jarring color pop when the boss exited enrage
+				#    (healed above 25% or died). Now we ease the self_modulate
+				#    back to white over ~0.4s with ease-out quad so the glow
+				#    fades smoothly — matching the HP bar danger pulse's ease-out
+				#    behavior. A tracked tween is killed if the boss re-enters
+				#    enrage before the fade completes.
+				if boss_hp_container:
+					if boss_hp_container.has_meta("_enrage_fade_tween") and is_instance_valid(boss_hp_container.get_meta("_enrage_fade_tween") as Tween):
+						(boss_hp_container.get_meta("_enrage_fade_tween") as Tween).kill()
+					var enrage_fade := create_tween()
+					enrage_fade.tween_property(boss_hp_container, "self_modulate",
+						Color(1.0, 1.0, 1.0, 1.0), 0.4) \
+						.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+					boss_hp_container.set_meta("_enrage_fade_tween", enrage_fade)
 	else:
 		# Boss reference is gone — clear it so we don't keep querying a
 		# freed node. The container visibility is handled by the exit anim.
@@ -1118,7 +1146,16 @@ func _process(delta: float) -> void:
 		# Reset enrage glow when boss is gone
 		if _boss_enrage_active:
 			_boss_enrage_active = false
-			boss_hp_container.self_modulate = Color(1.0, 1.0, 1.0, 1.0)
+			# Smooth ease-out here too — match the enrage exit fade so the
+			# bar doesn't snap when the boss dies while enraged.
+			if boss_hp_container:
+				if boss_hp_container.has_meta("_enrage_fade_tween") and is_instance_valid(boss_hp_container.get_meta("_enrage_fade_tween") as Tween):
+					(boss_hp_container.get_meta("_enrage_fade_tween") as Tween).kill()
+				var enrage_fade := create_tween()
+				enrage_fade.tween_property(boss_hp_container, "self_modulate",
+					Color(1.0, 1.0, 1.0, 1.0), 0.4) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+				boss_hp_container.set_meta("_enrage_fade_tween", enrage_fade)
 		# Hide the ghost bar when the boss is gone so it doesn't linger
 		if _boss_ghost_bar:
 			_boss_ghost_bar.visible = false

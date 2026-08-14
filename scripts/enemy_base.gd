@@ -1248,7 +1248,7 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 			lowhp_emit_tween.parallel().tween_property(_material, "emission",
 				current_color * 0.4, 0.3) \
-				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 		# Quick scale wobble — snap small then elastic bounce back
 		if body_mesh and not is_windup and not is_dead:
 			if _hit_squash_tween and _hit_squash_tween.is_valid():
@@ -1280,7 +1280,7 @@ func take_damage_from(amount: int, source_pos: Vector3 = Vector3.ZERO) -> void:
 			_material.emission_energy_multiplier = prev_emi * 2.5
 			var aggro_tween := create_tween()
 			aggro_tween.tween_property(_material, "emission_energy_multiplier",
-				prev_emi, 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+				prev_emi, 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	enemy_hit.emit(self, amount)
 	# Phase 20: Audio — enemy hit SFX
 	# ── Size-based pitch: larger enemies get deeper hit sounds so a
@@ -2438,7 +2438,7 @@ func _drop_rare_material() -> void:
 	get_parent().add_child(_rm_light)
 	_rm_light.global_position = global_position + Vector3(0, 1.0, 0)
 	var _rm_light_tween := _rm_light.create_tween()
-	_rm_light_tween.tween_property(_rm_light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_rm_light_tween.tween_property(_rm_light, "light_energy", 0.0, 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	_rm_light_tween.tween_callback(_rm_light.queue_free)
 	# Statistics tracking
 	if Statistics and Statistics.has_method("record_rare_material_drop"):
