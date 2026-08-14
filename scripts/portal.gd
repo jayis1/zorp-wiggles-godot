@@ -207,16 +207,19 @@ func _on_body_entered(body: Node3D) -> void:
 		# ── Departure light flash ── a brief cyan OmniLight at the origin
 		#    portal so the departure is visible in dark biomes where the
 		#    emission flash alone may be subtle. Self-managing tween → free.
-		var depart_light := OmniLight3D.new()
-		depart_light.light_color = GameConstants.PORTAL_INNER_COLOR
-		depart_light.light_energy = 5.0
-		depart_light.omni_range = 10.0
-		depart_parent.add_child(depart_light)
-		depart_light.global_position = global_position + Vector3(0, 2.0, 0)
-		var dl_tween := depart_light.create_tween()
-		dl_tween.tween_property(depart_light, "light_energy", 0.0, 0.4) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-		dl_tween.tween_callback(depart_light.queue_free)
+		#    Guard: depart_parent could be null if the portal was detached
+		#    from the scene tree (e.g. scene teardown during teleport).
+		if depart_parent:
+			var depart_light := OmniLight3D.new()
+			depart_light.light_color = GameConstants.PORTAL_INNER_COLOR
+			depart_light.light_energy = 5.0
+			depart_light.omni_range = 10.0
+			depart_parent.add_child(depart_light)
+			depart_light.global_position = global_position + Vector3(0, 2.0, 0)
+			var dl_tween := depart_light.create_tween()
+			dl_tween.tween_property(depart_light, "light_energy", 0.0, 0.4) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			dl_tween.tween_callback(depart_light.queue_free)
 
 	# Screen shake on teleport
 	var cam_rig: Node3D = GameManager.camera_rig
