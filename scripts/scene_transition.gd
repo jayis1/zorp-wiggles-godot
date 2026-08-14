@@ -48,6 +48,11 @@ var _shimmer_phase: float = 0.0
 func _ready() -> void:
 	# Build a persistent CanvasLayer + ColorRect that survives scene changes.
 	# Layer 1000 sits above the HUD (100) and all shader overlays (50-60).
+	# Connect to game_restarted so we don't get stuck mid-transition if the
+	# scene reloads (via get_tree().reload_current_scene) while a fade is
+	# in progress — the overlay would stay visible on the new scene.
+	if GameManager:
+		GameManager.game_restarted.connect(_on_game_restarted)
 	_canvas_layer = CanvasLayer.new()
 	_canvas_layer.layer = 1000
 	_canvas_layer.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -129,6 +134,20 @@ func _finish_transition() -> void:
 	_shimmer.color.a = 0.0
 	_phase_timer = 0.0
 	transition_finished.emit()
+
+func _on_game_restarted() -> void:
+	# If a scene transition was mid-flight when the game restarted (via
+	# reload_current_scene, which bypasses SceneTransition), force-clean
+	# the overlay so the new scene isn't covered by a black screen.
+	_is_transitioning = false
+	_phase = 0
+	_phase_timer = 0.0
+	_pending_scene = ""
+	if _overlay:
+		_overlay.color.a = 0.0
+		_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _shimmer:
+		_shimmer.color.a = 0.0
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────

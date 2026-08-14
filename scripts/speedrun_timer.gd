@@ -21,6 +21,7 @@ var _last_split_text: String = ""
 var _last_split_alpha: float = 0.0
 var _completed: bool = false
 var _completed_anim: float = 0.0  # 0..1 badge scale-in
+var _split_flash: float = 0.0  # Flash pulse on new biome split
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_CENTER_TOP)
@@ -41,11 +42,13 @@ func _on_restarted() -> void:
 	_last_split_alpha = 0.0
 	_completed = false
 	_completed_anim = 0.0
+	_split_flash = 0.0
 
 func _on_split(biome_id: int, split_time: float) -> void:
 	var bname: String = GameConstants.BIOME_NAMES.get(biome_id, "Unknown")
 	_last_split_text = "Last split: %s — %s" % [bname, _format_time(split_time)]
 	_last_split_alpha = 1.0
+	_split_flash = 1.0
 
 func _on_completed(_total_time: float) -> void:
 	_completed = true
@@ -59,6 +62,9 @@ func _process(delta: float) -> void:
 	# Fade out the last-split text after a few seconds
 	if _last_split_alpha > 0:
 		_last_split_alpha = maxf(0.0, _last_split_alpha - delta * 0.25)
+	# Split flash decay (matches endless wave flash timing)
+	if _split_flash > 0.0:
+		_split_flash = maxf(0.0, _split_flash - delta * 1.8)
 	# Completed badge scale-in
 	if _completed and _completed_anim < 1.0:
 		_completed_anim = minf(1.0, _completed_anim + delta * 2.5)
@@ -75,19 +81,29 @@ func _draw() -> void:
 		return
 	var a: float = _fade_alpha
 	var center_x: float = size.x / 2.0
+	# Split flash — smoothstep ease for a natural deceleration (matches the
+	# endless wave flash and boss rush boss flash from Enhancement Pack 59).
+	var flash: float = _split_flash * _split_flash * (3.0 - 2.0 * _split_flash)
 	# Background pill behind the timer for readability
 	var timer_text: String = "⏱ %s" % _format_time(GameModeManager.get_speedrun_time())
-	var timer_size: Vector2 = font.get_string_size(timer_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 22)
+	var timer_font_size: int = int(lerpf(22.0, 28.0, flash))
+	var timer_size: Vector2 = font.get_string_size(timer_text, HORIZONTAL_ALIGNMENT_LEFT, -1, timer_font_size)
 	var pill_w: float = timer_size.x + 40.0
 	var pill_h: float = 40.0
 	var pill_rect := Rect2(center_x - pill_w / 2.0, 0.0, pill_w, pill_h)
 	draw_rect(pill_rect, Color(0.02, 0.03, 0.08, 0.75 * a), true)
-	draw_rect(pill_rect, Color(0.4, 0.8, 1.0, 0.6 * a), false, 1.5)
-	# Timer text (cyan, large)
+	# Border glow brightens + thickens during flash (matches wave/boss flash)
+	var border_alpha: float = lerp(0.6, 1.0, flash)
+	var border_width: float = lerp(1.5, 3.0, flash)
+	draw_rect(pill_rect, Color(0.4, 0.8, 1.0, border_alpha * a), false, border_width)
+	# Timer text — shifts from cyan toward golden during flash
+	var timer_r: float = lerp(0.4, 1.0, flash)
+	var timer_g: float = lerp(0.9, 0.85, flash)
+	var timer_b: float = lerp(1.0, 0.3, flash)
 	font.draw_string(get_canvas_item(),
 		Vector2(center_x - timer_size.x / 2.0, 26.0),
-		timer_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 22,
-		Color(0.4, 0.9, 1.0, a))
+		timer_text, HORIZONTAL_ALIGNMENT_LEFT, -1, timer_font_size,
+		Color(timer_r, timer_g, timer_b, a))
 	# Biome progress
 	var visited: int = GameModeManager.get_speedrun_visited_count()
 	var total: int = GameModeManager.SPEEDRUN_SPLIT_BIOME_COUNT

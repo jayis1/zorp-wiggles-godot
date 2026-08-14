@@ -166,7 +166,9 @@ func _activate() -> void:
 		Statistics.record_waypoint_activated(waypoint_name)
 	GameManager.add_message("🧭 Waypoint activated: %s" % waypoint_name)
 	if AudioManager:
-		AudioManager.play_sfx(AudioManager.SFX_HEAL)
+		# Use SFX_FAST_TRAVEL (a whoosh) instead of SFX_HEAL — waypoint
+		# activation is a discovery/teleport event, not a healing event.
+		AudioManager.play_sfx(AudioManager.SFX_FAST_TRAVEL)
 	waypoint_activated.emit(self)
 
 func _process(_delta: float) -> void:
