@@ -308,7 +308,7 @@ func _draw_skill_node(font, skill_key: String, rect: Rect2, a: float, branch_col
 
 func _draw_button(font, rect: Rect2, text: String, a: float, color: Color = Color(0.2, 0.3, 0.5)) -> void:
 	draw_rect(rect, Color(color.r, color.g, color.b, 0.6 * a), true)
-	draw_rect(rect, Color(color.r + 0.2, color.g + 0.2, color.b + 0.2, 0.8 * a), false, 1.5)
+	draw_rect(rect, Color(clampf(color.r + 0.2, 0.0, 1.0), clampf(color.g + 0.2, 0.0, 1.0), clampf(color.b + 0.2, 0.0, 1.0), 0.8 * a), false, 1.5)
 	var text_size: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)
 	font.draw_string(get_canvas_item(),
 		Vector2(rect.position.x + (rect.size.x - text_size.x) / 2.0,
