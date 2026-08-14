@@ -85,4 +85,6 @@ func _on_expire() -> void:
 				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		fade_tween.chain().tween_callback(queue_free)
 	else:
+		if _tick_timer:
+			_tick_timer.stop()
 		queue_free()

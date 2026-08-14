@@ -57,7 +57,6 @@ var p1_revive_progress: float = 0.0
 # ─── Combo Milestone Signal ───────────────────────────────────────────────────
 signal combo_milestone(combo: int, tier: int, color: Color)
 signal pickup_streak_milestone(streak: int, xp_bonus: int)
-signal crit_chain_activated(chain: int)
 # ── Enhancement Pack 20: Critical hit signal ── Emitted by projectile.gd
 # when a crit lands. The crit_flash HUD overlay listens to this and plays
 # a brief gold-colored screen-edge glow so crits have a visual punch beyond

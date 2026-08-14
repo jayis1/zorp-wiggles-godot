@@ -29,10 +29,6 @@ signal weather_timer_changed(time_remaining: float)
 # ── Phase 28: Weather Expansion signals ──
 signal weather_combo_started(combo_weather: int, primary_weather: int)
 signal weather_combo_ended(combo_weather: int)
-signal emp_pulse_triggered()              # Magnetic Storm EMP fired
-signal gravity_shift_started(direction: int)  # -1 = upward, 1 = downward
-signal gravity_shift_ended()
-signal dimensional_shift_triggered()      # Dimensional Storm forced shift
 
 # ─── State ────────────────────────────────────────────────────────────────────
 var _current_weather: int = GameConstants.Weather.CLEAR
@@ -748,7 +744,6 @@ func _tick_magnetic_storm(delta: float) -> void:
 			GameConstants.MAGNETIC_STORM_EMP_INTERVAL_MAX)
 		# Fire an EMP pulse — disables dashing for a short window
 		_emp_disable_timer = GameConstants.MAGNETIC_STORM_EMP_DISABLE_DURATION
-		emp_pulse_triggered.emit()
 		GameManager.add_message("⚡ Magnetic EMP! Dashing disabled for %.1fs!" % GameConstants.MAGNETIC_STORM_EMP_DISABLE_DURATION)
 		# ── Enhancement Pack 58: Dedicated EMP pulse SFX ── previously the EMP
 		# had a visual flash + camera shake but no audio. A sharp electronic
@@ -781,7 +776,6 @@ func _tick_gravity_anomaly(delta: float) -> void:
 		if _gravity_shift_remaining <= 0:
 			_gravity_shift_active = false
 			_gravity_anomaly_force = 0.0
-			gravity_shift_ended.emit()
 			# Audio — settling chime as gravity returns to normal.
 			# Previously reused SFX_MUTATION at 0.6× pitch; now uses the
 			# dedicated SFX_GRAVITY_SHIFT at a lower pitch for the "settle"
@@ -797,7 +791,6 @@ func _tick_gravity_anomaly(delta: float) -> void:
 			# Randomly pick upward or downward shift
 			var direction: int = 1 if randf() < 0.5 else -1
 			_gravity_anomaly_force = direction * (GameConstants.GRAVITY_ANOMALY_UPWARD_FORCE if direction < 0 else GameConstants.GRAVITY_ANOMALY_DOWNWARD_FORCE)
-			gravity_shift_started.emit(direction)
 			var dir_name: String = "UPWARD" if direction < 0 else "DOWNWARD"
 			GameManager.add_message("🌀 Gravity anomaly! Shift %s for %.1fs!" % [dir_name, GameConstants.GRAVITY_ANOMALY_SHIFT_DURATION])
 			# ── Enhancement Pack 58: Dedicated gravity shift SFX ── previously
@@ -841,7 +834,6 @@ func _tick_dimensional_storm(delta: float) -> void:
 		# Only shift if we're currently in normal space (don't interrupt an
 		# active dimension — let it resolve naturally).
 		if DimensionSystem and DimensionSystem.get_current_dimension() == GameConstants.Dimension.NORMAL:
-			dimensional_shift_triggered.emit()
 			# Pick a random dimension and enter it directly
 			var dimensions: Array[int] = [
 				GameConstants.Dimension.VOID,
@@ -1013,14 +1005,16 @@ func _apply_eclipse_darkness() -> void:
 		# Tween the ambient light energy down to the eclipse value
 		var tw: Tween = create_tween()
 		tw.tween_property(_world_env.environment, "ambient_light_energy",
-			GameConstants.ECLIPSE_AMBIENT_DARKEN, 2.0).set_trans(Tween.TRANS_QUAD)
+			GameConstants.ECLIPSE_AMBIENT_DARKEN, 2.0) \
+			.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_QUAD)
 
 ## Phase 28: Restore the WorldEnvironment after Eclipse ends.
 func _restore_eclipse_darkness() -> void:
 	if _world_env and _world_env.environment:
 		var tw: Tween = create_tween()
 		tw.tween_property(_world_env.environment, "ambient_light_energy",
-			_eclipse_base_ambient_energy, 2.0).set_trans(Tween.TRANS_QUAD)
+			_eclipse_base_ambient_energy, 2.0) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 # ─── Weather effects start / end ──────────────────────────────────────────────
 

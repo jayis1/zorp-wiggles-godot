@@ -115,6 +115,8 @@ func bank_current_pet() -> bool:
 	donor_banked.emit(_donors.size() - 1, path)
 	# Dismiss the pet
 	ParticleEffects.spawn_death_poof(pet.get_parent(), pet.global_position, Color(0.8, 0.6, 1.0), 1.0)
+	if GameManager.player_died.is_connected(pet._on_player_died):
+		GameManager.player_died.disconnect(pet._on_player_died)
 	pet.queue_free()
 	GameManager.add_message("🔮 Banked %s-path donor (%d/2). Summon a different path next." % [
 		GameConstants.PET_PATH_NAMES[path], _donors.size()
@@ -165,6 +167,8 @@ func try_fuse() -> CharacterBody3D:
 	var old_pet: Node3D = get_tree().get_first_node_in_group("companion_pet")
 	if old_pet and is_instance_valid(old_pet):
 		ParticleEffects.spawn_death_poof(old_pet.get_parent(), old_pet.global_position, Color(0.8, 0.6, 1.0), 1.0)
+		if GameManager.player_died.is_connected(old_pet._on_player_died):
+			GameManager.player_died.disconnect(old_pet._on_player_died)
 		old_pet.queue_free()
 	# Spawn the fusion pet
 	var player: Node3D = get_tree().get_first_node_in_group("player")

@@ -170,6 +170,8 @@ func cycle_to_next_slot(current_pet: CharacterBody3D, pet_scene: PackedScene) ->
 		# Clean up the current pet without triggering death effects
 		if current_pet.has_method("_cleanup_path_effects"):
 			current_pet._cleanup_path_effects()
+		if GameManager.player_died.is_connected(current_pet._on_player_died):
+			GameManager.player_died.disconnect(current_pet._on_player_died)
 		ParticleEffects.spawn_death_poof(current_pet.get_parent(), current_pet.global_position, Color(0.5, 0.7, 1.0), 0.6)
 		current_pet.queue_free()
 	# Find next unlocked slot

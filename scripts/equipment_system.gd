@@ -31,8 +31,6 @@ signal piece_equipped(slot: int, piece_id: int) # Piece equipped to a slot
 signal piece_unequipped(slot: int)              # Piece removed from a slot
 signal piece_upgraded(piece_id: int, new_level: int)  # Piece upgraded
 signal consumable_used(consumable_id: int)      # Consumable consumed
-signal consumable_effect_started(consumable_id: int, duration: float)  # Temporary effect active
-signal consumable_effect_ended(consumable_id: int)    # Temporary effect expired
 signal material_refined(rare_material_id: int)  # Rare material created via refinement
 signal equipment_menu_toggled(is_open: bool)    # Menu open/close
 
@@ -154,15 +152,12 @@ func use_consumable(type: int) -> bool:
 				GameManager.add_message("🧪 Healed %d HP!" % int(value))
 		GameConstants.Consumable.SPEED_POTION:
 			_active_effects[type] = duration
-			consumable_effect_started.emit(type, duration)
 			GameManager.add_message("💨 Speed boost for %.0fs!" % duration)
 		GameConstants.Consumable.SHIELD_POTION:
 			_active_effects[type] = duration
-			consumable_effect_started.emit(type, duration)
 			GameManager.add_message("🛡 Shield boost for %.0fs!" % duration)
 		GameConstants.Consumable.POWER_POTION:
 			_active_effects[type] = duration
-			consumable_effect_started.emit(type, duration)
 			GameManager.add_message("💪 Power boost for %.0fs!" % duration)
 		GameConstants.Consumable.VOID_BOMB:
 			# Instant AoE explosion at player position
@@ -812,7 +807,6 @@ func _process(delta: float) -> void:
 				expired.append(consumable_id)
 		for consumable_id in expired:
 			_active_effects.erase(consumable_id)
-			consumable_effect_ended.emit(consumable_id)
 			GameManager.add_message("%s effect ended" % GameConstants.CONSUMABLE_NAMES[consumable_id])
 			# Audio feedback — reuses SFX_BUFF_EXPIRE (descending chime) to
 			# convey loss, matching the monolith buff expiration sound.

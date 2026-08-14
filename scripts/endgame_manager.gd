@@ -17,13 +17,6 @@ extends Node
 
 # ─── Signals ────────────────────────────────────────────────────────────────────
 signal ng_tier_changed(tier: int)
-signal survival_score_tick(score: int)
-signal gauntlet_biome_changed(index: int, biome_id: int)
-signal gauntlet_completed(total_time: float)
-signal boss_gauntlet_progress(index: int, total: int)
-signal boss_gauntlet_completed(total_time: float)
-signal loot_cave_discovered(cave_id: int)
-signal ancient_vault_unlocked()
 
 # ─── State ─────────────────────────────────────────────────────────────────────
 var _ng_tier: int = GameConstants.NGTier.NORMAL
@@ -83,7 +76,6 @@ func set_ng_tier(tier: int) -> void:
 		push_warning("[Endgame] NG tier %d not unlocked." % tier)
 		return
 	_ng_tier = tier
-	ng_tier_changed.emit(tier)
 	print_verbose("[Endgame] NG tier set to: %s" % GameConstants.NG_TIER_NAMES[tier])
 	# ── Enhancement: NG tier change juice ── SFX + camera trauma + HUD
 	# message so the player gets sensory feedback when cycling difficulty
@@ -196,7 +188,6 @@ func _update_survival(delta: float) -> void:
 		var to_add: int = int(_survival_score_accumulator)
 		_survival_score_accumulator -= float(to_add)
 		GameManager.player_score += to_add
-	survival_score_tick.emit(GameManager.player_score)
 	# Periodic boss spawn.
 	_survival_next_boss_time -= delta
 	if _survival_next_boss_time <= 0:
@@ -287,7 +278,6 @@ func _advance_gauntlet_biome() -> void:
 	var biome_id: int = biome_pool[_rng.randi() % biome_pool.size()]
 	_gauntlet_biome_timer = GameConstants.GAUNTLET_TIME_PER_BIOME
 	_gauntlet_kills_this_biome = 0
-	gauntlet_biome_changed.emit(_gauntlet_index, biome_id)
 	GameManager.add_message("⚔ Gauntlet %d/%d: %s — Kill %d enemies in %ds!" % [
 		_gauntlet_index + 1, GameConstants.GAUNTLET_BIOME_COUNT,
 		GameConstants.BIOME_NAMES.get(biome_id, "Unknown"),
@@ -326,7 +316,6 @@ func _update_gauntlet(delta: float) -> void:
 func _finish_gauntlet() -> void:
 	_gauntlet_completed = true
 	_gauntlet_active = false
-	gauntlet_completed.emit(_gauntlet_total_time)
 	# ── Enhancement: Gauntlet completion juice ── celebratory chime + camera
 	# shake, matching the Boss Rush completion feedback.
 	AudioManager.play_sfx(AudioManager.SFX_LEVEL_UP)
@@ -426,7 +415,6 @@ func _spawn_boss_gauntlet_next() -> void:
 			# in their own _ready(), so emitting here too would double-fire
 			# the signal to all 13 listeners (HUD, camera, arena, etc.).
 			GameManager.boss_spawned.emit(boss)
-	boss_gauntlet_progress.emit(_boss_gauntlet_index, GameConstants.BOSS_GAUNTLET_QUEUE.size())
 	GameManager.add_message("☠ Boss Gauntlet %d/%d" % [_boss_gauntlet_index + 1, GameConstants.BOSS_GAUNTLET_QUEUE.size()])
 	# ── Enhancement: Boss Gauntlet boss spawn juice ── each escalating boss
 	# gets the boss-spawn rumble + camera shake, matching the Boss Rush
@@ -439,7 +427,6 @@ func _spawn_boss_gauntlet_next() -> void:
 func _finish_boss_gauntlet() -> void:
 	_boss_gauntlet_completed = true
 	_boss_gauntlet_active = false
-	boss_gauntlet_completed.emit(_boss_gauntlet_total_time)
 	GameManager.add_message("🏆 BOSS GAUNTLET COMPLETE! Total time: %.1fs" % _boss_gauntlet_total_time)
 	# ── Enhancement: Boss Gauntlet completion juice ── the hardest mode in
 	# the game gets the strongest celebratory feedback: boss-defeated fanfare
@@ -555,7 +542,6 @@ func enter_loot_cave(cave_id: int) -> void:
 		return
 	if not cave["discovered"]:
 		cave["discovered"] = true
-		loot_cave_discovered.emit(cave_id)
 		GameManager.add_message("💎 Discovered a Loot Cave!")
 		AudioManager.play_sfx(AudioManager.SFX_CHEST_OPEN)
 		# Camera shake for the discovery moment.
@@ -799,7 +785,6 @@ func try_open_vault(root: Node) -> void:
 	# Unlock the vault.
 	_ancient_vault["unlocked"] = true
 	_ancient_vault_unlocked = true
-	ancient_vault_unlocked.emit()
 	# Solve the puzzle (procedural: walk to N glowing runes in order).
 	_spawn_vault_puzzle(root)
 	GameManager.add_message("✦ Ancient Vault unlocked! Solve the rune puzzle to claim the legendary loot.")

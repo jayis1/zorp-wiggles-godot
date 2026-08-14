@@ -1365,6 +1365,8 @@ func _die() -> void:
 		PetFusionSystem.on_fusion_pet_died()
 		GameManager.add_message("💀 The fusion pet is gone for this run!")
 		# Fusion pets don't respawn — actually die
+		if GameManager.player_died.is_connected(_on_player_died):
+			GameManager.player_died.disconnect(_on_player_died)
 		queue_free()
 		return
 	# Respawn timer — re-summon at follow position after delay
@@ -1434,6 +1436,8 @@ func _on_player_died() -> void:
 	# ── Phase 27: Clean up path ability effects before freeing ──
 	_cleanup_path_effects()
 	ParticleEffects.spawn_death_poof(get_parent(), global_position, _stage_color(), 1.0)
+	if GameManager.player_died.is_connected(_on_player_died):
+		GameManager.player_died.disconnect(_on_player_died)
 	queue_free()
 
 
