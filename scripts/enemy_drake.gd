@@ -15,6 +15,10 @@ var is_charging: bool = false
 var charge_dir: Vector3 = Vector3.ZERO
 var charge_duration: float = 0.0
 
+# Preloaded projectile scene — shared across all fire-breath volleys so the
+# resource loader isn't hit on every attack (the Drake fires 5 bolts per cone).
+const ENEMY_PROJECTILE_SCENE := preload("res://scenes/entities/enemy_projectile.tscn")
+
 func _ready() -> void:
 	enemy_name = "Plasma Drake"
 	enemy_type = GameConstants.EnemyType.DRAKE
@@ -162,17 +166,10 @@ func _fire_breath(player: Node3D) -> void:
 	var base_dir: Vector3 = (player.global_position - global_position).normalized()
 	base_dir.y = 0
 
-	var proj_scene: PackedScene = load("res://scenes/entities/enemy_projectile.tscn")
-	if not proj_scene:
-		# Scene failed to load — skip the attack rather than unfairly damaging
-		# the player as a "fallback." The scene always exists in the project,
-		# so this path should never execute, but if it does, silently skip.
-		return
-
 	for i in range(5):
 		var angle_offset: float = (i - 2) * 10.0  # -20, -10, 0, 10, 20 degrees
 		var angled_dir := base_dir.rotated(Vector3.UP, deg_to_rad(angle_offset))
-		var proj: Area3D = proj_scene.instantiate()
+		var proj: Area3D = ENEMY_PROJECTILE_SCENE.instantiate()
 		# Set properties BEFORE adding to tree so _ready() picks them up
 		proj.set("direction", angled_dir)
 		proj.set("speed", GameConstants.SPORE_SPIT_SPEED * 1.2)

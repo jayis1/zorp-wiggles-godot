@@ -9,6 +9,9 @@ class_name EnemySentinel
 # ─── Sentinel State ───────────────────────────────────────────────────────────
 var shockwave_timer: float = 4.0
 
+# Preloaded shockwave scene — shared across all shockwave attacks.
+const SHOCKWAVE_SCENE := preload("res://scenes/entities/shockwave.tscn")
+
 func _ready() -> void:
 	enemy_name = "Starburst Sentinel"
 	enemy_type = GameConstants.EnemyType.SENTINEL
@@ -84,18 +87,11 @@ func _fire_shockwave() -> void:
 	# shockwave attack was completely silent, despite having visual particles
 	# + a light flash. The SFX_RIFT whoosh conveys a seismic energy ripple.
 	AudioManager.play_sfx(AudioManager.SFX_RIFT)
-	# Create expanding shockwave ring
-	var shockwave_scene: PackedScene = load("res://scenes/entities/shockwave.tscn")
-	if shockwave_scene:
-		var shockwave: Area3D = shockwave_scene.instantiate()
-		get_parent().add_child(shockwave)
-		shockwave.global_position = global_position
-		shockwave.set("damage", GameConstants.STARBURST_SHOCKWAVE_DAMAGE)
-		shockwave.set("max_radius", GameConstants.STARBURST_SHOCKWAVE_MAX_RADIUS)
-		shockwave.set("expand_speed", GameConstants.STARBURST_SHOCKWAVE_EXPAND_SPEED)
-	else:
-		# Fallback: directly damage player if in range
-		if _cached_player and is_instance_valid(_cached_player):
-			var dist: float = global_position.distance_to(_cached_player.global_position)
-			if dist < GameConstants.STARBURST_SHOCKWAVE_MAX_RADIUS:
-				GameManager.take_damage(GameConstants.STARBURST_SHOCKWAVE_DAMAGE, global_position)
+	# Create expanding shockwave ring — preloaded const so repeated attacks
+	# don't hit the resource loader.
+	var shockwave: Area3D = SHOCKWAVE_SCENE.instantiate()
+	get_parent().add_child(shockwave)
+	shockwave.global_position = global_position
+	shockwave.set("damage", GameConstants.STARBURST_SHOCKWAVE_DAMAGE)
+	shockwave.set("max_radius", GameConstants.STARBURST_SHOCKWAVE_MAX_RADIUS)
+	shockwave.set("expand_speed", GameConstants.STARBURST_SHOCKWAVE_EXPAND_SPEED)

@@ -25,6 +25,10 @@ var _mesh: MeshInstance3D = null
 var _mat: StandardMaterial3D = null
 var _alert_indicator: Label3D = null
 
+# Preloaded enemy projectile scene — shared across all dark-bolt attacks so
+# the resource loader isn't hit on every shot.
+const ENEMY_PROJECTILE_SCENE := preload("res://scenes/entities/enemy_projectile.tscn")
+
 func _ready() -> void:
 	add_to_group("enemies")
 	add_to_group("void_clone")
@@ -128,12 +132,7 @@ func _shoot_dark_projectile(player: Node3D) -> void:
 	var dir: Vector3 = (player.global_position - global_position).normalized()
 	dir.y = 0
 
-	# Use the enemy projectile scene
-	var proj_scene: PackedScene = load("res://scenes/entities/enemy_projectile.tscn")
-	if not proj_scene:
-		return
-
-	var proj: Area3D = proj_scene.instantiate()
+	var proj: Area3D = ENEMY_PROJECTILE_SCENE.instantiate()
 	# Set properties BEFORE adding to tree so _ready() picks them up
 	proj.set("direction", dir)
 	proj.set("damage", damage)

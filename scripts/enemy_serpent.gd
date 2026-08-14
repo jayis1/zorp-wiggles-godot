@@ -16,6 +16,9 @@ var segment_colors: Array[Color] = [
 	Color(0.0, 180.0 / 255.0, 140.0 / 255.0),
 ]
 
+# Preloaded mini-blob scene — shared across all scatter-on-death spawns.
+const MINI_BLOB_SCENE := preload("res://scenes/entities/enemy_blob.tscn")
+
 func _ready() -> void:
 	enemy_name = "Plasma Serpent"
 	enemy_type = GameConstants.EnemyType.SERPENT
@@ -91,24 +94,23 @@ func _die() -> void:
 	for i in range(segment_nodes.size()):
 		var seg := segment_nodes[i]
 		if is_instance_valid(seg):
-			# Create a mini blob at the segment position
-			var mini_blob_scene: PackedScene = load("res://scenes/entities/enemy_blob.tscn")
-			if mini_blob_scene:
-				var mini_blob: CharacterBody3D = mini_blob_scene.instantiate()
-				# Configure BEFORE adding to scene tree so _ready() picks up overrides
-				mini_blob.set("max_hp", GameConstants.PLASMA_SERPENT_SCATTER_HP)
-				mini_blob.set("hp", GameConstants.PLASMA_SERPENT_SCATTER_HP)
-				mini_blob.set("damage", GameConstants.PLASMA_SERPENT_SCATTER_DAMAGE)
-				mini_blob.set("speed", GameConstants.PLASMA_SERPENT_SCATTER_SPEED)
-				mini_blob.set("base_scale", 0.3)
-				mini_blob.set("enemy_name", "Serpent Segment")
-				mini_blob.set("xp_reward", 5)
-				mini_blob.set("score_reward", 25)
-				get_parent().add_child(mini_blob)
-				mini_blob.global_position = seg.global_position
-				# Track mini-blob so it is cleaned up on restart and counted by the spawner
-				GameManager.enemies.append(mini_blob)
-				seg.queue_free()
+			# Create a mini blob at the segment position — preloaded const
+			# so the resource loader isn't hit per-segment on death.
+			var mini_blob: CharacterBody3D = MINI_BLOB_SCENE.instantiate()
+			# Configure BEFORE adding to scene tree so _ready() picks up overrides
+			mini_blob.set("max_hp", GameConstants.PLASMA_SERPENT_SCATTER_HP)
+			mini_blob.set("hp", GameConstants.PLASMA_SERPENT_SCATTER_HP)
+			mini_blob.set("damage", GameConstants.PLASMA_SERPENT_SCATTER_DAMAGE)
+			mini_blob.set("speed", GameConstants.PLASMA_SERPENT_SCATTER_SPEED)
+			mini_blob.set("base_scale", 0.3)
+			mini_blob.set("enemy_name", "Serpent Segment")
+			mini_blob.set("xp_reward", 5)
+			mini_blob.set("score_reward", 25)
+			get_parent().add_child(mini_blob)
+			mini_blob.global_position = seg.global_position
+			# Track mini-blob so it is cleaned up on restart and counted by the spawner
+			GameManager.enemies.append(mini_blob)
+			seg.queue_free()
 
 	segment_nodes.clear()
 	super._die()

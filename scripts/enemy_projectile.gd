@@ -42,6 +42,17 @@ var _is_fizzling: bool = false
 #    the spawn scale animation. When > 0, the tween owns mesh.scale.
 var _spawn_flash_timer: float = 0.0
 
+# ── Rifled spin accumulator ── Each bolt accumulates its own Z-rotation
+# per frame so the helical spin starts from 0 at spawn and progresses
+# consistently. Previously, mesh.rotation.z was set to
+# Time.get_ticks_msec() * 0.015, which meant a bolt spawned at t=5000ms
+# would start at rotation 75 radians — an arbitrary phase that made
+# every bolt's spin start at a different angle. With a per-instance
+# accumulator, each bolt's spin begins at 0 and rolls forward at a
+# frame-rate-independent rate, giving a consistent visual identity.
+var _spin_accum: float = 0.0
+const SPIN_RATE: float = 0.9  # Radians per second (visual-only)
+
 # ── Trail particles ── A short-lived GPUParticles3D that emits colored sparks
 #    behind the bolt as it flies. The trail uses world-space coordinates
 #    (local_coords = false) so particles stay where they're emitted instead of
@@ -258,11 +269,12 @@ func _physics_process(delta: float) -> void:
 			mesh.scale = Vector3(0.7, 0.7, 2.2)
 		# ── Rifled spin ── Add a constant roll around the travel axis so the
 		# bolt reads as spinning energy rather than a static stretched sphere.
-		# Matches the player projectile's rifled spin for visual consistency.
-		# Uses wall-clock time so the spin rate is consistent regardless of
-		# time-scale (hit-stop, Time-Slow). Visual-only — the collider is on
-		# the parent Area3D, not the mesh, so this doesn't affect hit detection.
-		mesh.rotation.z = Time.get_ticks_msec() * 0.015
+		# A per-instance accumulator (_spin_accum) advances at SPIN_RATE rad/s
+		# using unscaled delta (wall-clock), so the spin rate is consistent
+		# regardless of time-scale (hit-stop, Time-Slow) and every bolt starts
+		# its spin from 0 rather than an arbitrary global phase.
+		_spin_accum += raw_delta * SPIN_RATE
+		mesh.rotation.z = _spin_accum
 
 	# Energy flicker — the point light pulses so the bolt feels like crackling
 	# energy. Uses wall-clock time so flicker is consistent regardless of

@@ -10,6 +10,17 @@ var damage: int = GameConstants.PROJECTILE_BASE_DAMAGE
 var lifetime: float = GameConstants.PROJECTILE_LIFETIME
 var speed: float = GameConstants.PROJECTILE_SPEED
 
+# ── Rifled spin accumulator ── Each bolt accumulates its own Z-rotation
+# per frame so the helical spin starts from 0 at spawn and progresses
+# consistently. Previously, mesh_instance.rotation.z was set to
+# Time.get_ticks_msec() * 0.018, which meant a bolt spawned at t=5000ms
+# would start at rotation 90 radians — an arbitrary phase that made
+# every bolt's spin start at a different angle. With a per-instance
+# accumulator, each bolt's spin begins at 0 and rolls forward at a
+# frame-rate-independent rate, giving a consistent visual identity.
+var _spin_accum: float = 0.0
+const SPIN_RATE: float = 1.08  # Radians per second (visual-only)
+
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 
@@ -200,12 +211,14 @@ func _physics_process(delta: float) -> void:
 		mesh_instance.scale = Vector3(pulse_scale, pulse_scale, 2.4)
 		# ── Rifled spin ── Add a constant roll around the travel axis so the
 		# bolt reads as spinning energy rather than a static stretched sphere.
-		# The roll accumulates on the mesh's local Z (forward after look_at),
-		# giving every shot a subtle helical motion. Uses wall-clock time so
-		# the spin rate is consistent regardless of time-scale (hit-stop, etc.).
+		# A per-instance accumulator (_spin_accum) advances at SPIN_RATE rad/s
+		# using unscaled delta (wall-clock), so the spin rate is consistent
+		# regardless of time-scale (hit-stop, etc.) and every bolt starts
+		# its spin from 0 rather than an arbitrary global phase.
 		# The spin is visual-only — the collider is on the parent Area3D, not
 		# the mesh, so this doesn't affect hit detection.
-		mesh_instance.rotation.z = Time.get_ticks_msec() * 0.018
+		_spin_accum += delta * SPIN_RATE
+		mesh_instance.rotation.z = _spin_accum
 
 	# Energy flicker — the point light pulses subtly so the bolt feels like
 	# crackling energy rather than a static glow. Uses wall-clock time so the

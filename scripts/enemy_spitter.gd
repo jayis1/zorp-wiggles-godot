@@ -9,6 +9,20 @@ class_name EnemySpitter
 # ─── Spitter State ────────────────────────────────────────────────────────────
 var spit_timer: float = 3.0
 var spit_charge_active: bool = false
+var _recoil_tween: Tween = null
+
+## Smoothly ease the body scale back to base_scale after a charge-up discharge.
+## Uses elastic easing for a wobbly "deflate" that reads as an energy recoil
+## rather than a hard snap. Kills any in-progress recoil tween so repeated
+## fires restart cleanly. Skipped if the base class hit-squash tween owns
+## body_mesh.scale (checked via the base class's _dmg_squash_tween reference).
+func _start_recoil_tween() -> void:
+	if _recoil_tween and _recoil_tween.is_valid():
+		_recoil_tween.kill()
+	_recoil_tween = create_tween()
+	_recoil_tween.tween_property(self, "scale",
+		Vector3.ONE * base_scale, 0.25) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 func _ready() -> void:
 	enemy_name = "Spore Spitter"
@@ -118,8 +132,16 @@ func _update_spit(delta: float, player: Node3D, dist_to_player: float) -> void:
 		_fire_spit(player)
 		spit_timer = randf_range(2.5, 4.5)
 		spit_charge_active = false
-		# Restore scale and color
-		scale = Vector3.ONE * base_scale
+		# ── Smooth recoil recovery ── The charge-up swells the Spitter up to
+		#    1.0 + CHARGE_SCALE. Previously, firing snapped scale back to
+		#    base_scale instantly — a hard pop that read as a glitch, not a
+		#    recoil. Now a quick elastic tween eases the scale back over
+		#    0.25s so the Spitter "deflates" from the spit, selling the
+		#    energy discharge. The material color/emission still snap back
+		#    (the glow is gone the instant the bolt leaves), but the body
+		#    itself recoils smoothly. Skipped if a scale-affecting tween is
+		#    already running (e.g. hit squash in the base class).
+		_start_recoil_tween()
 		if _material:
 			_material.albedo_color = base_color
 			_material.emission_energy_multiplier = 1.0
@@ -127,28 +149,26 @@ func _update_spit(delta: float, player: Node3D, dist_to_player: float) -> void:
 		# Player out of range — reset without firing
 		spit_timer = randf_range(2.5, 4.5)
 		spit_charge_active = false
-		scale = Vector3.ONE * base_scale
+		_start_recoil_tween()
 		if _material:
 			_material.albedo_color = base_color
 			_material.emission_energy_multiplier = 1.0
+
+const ENEMY_PROJECTILE_SCENE := preload("res://scenes/entities/enemy_projectile.tscn")
 
 func _fire_spit(player: Node3D) -> void:
 	# Enhancement Pack 26: SFX on spit fire — the Spore Spitter's projectile
 	# attack had no audio, making it hard to notice the projectile in busy
 	# combat. The acid hiss conveys the spore/spit nature of the attack.
 	AudioManager.play_sfx(AudioManager.SFX_SHOOT_POISON)
-	# Create enemy projectile
-	var proj_scene: PackedScene = load("res://scenes/entities/enemy_projectile.tscn")
-	if proj_scene:
-		var proj: Area3D = proj_scene.instantiate()
-		var dir: Vector3 = (player.global_position - global_position).normalized()
-		# Set properties BEFORE adding to tree so _ready() picks them up
-		proj.set("direction", dir)
-		proj.set("speed", GameConstants.SPORE_SPIT_SPEED)
-		proj.set("damage", GameConstants.SPORE_SPIT_DAMAGE)
-		proj.set("lifetime", GameConstants.SPORE_SPIT_LIFETIME)
-		get_parent().add_child(proj)
-		proj.global_position = global_position + Vector3(0, 0.5, 0)
-	else:
-		# Fallback: instant damage
-		GameManager.take_damage(GameConstants.SPORE_SPIT_DAMAGE, global_position)
+	# Create enemy projectile — preloaded at parse time (const) so repeated
+	# shots don't hit the resource loader every attack.
+	var proj: Area3D = ENEMY_PROJECTILE_SCENE.instantiate()
+	var dir: Vector3 = (player.global_position - global_position).normalized()
+	# Set properties BEFORE adding to tree so _ready() picks them up
+	proj.set("direction", dir)
+	proj.set("speed", GameConstants.SPORE_SPIT_SPEED)
+	proj.set("damage", GameConstants.SPORE_SPIT_DAMAGE)
+	proj.set("lifetime", GameConstants.SPORE_SPIT_LIFETIME)
+	get_parent().add_child(proj)
+	proj.global_position = global_position + Vector3(0, 0.5, 0)
