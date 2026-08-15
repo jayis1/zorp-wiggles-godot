@@ -19,6 +19,14 @@ var segment_colors: Array[Color] = [
 # Preloaded mini-blob scene — shared across all scatter-on-death spawns.
 const MINI_BLOB_SCENE := preload("res://scenes/entities/enemy_blob.tscn")
 
+# Shared segment materials — only 3 unique colors, so cache them statically
+# to eliminate per-segment StandardMaterial3D allocation on every serpent spawn.
+static var _shared_seg_mats: Array[StandardMaterial3D] = []
+
+# Segment visual smoothing rate — higher = snappier follow, lower = more lag.
+# 12.0 produces a smooth, flowing trailing motion during turns.
+const SERPENT_SEG_SMOOTH: float = 12.0
+
 func _ready() -> void:
 	enemy_name = "Plasma Serpent"
 	enemy_type = GameConstants.EnemyType.SERPENT
@@ -36,7 +44,8 @@ func _ready() -> void:
 	for i in range(GameConstants.PLASMA_SERPENT_SEGMENTS + 1):
 		segment_positions.append(global_position)
 
-	# Create visual segment meshes
+	# Create visual segment meshes — use shared materials to avoid
+	# per-segment StandardMaterial3D allocation. Only 3 unique colors.
 	for i in range(GameConstants.PLASMA_SERPENT_SEGMENTS):
 		var seg_scale: float = max(0.3, base_scale * 0.8 - i * 0.12)
 		var seg_mesh := MeshInstance3D.new()
@@ -44,12 +53,7 @@ func _ready() -> void:
 		sphere.radius = seg_scale * 0.5
 		sphere.height = seg_scale
 		seg_mesh.mesh = sphere
-
-		var seg_mat := StandardMaterial3D.new()
-		seg_mat.albedo_color = segment_colors[i % segment_colors.size()]
-		seg_mat.emission_enabled = true
-		seg_mat.emission = seg_mat.albedo_color * 0.15
-		seg_mesh.material_override = seg_mat
+		seg_mesh.material_override = _get_shared_seg_material(i)
 
 		add_child(seg_mesh)
 		seg_mesh.global_position = global_position
@@ -77,9 +81,15 @@ func _update_segments(delta: float) -> void:
 			var move_amount: float = dist - GameConstants.PLASMA_SERPENT_SEGMENT_SPACING
 			segment_positions[i + 1] = current_pos + diff.normalized() * move_amount
 
-		# Update visual position
+		# Update visual position — lerp toward the target position for
+		# smoother trailing. Without lerp, segments snap to the exact
+		# calculated position each frame, producing a rigid "rig on rails"
+		# look during sharp turns. The lerp adds a frame-rate-independent
+		# smoothing that makes the body flow like a real serpent.
 		if i < segment_nodes.size():
-			segment_nodes[i].global_position = segment_positions[i + 1]
+			var visual_target: Vector3 = segment_positions[i + 1]
+			var lerp_weight: float = 1.0 - exp(-SERPENT_SEG_SMOOTH * delta)
+			segment_nodes[i].global_position = segment_nodes[i].global_position.lerp(visual_target, lerp_weight)
 
 func _die() -> void:
 	# Plasma scatter burst — the serpent is the only standard enemy with no
@@ -114,3 +124,16 @@ func _die() -> void:
 
 	segment_nodes.clear()
 	super._die()
+
+# ─── Shared segment material helper ──────────────────────────────────────────
+# Returns the shared StandardMaterial3D for segment index i, creating the
+# 3 cached materials on first call. All serpents share the same 3 materials.
+static func _get_shared_seg_material(i: int) -> StandardMaterial3D:
+	if _shared_seg_mats.is_empty():
+		for c in segment_colors:
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = c
+			mat.emission_enabled = true
+			mat.emission = c * 0.15
+			_shared_seg_mats.append(mat)
+	return _shared_seg_mats[i % _shared_seg_mats.size()]

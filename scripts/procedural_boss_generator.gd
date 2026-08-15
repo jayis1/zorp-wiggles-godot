@@ -105,10 +105,8 @@ func _build_boss_node(boss_name: String, hp: int, damage: int, speed: float, pat
 	# We extend EnemyBase by reusing the base scene — instantiate an enemy_blob
 	# and reconfigure it as a procedural boss. This gives us pathfinding,
 	# damage handling, death logic, etc. for free.
-	var scene: PackedScene = load("res://scenes/entities/enemy_blob.tscn")
-	if not scene:
-		return null
-	var boss: CharacterBody3D = scene.instantiate()
+	const BLOB_SCENE := preload("res://scenes/entities/enemy_blob.tscn")
+	var boss: CharacterBody3D = BLOB_SCENE.instantiate()
 	# Configure stats.
 	if boss is EnemyBase:
 		boss.enemy_name = boss_name

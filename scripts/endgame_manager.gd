@@ -15,6 +15,21 @@
 
 extends Node
 
+# ─── Preloaded scenes ─────────────────────────────────────────────────────────
+const COLLECTIBLE_SCENE := preload("res://scenes/entities/collectible.tscn")
+const DRAKE_SCENE := preload("res://scenes/entities/enemy_drake.tscn")
+const BOSS_SCENES: Dictionary = {
+	GameConstants.EnemyType.DRAKE: preload("res://scenes/entities/enemy_drake.tscn"),
+	GameConstants.EnemyType.SERPENT: preload("res://scenes/entities/enemy_serpent.tscn"),
+	GameConstants.EnemyType.GRAVITON: preload("res://scenes/entities/enemy_graviton.tscn"),
+	GameConstants.EnemyType.VOID_LEVIATHAN: preload("res://scenes/entities/enemy_void_leviathan.tscn"),
+	GameConstants.EnemyType.ANCIENT_SENTINEL: preload("res://scenes/entities/enemy_ancient_sentinel.tscn"),
+	GameConstants.EnemyType.GRAVITY_ELEMENTAL: preload("res://scenes/entities/enemy_gravity_elemental.tscn"),
+	GameConstants.EnemyType.ECHO_KNIGHT: preload("res://scenes/entities/enemy_echo_knight.tscn"),
+	GameConstants.EnemyType.TIME_WARDEN: preload("res://scenes/entities/enemy_time_warden.tscn"),
+	GameConstants.EnemyType.BLOB: preload("res://scenes/entities/enemy_blob.tscn"),
+}
+
 # ─── Signals ────────────────────────────────────────────────────────────────────
 signal ng_tier_changed(tier: int)
 
@@ -204,8 +219,7 @@ func _spawn_survival_boss() -> void:
 		GameConstants.EnemyType.ANCIENT_SENTINEL,
 	]
 	var bt: int = boss_types[_rng.randi() % boss_types.size()]
-	var scene_path := _boss_scene_path(bt)
-	var scene: PackedScene = load(scene_path)
+	var scene: PackedScene = BOSS_SCENES.get(bt)
 	if not scene:
 		return
 	var player: Node3D = get_tree().get_first_node_in_group("player")
@@ -375,8 +389,7 @@ func _spawn_boss_gauntlet_next() -> void:
 		return
 	var idx: int = _boss_gauntlet_index
 	var bt: int = GameConstants.BOSS_GAUNTLET_QUEUE[idx]
-	var scene_path := _boss_scene_path(bt)
-	var scene: PackedScene = load(scene_path)
+	var scene: PackedScene = BOSS_SCENES.get(bt)
 	if not scene:
 		# Skip missing boss scenes.
 		_boss_gauntlet_index += 1
@@ -626,10 +639,7 @@ func _spawn_loot_cave_elites(root: Node3D, _cave: Dictionary) -> void:
 	]
 	for i in GameConstants.LOOT_CAVE_ELITE_COUNT:
 		var bt: int = elite_pool[_rng.randi() % elite_pool.size()]
-		var scene_path := _boss_scene_path(bt)
-		if scene_path.is_empty():
-			scene_path = "res://scenes/entities/enemy_blob.tscn"
-		var scene: PackedScene = load(scene_path)
+		var scene: PackedScene = BOSS_SCENES.get(bt, BOSS_SCENES[GameConstants.EnemyType.BLOB])
 		if not scene:
 			continue
 		var elite := scene.instantiate()
@@ -653,9 +663,7 @@ func _spawn_loot_cave_elites(root: Node3D, _cave: Dictionary) -> void:
 
 func _spawn_loot_cave_rewards(root: Node3D, cave: Dictionary) -> void:
 	# Spawn rare collectibles in a circle at the center of the cave.
-	var collectible_scene: PackedScene = load("res://scenes/entities/collectible.tscn")
-	if not collectible_scene:
-		return
+	var collectible_scene: PackedScene = COLLECTIBLE_SCENE
 	var rare_types: Array[int] = [
 		GameConstants.CollectibleType.METEOR_SHARD,
 		GameConstants.CollectibleType.QUANTUM_FUZZ,
@@ -891,7 +899,7 @@ func _complete_vault_puzzle() -> void:
 		cam_rig.add_trauma(0.5)
 
 func _spawn_vault_guardian() -> void:
-	var scene: PackedScene = load("res://scenes/entities/enemy_drake.tscn")
+	var scene: PackedScene = DRAKE_SCENE
 	if not scene:
 		return
 	var guardian := scene.instantiate()
@@ -928,7 +936,7 @@ func _on_vault_guardian_died(_enemy: Node) -> void:
 		return
 	_vault_guardian_died_handled = true
 	# Spawn legendary loot at the vault entrance.
-	var collectible_scene: PackedScene = load("res://scenes/entities/collectible.tscn")
+	var collectible_scene: PackedScene = COLLECTIBLE_SCENE
 	if not collectible_scene:
 		return
 	var legendary_types: Array[int] = [
@@ -1118,26 +1126,3 @@ func _save_unlocks() -> void:
 	file.close()
 
 # ─── Helpers ────────────────────────────────────────────────────────────────────
-
-func _boss_scene_path(boss_type: int) -> String:
-	match boss_type:
-		GameConstants.EnemyType.DRAKE:
-			return "res://scenes/entities/enemy_drake.tscn"
-		GameConstants.EnemyType.SERPENT:
-			return "res://scenes/entities/enemy_serpent.tscn"
-		GameConstants.EnemyType.GRAVITON:
-			return "res://scenes/entities/enemy_graviton.tscn"
-		GameConstants.EnemyType.VOID_LEVIATHAN:
-			return "res://scenes/entities/enemy_void_leviathan.tscn"
-		GameConstants.EnemyType.ANCIENT_SENTINEL:
-			return "res://scenes/entities/enemy_ancient_sentinel.tscn"
-		GameConstants.EnemyType.GRAVITY_ELEMENTAL:
-			return "res://scenes/entities/enemy_gravity_elemental.tscn"
-		GameConstants.EnemyType.ECHO_KNIGHT:
-			return "res://scenes/entities/enemy_echo_knight.tscn"
-		GameConstants.EnemyType.TIME_WARDEN:
-			return "res://scenes/entities/enemy_time_warden.tscn"
-		GameConstants.EnemyType.BLOB:
-			return "res://scenes/entities/enemy_blob.tscn"
-		_:
-			return ""

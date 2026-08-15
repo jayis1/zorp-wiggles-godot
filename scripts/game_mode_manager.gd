@@ -27,6 +27,17 @@
 
 extends Node
 
+# ─── Preloaded boss scenes for Boss Rush / Boss Gauntlet ───────────────────────
+const BOSS_SCENES: Dictionary = {
+	GameConstants.EnemyType.BLOB: preload("res://scenes/entities/enemy_blob.tscn"),
+	GameConstants.EnemyType.DRAKE: preload("res://scenes/entities/enemy_drake.tscn"),
+	GameConstants.EnemyType.SERPENT: preload("res://scenes/entities/enemy_serpent.tscn"),
+	GameConstants.EnemyType.GRAVITON: preload("res://scenes/entities/enemy_graviton.tscn"),
+	GameConstants.EnemyType.VOID_LEVIATHAN: preload("res://scenes/entities/enemy_void_leviathan.tscn"),
+	GameConstants.EnemyType.ANCIENT_SENTINEL: preload("res://scenes/entities/enemy_ancient_sentinel.tscn"),
+	GameConstants.EnemyType.GRAVITY_ELEMENTAL: preload("res://scenes/entities/enemy_gravity_elemental.tscn"),
+}
+
 # ─── Signals ──────────────────────────────────────────────────────────────────
 signal mode_changed(new_mode: int)
 signal wave_changed(wave: int)
@@ -486,10 +497,9 @@ func _spawn_next_boss_rush_boss() -> void:
 		_finish_boss_rush()
 		return
 	var boss_type: int = BOSS_RUSH_QUEUE[_boss_rush_index]
-	var scene_path: String = _boss_rush_scene_path(boss_type)
-	var scene: PackedScene = load(scene_path)
+	var scene: PackedScene = BOSS_SCENES.get(boss_type, BOSS_SCENES[GameConstants.EnemyType.DRAKE])
 	if not scene:
-		push_warning("[GameMode] Boss Rush: could not load boss scene %s — skipping." % scene_path)
+		push_warning("[GameMode] Boss Rush: no scene for boss type %d — skipping." % boss_type)
 		_boss_rush_index += 1
 		_boss_rush_intermission_timer = 1.0
 		return
@@ -539,21 +549,6 @@ func _spawn_next_boss_rush_boss() -> void:
 	AudioManager.play_sfx(AudioManager.SFX_BOSS_SPAWN)
 	if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 		GameManager.camera_rig.add_trauma(0.4)
-
-func _boss_rush_scene_path(boss_type: int) -> String:
-	match boss_type:
-		GameConstants.EnemyType.DRAKE:
-			return "res://scenes/entities/enemy_drake.tscn"
-		GameConstants.EnemyType.SERPENT:
-			return "res://scenes/entities/enemy_serpent.tscn"
-		GameConstants.EnemyType.GRAVITON:
-			return "res://scenes/entities/enemy_graviton.tscn"
-		GameConstants.EnemyType.VOID_LEVIATHAN:
-			return "res://scenes/entities/enemy_void_leviathan.tscn"
-		GameConstants.EnemyType.ANCIENT_SENTINEL:
-			return "res://scenes/entities/enemy_ancient_sentinel.tscn"
-		_:
-			return "res://scenes/entities/enemy_drake.tscn"
 
 func _start_boss_rush_intermission() -> void:
 	# Heal the player between bosses

@@ -13,6 +13,16 @@ extends Node3D
 
 class_name BossArena
 
+# ─── Preloaded scenes ─────────────────────────────────────────────────────────
+const DESTRUCTIBLE_SCENE := preload("res://scenes/entities/destructible.tscn")
+const PORTAL_SCENE := preload("res://scenes/entities/portal.tscn")
+const BOSS_SCENES: Dictionary = {
+	GameConstants.EnemyType.DRAKE: preload("res://scenes/entities/enemy_drake.tscn"),
+	GameConstants.EnemyType.SERPENT: preload("res://scenes/entities/enemy_serpent.tscn"),
+	GameConstants.EnemyType.GRAVITON: preload("res://scenes/entities/enemy_graviton.tscn"),
+	GameConstants.EnemyType.VOID_LEVIATHAN: preload("res://scenes/entities/enemy_void_leviathan.tscn"),
+	GameConstants.EnemyType.ANCIENT_SENTINEL: preload("res://scenes/entities/enemy_ancient_sentinel.tscn"),
+}
 signal arena_activated(arena_type: int)
 signal arena_deactivated()
 signal arena_shrunk(new_radius: float)
@@ -297,29 +307,27 @@ func _spawn_cover_pillars() -> void:
 		var pos: Vector3 = _center + Vector3(cos(angle) * dist, 0, sin(angle) * dist)
 
 		# Use destructible scene as cover
-		var destructible_scene: PackedScene = load("res://scenes/entities/destructible.tscn")
-		if destructible_scene:
-			var pillar: Node3D = destructible_scene.instantiate()
-			get_parent().add_child(pillar)
-			pillar.global_position = pos
+		var pillar: Node3D = DESTRUCTIBLE_SCENE.instantiate()
+		get_parent().add_child(pillar)
+		pillar.global_position = pos
 
-			# Configure as arena pillar
-			if pillar is Destructible:
-				pillar.hp = 60  # Tougher than normal crates
-				pillar.shatter_count = 12
-				pillar.is_crystal = _arena_type == GameConstants.ArenaType.CRYSTAL_ARENA
-				if pillar.is_crystal:
-					pillar.fragment_color = GameConstants.ARENA_CRYSTAL_COLOR
-				else:
-					pillar.fragment_color = Color(
-						GameConstants.ARENA_WALL_COLOR.r + 0.1,
-						GameConstants.ARENA_WALL_COLOR.g + 0.1,
-						GameConstants.ARENA_WALL_COLOR.b + 0.1
-					)
-				# Scale up the pillar for better cover
-				pillar.scale = Vector3(1.5, 1.8, 1.5)
+		# Configure as arena pillar
+		if pillar is Destructible:
+			pillar.hp = 60  # Tougher than normal crates
+			pillar.shatter_count = 12
+			pillar.is_crystal = _arena_type == GameConstants.ArenaType.CRYSTAL_ARENA
+			if pillar.is_crystal:
+				pillar.fragment_color = GameConstants.ARENA_CRYSTAL_COLOR
+			else:
+				pillar.fragment_color = Color(
+					GameConstants.ARENA_WALL_COLOR.r + 0.1,
+					GameConstants.ARENA_WALL_COLOR.g + 0.1,
+					GameConstants.ARENA_WALL_COLOR.b + 0.1
+				)
+			# Scale up the pillar for better cover
+			pillar.scale = Vector3(1.5, 1.8, 1.5)
 
-			_cover_pillars.append(pillar)
+		_cover_pillars.append(pillar)
 
 func _rebuild_nav() -> void:
 	if NavigationManager:
@@ -440,14 +448,12 @@ func _start_lowering() -> void:
 
 func _spawn_exit_portal() -> void:
 	# Spawn a portal at arena center that the player can use to teleport away
-	var portal_scene: PackedScene = load("res://scenes/entities/portal.tscn")
-	if portal_scene:
-		_exit_portal = portal_scene.instantiate()
-		get_parent().add_child(_exit_portal)
-		_exit_portal.global_position = _center + Vector3(0, 0.5, 0)
-		# Auto-free after lifetime
-		var timer := get_tree().create_timer(GameConstants.ARENA_EXIT_PORTAL_LIFETIME)
-		timer.timeout.connect(func(): if is_instance_valid(_exit_portal): _exit_portal.queue_free())
+	_exit_portal = PORTAL_SCENE.instantiate()
+	get_parent().add_child(_exit_portal)
+	_exit_portal.global_position = _center + Vector3(0, 0.5, 0)
+	# Auto-free after lifetime
+	var timer := get_tree().create_timer(GameConstants.ARENA_EXIT_PORTAL_LIFETIME)
+	timer.timeout.connect(func(): if is_instance_valid(_exit_portal): _exit_portal.queue_free())
 
 func _cleanup_arena() -> void:
 	# Remove walls
@@ -495,26 +501,10 @@ func _spawn_arena_boss() -> void:
 	]
 	var boss_type: int = boss_types[randi() % boss_types.size()]
 
-	# Map to scene
-	var scene_path: String = ""
-	match boss_type:
-		GameConstants.EnemyType.DRAKE:
-			scene_path = "res://scenes/entities/enemy_drake.tscn"
-		GameConstants.EnemyType.SERPENT:
-			scene_path = "res://scenes/entities/enemy_serpent.tscn"
-		GameConstants.EnemyType.GRAVITON:
-			scene_path = "res://scenes/entities/enemy_graviton.tscn"
-		# Phase 23: New boss scenes
-		GameConstants.EnemyType.VOID_LEVIATHAN:
-			scene_path = "res://scenes/entities/enemy_void_leviathan.tscn"
-		GameConstants.EnemyType.ANCIENT_SENTINEL:
-			scene_path = "res://scenes/entities/enemy_ancient_sentinel.tscn"
-		_:
-			scene_path = "res://scenes/entities/enemy_drake.tscn"
-
-	var scene: PackedScene = load(scene_path)
+	# Map to scene — preloaded in BOSS_SCENES dictionary
+	var scene: PackedScene = BOSS_SCENES.get(boss_type, BOSS_SCENES[GameConstants.EnemyType.DRAKE])
 	if not scene:
-		print_verbose("[BossArena] Failed to load boss scene: %s" % scene_path)
+		print_verbose("[BossArena] Failed to load boss scene for type %d" % boss_type)
 		return
 
 	var boss: CharacterBody3D = scene.instantiate()

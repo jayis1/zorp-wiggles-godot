@@ -10,6 +10,8 @@ extends Node
 # declaring class_name with the same name causes a "hides autoload singleton"
 # parse error in Godot 4.4.
 
+const MERCHANT_SCENE := preload("res://scenes/entities/wandering_merchant.tscn")
+
 var _spawn_timer: float = 0.0
 var _next_spawn_time: float = 0.0
 # Cached count instead of per-frame group scan. Incremented when a merchant
@@ -68,10 +70,7 @@ func _spawn_merchant() -> void:
 	var player: Node3D = get_tree().get_first_node_in_group("player")
 	if not player:
 		return
-	var scene: PackedScene = load("res://scenes/entities/wandering_merchant.tscn")
-	if not scene:
-		print_verbose("[WanderingMerchantSpawner] Failed to load merchant scene")
-		return
+	var scene: PackedScene = MERCHANT_SCENE
 	# Spawn near the player but not on top of them.
 	var angle: float = randf() * TAU
 	var dist: float = GameConstants.WANDERING_MERCHANT_SPAWN_DISTANCE

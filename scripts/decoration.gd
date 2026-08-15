@@ -47,7 +47,7 @@ static var _shared_water_mat: ShaderMaterial = null
 static func _get_water_material() -> ShaderMaterial:
 	if _shared_water_mat:
 		return _shared_water_mat
-	var water_shader: Shader = load("res://assets/shaders/water_surface.gdshader")
+	var water_shader: Shader = preload("res://assets/shaders/water_surface.gdshader")
 	if not water_shader:
 		return null
 	_shared_water_mat = ShaderMaterial.new()

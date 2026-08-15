@@ -17,6 +17,11 @@
 
 extends Node
 
+# ─── Preloaded scenes ─────────────────────────────────────────────────────────
+const RIFT_SCENE := preload("res://scenes/entities/dimensional_rift.tscn")
+const SHADOW_CLONE_SCENE := preload("res://scenes/entities/shadow_clone.tscn")
+const COLLECTIBLE_SCENE := preload("res://scenes/entities/collectible.tscn")
+
 # ─── Signals ──────────────────────────────────────────────────────────────────
 signal dimension_changed(new_dimension: int, old_dimension: int)
 signal dimension_transition_started(target_dimension: int)
@@ -152,12 +157,7 @@ func _try_spawn_rift() -> void:
 	_spawn_rift(pos, target_dim)
 
 func _spawn_rift(pos: Vector3, target_dim: int) -> void:
-	var rift_scene: PackedScene = load("res://scenes/entities/dimensional_rift.tscn")
-	if not rift_scene:
-		push_warning("[DimensionSystem] Failed to load dimensional_rift.tscn")
-		return
-
-	var rift: Node3D = rift_scene.instantiate()
+	var rift: Node3D = RIFT_SCENE.instantiate()
 	# Set properties BEFORE add_child so _ready() sees the correct values.
 	# _ready() uses target_dimension for colors and global_position for particles.
 	rift.global_position = pos
@@ -365,12 +365,7 @@ func _spawn_void_shadow_clone() -> void:
 		return
 
 	var pos: Vector3 = player.global_position + Vector3(8, 1, 8)
-	var clone_scene: PackedScene = load("res://scenes/entities/shadow_clone.tscn")
-	if not clone_scene:
-		push_warning("[DimensionSystem] shadow_clone.tscn not found")
-		return
-
-	var clone: CharacterBody3D = clone_scene.instantiate()
+	var clone: CharacterBody3D = SHADOW_CLONE_SCENE.instantiate()
 	var world: Node = GameManager.world
 	if not world:
 		world = get_tree().current_scene
@@ -423,9 +418,7 @@ func _spawn_exit_collectibles() -> void:
 	if not player:
 		return
 
-	var coll_scene: PackedScene = load("res://scenes/entities/collectible.tscn")
-	if not coll_scene:
-		return
+	var coll_scene: PackedScene = COLLECTIBLE_SCENE
 
 	var count: int = randi_range(2, 4)
 	for i in count:

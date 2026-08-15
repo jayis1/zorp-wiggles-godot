@@ -8,6 +8,8 @@ extends Node3D
 
 class_name EnemySpawner
 
+const SPAWN_WARNING_SCENE := preload("res://scenes/entities/spawn_warning.tscn")
+
 # ─── Spawn State ──────────────────────────────────────────────────────────────
 var spawn_timer: float = 0.0
 var spawn_warning_timer: float = 0.0
@@ -47,9 +49,6 @@ var _last_nearby_count: int = 0
 #    invalid (player died, scene changed, etc.). The cache is cleared in
 #    _on_game_restarted so a new run doesn't reuse a stale reference.
 var _cached_player: Node3D = null
-
-# Precached spawn-warning scene (loaded once, reused for every spawn).
-static var _cached_spawn_warning: PackedScene = null
 
 # ─── Enemy Type Tiers ─────────────────────────────────────────────────────────
 # Maps to enemy scenes by difficulty tier (easy/medium/hard)
@@ -294,15 +293,8 @@ func _try_spawn() -> void:
 					"timer": GameConstants.ENEMY_SPAWN_WARNING_DURATION + randf_range(0.0, 0.5),
 				})
 
-	# Create visual warning ring — use the precached scene if available.
-	# load() is called here every spawn tick; precaching avoids the repeated
-	# resource lookup. The scene is tiny but the lookup still costs a String
-	# hash + dictionary probe per spawn.
-	var warning_scene: PackedScene = _cached_spawn_warning
-	if warning_scene == null:
-		warning_scene = load("res://scenes/entities/spawn_warning.tscn")
-		if warning_scene:
-			_cached_spawn_warning = warning_scene
+	# Create visual warning ring — preloaded const scene.
+	var warning_scene: PackedScene = SPAWN_WARNING_SCENE
 	if warning_scene:
 		var warning: Node3D = warning_scene.instantiate()
 		get_parent().add_child(warning)

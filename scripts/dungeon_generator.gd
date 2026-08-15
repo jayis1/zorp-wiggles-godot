@@ -17,6 +17,9 @@ extends Node3D
 
 class_name DungeonGen
 
+# ─── Preloaded scenes ─────────────────────────────────────────────────────────
+const CHEST_SCENE := preload("res://scenes/entities/treasure_chest.tscn")
+
 # ─── Signals ────────────────────────────────────────────────────────────────────
 signal dungeon_entered(dungeon_id: int, theme: int)
 signal dungeon_cleared(dungeon_id: int)
@@ -552,10 +555,7 @@ func _on_dungeon_boss_died(enemy: Node, _dungeon_id: int) -> void:
 
 func _spawn_reward_chest(room: Dictionary, dungeon_id: int) -> void:
 	# Use the existing treasure_chest scene for consistency.
-	var chest_scene: PackedScene = load("res://scenes/entities/treasure_chest.tscn")
-	if not chest_scene:
-		return
-	var chest := chest_scene.instantiate()
+	var chest := CHEST_SCENE.instantiate()
 	chest.position = _active_root.global_position + room["center"] + Vector3(0, 0.5, 4.0)
 	get_tree().current_scene.add_child(chest)
 	# Mark as dungeon reward so opening it clears the dungeon.

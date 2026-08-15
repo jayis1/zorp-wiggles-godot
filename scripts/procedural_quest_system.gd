@@ -21,6 +21,8 @@
 ## MissionSystem missions and ProceduralQuestSystem quests in one panel.
 extends Node
 
+const COLLECTIBLE_SCENE := preload("res://scenes/entities/collectible.tscn")
+
 # ─── Signals ──────────────────────────────────────────────────────────────────
 signal quest_generated(quest: Variant)
 signal quest_completed(quest: Variant)
@@ -436,9 +438,7 @@ func _spawn_bonus_loot_drop() -> void:
 	var player: Node3D = GameManager.player
 	if not player or not is_instance_valid(player):
 		return
-	var collectible_scene: PackedScene = load("res://scenes/entities/collectible.tscn")
-	if not collectible_scene:
-		return
+	var collectible_scene: PackedScene = COLLECTIBLE_SCENE
 	var drop: Area3D = collectible_scene.instantiate()
 	var world: Node = GameManager.world if GameManager.world else get_tree().current_scene
 	world.add_child(drop)

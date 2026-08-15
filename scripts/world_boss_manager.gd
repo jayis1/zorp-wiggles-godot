@@ -19,6 +19,16 @@ extends Node
 # declaring class_name with the same name causes a "hides autoload singleton"
 # parse error in Godot 4.4.
 
+# ─── Preloaded scenes ─────────────────────────────────────────────────────────
+const WARNING_SCENE := preload("res://scenes/entities/spawn_warning.tscn")
+const COLLECTIBLE_SCENE := preload("res://scenes/entities/collectible.tscn")
+const BOSS_SCENES: Dictionary = {
+	GameConstants.EnemyType.DRAKE: preload("res://scenes/entities/enemy_drake.tscn"),
+	GameConstants.EnemyType.VOID_LEVIATHAN: preload("res://scenes/entities/enemy_void_leviathan.tscn"),
+	GameConstants.EnemyType.ANCIENT_SENTINEL: preload("res://scenes/entities/enemy_ancient_sentinel.tscn"),
+	GameConstants.EnemyType.GRAVITY_ELEMENTAL: preload("res://scenes/entities/enemy_gravity_elemental.tscn"),
+}
+
 signal world_boss_spawned(boss: Node, boss_display_name: String)
 signal world_boss_defeated(boss: Node, boss_display_name: String)
 
@@ -113,12 +123,10 @@ func _try_spawn_world_boss() -> void:
 	spawn_pos.x = clampf(spawn_pos.x, -extent, extent)
 	spawn_pos.z = clampf(spawn_pos.z, -extent, extent)
 	# Telegraph: spawn a warning ring so the player has time to prepare.
-	var warning_scene: PackedScene = load("res://scenes/entities/spawn_warning.tscn")
-	if warning_scene:
-		var warning: Node3D = warning_scene.instantiate()
-		get_tree().current_scene.add_child(warning)
-		warning.global_position = spawn_pos
-		warning.set("duration", GameConstants.WORLD_BOSS_TELEGRAPH_TIME)
+	var warning: Node3D = WARNING_SCENE.instantiate()
+	get_tree().current_scene.add_child(warning)
+	warning.global_position = spawn_pos
+	warning.set("duration", GameConstants.WORLD_BOSS_TELEGRAPH_TIME)
 	# Materialize the boss after the telegraph delay.
 	var delay_tw := create_tween()
 	delay_tw.tween_interval(GameConstants.WORLD_BOSS_TELEGRAPH_TIME)
@@ -130,15 +138,18 @@ func _try_spawn_world_boss() -> void:
 	world_boss_spawned.emit(null, display_name)
 
 func _materialize_world_boss(boss_type: int, spawn_pos: Vector3, display_name: String) -> void:
-	# Look up the scene path from the EnemySpawner's ENEMY_SCENES table.
-	var scene_path: String = EnemySpawner.ENEMY_SCENES.get(boss_type, "")
-	if scene_path.is_empty():
-		print_verbose("[WorldBossManager] No scene for boss type %d" % boss_type)
-		return
-	var scene: PackedScene = load(scene_path)
-	if not scene:
-		print_verbose("[WorldBossManager] Failed to load boss scene: %s" % scene_path)
-		return
+	# Use preloaded BOSS_SCENES dictionary; fall back to runtime load for any
+	# boss type not in the preloaded dict.
+	var scene: PackedScene = BOSS_SCENES.get(boss_type)
+	if scene == null:
+		var scene_path: String = EnemySpawner.ENEMY_SCENES.get(boss_type, "")
+		if scene_path.is_empty():
+			print_verbose("[WorldBossManager] No scene for boss type %d" % boss_type)
+			return
+		scene = load(scene_path)
+		if not scene:
+			print_verbose("[WorldBossManager] Failed to load boss scene: %s" % scene_path)
+			return
 	var boss: CharacterBody3D = scene.instantiate()
 	boss.position = spawn_pos
 	get_tree().current_scene.add_child(boss)
@@ -233,9 +244,7 @@ func _on_player_died() -> void:
 
 func _spawn_loot_shower(pos: Vector3) -> void:
 	# Spawn a burst of collectibles at the boss death location.
-	var collectible_scene: PackedScene = load("res://scenes/entities/collectible.tscn")
-	if not collectible_scene:
-		return
+	var collectible_scene: PackedScene = COLLECTIBLE_SCENE
 	# Weighted loot table — favor rare items for world bosses.
 	var loot_table: Array[Dictionary] = [
 		{"type": GameConstants.CollectibleType.METEOR_SHARD, "weight": 3},
