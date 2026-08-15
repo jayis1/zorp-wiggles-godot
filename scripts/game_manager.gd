@@ -351,9 +351,15 @@ func _start_game() -> void:
 	player_is_downed = false
 	p1_downed_timer = 0.0
 	p1_revive_progress = 0.0
-	# Only reset game_time if not restoring (SaveSystem sets it via _apply_state)
-	if not restoring_from_save:
-		game_time = 0.0
+	# Always reset game_time. The restoring_from_save flag is only set by
+	# SaveSystem.load_and_restart() before a scene reload, but _start_game()
+	# is not called on scene reload (only from _ready at autoload init or from
+	# restart_game). So by the time _start_game runs with restoring_from_save=true,
+	# it's via restart_game (death/victory "try again") where we want a fresh run.
+	# The save state was already applied by _apply_state before the scene reload.
+	if restoring_from_save:
+		pass  # Consume the stale flag — don't skip game_time reset
+	game_time = 0.0
 	is_paused = false
 	_last_difficulty_tier = 0
 	active_buffs.clear()

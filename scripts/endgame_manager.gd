@@ -1071,7 +1071,7 @@ func _check_loot_cave_clear() -> void:
 		var cave_pos: Vector3 = cave["position"]
 		var remaining: int = 0
 		for e in GameManager.enemies:
-			if not is_instance_valid(e) or e.is_dead:
+			if not is_instance_valid(e) or ("is_dead" in e and e.is_dead):
 				continue
 			if e.global_position.distance_to(Vector3(cave_pos.x, GameConstants.LOOT_CAVE_DEPTH, cave_pos.z)) < 25.0:
 				remaining += 1
