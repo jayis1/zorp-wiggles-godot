@@ -6,6 +6,8 @@ extends Control
 
 class_name SettingsMenu
 
+const REBIND_MENU_SCRIPT := preload("res://scripts/control_rebind_menu.gd")
+
 var _bg: ColorRect
 var _panel: Panel
 var _title: Label
@@ -183,9 +185,8 @@ func _build_ui() -> void:
 	add_child(rebind_btn)
 	rebind_btn.pressed.connect(_on_rebind_controls)
 	# Create the rebind menu (hidden by default)
-	var rb_script = load("res://scripts/control_rebind_menu.gd")
 	_rebind_menu = Control.new()
-	_rebind_menu.set_script(rb_script)
+	_rebind_menu.set_script(REBIND_MENU_SCRIPT)
 	_rebind_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_rebind_menu.mouse_filter = Control.MOUSE_FILTER_STOP
 	_rebind_menu.visible = false

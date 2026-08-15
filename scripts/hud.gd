@@ -4,6 +4,50 @@
 
 extends CanvasLayer
 
+# ─── Preloaded script resources (compile-time, once) ────────────────────────
+# All HUD sub-components are loaded via preload() at class scope instead of
+# runtime load() calls in _ready(). This eliminates ~37 resource cache lookups
+# (String hash + dictionary probe) every time the HUD is created (game start,
+# scene reload, game restart). The scripts are loaded once at parse time.
+const SDI_SCRIPT := preload("res://scripts/spawn_direction_indicator.gd")
+const MINIMAP_SCRIPT := preload("res://scripts/minimap.gd")
+const DDI_SCRIPT := preload("res://scripts/damage_direction_indicator.gd")
+const BTV_SCRIPT := preload("res://scripts/boss_tension_vignette.gd")
+const DS_SCRIPT := preload("res://scripts/death_screen.gd")
+const BI_SCRIPT := preload("res://scripts/biome_indicator.gd")
+const DCI_SCRIPT := preload("res://scripts/dash_cooldown_indicator.gd")
+const KF_SCRIPT := preload("res://scripts/kill_feed.gd")
+const AP_SCRIPT := preload("res://scripts/achievement_popup.gd")
+const PUD_SCRIPT := preload("res://scripts/powerup_timer_display.gd")
+const DF_SCRIPT := preload("res://scripts/damage_flash.gd")
+const DI_SCRIPT := preload("res://scripts/dimension_indicator.gd")
+const PH_SCRIPT := preload("res://scripts/companion_hud.gd")
+const CM_SCRIPT := preload("res://scripts/crafting_menu.gd")
+const WI_SCRIPT := preload("res://scripts/weather_indicator.gd")
+const COOP_SCRIPT := preload("res://scripts/co_op_hud.gd")
+const QL_SCRIPT := preload("res://scripts/quest_log.gd")
+const TM_SCRIPT := preload("res://scripts/trade_menu.gd")
+const FT_SCRIPT := preload("res://scripts/fast_travel_menu.gd")
+const SP_SCRIPT := preload("res://scripts/statistics_page.gd")
+const ST_SCRIPT := preload("res://scripts/skill_tree.gd")
+const EQ_SCRIPT := preload("res://scripts/equipment_menu.gd")
+const FPS_SCRIPT := preload("res://scripts/fps_counter.gd")
+const SRT_SCRIPT := preload("res://scripts/speedrun_timer.gd")
+const BRH_SCRIPT := preload("res://scripts/boss_rush_hud.gd")
+const EWH_SCRIPT := preload("res://scripts/endless_wave_hud.gd")
+const DCH_SCRIPT := preload("res://scripts/daily_challenge_hud.gd")
+const WCH_SCRIPT := preload("res://scripts/weekly_challenge_hud.gd")
+const VS_SCRIPT := preload("res://scripts/victory_screen.gd")
+const BIC_SCRIPT := preload("res://scripts/boss_intro_card.gd")
+const CF_SCRIPT := preload("res://scripts/crit_flash.gd")
+const BPF_SCRIPT := preload("res://scripts/boss_phase_flash.gd")
+const PM_SCRIPT := preload("res://scripts/photo_mode.gd")
+const LB_SCRIPT := preload("res://scripts/leaderboards_page.gd")
+const RB_SCRIPT := preload("res://scripts/replay_browser.gd")
+const PVP_SCRIPT := preload("res://scripts/pvp_hud.gd")
+const PAM_SCRIPT := preload("res://scripts/pet_accessory_menu.gd")
+const PTM_SCRIPT := preload("res://scripts/pet_training_menu.gd")
+
 # ─── HP Bar ──────────────────────────────────────────────────────────────────
 @onready var hp_bar: ColorRect = $HPBarContainer/HPBar
 @onready var hp_bar_bg: ColorRect = $HPBarContainer/HPBarBG
@@ -342,29 +386,25 @@ func _ready() -> void:
 	add_child(_pickup_streak_label)
 	
 	# Create spawn direction indicator
-	var sdi_script := load("res://scripts/spawn_direction_indicator.gd")
 	_spawn_direction_indicator = Control.new()
-	_spawn_direction_indicator.set_script(sdi_script)
+	_spawn_direction_indicator.set_script(SDI_SCRIPT)
 	_spawn_direction_indicator.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_spawn_direction_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_spawn_direction_indicator)
 	
 	# ── Phase 5: Minimap ──
-	var minimap_script := load("res://scripts/minimap.gd")
 	var minimap_ctrl := Control.new()
-	minimap_ctrl.set_script(minimap_script)
+	minimap_ctrl.set_script(MINIMAP_SCRIPT)
 	add_child(minimap_ctrl)
-	
+
 	# ── Phase 5: Damage Direction Indicator ──
-	var ddi_script := load("res://scripts/damage_direction_indicator.gd")
 	var ddi_ctrl := Control.new()
-	ddi_ctrl.set_script(ddi_script)
+	ddi_ctrl.set_script(DDI_SCRIPT)
 	add_child(ddi_ctrl)
-	
+
 	# ── Phase 5: Boss Tension Vignette ──
-	var btv_script := load("res://scripts/boss_tension_vignette.gd")
 	var btv_ctrl := Control.new()
-	btv_ctrl.set_script(btv_script)
+	btv_ctrl.set_script(BTV_SCRIPT)
 	add_child(btv_ctrl)
 
 	# ── Hit-stop visual flash overlay ── A brief full-screen white flash
@@ -387,64 +427,54 @@ func _ready() -> void:
 	HitStopCoordinator.freeze_requested.connect(_on_hitstop_freeze)
 	
 	# ── Phase 5: Death Screen ──
-	var ds_script := load("res://scripts/death_screen.gd")
 	var ds_ctrl := Control.new()
-	ds_ctrl.set_script(ds_script)
+	ds_ctrl.set_script(DS_SCRIPT)
 	add_child(ds_ctrl)
-	
+
 	# ── Phase 5: Biome Indicator ──
-	var bi_script := load("res://scripts/biome_indicator.gd")
 	var bi_ctrl := Control.new()
-	bi_ctrl.set_script(bi_script)
+	bi_ctrl.set_script(BI_SCRIPT)
 	add_child(bi_ctrl)
-	
+
 	# ── Phase 5: Dash Cooldown Indicator ──
-	var dci_script := load("res://scripts/dash_cooldown_indicator.gd")
 	var dci_ctrl := Control.new()
-	dci_ctrl.set_script(dci_script)
+	dci_ctrl.set_script(DCI_SCRIPT)
 	add_child(dci_ctrl)
-	
+
 	# ── Phase 5: Kill Feed ──
-	var kf_script := load("res://scripts/kill_feed.gd")
 	var kf_ctrl := Control.new()
-	kf_ctrl.set_script(kf_script)
+	kf_ctrl.set_script(KF_SCRIPT)
 	add_child(kf_ctrl)
-	
+
 	# ── Phase 5: Achievement Popups ──
-	var ap_script := load("res://scripts/achievement_popup.gd")
 	var ap_ctrl := Control.new()
-	ap_ctrl.set_script(ap_script)
+	ap_ctrl.set_script(AP_SCRIPT)
 	ap_ctrl.add_to_group("achievement_popup")
 	add_child(ap_ctrl)
-	
+
 	# ── Phase 5: Power-up Timer Display ──
-	var pud_script := load("res://scripts/powerup_timer_display.gd")
 	var pud_ctrl := Control.new()
-	pud_ctrl.set_script(pud_script)
+	pud_ctrl.set_script(PUD_SCRIPT)
 	add_child(pud_ctrl)
 
 	# ── Phase 6: Player Damage Flash ──
-	var df_script := load("res://scripts/damage_flash.gd")
 	var df_ctrl := Control.new()
-	df_ctrl.set_script(df_script)
+	df_ctrl.set_script(DF_SCRIPT)
 	add_child(df_ctrl)
 
 	# ── Phase 14: Dimension Indicator ──
-	var di_script := load("res://scripts/dimension_indicator.gd")
 	var di_ctrl := Control.new()
-	di_ctrl.set_script(di_script)
+	di_ctrl.set_script(DI_SCRIPT)
 	add_child(di_ctrl)
 
 	# ── Phase 15: Companion Pet HUD ──
-	var ph_script := load("res://scripts/companion_hud.gd")
 	var ph_ctrl := Control.new()
-	ph_ctrl.set_script(ph_script)
+	ph_ctrl.set_script(PH_SCRIPT)
 	add_child(ph_ctrl)
-	
+
 	# ── Phase 16: Weapon Mod Crafting Menu ──
-	var cm_script := load("res://scripts/crafting_menu.gd")
 	var cm_ctrl := Control.new()
-	cm_ctrl.set_script(cm_script)
+	cm_ctrl.set_script(CM_SCRIPT)
 	cm_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	cm_ctrl.mouse_filter = Control.MOUSE_FILTER_STOP  # Needs to capture clicks when visible
 	add_child(cm_ctrl)
@@ -488,114 +518,97 @@ func _ready() -> void:
 		WeaponModFusion.fusion_removed.connect(_on_mod_unequipped_hud)
 
 	# ── Phase 17: Weather Indicator ──
-	var wi_script := load("res://scripts/weather_indicator.gd")
 	var wi_ctrl := Control.new()
-	wi_ctrl.set_script(wi_script)
+	wi_ctrl.set_script(WI_SCRIPT)
 	wi_ctrl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	wi_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(wi_ctrl)
 
 	# ── Phase 19: Co-op HUD ──
-	var coop_script := load("res://scripts/co_op_hud.gd")
 	var coop_ctrl := Control.new()
-	coop_ctrl.set_script(coop_script)
+	coop_ctrl.set_script(COOP_SCRIPT)
 	coop_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	coop_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(coop_ctrl)
 
 	# ── Phase 7: Quest Log / Mission Board ──
-	var ql_script := load("res://scripts/quest_log.gd")
 	var ql_ctrl := Control.new()
-	ql_ctrl.set_script(ql_script)
+	ql_ctrl.set_script(QL_SCRIPT)
 	ql_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ql_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ql_ctrl)
 
 	# ── Phase 7: Trader Trade Menu ──
-	var tm_script := load("res://scripts/trade_menu.gd")
 	var tm_ctrl := Control.new()
-	tm_ctrl.set_script(tm_script)
+	tm_ctrl.set_script(TM_SCRIPT)
 	tm_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(tm_ctrl)
 
 	# ── Phase 26: Fast Travel Menu (B key) ──
-	var ft_script := load("res://scripts/fast_travel_menu.gd")
 	var ft_ctrl := Control.new()
-	ft_ctrl.set_script(ft_script)
+	ft_ctrl.set_script(FT_SCRIPT)
 	ft_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ft_ctrl.add_to_group("fast_travel_menu")
 	add_child(ft_ctrl)
 
 	# ── Phase 25: Statistics Page (F2) ──
-	var sp_script := load("res://scripts/statistics_page.gd")
 	var sp_ctrl := Control.new()
-	sp_ctrl.set_script(sp_script)
+	sp_ctrl.set_script(SP_SCRIPT)
 	sp_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	sp_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(sp_ctrl)
 
 	# ── Phase 25: Skill Tree UI (K) ──
-	var st_script := load("res://scripts/skill_tree.gd")
 	var st_ctrl := Control.new()
-	st_ctrl.set_script(st_script)
+	st_ctrl.set_script(ST_SCRIPT)
 	st_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	st_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(st_ctrl)
 
 	# ── Phase 29: Equipment Menu UI (X) ──
-	var eq_script := load("res://scripts/equipment_menu.gd")
 	var eq_ctrl := Control.new()
-	eq_ctrl.set_script(eq_script)
+	eq_ctrl.set_script(EQ_SCRIPT)
 	eq_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	eq_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(eq_ctrl)
 
 	# ── Phase 31: FPS Counter & Performance Overlay (F3) ──
-	var fps_script := load("res://scripts/fps_counter.gd")
 	var fps_ctrl := Control.new()
-	fps_ctrl.set_script(fps_script)
+	fps_ctrl.set_script(FPS_SCRIPT)
 	fps_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(fps_ctrl)
 
 	# ── Phase 25: Game Mode HUDs — Speedrun Timer, Boss Rush, Endless Wave ──
-	# These overlays only draw when their respective mode is active; otherwise
-	# they stay invisible (alpha 0) and consume negligible overhead.
-	var srt_script := load("res://scripts/speedrun_timer.gd")
 	var srt_ctrl := Control.new()
-	srt_ctrl.set_script(srt_script)
+	srt_ctrl.set_script(SRT_SCRIPT)
 	srt_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(srt_ctrl)
 
-	var brh_script := load("res://scripts/boss_rush_hud.gd")
 	var brh_ctrl := Control.new()
-	brh_ctrl.set_script(brh_script)
+	brh_ctrl.set_script(BRH_SCRIPT)
 	brh_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(brh_ctrl)
 
-	var ewh_script := load("res://scripts/endless_wave_hud.gd")
 	var ewh_ctrl := Control.new()
-	ewh_ctrl.set_script(ewh_script)
+	ewh_ctrl.set_script(EWH_SCRIPT)
 	ewh_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ewh_ctrl)
 
 	# ── Phase 25: Daily Challenge HUD (top-center overlay during daily runs) ──
-	var dch_script := load("res://scripts/daily_challenge_hud.gd")
 	var dch_ctrl := Control.new()
-	dch_ctrl.set_script(dch_script)
+	dch_ctrl.set_script(DCH_SCRIPT)
 	dch_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dch_ctrl)
 
 	# ── Phase 25: Weekly Challenge HUD (top-center overlay during weekly runs) ──
-	var wch_script := load("res://scripts/weekly_challenge_hud.gd")
 	var wch_ctrl := Control.new()
-	wch_ctrl.set_script(wch_script)
+	wch_ctrl.set_script(WCH_SCRIPT)
 	wch_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(wch_ctrl)
 
 	# ── Phase 30: Victory Screen (boss rush / speedrun / endless completion) ──
-	var vs_script := load("res://scripts/victory_screen.gd")
 	var vs_ctrl := Control.new()
-	vs_ctrl.set_script(vs_script)
+	vs_ctrl.set_script(VS_SCRIPT)
 	vs_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vs_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(vs_ctrl)
@@ -605,9 +618,8 @@ func _ready() -> void:
 	# then slides out. Gives boss appearances a cinematic "title card" moment
 	# beyond the boss HP bar + HUD message. Purely visual — doesn't block
 	# input or pause the game.
-	var bic_script := load("res://scripts/boss_intro_card.gd")
 	var bic_ctrl := Control.new()
-	bic_ctrl.set_script(bic_script)
+	bic_ctrl.set_script(BIC_SCRIPT)
 	bic_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bic_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bic_ctrl)
@@ -616,9 +628,8 @@ func _ready() -> void:
 	# gold-colored screen-edge glow that flashes on critical hits, tinted
 	# to the weapon mod's color for thematic variety. Gives crits a visual
 	# punch beyond the gold damage number + hit-stop freeze.
-	var cf_script := load("res://scripts/crit_flash.gd")
 	var cf_ctrl := Control.new()
-	cf_ctrl.set_script(cf_script)
+	cf_ctrl.set_script(CF_SCRIPT)
 	cf_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	cf_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(cf_ctrl)
@@ -628,57 +639,50 @@ func _ready() -> void:
 	# phase (Drake enrage, Void Leviathan stage 2/3, Ancient Sentinel enrage).
 	# Matches the boss's phase color so the player gets a visual cue of the
 	# phase shift even if they're not looking at the boss model.
-	var bpf_script := load("res://scripts/boss_phase_flash.gd")
 	var bpf_ctrl := Control.new()
-	bpf_ctrl.set_script(bpf_script)
+	bpf_ctrl.set_script(BPF_SCRIPT)
 	bpf_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bpf_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bpf_ctrl)
 
 	# ── Phase 30: Photo Mode (free-look camera + screenshots) ──
 	# PhotoMode is a Node (not a Control) — it manages its own Camera3D and HUD panel.
-	var pm_script := load("res://scripts/photo_mode.gd")
 	var pm_node := Node.new()
-	pm_node.set_script(pm_script)
+	pm_node.set_script(PM_SCRIPT)
 	pm_node.name = "PhotoMode"
 	add_child(pm_node)
 
 	# ── Phase 32: Leaderboards Page (F12) ──
-	var lb_script := load("res://scripts/leaderboards_page.gd")
 	var lb_ctrl := Control.new()
-	lb_ctrl.set_script(lb_script)
+	lb_ctrl.set_script(LB_SCRIPT)
 	lb_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	lb_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(lb_ctrl)
 
 	# ── Phase 32: Replay Browser (F11) ──
-	var rb_script := load("res://scripts/replay_browser.gd")
 	var rb_ctrl := Control.new()
-	rb_ctrl.set_script(rb_script)
+	rb_ctrl.set_script(RB_SCRIPT)
 	rb_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	rb_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(rb_ctrl)
 
 	# ── Phase 32: PvP Arena HUD ──
-	var pvp_script := load("res://scripts/pvp_hud.gd")
 	var pvp_ctrl := Control.new()
-	pvp_ctrl.set_script(pvp_script)
+	pvp_ctrl.set_script(PVP_SCRIPT)
 	pvp_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	pvp_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(pvp_ctrl)
 
 	# ── Phase 27: Pet Accessory Menu UI (F6) ──
-	var pam_script := load("res://scripts/pet_accessory_menu.gd")
 	var pam_ctrl := Control.new()
-	pam_ctrl.set_script(pam_script)
+	pam_ctrl.set_script(PAM_SCRIPT)
 	pam_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	pam_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(pam_ctrl)
 
 	# ── Phase 27: Pet Training Menu UI (Shift+T) ──
-	var ptm_script := load("res://scripts/pet_training_menu.gd")
 	var ptm_ctrl := Control.new()
-	ptm_ctrl.set_script(ptm_script)
+	ptm_ctrl.set_script(PTM_SCRIPT)
 	ptm_ctrl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ptm_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ptm_ctrl)

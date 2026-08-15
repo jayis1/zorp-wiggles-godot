@@ -4,6 +4,10 @@
 
 extends Control
 
+const SETTINGS_MENU_SCRIPT := preload("res://scripts/settings_menu.gd")
+const MODE_SELECTOR_SCRIPT := preload("res://scripts/mode_selector.gd")
+const CHARACTER_SELECT_SCRIPT := preload("res://scripts/character_select.gd")
+
 @onready var start_button: Button = $StartButton
 @onready var settings_button: Button = $SettingsButton
 @onready var quit_button: Button = $QuitButton
@@ -35,9 +39,8 @@ func _ready() -> void:
 	# Sits above the Start button. Only shown when SaveSystem reports a save.
 	_add_continue_button()
 	# Phase 20: Create settings menu (reused from pause menu's settings)
-	var sm_script = load("res://scripts/settings_menu.gd")
 	_settings_menu = Control.new()
-	_settings_menu.set_script(sm_script)
+	_settings_menu.set_script(SETTINGS_MENU_SCRIPT)
 	_settings_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_settings_menu.mouse_filter = Control.MOUSE_FILTER_STOP
 	_settings_menu.visible = false
@@ -45,18 +48,16 @@ func _ready() -> void:
 	# ── Phase 25: Create Mode Selector UI ──
 	# A full-screen overlay that lets the player pick Normal/Endless/Boss Rush/Speedrun.
 	# The selected mode persists via GameModeManager and is used when the game starts.
-	var ms_script = load("res://scripts/mode_selector.gd")
 	_mode_selector = Control.new()
-	_mode_selector.set_script(ms_script)
+	_mode_selector.set_script(MODE_SELECTOR_SCRIPT)
 	_mode_selector.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_mode_selector.mouse_filter = Control.MOUSE_FILTER_STOP
 	_mode_selector.visible = false
 	add_child(_mode_selector)
 	# ── Phase 30: Create Character Select screen ──
 	# Full-screen overlay for picking Zorp vs Zerp for solo runs.
-	var cs_script = load("res://scripts/character_select.gd")
 	_character_select = Control.new()
-	_character_select.set_script(cs_script)
+	_character_select.set_script(CHARACTER_SELECT_SCRIPT)
 	_character_select.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_character_select.mouse_filter = Control.MOUSE_FILTER_STOP
 	_character_select.visible = false

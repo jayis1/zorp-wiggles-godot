@@ -7,6 +7,8 @@ extends Control
 
 class_name PauseMenu
 
+const SETTINGS_MENU_SCRIPT := preload("res://scripts/settings_menu.gd")
+
 var _bg: ColorRect
 var _panel: Panel
 var _title: Label
@@ -104,9 +106,8 @@ func _build_ui() -> void:
 		btn.button_up.connect(_on_button_release.bind(btn))
 
 	# Settings menu (hidden by default)
-	var sm_script = load("res://scripts/settings_menu.gd")
 	_settings_menu = Control.new()
-	_settings_menu.set_script(sm_script)
+	_settings_menu.set_script(SETTINGS_MENU_SCRIPT)
 	_settings_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_settings_menu.mouse_filter = Control.MOUSE_FILTER_STOP
 	_settings_menu.visible = false

@@ -201,7 +201,7 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 
 ## 📊 Stats
 
-- **69,000+ lines** of GDScript across 163 scripts
+- **70,000+ lines** of GDScript across 163 scripts
 - **225 files** (163 scripts + 49 scenes + 13 shaders)
 - **21 enemy types** with unique AI (including 10 Phase 23 bosses/elites)
 - **36 weapon mods** craftable (20 original + 2 Enhancement + 2 Enhancement Pack 2 + 12 Phase 24)

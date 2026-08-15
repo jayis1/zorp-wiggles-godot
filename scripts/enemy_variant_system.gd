@@ -16,6 +16,8 @@
 ## XP/score/loot when the variant dies.
 extends Node
 
+const COLLECTIBLE_SCENE := preload("res://scenes/entities/collectible.tscn")
+
 # ─── Signals ──────────────────────────────────────────────────────────────────
 signal variant_spawned(enemy: Node, tier: int, traits: Array)
 signal variant_defeated(enemy: Node, tier: int, traits: Array)
@@ -474,9 +476,6 @@ func _spawn_bonus_loot(eb: EnemyBase, tier: int) -> void:
 	# via the `tier >= Tier.CHAMPION` gate above, but this keeps the logic
 	# correct if the gate is ever loosened).
 	var drop_count: int = 2 if tier == Tier.CHAMPION else 1
-	var collectible_scene: PackedScene = load("res://scenes/entities/collectible.tscn")
-	if not collectible_scene:
-		return
 	# Pick a rare-ish collectible type
 	var rare_types: Array[int] = [
 		GameConstants.CollectibleType.METEOR_SHARD,
@@ -485,7 +484,7 @@ func _spawn_bonus_loot(eb: EnemyBase, tier: int) -> void:
 		GameConstants.CollectibleType.STAR_FRUIT,
 	]
 	for i in range(drop_count):
-		var drop: Area3D = collectible_scene.instantiate()
+		var drop: Area3D = COLLECTIBLE_SCENE.instantiate()
 		eb.get_parent().add_child(drop)
 		drop.global_position = eb.global_position + Vector3(
 			randf_range(-1.5, 1.5), 0.5, randf_range(-1.5, 1.5)
