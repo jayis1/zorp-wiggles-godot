@@ -255,6 +255,43 @@ func _ready() -> void:
 		GameManager.game_restarted.connect(_on_game_restarted)
 
 func _on_game_restarted() -> void:
+	# ── Bug fix: weather state persisting across runs ──
+	# The old _on_game_restarted() only re-resolved the WorldEnvironment but
+	# never reset the weather state. If the player died during a thunderstorm,
+	# the thunderstorm state (_current_weather, _weather_timer, particles,
+	# lights, combo weather, fog density, EMP disable, gravity shift, etc.)
+	# would persist into the new run. The new run would start mid-thunderstorm
+	# with lightning strikes, fog overrides, and all weather lights active
+	# — even though the HUD showed "Clear" weather (since the weather_changed
+	# signal wasn't emitted). Now we fully reset all weather state so the
+	# new run starts clean with Clear weather, default fog, and no active
+	# weather effects.
+	_end_weather_effects(_current_weather)
+	_current_weather = GameConstants.Weather.CLEAR
+	_next_weather = GameConstants.Weather.CLEAR
+	_weather_timer = randf_range(GameConstants.WEATHER_DURATION_MIN, GameConstants.WEATHER_DURATION_MAX)
+	_transition_timer = 0.0
+	_is_transitioning = false
+	_acid_rain_tick_timer = 0.0
+	_lightning_timer = 8.0
+	_pending_strikes.clear()
+	# Phase 28 state
+	_pollen_tick_timer = 0.0
+	_emp_timer = 10.0
+	_emp_disable_timer = 0.0
+	_gravity_shift_timer = 0.0
+	_gravity_shift_active = false
+	_gravity_shift_remaining = 0.0
+	_gravity_anomaly_force = 0.0
+	_dim_rift_timer = 8.0
+	_dim_shift_timer = 15.0
+	# Combo weather
+	if _combo_weather != GameConstants.Weather.CLEAR:
+		weather_combo_ended.emit(_combo_weather)
+	_combo_weather = GameConstants.Weather.CLEAR
+	_combo_timer = 0.0
+	# Clear cached player (old player node is freed)
+	_cached_player = null
 	# The scene was reloaded; the old WorldEnvironment is freed. Re-resolve
 	# on the next frame so the new scene's WorldEnvironment is available.
 	_world_env = null

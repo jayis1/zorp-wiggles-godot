@@ -323,6 +323,27 @@ func _physics_process(delta: float) -> void:
 				_act_dist_t = 1.0 - _act_dist_t * _act_dist_t * (3.0 - 2.0 * _act_dist_t)
 				activate_vol = lerpf(0.15, 1.0, _act_dist_t)
 			AudioManager.play_sfx_pitched_volume(AudioManager.SFX_SPAWN_IN, activate_pitch, activate_vol)
+		# ── Spawn-landing squash ── When the grace period ends, the enemy
+		#    "lands" into active state. A brief vertical squash (compress Y,
+		#    stretch X/Z) with an elastic recovery gives the materialization
+		#    a physical "impact" read — the enemy doesn't just pop to full
+		#    size, it *lands* with weight. The squash is short (50ms down,
+		#    220ms elastic back) so it reads as a snappy landing, not a
+		#    slow deform. Skipped if a hit squash is already running (the
+		#    hit owns the scale). Uses the same tracked tween pattern as
+		#    the hit squash so the idle breathing code doesn't overwrite the
+		#    scale mid-rebound.
+		if body_mesh and not is_windup and not is_dead:
+			if _hit_squash_tween and _hit_squash_tween.is_valid():
+				_hit_squash_tween.kill()
+			var land_squash := create_tween()
+			_hit_squash_tween = land_squash
+			land_squash.tween_property(body_mesh, "scale",
+				Vector3(base_scale * 1.25, base_scale * 0.7, base_scale * 1.25), 0.05) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+			land_squash.tween_property(body_mesh, "scale",
+				Vector3.ONE * base_scale, 0.22) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 		return
 
 	# Check if player is alive

@@ -184,6 +184,12 @@ func _ready() -> void:
 	#    damage feedback read. The signal carries the source position but we
 	#    don't need it for the FOV dip (the shake uses it for direction bias).
 	GameManager.damage_taken_from.connect(_on_player_damage_fov_dip)
+	# ── Directional damage roll tilt ── connect the damage roll handler so
+	#    the camera briefly tilts toward the damage source on each hit.
+	#    This gives directional feedback — a hit from the right tilts the
+	#    camera right, a hit from the left tilts left — complementing the
+	#    shake bias and FOV dip for a multi-layer directional damage read.
+	GameManager.damage_taken_from.connect(_on_player_damage_roll)
 	# ── Level-up FOV punch ── connect to the level-up signal so the camera
 	#    does a brief cinematic zoom-in/ease-out when the player levels up.
 	#    A level-up is a milestone moment; a subtle FOV punch (zoom in ~4°
@@ -593,6 +599,59 @@ func _on_player_damage_fov_dip(_source_pos: Vector3) -> void:
 	# "tunnel vision" should linger, reinforcing the sense of danger
 	# after a hit rather than snapping away immediately.
 	_fov_return_mode = FovReturnMode.DAMAGE_DIP
+
+# ── Directional damage roll tilt ── When the player takes damage from a
+#    specific direction, the camera briefly rolls (Z rotation) toward the
+#    damage source — a subtle "recoil lean" that makes hits feel
+#    directional without being disorienting. The roll snaps instantly and
+#    recovers over 300ms with an ease-out cubic curve. The max roll
+#    is small (±2.5°) so it reads as a gentle tilt, not a violent camera
+#    swing. The roll is applied on the RIG (not the camera child) so it
+#    composes cleanly with the shake system's own Z rotation on the
+#    camera child node. The roll direction is derived from the damage
+#    source's horizontal direction relative to the player: a hit from
+#    the right rolls the camera clockwise (positive Z), a hit from the
+#    left rolls counter-clockwise (negative Z).
+var _damage_roll_tween: Tween = null
+const DAMAGE_ROLL_MAX: float = 2.5  # Max roll in degrees
+const DAMAGE_ROLL_OUT_DURATION: float = 0.30  # Ease back to level
+func _on_player_damage_roll(source_pos: Vector3) -> void:
+	if source_pos == Vector3.ZERO:
+		return
+	if not _target_node or not is_instance_valid(_target_node):
+		return
+	# Compute the horizontal direction from the damage source to the player.
+	# A hit from the player's right should roll the camera toward the right
+	# (positive roll), a hit from the left toward the left (negative roll).
+	var hit_dir: Vector3 = _target_node.global_position - source_pos
+	hit_dir.y = 0.0
+	if hit_dir.length_squared() < 0.01:
+		return
+	hit_dir = hit_dir.normalized()
+	# Convert the world-space hit direction to a camera-relative horizontal
+	# direction using the rig's current basis. In Godot 4, multiplying a
+	# world direction by the inverse basis gives a local-space direction.
+	# global_basis.transposed() ≈ inverse for orthonormal rotation matrices.
+	var local_hit: Vector3 = global_basis.transposed() * hit_dir
+	# Roll sign: hit from the right (local_hit.x > 0) → positive roll
+	# (camera tilts right), hit from the left (local_hit.x < 0) → negative
+	# roll (camera tilts left). The roll magnitude is constant (direction-
+	# independent) so all hits feel equally weighty regardless of angle.
+	var roll_sign: float = signf(local_hit.x) if absf(local_hit.x) > 0.1 else 1.0
+	var target_roll: float = roll_sign * DAMAGE_ROLL_MAX
+	# Kill any in-progress roll tween so rapid hits restart the tilt cleanly.
+	if _damage_roll_tween and _damage_roll_tween.is_valid():
+		_damage_roll_tween.kill()
+	_damage_roll_tween = create_tween()
+	# Snap to the target roll, then ease back to zero. The snap is instant
+	# (a 1-frame tilt) so the directional read is immediate, and the
+	# recovery uses ease-out cubic for a smooth settle. The roll is on the
+	# rig's rotation_degrees.z, which the _process loop doesn't touch (it
+	# only eases x and y), so the tween owns z exclusively.
+	rotation_degrees.z = target_roll
+	_damage_roll_tween.tween_property(self, "rotation_degrees:z",
+		0.0, DAMAGE_ROLL_OUT_DURATION) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 func set_camera_yaw(yaw_deg: float) -> void:
 	# Set the target yaw — _process eases the actual rotation toward this.

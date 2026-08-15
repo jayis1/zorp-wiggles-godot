@@ -42,8 +42,9 @@ var _vacuum_duration_left: float = 0.0
 
 # Reuse the enemy projectile scene for void breath bolts
 const ENEMY_PROJECTILE_SCENE := preload("res://scenes/entities/enemy_projectile.tscn")
-# Reuse the Void Wisp scene for summons
-const WISP_SCENE_PATH := "res://scenes/entities/enemy_wisp.tscn"
+# Reuse the Void Wisp scene for summons — preloaded at parse time so repeated
+# summon attacks don't hit the resource loader every cast.
+const WISP_SCENE := preload("res://scenes/entities/enemy_wisp.tscn")
 
 func _ready() -> void:
 	enemy_name = "Void Leviathan"
@@ -308,9 +309,6 @@ func _fire_void_breath() -> void:
 
 ## Summon Void Wisps around the leviathan (stage 2+).
 func _summon_wisps() -> void:
-	var wisp_scene: PackedScene = load(WISP_SCENE_PATH)
-	if not wisp_scene:
-		return
 	# Respect the global enemy cap
 	# Use GameManager.enemies array instead of get_nodes_in_group("enemies") to
 	# avoid an O(n) scene-tree group scan — matches the optimization pattern from
@@ -329,7 +327,7 @@ func _summon_wisps() -> void:
 		var spawn_pos: Vector3 = global_position + Vector3(
 			cos(angle) * dist, 1.0, sin(angle) * dist
 		)
-		var wisp: CharacterBody3D = wisp_scene.instantiate()
+		var wisp: CharacterBody3D = WISP_SCENE.instantiate()
 		wisp.position = spawn_pos
 		get_parent().add_child(wisp)
 		GameManager.enemies.append(wisp)

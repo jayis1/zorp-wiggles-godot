@@ -684,8 +684,25 @@ func _physics_process(delta: float) -> void:
 		_pull_tilt_current = _pull_tilt_current.lerp(tilt_target, tilt_weight)
 		# Apply tilt on top of the Y-axis idle spin (rotate_y sets rotation.y)
 		# We only write X and Z so the spin isn't disrupted.
-		mesh_instance.rotation.x = _pull_tilt_current.x
-		mesh_instance.rotation.z = _pull_tilt_current.z
+		# ── Idle tilt wobble ── When not being magnetically pulled, add a
+		#    subtle X/Z rotation oscillation so the collectible feels like
+		#    it's floating on an unseen current rather than being a
+		#    mechanically spinning sprite. The wobble uses incoherent sine
+		#    frequencies on X and Z (0.8 and 1.1 rad/s relative to the
+		#    bob phase) so the tilt never repeats in a visible loop. The
+		#    amplitude is tiny (~6° max) so it reads as organic drift.
+		#    Rare items get a slightly larger tilt (~9°) so they feel
+		#    more energetically buoyant. When pulling, only the pull tilt
+		#    is applied (the wobble would fight the directional lean).
+		#    Skipped during despawn warning (flicker owns the visual).
+		var idle_tilt_x: float = 0.0
+		var idle_tilt_z: float = 0.0
+		if not is_magnetic and not _despawn_warning:
+			var tilt_amp: float = 0.10 if not _is_rare() else 0.16  # ~6° / ~9°
+			idle_tilt_x = sin(bob_offset * 0.8) * tilt_amp
+			idle_tilt_z = sin(bob_offset * 1.1 + PI * 0.33) * tilt_amp * 0.7
+		mesh_instance.rotation.x = _pull_tilt_current.x + idle_tilt_x
+		mesh_instance.rotation.z = _pull_tilt_current.z + idle_tilt_z
 
 	# Collect radius
 	if dist < GameConstants.COLLECT_RADIUS:
