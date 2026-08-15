@@ -120,6 +120,15 @@ var _idle_breath_speed: float = 2.5  # Per-enemy randomized breathing rate (rad/
 const _IDLE_BREATH_SPEED_BASE: float = 2.5  # Center of the random range
 const _IDLE_BREATH_SCALE_AMP: float = 0.04  # ±4% scale pulse
 const _IDLE_BREATH_Y_AMP: float = 0.02  # ±2cm vertical bob
+# ── Idle Y-sway ── A subtle Y-axis rotation sway during idle breathing
+#    so stationary enemies shift their weight gently, like a creature
+#    looking around. Uses a separate incoherent phase (0.37× the breath
+#    frequency) so the sway doesn't sync with the scale pulse. The
+#    amplitude is tiny (±0.03 rad ≈ ±1.7°) so it reads as organic life,
+#    not a mechanical turn. Skipped during walking (the walk cycle owns
+#    body_mesh.rotation.y via the sway animation) and during hit-flash /
+#    windup / attack (those own the mesh transform).
+const _IDLE_SWAY_AMP: float = 0.03  # ±1.7° Y rotation
 
 # ─── Movement Smoothing ──────────────────────────────────────────────────────
 ## Higher = snappier velocity changes. ~8 = smooth organic, ~20 = tight.
@@ -2036,6 +2045,17 @@ func _update_visuals(delta: float) -> void:
 			var breath_y: float = sin(_idle_breath_phase) * _IDLE_BREATH_Y_AMP
 			body_mesh.position.y = 0.5 + breath_y
 			var breath_scale: float = 1.0 + sin(_idle_breath_phase) * _IDLE_BREATH_SCALE_AMP
+			# ── Idle Y-sway ── A gentle Y-axis rotation sway on a separate
+			#    incoherent phase (0.37× the breath frequency) so it doesn't
+			#    sync with the scale pulse. The sway is tiny (±1.7°) and only
+			#    applies when not walking (the walk cycle owns rotation.y via
+			#    the sway animation). This makes idle enemies feel like they're
+			#    subtly shifting their weight or looking around, rather than
+			#    being frozen mannequins. The settle lerp above already eased
+			#    rotation.y toward 0, so the sway layers on top of that
+			#    baseline — the enemy returns to ~0° between sways.
+			var sway_y: float = sin(_idle_breath_phase * 0.37) * _IDLE_SWAY_AMP
+			body_mesh.rotation.y = sway_y
 			# Only apply if no external tween is controlling scale (avoid
 			# fighting the spawn-in scale tween, which runs during the
 			# grace period and sets self.scale, not body_mesh.scale).

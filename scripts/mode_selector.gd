@@ -18,6 +18,14 @@ var _mode_rects: Array[Rect2] = []
 var _start_btn_rect: Rect2 = Rect2()
 var _back_btn_rect: Rect2 = Rect2()
 
+# ── Card hover scale ── Each card eases its own scale factor toward 1.0
+#    (idle) or 1.05 (hovered). The scale is drawn around the card center so
+#    the card grows from the middle, not the top-left corner. This makes
+#    the cards feel tactile — like physical tiles that lift when touched.
+var _card_hover_scales: Array[float] = []
+const CARD_HOVER_SCALE_TARGET: float = 1.05
+const CARD_HOVER_SCALE_SPEED: float = 8.0  # How fast the scale eases (higher = snappier)
+
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -38,7 +46,16 @@ func _process(delta: float) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP if _fade_alpha > 0.5 else Control.MOUSE_FILTER_IGNORE
 	if _fade_alpha < 0.01 and not _visible_flag:
 		visible = false
+	# ── Ease card hover scales ── Each card's scale factor eases toward
+	#    its target (1.05 for hovered, 1.0 for others) with an exponential
+	#    lerp for a smooth, frame-rate-independent transition. This makes
+	#    the cards grow and shrink organically as the cursor moves across
+	#    the grid, rather than snapping to size.
 	if _fade_alpha > 0.01:
+		var weight: float = 1.0 - exp(-CARD_HOVER_SCALE_SPEED * delta)
+		for i in range(_card_hover_scales.size()):
+			var target_scale: float = CARD_HOVER_SCALE_TARGET if i == _hovered_mode else 1.0
+			_card_hover_scales[i] = lerpf(_card_hover_scales[i], target_scale, weight)
 		queue_redraw()
 
 func _gui_input(event: InputEvent) -> void:
@@ -91,6 +108,9 @@ func _draw() -> void:
 	if _fade_alpha < 0.01:
 		return
 	_mode_rects.clear()
+	# Ensure the hover scale array matches the number of mode cards
+	while _card_hover_scales.size() < GameModeManager.MODE_NAMES.size():
+		_card_hover_scales.append(1.0)
 	var font := get_theme_default_font()
 	if not font:
 		return
@@ -127,7 +147,15 @@ func _draw() -> void:
 		var card_y: float = start_y + row * (card_h + gap)
 		var card_rect := Rect2(card_x, card_y, card_w, card_h)
 		_mode_rects.append(card_rect)
-		_draw_mode_card(font, i, card_rect, a, current_mode)
+		# ── Apply hover scale ── Scale the card rect around its center
+		#    so the hovered card grows from the middle. The scale factor
+		#    is eased in _process for a smooth transition. The scaled rect
+		#    is used for both hit-testing (so the larger card still accepts
+		#    clicks) and drawing (so the card visually grows).
+		var hov_scale: float = _card_hover_scales[i] if i < _card_hover_scales.size() else 1.0
+		var scaled_rect: Rect2 = _rect_around_center(card_rect, hov_scale)
+		_mode_rects[i] = scaled_rect  # Use scaled rect for hit-testing
+		_draw_mode_card(font, i, scaled_rect, a, current_mode)
 	# Start button (bottom-center)
 	var btn_w: float = 200.0
 	var btn_h: float = 50.0
@@ -234,3 +262,12 @@ func _draw_centered_text(font, text: String, pos: Vector2, font_size: int, color
 	font.draw_string(get_canvas_item(),
 		Vector2(pos.x - text_size.x / 2.0, pos.y + text_size.y / 2.0),
 		text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+
+## Scale a Rect2 around its center by the given factor. Used for card hover
+## scaling so the card grows from the middle, not the top-left corner.
+func _rect_around_center(rect: Rect2, scale_factor: float) -> Rect2:
+	if absf(scale_factor - 1.0) < 0.001:
+		return rect
+	var center: Vector2 = rect.get_center()
+	var new_size: Vector2 = rect.size * scale_factor
+	return Rect2(center - new_size * 0.5, new_size)

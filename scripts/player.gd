@@ -1299,9 +1299,29 @@ func _play_pickup_pulse(item_color: Color, is_rare: bool) -> void:
 	# so frequent pickups don't become visual noise.
 	var pop_scale: float = 1.08 if is_rare else 1.04
 	_pickup_pulse_tween = create_tween()
-	_pickup_pulse_tween.tween_property(mesh, "scale", Vector3.ONE * pop_scale, 0.06) \
+	# ── Pickup Y-spin wobble ── A brief Y-axis rotation twist on pickup
+	#    so Zorp "reaches" for the item — a tiny spin that returns to rest,
+	#    giving the collection a tactile rotation beat alongside the scale
+	#    pop and emission flash. Rare items get a bigger wobble (0.12 rad ≈
+	#    7°) so legendary drops feel weightier; common items get 0.06 rad
+	#    (≈3.4°) — subtle enough that mass XP orb pickups don't read as
+	#    spinning. The wobble snaps in 50ms then eases back with an elastic
+	#    spring so it bounces past rest and settles, matching the squash
+	#    pulse's elastic language. Runs in parallel with the scale pop so
+	#    both animate together as a single cohesive "catch" beat.
+	var wobble_angle: float = 0.12 if is_rare else 0.06
+	# Random direction (left or right) so consecutive pickups alternate
+	# sides, preventing a repetitive one-direction spin during magnet chains.
+	var wobble_dir: float = 1.0 if randf() > 0.5 else -1.0
+	_pickup_pulse_tween.tween_property(mesh, "rotation:y",
+		mesh.rotation.y + wobble_angle * wobble_dir, 0.05) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	_pickup_pulse_tween.tween_property(mesh, "scale", Vector3.ONE, 0.12) \
+	_pickup_pulse_tween.parallel().tween_property(mesh, "scale", Vector3.ONE * pop_scale, 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	# Return Y rotation to the idle baseline (0) with an elastic spring
+	_pickup_pulse_tween.tween_property(mesh, "rotation:y", 0.0, 0.12) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+	_pickup_pulse_tween.parallel().tween_property(mesh, "scale", Vector3.ONE, 0.12) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	# Emission flash in the item's color — brief and small so it reads as
 	# a "taste" of the pickup, not a full color swap. Only the emission
