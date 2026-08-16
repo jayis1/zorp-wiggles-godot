@@ -1497,6 +1497,24 @@ func _start_slide(initial_vel: Vector3) -> void:
 	slide_velocity = initial_vel
 	# Keep invuln during early slide for a smooth feel
 	GameManager.player_invuln_timer = max(GameManager.player_invuln_timer, 0.1)
+	# ── Dash-to-slide transition cue ── When the dash ends and the slide
+	#    begins, there's no visual feedback for the transition moment —
+	#    the player goes from stretched-dash to sliding with no "shift."
+	#    A tiny scale "settle" (snap to 0.92 then ease back to 1.0 over
+	#    0.12s) gives the transition a physical "landing into slide"
+	#    read, as if Zorp's body catches up to the momentum change. This
+	#    is the counterpart to the dash start squash — the dash squashes
+	#    on launch and settles on slide entry, framing the dash-slide
+	#    as a two-beat motion (punch → glide) rather than one continuous
+	#    stretch. Skipped if mesh is null (safety during scene teardown).
+	if mesh:
+		var settle_tween := create_tween()
+		settle_tween.tween_property(mesh, "scale",
+			Vector3.ONE * 0.92, 0.05) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		settle_tween.tween_property(mesh, "scale",
+			Vector3.ONE, 0.12) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 func _update_slide(delta: float) -> void:
 	# Apply friction (frame-rate independent exponential decay)

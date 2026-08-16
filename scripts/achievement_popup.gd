@@ -34,7 +34,11 @@ class PopupEntry:
 	#    a simple notification into a mini-progress display. One-shot
 	#    achievements have progress_frac = -1.0 (no bar drawn).
 	var progress_frac: float = -1.0  # -1 = no bar, 0..1 = bar fill
-	var progress_text: String = ""   # e.g. "85/100"
+	var progress_text: String = ""  # e.g. "85/100"
+	# ── Exit scale-shrink ── During the slide-out phase, the popup
+	#    scales down from 1.0 to 0.88 so it "shrinks away" rather than
+	#    just sliding. Set to 1.0 during slide-in and stay phases.
+	var exit_scale: float = 1.0
 
 # ─── Internal State ───────────────────────────────────────────────────────────
 var _popups: Array[PopupEntry] = []
@@ -396,16 +400,27 @@ func _process(delta: float) -> void:
 			var eased_in: float = 1.0 - pow(1.0 - slide_progress, 3.0)
 			entry.slide_x = lerpf(360.0, 0.0, eased_in)
 			entry.alpha = eased_in
+			entry.exit_scale = 1.0
 		elif entry.timer > 0.4:
 			# Staying
 			entry.slide_x = 0.0
 			entry.alpha = 1.0
+			entry.exit_scale = 1.0
 		else:
 			# Sliding out — ease-in cubic: t^3 (accelerate away)
 			var out_progress: float = 1.0 - entry.timer / 0.4
 			var eased_out: float = pow(out_progress, 3.0)
 			entry.slide_x = lerpf(0.0, 360.0, eased_out)
 			entry.alpha = 1.0 - eased_out
+			# ── Exit scale-shrink ── The slide-in eases in with an
+			#    ease-out cubic (fast enter, decelerate), but the slide-out
+			#    only slides and fades — no scale change. Adding a subtle
+			#    scale-down (1.0 → 0.88) during the exit gives the popup a
+			#    "shrinking away" read that mirrors the entrance energy in
+			#    reverse, matching the combo break deflate and the boss bar
+			#    exit shrink. The shrink uses ease-in cubic (same as the
+			#    slide) so the scale and position accelerate together.
+			entry.exit_scale = lerpf(1.0, 0.88, eased_out)
 
 	# Remove expired
 	for i in range(_popups.size() - 1, -1, -1):
@@ -430,7 +445,19 @@ func _draw() -> void:
 		# Progress-based achievements get a taller panel to fit the bar
 		var has_bar: bool = entry.progress_frac >= 0.0
 		var this_height: float = panel_height + (16.0 if has_bar else 0.0)
+		# ── Exit scale-shrink ── Scale the panel around its center during
+		#    the slide-out so the popup shrinks as it exits. The scale is
+		#    applied by adjusting the panel position and dimensions: we
+		#    compute the center, then scale width/height/offsets around it.
+		var es: float = entry.exit_scale
+		var scaled_w: float = panel_width * es
+		var scaled_h: float = this_height * es
 		var panel_x: float = size.x - panel_width + entry.slide_x
+		# Adjust panel_x so the scale is centered: shift right by half the
+		# width difference so the shrink grows toward the center, not the
+		# left edge. Only noticeable during exit (es < 1.0).
+		panel_x += (panel_width - scaled_w) * 0.5
+		var panel_y: float = y + (this_height - scaled_h) * 0.5
 
 		# ── Gold glow pulse behind the panel ── A subtle gold radial glow
 		#    that pulses behind the popup during its "staying" phase, giving
@@ -445,43 +472,54 @@ func _draw() -> void:
 			var glow_pulse: float = 0.5 + 0.5 * sin(entry.timer * 1.2 * TAU)
 			var glow_alpha: float = 0.06 + 0.04 * glow_pulse
 			var glow_col := Color(1.0, 0.843, 0.0, glow_alpha * entry.alpha)
-			draw_rect(Rect2(panel_x - 3, y - 3, panel_width + 6, this_height + 6), glow_col, true)
+			draw_rect(Rect2(panel_x - 3, panel_y - 3, scaled_w + 6, scaled_h + 6), glow_col, true)
 
 		# Draw panel background
 		var bg := Color(0.05, 0.05, 0.12, 0.85 * entry.alpha)
-		draw_rect(Rect2(panel_x, y, panel_width, this_height), bg, true)
+		draw_rect(Rect2(panel_x, panel_y, scaled_w, scaled_h), bg, true)
 
 		# Draw gold border
 		var border := Color(1.0, 0.843, 0.0, 0.7 * entry.alpha)
-		draw_rect(Rect2(panel_x, y, panel_width, this_height), border, false, 2.0)
+		draw_rect(Rect2(panel_x, panel_y, scaled_w, scaled_h), border, false, 2.0)
 
-		# Draw icon (large, left side)
+		# Draw icon (large, left side) — offset by scale relative to center
 		var icon_size: int = 28
 		var icon_ts := font.get_string_size(entry.achievement.icon, HORIZONTAL_ALIGNMENT_LEFT, -1, icon_size)
+		# Scale icon position relative to panel center
+		var icon_x: float = panel_x + 10 * es
+		var icon_y: float = panel_y + (icon_ts.y + 8) * es
+		var icon_font_size: int = int(float(icon_size) * es)
+		icon_font_size = maxi(icon_font_size, 8)
 		font.draw_string(get_canvas_item(),
-			Vector2(panel_x + 10, y + icon_ts.y + 8),
-			entry.achievement.icon, HORIZONTAL_ALIGNMENT_LEFT, -1, icon_size,
+			Vector2(icon_x, icon_y),
+			entry.achievement.icon, HORIZONTAL_ALIGNMENT_LEFT, -1, icon_font_size,
 			Color(1.0, 0.843, 0.0, entry.alpha))
 
-		# Draw title (bold-looking, larger)
+		# Draw title (bold-looking, larger) — scale font + position
 		var title_size: int = 18
+		var title_font_size: int = int(float(title_size) * es)
+		title_font_size = maxi(title_font_size, 8)
 		font.draw_string(get_canvas_item(),
-			Vector2(panel_x + 50, y + 22),
-			entry.achievement.title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_size,
+			Vector2(panel_x + 50 * es, panel_y + 22 * es),
+			entry.achievement.title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_font_size,
 			Color(1.0, 1.0, 1.0, entry.alpha))
 
-		# Draw description (smaller, dimmer)
+		# Draw description (smaller, dimmer) — scale font + position
 		var desc_size: int = 13
+		var desc_font_size: int = int(float(desc_size) * es)
+		desc_font_size = maxi(desc_font_size, 8)
 		font.draw_string(get_canvas_item(),
-			Vector2(panel_x + 50, y + 42),
-			entry.achievement.description, HORIZONTAL_ALIGNMENT_LEFT, -1, desc_size,
+			Vector2(panel_x + 50 * es, panel_y + 42 * es),
+			entry.achievement.description, HORIZONTAL_ALIGNMENT_LEFT, -1, desc_font_size,
 			Color(0.7, 0.7, 0.8, 0.8 * entry.alpha))
 
-		# Draw "ACHIEVEMENT UNLOCKED" label (tiny, top)
+		# Draw "ACHIEVEMENT UNLOCKED" label (tiny, top) — scale font + position
 		var label_size: int = 9
+		var label_font_size: int = int(float(label_size) * es)
+		label_font_size = maxi(label_font_size, 6)
 		font.draw_string(get_canvas_item(),
-			Vector2(panel_x + 50, y + 12),
-			"ACHIEVEMENT UNLOCKED", HORIZONTAL_ALIGNMENT_LEFT, -1, label_size,
+			Vector2(panel_x + 50 * es, panel_y + 12 * es),
+			"ACHIEVEMENT UNLOCKED", HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size,
 			Color(1.0, 0.843, 0.0, 0.6 * entry.alpha))
 
 		# ── Progress bar ── For progress-based achievements, draw a thin
@@ -491,10 +529,10 @@ func _draw() -> void:
 		#    This transforms the popup from a bare notification into a
 		#    mini-progress display so the player sees how close they are.
 		if has_bar:
-			var bar_x: float = panel_x + 10
-			var bar_y: float = y + panel_height + 2
-			var bar_w: float = panel_width - 80
-			var bar_h: float = 8.0
+			var bar_x: float = panel_x + 10 * es
+			var bar_y: float = panel_y + (panel_height + 2) * es
+			var bar_w: float = (panel_width - 80) * es
+			var bar_h: float = 8.0 * es
 			# Track (dark background)
 			var track_col := Color(0.15, 0.15, 0.2, 0.8 * entry.alpha)
 			draw_rect(Rect2(bar_x, bar_y, bar_w, bar_h), track_col, true)
@@ -503,9 +541,10 @@ func _draw() -> void:
 			var fill_col := Color(1.0, 0.843, 0.0, 0.9 * entry.alpha)
 			draw_rect(Rect2(bar_x, bar_y, fill_w, bar_h), fill_col, true)
 			# Progress text (right-aligned in the remaining space)
-			var pt_size: int = 10
+			var pt_size: int = int(float(10) * es)
+			pt_size = maxi(pt_size, 6)
 			font.draw_string(get_canvas_item(),
-				Vector2(panel_x + panel_width - 65, bar_y + 8),
+				Vector2(panel_x + (panel_width - 65) * es, bar_y + 8 * es),
 				entry.progress_text, HORIZONTAL_ALIGNMENT_LEFT, -1, pt_size,
 				Color(0.8, 0.8, 0.85, 0.85 * entry.alpha))
 

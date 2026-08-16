@@ -15,6 +15,17 @@ var _display_alpha: float = 1.0  # Brightness multiplier (fades after display)
 var _biome_colors: Dictionary = {}
 var _world_ref: Node3D = null
 
+# ── Biome change scale-pop ── When the biome changes, the indicator text
+#    used to just lerp color with no motion. The weather indicator gets a
+#    scale-pop on change; the biome indicator deserves the same treatment
+#    so biome transitions feel deliberate, not silent. A quick shrink →
+#    elastic overshoot gives the name a "landed in a new place" read.
+#    The pop is driven by a _pop_phase that eases to 0 over ~0.4s, and
+#    _draw applies a scale transform around the text center.
+var _pop_phase: float = 0.0  # 1.0 at change moment → eases to 0
+const POP_DECAY_SPEED: float = 3.5  # How fast the pop settles (higher = snappier)
+var _pop_scale: float = 1.0  # Computed scale from _pop_phase
+
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_TOP_WIDE)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -41,6 +52,9 @@ func _on_biome_changed(biome_id: int) -> void:
 	_target_color = Color(biome_color.r, biome_color.g, biome_color.b, 0.9)
 	# Reset display alpha to full (bright)
 	_display_alpha = 1.0
+	# Trigger the scale-pop so the biome change reads as a deliberate
+	# visual "shift" rather than a silent color lerp.
+	_pop_phase = 1.0
 
 func _process(delta: float) -> void:
 	# Frame-rate-independent exponential lerp (1 - exp(-k*delta)) instead of
@@ -55,6 +69,35 @@ func _process(delta: float) -> void:
 	_display_alpha = lerpf(_display_alpha, 0.4, weight)
 	# Lerp color toward target
 	_current_color = _current_color.lerp(_target_color, weight)
+	# ── Decay the scale-pop phase ── Uses ease-out elastic so the pop
+	#    overshoots past 1.0 then settles, matching the weather icon pop.
+	#    The elastic curve is approximated by combining a shrink phase
+	#    (first 20% of the decay) and an overshoot phase (remaining 80%).
+	if _pop_phase > 0.0:
+		_pop_phase -= delta * POP_DECAY_SPEED
+		if _pop_phase <= 0.0:
+			_pop_phase = 0.0
+			_pop_scale = 1.0
+		else:
+			# Map _pop_phase (1→0) to an elastic pop: shrink to 0.6 at
+			# phase=0.8, overshoot to 1.15 at phase=0.4, settle to 1.0 at 0.
+			var p: float = _pop_phase
+			if p > 0.8:
+				# Wind-up shrink: 1.0 → 0.6 as p goes 1.0 → 0.8
+				var t: float = (1.0 - p) / 0.2
+				_pop_scale = lerpf(1.0, 0.6, t * t)
+			elif p > 0.4:
+				# Overshoot: 0.6 → 1.15 as p goes 0.8 → 0.4
+				var t: float = (0.8 - p) / 0.4
+				# Ease-out cubic for a fast pop that decelerates
+				t = 1.0 - pow(1.0 - t, 3.0)
+				_pop_scale = lerpf(0.6, 1.15, t)
+			else:
+				# Settle: 1.15 → 1.0 as p goes 0.4 → 0.0
+				var t: float = 1.0 - (p / 0.4)
+				# Ease-out quartic for a soft landing
+				t = 1.0 - pow(1.0 - t, 4.0)
+				_pop_scale = lerpf(1.15, 1.0, t)
 	# Update actual modulate-like via custom draw
 	queue_redraw()
 
@@ -79,7 +122,21 @@ func _draw() -> void:
 	var color := Color(_current_color.r, _current_color.g, _current_color.b,
 		_current_color.a * _display_alpha)
 
-	# Draw a subtle shadow for readability
+	# ── Apply scale-pop around the text center ── The pop gives the
+	#    biome name a "landed in a new place" read on biome change.
+	#    We draw the shadow and text at the scaled position, scaling
+	#    around the text's horizontal center so it grows from the
+	#    middle, not the top-left corner.
+	var scaled_text_w: float = text_size.x * _pop_scale
+	var scaled_text_h: float = text_size.y * _pop_scale
+	var scaled_center_x: float = center_x
+	var scaled_draw_y: float = draw_y - (scaled_text_h - text_size.y) * 0.5
+	var scaled_offset_x: float = scaled_center_x - scaled_text_w / 2.0
+
+	# Draw a subtle shadow for readability (scaled with the text)
 	var shadow_color := Color(0, 0, 0, color.a * 0.5)
-	font.draw_string(get_canvas_item(), Vector2(center_x - text_size.x / 2.0 + 2, draw_y + 2), display_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, shadow_color)
-	font.draw_string(get_canvas_item(), Vector2(center_x - text_size.x / 2.0, draw_y), display_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+	var shadow_font_size: int = int(float(font_size) * _pop_scale)
+	# Clamp font size to avoid zero or negative on extreme scales
+	shadow_font_size = maxi(shadow_font_size, 8)
+	font.draw_string(get_canvas_item(), Vector2(scaled_offset_x + 2, scaled_draw_y + 2), display_text, HORIZONTAL_ALIGNMENT_LEFT, -1, shadow_font_size, shadow_color)
+	font.draw_string(get_canvas_item(), Vector2(scaled_offset_x, scaled_draw_y), display_text, HORIZONTAL_ALIGNMENT_LEFT, -1, shadow_font_size, color)

@@ -1317,8 +1317,25 @@ func _on_combo_changed(count: int) -> void:
 		if combo_text and combo_text.visible:
 			if combo_text.has_meta("_combo_tween") and is_instance_valid(combo_text.get_meta("_combo_tween") as Tween):
 				(combo_text.get_meta("_combo_tween") as Tween).kill()
+			# ── Combo break shake ── A combo break is a negative event — the
+			#    player lost their streak. The existing deflate (scale down +
+			#    fade) reads as a gentle "settle," but a broken streak should
+			#    feel like a small "stumble." We add a brief horizontal shake
+			#    (a decaying sine wobble) on top of the deflate so the combo
+			#    text visibly "shatters" rather than softly fading. The shake
+			#    is driven by a tween_method that writes position.x around the
+			#    label's resting offset_left, decaying over the 0.18s break
+			#    duration. The amplitude is small (±4px) and the frequency
+			#    high (28 Hz) so it reads as a vibration, not a sway.
 			var break_tween := create_tween()
-			break_tween.tween_property(combo_text, "scale", Vector2.ONE * 0.7, 0.18) \
+			# Capture resting offset so the shake returns to it
+			var rest_left: float = combo_text.offset_left
+			break_tween.tween_method(
+				func(amp: float):
+					combo_text.offset_left = rest_left + sin(amp * 28.0) * 4.0 * amp,
+				1.0, 0.0, 0.18
+			).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			break_tween.parallel().tween_property(combo_text, "scale", Vector2.ONE * 0.7, 0.18) \
 				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 			break_tween.parallel().tween_property(combo_text, "modulate:a", 0.0, 0.18) \
 				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
@@ -1326,6 +1343,7 @@ func _on_combo_changed(count: int) -> void:
 				combo_text.visible = false
 				combo_text.scale = Vector2.ONE
 				combo_text.modulate.a = 1.0
+				combo_text.offset_left = rest_left
 			)
 			combo_text.set_meta("_combo_tween", break_tween)
 		else:
