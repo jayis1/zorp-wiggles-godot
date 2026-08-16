@@ -129,7 +129,7 @@ func fuse_mods(parent_a: int, parent_b: int) -> int:
 	fm.fire_rate_mult = _combine_stat(
 		GameConstants.WEAPON_MOD_FIRE_RATE_MULT[parent_a],
 		GameConstants.WEAPON_MOD_FIRE_RATE_MULT[parent_b],
-		fm.bonus)
+		fm.bonus, true)
 	fm.speed_mult = _combine_stat(
 		GameConstants.WEAPON_MOD_SPEED_MULT[parent_a],
 		GameConstants.WEAPON_MOD_SPEED_MULT[parent_b],
@@ -171,14 +171,13 @@ func fuse_mods(parent_a: int, parent_b: int) -> int:
 	return fused_id
 
 # Combine two stat multipliers by averaging and adding the bonus.
-# A higher multiplier is "better" for damage/speed/fire-rate (lower fire-rate
-# mult = faster fire, so we invert before averaging to favor faster fire).
-func _combine_stat(a: float, b: float, bonus: float) -> float:
-	# Average the two values, then add bonus.
-	# For fire_rate_mult, lower is better (cooldown multiplier). We want the
-	# fusion to be at least as good as the faster parent, so we take the min
-	# (faster) and subtract a fraction of the bonus.
+# For damage_mult and speed_mult, higher is better, so bonus is additive.
+# For fire_rate_mult, lower is better (cooldown multiplier), so bonus is
+# subtracted to make the fused mod fire faster, not slower.
+func _combine_stat(a: float, b: float, bonus: float, lower_is_better: bool = false) -> float:
 	var avg: float = (a + b) * 0.5
+	if lower_is_better:
+		return maxf(0.1, avg - bonus)
 	return maxf(0.1, avg + bonus)
 
 # Generate a procedural name for the fused mod by combining parent syllables.
