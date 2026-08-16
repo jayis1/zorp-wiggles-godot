@@ -16,13 +16,19 @@ class_name BossArena
 # ─── Preloaded scenes ─────────────────────────────────────────────────────────
 const DESTRUCTIBLE_SCENE := preload("res://scenes/entities/destructible.tscn")
 const PORTAL_SCENE := preload("res://scenes/entities/portal.tscn")
-const BOSS_SCENES: Dictionary = {
-	GameConstants.EnemyType.DRAKE: preload("res://scenes/entities/enemy_drake.tscn"),
-	GameConstants.EnemyType.SERPENT: preload("res://scenes/entities/enemy_serpent.tscn"),
-	GameConstants.EnemyType.GRAVITON: preload("res://scenes/entities/enemy_graviton.tscn"),
-	GameConstants.EnemyType.VOID_LEVIATHAN: preload("res://scenes/entities/enemy_void_leviathan.tscn"),
-	GameConstants.EnemyType.ANCIENT_SENTINEL: preload("res://scenes/entities/enemy_ancient_sentinel.tscn"),
-}
+# Boss scenes loaded at runtime to avoid Godot 4.4 class resolution order
+# issues during autoload init (enemy_drake.gd/enemy_serpent.gd extend
+# enemy_base.gd which may not be registered yet at preload time).
+var BOSS_SCENES: Dictionary = {}
+func _init_boss_scenes() -> void:
+	if BOSS_SCENES.is_empty():
+		BOSS_SCENES = {
+			GameConstants.EnemyType.DRAKE: load("res://scenes/entities/enemy_drake.tscn"),
+			GameConstants.EnemyType.SERPENT: load("res://scenes/entities/enemy_serpent.tscn"),
+			GameConstants.EnemyType.GRAVITON: load("res://scenes/entities/enemy_graviton.tscn"),
+			GameConstants.EnemyType.VOID_LEVIATHAN: load("res://scenes/entities/enemy_void_leviathan.tscn"),
+			GameConstants.EnemyType.ANCIENT_SENTINEL: load("res://scenes/entities/enemy_ancient_sentinel.tscn"),
+		}
 signal arena_activated(arena_type: int)
 signal arena_deactivated()
 signal arena_shrunk(new_radius: float)
@@ -68,6 +74,7 @@ const VOID_HAZARDS: Array[int] = [
 ]
 
 func _ready() -> void:
+	_init_boss_scenes()
 	# Listen for boss spawn/death to activate/deactivate arenas
 	GameManager.boss_spawned.connect(_on_boss_spawned)
 	GameManager.boss_defeated.connect(_on_boss_defeated)
@@ -155,7 +162,7 @@ func _on_boss_spawned(boss: Node) -> void:
 	_boss_node = boss
 
 	# Determine arena type from boss type
-	if boss is EnemyDrake:
+	if boss.has_method("get") and boss.get("enemy_type") == GameConstants.EnemyType.DRAKE:
 		_arena_type = GameConstants.ArenaType.LAVA_ARENA
 	elif boss.has_method("get") and boss.get("enemy_type") == GameConstants.EnemyType.SERPENT:
 		_arena_type = GameConstants.ArenaType.CRYSTAL_ARENA

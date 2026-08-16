@@ -28,15 +28,21 @@
 extends Node
 
 # ─── Preloaded boss scenes for Boss Rush / Boss Gauntlet ───────────────────────
-const BOSS_SCENES: Dictionary = {
-	GameConstants.EnemyType.BLOB: preload("res://scenes/entities/enemy_blob.tscn"),
-	GameConstants.EnemyType.DRAKE: preload("res://scenes/entities/enemy_drake.tscn"),
-	GameConstants.EnemyType.SERPENT: preload("res://scenes/entities/enemy_serpent.tscn"),
-	GameConstants.EnemyType.GRAVITON: preload("res://scenes/entities/enemy_graviton.tscn"),
-	GameConstants.EnemyType.VOID_LEVIATHAN: preload("res://scenes/entities/enemy_void_leviathan.tscn"),
-	GameConstants.EnemyType.ANCIENT_SENTINEL: preload("res://scenes/entities/enemy_ancient_sentinel.tscn"),
-	GameConstants.EnemyType.GRAVITY_ELEMENTAL: preload("res://scenes/entities/enemy_gravity_elemental.tscn"),
-}
+# Loaded at runtime to avoid Godot 4.4 class resolution order issues during
+# autoload init (enemy_drake.gd/enemy_serpent.gd extend enemy_base.gd which
+# may not be registered yet at preload time).
+var BOSS_SCENES: Dictionary = {}
+func _init_boss_scenes() -> void:
+	if BOSS_SCENES.is_empty():
+		BOSS_SCENES = {
+			GameConstants.EnemyType.BLOB: load("res://scenes/entities/enemy_blob.tscn"),
+			GameConstants.EnemyType.DRAKE: load("res://scenes/entities/enemy_drake.tscn"),
+			GameConstants.EnemyType.SERPENT: load("res://scenes/entities/enemy_serpent.tscn"),
+			GameConstants.EnemyType.GRAVITON: load("res://scenes/entities/enemy_graviton.tscn"),
+			GameConstants.EnemyType.VOID_LEVIATHAN: load("res://scenes/entities/enemy_void_leviathan.tscn"),
+			GameConstants.EnemyType.ANCIENT_SENTINEL: load("res://scenes/entities/enemy_ancient_sentinel.tscn"),
+			GameConstants.EnemyType.GRAVITY_ELEMENTAL: load("res://scenes/entities/enemy_gravity_elemental.tscn"),
+		}
 
 # ─── Signals ──────────────────────────────────────────────────────────────────
 signal mode_changed(new_mode: int)
@@ -144,6 +150,7 @@ func _init() -> void:
 	_load()
 
 func _ready() -> void:
+	_init_boss_scenes()
 	if GameManager:
 		GameManager.game_restarted.connect(_on_game_restarted)
 		GameManager.player_died.connect(_on_player_died)

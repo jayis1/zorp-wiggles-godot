@@ -1981,9 +1981,29 @@ func _update_visuals(delta: float) -> void:
 	# Subtle vertical bob + sway while moving, giving enemies a more organic feel.
 	# Each enemy gets a random phase so groups don't sync.
 	if not is_windup and not is_attacking and velocity.length() > 0.5:
-		_walk_phase += delta * _walk_freq
+		# ── Speed-proportional bob frequency ── The bob frequency was
+		#    fixed at _walk_freq regardless of actual movement speed.
+		#    An enemy slowed by weather, ice aura, or enrage mult still
+		#    bobbed at full speed, and a frenzied enemy didn't bob any
+		#    faster — the visual didn't match the motion. Now the bob
+		#    frequency scales with the ratio of current speed to base
+		#    speed, clamped to 0.4×–1.6× so the bob never freezes
+		#    (0× would look dead) or spins unnaturally fast. This makes
+		#    slowed enemies visibly sluggish and fast enemies visibly
+		#    urgent, matching the player's speed-proportional walk bob.
+		var speed_ratio: float = clampf(velocity.length() / maxf(speed, 0.1), 0.4, 1.6)
+		_walk_phase += delta * _walk_freq * speed_ratio
 		if body_mesh:
-			var bob_y: float = sin(_walk_phase) * _walk_amp
+			# ── Speed-proportional bob amplitude ── The bob amplitude was
+			#    fixed at _walk_amp regardless of actual speed. A slowed
+			#    enemy bobbed with the same vertical intensity as a sprinting
+			#    one, which looked wrong — slow movement should have a
+			#    gentle sway, fast movement a pronounced bounce. Now the
+			#    amplitude scales with speed_ratio (clamped 0.5×–1.2×) so
+			#    the bob intensity matches the motion energy. This mirrors
+			#    the player's walk bob which scales amplitude with speed_frac.
+			var bob_amp: float = _walk_amp * clampf(speed_ratio, 0.5, 1.2)
+			var bob_y: float = sin(_walk_phase) * bob_amp
 			body_mesh.position.y = 0.5 + bob_y
 			# Sway: Z sway (side-to-side) + X sway (forward-back) using a
 			# 90° phase offset so the two axes create a circular wobble —

@@ -22,12 +22,18 @@ extends Node
 # ─── Preloaded scenes ─────────────────────────────────────────────────────────
 const WARNING_SCENE := preload("res://scenes/entities/spawn_warning.tscn")
 const COLLECTIBLE_SCENE := preload("res://scenes/entities/collectible.tscn")
-const BOSS_SCENES: Dictionary = {
-	GameConstants.EnemyType.DRAKE: preload("res://scenes/entities/enemy_drake.tscn"),
-	GameConstants.EnemyType.VOID_LEVIATHAN: preload("res://scenes/entities/enemy_void_leviathan.tscn"),
-	GameConstants.EnemyType.ANCIENT_SENTINEL: preload("res://scenes/entities/enemy_ancient_sentinel.tscn"),
-	GameConstants.EnemyType.GRAVITY_ELEMENTAL: preload("res://scenes/entities/enemy_gravity_elemental.tscn"),
-}
+# Boss scenes loaded at runtime to avoid Godot 4.4 class resolution order
+# issues during autoload init (enemy_drake.gd extends enemy_base.gd which
+# may not be registered yet at preload time).
+var BOSS_SCENES: Dictionary = {}
+func _init_boss_scenes() -> void:
+	if BOSS_SCENES.is_empty():
+		BOSS_SCENES = {
+			GameConstants.EnemyType.DRAKE: load("res://scenes/entities/enemy_drake.tscn"),
+			GameConstants.EnemyType.VOID_LEVIATHAN: load("res://scenes/entities/enemy_void_leviathan.tscn"),
+			GameConstants.EnemyType.ANCIENT_SENTINEL: load("res://scenes/entities/enemy_ancient_sentinel.tscn"),
+			GameConstants.EnemyType.GRAVITY_ELEMENTAL: load("res://scenes/entities/enemy_gravity_elemental.tscn"),
+		}
 
 signal world_boss_spawned(boss: Node, boss_display_name: String)
 signal world_boss_defeated(boss: Node, boss_display_name: String)
@@ -48,6 +54,7 @@ var _active_display_name: String = ""
 var _cached_player: Node3D = null
 
 func _ready() -> void:
+	_init_boss_scenes()
 	_schedule_next_spawn()
 	# Listen for boss deaths so we can drop the loot shower and clear our ref.
 	if GameManager.boss_defeated.is_connected(_on_boss_defeated):

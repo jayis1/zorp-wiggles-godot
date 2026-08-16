@@ -186,10 +186,40 @@ func _update_display(weather: int) -> void:
 	_current_color = col
 	if _label:
 		_label.text = name
-		_label.add_theme_color_override("font_color", col)
+		# ── Smooth label color transition ── The weather name label's
+		#    color used to snap instantly on weather change (e.g.
+		#    Clear yellow → Storm blue in one frame). Now we tween the
+		#    font_color override over 0.4s with ease-out quad so the
+		#    color eases through the transition, mirroring the smooth
+		#    bar color lerp. A tracked tween is killed before starting
+		#    a new one so rapid weather changes (combo transitions)
+		#    don't stack into jitter.
+		if _label.has_meta("_color_tween") and is_instance_valid(_label.get_meta("_color_tween") as Tween):
+			(_label.get_meta("_color_tween") as Tween).kill()
+		var prev_label_col: Color = _label.get_theme_color("font_color") if _label.has_theme_color_override("font_color") else Color(1, 1, 1)
+		var label_color_tween := create_tween()
+		label_color_tween.tween_method(
+			func(c: Color):
+				_label.add_theme_color_override("font_color", c),
+			prev_label_col, col, 0.4
+		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		_label.set_meta("_color_tween", label_color_tween)
 	if _icon_label:
 		_icon_label.text = icon
-		_icon_label.add_theme_color_override("font_color", col)
+		# ── Smooth icon color transition ── Same treatment as the
+		#    label: tween the icon's font_color from the previous
+		#    weather color to the new one over 0.4s, so the icon
+		#    color shifts alongside the label rather than snapping.
+		if _icon_label.has_meta("_color_tween") and is_instance_valid(_icon_label.get_meta("_color_tween") as Tween):
+			(_icon_label.get_meta("_color_tween") as Tween).kill()
+		var prev_icon_col: Color = _icon_label.get_theme_color("font_color") if _icon_label.has_theme_color_override("font_color") else Color(1, 1, 1)
+		var icon_color_tween := create_tween()
+		icon_color_tween.tween_method(
+			func(c: Color):
+				_icon_label.add_theme_color_override("font_color", c),
+			prev_icon_col, col, 0.4
+		).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		_icon_label.set_meta("_color_tween", icon_color_tween)
 	if _timer_bar:
 		var c: Color = col
 		c.a = 0.9

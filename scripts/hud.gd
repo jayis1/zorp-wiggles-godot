@@ -1449,6 +1449,41 @@ func _show_score_increment(amount: int) -> void:
 
 func _on_player_died() -> void:
 	show_message("Zorp has fallen!", 5.0)
+	# ── Boss bar cleanup on death ── When the player dies during a boss
+	#    fight, the boss enemy is freed by restart_game() but
+	#    boss_defeated is never emitted (the boss wasn't killed — the
+	#    player died). This means _on_boss_defeated (which runs the
+	#    exit animation) never fires, and the boss HP bar stays visible
+	#    with stale data after respawn. We clear the boss bar reference
+	#    and run the exit fade here so the bar animates out cleanly
+	#    alongside the death screen, rather than lingering into the
+	#    next run. The exit animation is the same one used by
+	#    _on_boss_defeated (fade out + slide up) for visual consistency.
+	boss_ref = null
+	_boss_bar_prev_ratio = 1.0
+	_boss_bar_flash_timer = 0.0
+	_boss_enrage_active = false
+	_boss_ghost_ratio = 1.0
+	if _boss_ghost_bar:
+		_boss_ghost_bar.visible = false
+	if boss_hp_container and boss_hp_container.visible:
+		if _boss_bar_tween and _boss_bar_tween.is_valid():
+			_boss_bar_tween.kill()
+		# Reset enrage self_modulate so the bar exits from a clean state
+		boss_hp_container.self_modulate = Color.WHITE
+		var rest_top: float = boss_hp_container.offset_top
+		_boss_bar_tween = create_tween()
+		_boss_bar_tween.set_parallel(true)
+		_boss_bar_tween.tween_property(boss_hp_container, "modulate:a", 0.0, 0.4) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+		_boss_bar_tween.tween_property(boss_hp_container, "offset_top",
+			rest_top - 30.0, 0.4) \
+			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+		_boss_bar_tween.chain().tween_callback(func():
+			boss_hp_container.visible = false
+			boss_hp_container.modulate.a = 1.0
+			boss_hp_container.offset_top = rest_top
+		)
 	# Death screen is handled by DeathScreen node (death_screen.gd)
 
 func _on_game_restarted() -> void:
@@ -1518,12 +1553,34 @@ func _on_game_restarted() -> void:
 	if _score_float_tween and _score_float_tween.is_valid():
 		_score_float_tween.kill()
 		_score_float_tween = null
-	# Reset the auto-fire indicator — the player's _auto_fire_pinned flag is
+	# Reset auto-fire indicator — the player's _auto_fire_pinned flag is
 	# reset on respawn (see Player._on_game_restarted_player), but the HUD
 	# indicator also needs to clear so a stale [AUTO] badge doesn't persist
 	# into the new run. Calling set_auto_fire_indicator(false) hides the
 	# label and resets the pulse phase.
 	set_auto_fire_indicator(false)
+	# ── Boss bar safety reset ── If the player died during a boss fight,
+	# _on_player_died already runs the exit animation. But if the restart
+	# fires before that animation completes (or the HUD was reloaded), the
+	# boss bar might still be visible with stale data. This ensures the
+	# bar is fully hidden and reset for the new run — no lingering boss
+	# UI from the previous run's boss.
+	boss_ref = null
+	if _boss_bar_tween and _boss_bar_tween.is_valid():
+		_boss_bar_tween.kill()
+		_boss_bar_tween = null
+	if boss_hp_container:
+		boss_hp_container.visible = false
+		boss_hp_container.modulate.a = 1.0
+		boss_hp_container.self_modulate = Color.WHITE
+	_boss_bar_target_ratio = 1.0
+	_boss_bar_prev_ratio = 1.0
+	_boss_bar_flash_timer = 0.0
+	_boss_enrage_active = false
+	_boss_enrage_phase = 0.0
+	_boss_ghost_ratio = 1.0
+	if _boss_ghost_bar:
+		_boss_ghost_bar.visible = false
 
 func _update_all_displays() -> void:
 	_on_hp_changed(GameManager.player_hp, GameManager.player_max_hp)

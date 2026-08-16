@@ -17,18 +17,23 @@ extends Node
 
 # ─── Preloaded scenes ─────────────────────────────────────────────────────────
 const COLLECTIBLE_SCENE := preload("res://scenes/entities/collectible.tscn")
-const DRAKE_SCENE := preload("res://scenes/entities/enemy_drake.tscn")
-const BOSS_SCENES: Dictionary = {
-	GameConstants.EnemyType.DRAKE: preload("res://scenes/entities/enemy_drake.tscn"),
-	GameConstants.EnemyType.SERPENT: preload("res://scenes/entities/enemy_serpent.tscn"),
-	GameConstants.EnemyType.GRAVITON: preload("res://scenes/entities/enemy_graviton.tscn"),
-	GameConstants.EnemyType.VOID_LEVIATHAN: preload("res://scenes/entities/enemy_void_leviathan.tscn"),
-	GameConstants.EnemyType.ANCIENT_SENTINEL: preload("res://scenes/entities/enemy_ancient_sentinel.tscn"),
-	GameConstants.EnemyType.GRAVITY_ELEMENTAL: preload("res://scenes/entities/enemy_gravity_elemental.tscn"),
-	GameConstants.EnemyType.ECHO_KNIGHT: preload("res://scenes/entities/enemy_echo_knight.tscn"),
-	GameConstants.EnemyType.TIME_WARDEN: preload("res://scenes/entities/enemy_time_warden.tscn"),
-	GameConstants.EnemyType.BLOB: preload("res://scenes/entities/enemy_blob.tscn"),
-}
+# Boss scenes loaded at runtime to avoid Godot 4.4 class resolution order
+# issues during autoload init (enemy_drake.gd/enemy_serpent.gd extend
+# enemy_base.gd which may not be registered yet at preload time).
+var BOSS_SCENES: Dictionary = {}
+func _init_boss_scenes() -> void:
+	if BOSS_SCENES.is_empty():
+		BOSS_SCENES = {
+			GameConstants.EnemyType.DRAKE: load("res://scenes/entities/enemy_drake.tscn"),
+			GameConstants.EnemyType.SERPENT: load("res://scenes/entities/enemy_serpent.tscn"),
+			GameConstants.EnemyType.GRAVITON: load("res://scenes/entities/enemy_graviton.tscn"),
+			GameConstants.EnemyType.VOID_LEVIATHAN: load("res://scenes/entities/enemy_void_leviathan.tscn"),
+			GameConstants.EnemyType.ANCIENT_SENTINEL: load("res://scenes/entities/enemy_ancient_sentinel.tscn"),
+			GameConstants.EnemyType.GRAVITY_ELEMENTAL: load("res://scenes/entities/enemy_gravity_elemental.tscn"),
+			GameConstants.EnemyType.ECHO_KNIGHT: load("res://scenes/entities/enemy_echo_knight.tscn"),
+			GameConstants.EnemyType.TIME_WARDEN: load("res://scenes/entities/enemy_time_warden.tscn"),
+			GameConstants.EnemyType.BLOB: load("res://scenes/entities/enemy_blob.tscn"),
+		}
 
 # ─── Signals ────────────────────────────────────────────────────────────────────
 signal ng_tier_changed(tier: int)
@@ -67,6 +72,7 @@ const SAVE_PATH: String = "user://zorp_endgame.json"
 
 func _ready() -> void:
 	add_to_group("endgame_manager")
+	_init_boss_scenes()
 	_load_unlocks()
 	if GameManager:
 		GameManager.game_restarted.connect(_on_game_restarted)
@@ -899,7 +905,7 @@ func _complete_vault_puzzle() -> void:
 		cam_rig.add_trauma(0.5)
 
 func _spawn_vault_guardian() -> void:
-	var scene: PackedScene = DRAKE_SCENE
+	var scene: PackedScene = BOSS_SCENES.get(GameConstants.EnemyType.DRAKE)
 	if not scene:
 		return
 	var guardian := scene.instantiate()
