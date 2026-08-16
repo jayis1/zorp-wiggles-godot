@@ -65,7 +65,10 @@ var _heartbeat_prev_phase: float = 0.0
 var _heartbeat_audio_active: bool = false
 
 # ── Landing effect: tracks whether P2 is airborne (reverse-gravity, etc.) ──
+# _airborne_peak_y tracks the highest point reached during the airborne phase
+# so the landing effect can scale squash/shake/dust by fall distance (P1 parity).
 var _was_airborne: bool = false
+var _airborne_peak_y: float = 0.0
 
 # ── Dash afterimage timer (shared by dash + slide, matching P1's pattern) ──
 var _afterimage_timer: float = 0.0
@@ -170,13 +173,19 @@ func _physics_process(delta: float) -> void:
 		global_position.y = lerpf(global_position.y, ceiling_y, 1.0 - exp(-8.0 * delta))
 		if mesh:
 			mesh.rotation.x = lerpf(mesh.rotation.x, deg_to_rad(180), 1.0 - exp(-5.0 * delta))
-		_was_airborne = true
+		if not _was_airborne:
+			_was_airborne = true
+			_airborne_peak_y = global_position.y
+		_airborne_peak_y = maxf(_airborne_peak_y, global_position.y)
 	else:
 		if mesh and abs(mesh.rotation.x) > 0.01:
 			mesh.rotation.x = lerpf(mesh.rotation.x, 0.0, 1.0 - exp(-5.0 * delta))
 		if global_position.y > 2.0:
 			global_position.y = lerpf(global_position.y, 0.5, 1.0 - exp(-8.0 * delta))
-			_was_airborne = true
+			if not _was_airborne:
+				_was_airborne = true
+				_airborne_peak_y = global_position.y
+			_airborne_peak_y = maxf(_airborne_peak_y, global_position.y)
 		elif _was_airborne and global_position.y <= 0.8:
 			# Just landed — play landing squash + dust puff
 			_was_airborne = false
@@ -234,6 +243,12 @@ func _physics_process(delta: float) -> void:
 	var p2_grav_force: float = WeatherSystem.get_gravity_anomaly_force()
 	if p2_grav_force != 0.0 and not is_dashing and not is_sliding:
 		velocity.y = p2_grav_force
+		# Track airborne state for landing effect when gravity normalizes (P1 parity)
+		if abs(global_position.y - 0.5) > 1.5:
+			if not _was_airborne:
+				_was_airborne = true
+				_airborne_peak_y = global_position.y
+			_airborne_peak_y = maxf(_airborne_peak_y, global_position.y)
 	elif velocity.y != 0 and not DimensionSystem.gravity_reversed():
 		velocity.y = 0
 	move_and_slide()
@@ -364,12 +379,25 @@ func _start_dash() -> void:
 	# P2 gets invuln during dash
 	invuln_timer = max(invuln_timer, GameConstants.PLAYER_DASH_INVULN_DURATION)
 	is_invuln = true
-	# Camera shake
+	# Camera shake on dash — biased in the dash direction so the camera
+	# surges forward with Zerp, amplifying the speed sensation (P1 parity).
+	var dash_bias: Vector3 = dash_direction
+	dash_bias.y = 0.0
+	if dash_bias.length_squared() > 0.01:
+		dash_bias = dash_bias.normalized()
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
-		cam_rig.add_trauma(0.15)
+		cam_rig.add_trauma(0.15, dash_bias)
 	if cam_rig and cam_rig.has_method("kick_fov"):
 		cam_rig.kick_fov(GameConstants.CAMERA_DASH_FOV_KICK)
+	# ── Dash launch dust kick (P1 parity) ── A small ground-level dust
+	#    burst at Zerp's feet the moment the dash fires, selling the
+	#    "launch" impulse. Without this, P2's dash had camera shake +
+	#    trail + FOV kick + squash but the ground had no reaction,
+	#    making the dash feel slightly less grounded than P1's.
+	ParticleEffects.spawn_death_poof(get_parent(),
+		global_position + Vector3(0, 0.1, 0),
+		Color(0.7, 0.65, 0.55), 0.4)
 	# Dash trail
 	ParticleEffects.spawn_dash_trail(get_parent(), global_position, base_color)
 	# ── Dash afterimage — P2 also gets ghost copies during dash for visual parity with P1 ──
@@ -410,9 +438,10 @@ func _update_slide(delta: float) -> void:
 		normal.y = 0
 		normal = normal.normalized()
 		slide_velocity = slide_velocity.bounce(normal) * GameConstants.DASH_BOUNCE_RESTITUTION
+		# Camera shake on wall bump — biased toward the wall normal (P1 parity).
 		var cam_rig: Node3D = GameManager.camera_rig
 		if cam_rig and cam_rig.has_method("add_trauma"):
-			cam_rig.add_trauma(0.1)
+			cam_rig.add_trauma(0.1, normal)
 		ParticleEffects.spawn_dash_trail(get_parent(), global_position, Color(0.5, 0.8, 1.0))
 		# Audio feedback — wall bounce impact (Enhancement Pack 45, co-op parity).
 		AudioManager.play_sfx(AudioManager.SFX_WALL_BOUNCE)
@@ -477,23 +506,43 @@ func _update_idle_breathing(delta: float) -> void:
 func _play_landing_effect() -> void:
 	if is_dashing or is_sliding:
 		return
+	# ── Fall-distance scaling (P1 parity) ── The squash intensity, dust
+	#    size, and camera shake all scale with how far Zerp fell. A 2m
+	#    hop gets the baseline gentle squash; a 20m reverse-gravity slam
+	#    gets a dramatic flat squash + heavy shake + bigger dust cloud.
+	#    The fall distance is mapped through a smoothstep so small falls
+	#    don't over-react and large falls plateau gracefully. The scaling
+	#    factor is 0.6 (small hop) → 1.8 (big slam).
+	var fall_dist: float = maxf(0.0, _airborne_peak_y - global_position.y)
+	_airborne_peak_y = 0.0
+	# Smoothstep mapping: 0m → 0.6, 10m+ → 1.8, smooth S-curve between
+	var fall_t: float = clampf(fall_dist / 10.0, 0.0, 1.0)
+	fall_t = fall_t * fall_t * (3.0 - 2.0 * fall_t)  # Smoothstep
+	var intensity_mult: float = lerpf(0.6, 1.8, fall_t)
 	if mesh:
 		var land_tween := create_tween()
-		land_tween.tween_property(mesh, "scale", Vector3(1.5, 0.4, 1.5), 0.08) \
+		# Squash flat: wide and short (impact frame) — scaled by fall intensity
+		var squash_xz: float = 1.5 * intensity_mult
+		var squash_y: float = lerpf(0.4, 0.15, fall_t)  # Flatter on big falls
+		land_tween.tween_property(mesh, "scale",
+			Vector3(squash_xz, squash_y, squash_xz), 0.08) \
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_CUBIC)
+		# Bounce back to normal with elastic overshoot for a juicy recovery
 		land_tween.tween_property(mesh, "scale", Vector3.ONE, 0.22) \
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_ELASTIC)
-	# Dust puff at P2's feet
+	# Dust puff at P2's feet — scale the poof size with fall intensity
 	ParticleEffects.spawn_death_poof(get_parent(), global_position + Vector3(0, 0.1, 0),
-		Color(0.7, 0.65, 0.55), 0.6)
-	# Small camera shake on landing
+		Color(0.7, 0.65, 0.55), 0.6 * intensity_mult)
+	# Camera shake on landing for weight — scaled by fall distance
 	var cam_rig: Node3D = GameManager.camera_rig
 	if cam_rig and cam_rig.has_method("add_trauma"):
-		cam_rig.add_trauma(0.12)
+		cam_rig.add_trauma(0.12 * intensity_mult)
 	# ── Enhancement Pack 21: Landing SFX — P2 parity with P1's landing thump.
-	AudioManager.play_sfx_pitched(AudioManager.SFX_LAND, 1.0)
+	#    Pitch scales down with fall intensity so bigger falls sound deeper.
+	AudioManager.play_sfx_pitched(AudioManager.SFX_LAND,
+		lerpf(1.2, 0.7, fall_t))
 
 # ── Pickup feedback pulse ── P2 parity with P1's _play_pickup_pulse. When P2
 #    collects an item, P2's mesh briefly scales up and emission flashes in the
@@ -965,10 +1014,23 @@ func _on_p2_damaged(source_pos: Vector3) -> void:
 		return
 	if _dmg_squash_tween and _dmg_squash_tween.is_valid():
 		_dmg_squash_tween.kill()
+	# Determine recoil direction (horizontal, away from source). If no
+	# source position, default to a uniform squash (P1 parity).
+	var recoil_dir: Vector3 = Vector3.ZERO
+	if source_pos != Vector3.ZERO:
+		recoil_dir = (global_position - source_pos)
+		recoil_dir.y = 0
+		if recoil_dir.length_squared() > 0.01:
+			recoil_dir = recoil_dir.normalized()
 	_dmg_squash_tween = create_tween()
-	# Impact frame: flat squash in 50ms (sharp, almost a freeze-frame)
+	# Impact frame: flat squash in 50ms (sharp, almost a freeze-frame).
+	# The X/Z stretch is biased by the recoil direction so the squash is
+	# directional — Zerp stretches MORE along the hit axis (away from the
+	# source) and less perpendicular (P1 parity).
+	var _sx: float = lerpf(1.35, 1.55, absf(recoil_dir.x))
+	var _sz: float = lerpf(1.35, 1.55, absf(recoil_dir.z))
 	_dmg_squash_tween.tween_property(mesh, "scale",
-		Vector3(1.35, 0.55, 1.35), 0.05) \
+		Vector3(_sx, 0.55, _sz), 0.05) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	# Recoil bounce back with elastic for a wobbly recovery
 	_dmg_squash_tween.tween_property(mesh, "scale", Vector3.ONE, 0.28) \
