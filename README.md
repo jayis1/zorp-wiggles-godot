@@ -30,7 +30,7 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 12. **Local Co-op** — Player 2 "Zerp" drops in anytime, shared camera with dynamic zoom, enemy scaling, shared combo, revive system, mega pulse wave sync, 7 co-op achievements
 
 ### Audio & Polish
-- 118 procedurally generated sound effects (no external audio files needed)
+- 122 procedurally generated sound effects (no external audio files needed)
 - 12 per-biome ambient music tracks + boss fight music
 - Dynamic music intensity — 5 tiers (Calm/Engaged/Heated/Intense/Frenzied) that scale with the combo counter (pitch + volume)
 - Trauma-based screen shake, input buffering, hit-stop freeze frames
@@ -212,9 +212,9 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 - **5 pet evolution paths** (Fire/Ice/Electric/Void/Nature) with 3 stages each + fusion system
 - **10 game modes** (Normal, Endless, Boss Rush, Speedrun, PvP, Survival, Gauntlet, Boss Gauntlet, Daily Challenge, Weekly Challenge)
 - **Local co-op** with Player 2 "Zerp"
-- **118 procedural SFX** + 12 biome music tracks + dynamic music intensity
+- **122 procedural SFX** + 12 biome music tracks + dynamic music intensity
 - **8 procedural anomalous zone traits** with real gameplay effects (toxic haze, magma fissures, gravity well, echo chamber, glowing, crystal shard, mirror surface, rain indoor)
-- **371+ git commits** of development history
+- **374+ git commits** of development history
 
 ---
 

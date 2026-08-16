@@ -233,6 +233,12 @@ func _fling_loose_objects() -> void:
 			if body is RigidBody3D:
 				(body as RigidBody3D).apply_impulse(launch_dir * 15.0, Vector3.ZERO)
 			flung += 1
+	# Enhancement Pack 69: Fling SFX — a gravitic launch whoosh for objects
+	# being hurled at the player. Previously the fling was silent — corpses
+	# just silently flew through the air toward the player with no audio.
+	# Only plays if at least one object was flung (not on empty flings).
+	if flung > 0:
+		AudioManager.play_sfx(AudioManager.SFX_GRAVITY_FLING)
 	# Also spawn a few direct projectiles toward the player (visual "gravity bolts")
 	var extra_bolts: int = max(0, 3 - flung)
 	for i in range(extra_bolts):

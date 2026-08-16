@@ -603,6 +603,20 @@ const SFX_DUNGEON_CLEAR: String = "dungeon_clear"
 # combat streaks. Added to _PITCH_VARIATION_SFX for natural micro-detuning.
 const SFX_GAUNTLET_CLEAR: String = "gauntlet_clear"
 
+# ── Enhancement Pack 69: Missing boss & enemy attack SFX ──
+# Toxic spore burst — wet corrosive pop for the Toxic Spore's death cloud spawn.
+# A bubbling, viscous sound that conveys a biological hazard rupturing.
+const SFX_POISON_BURST: String = "poison_burst"
+# Void breath — deep void discharge for the Void Leviathan's 7-bolt cone attack.
+# A deep, guttural energy release distinct from regular enemy projectile fire.
+const SFX_VOID_BREATH: String = "void_breath"
+# Pillar impact — heavy crystal slam for the Ancient Sentinel's falling pillars.
+# A weighty, crystalline crash that conveys a massive object striking the ground.
+const SFX_PILLAR_IMPACT: String = "pillar_impact"
+# Gravity fling — gravitic launch whoosh for the Gravity Elemental's object fling.
+# A rapid upward energy burst conveying objects being hurled by gravitational force.
+const SFX_GRAVITY_FLING: String = "gravity_fling"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -1001,6 +1015,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	# Enhancement Pack 60: Endgame milestone SFX get pitch variation
 	# (SFX_ENDGAME_UNLOCK excluded — rare dramatic event should sound consistent)
 	SFX_DUNGEON_CLEAR, SFX_GAUNTLET_CLEAR,
+	# Enhancement Pack 69: Missing boss & enemy attack SFX get pitch variation
+	SFX_POISON_BURST, SFX_VOID_BREATH, SFX_PILLAR_IMPACT, SFX_GRAVITY_FLING,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1665,6 +1681,33 @@ func _generate_all_sfx() -> void:
 	# Gauntlet biome clear — punchy 3-note with an octave leap for a "victory hop."
 	# Shorter than dungeon clear since it's a smaller milestone.
 	_sfx_streams[SFX_GAUNTLET_CLEAR] = _gen_arpeggio([523.0, 659.0, 1047.0], 0.06, 0.22)
+
+	# ── Enhancement Pack 69: Missing boss & enemy attack SFX ──────────────
+	# Poison burst — a wet bubbling pop (descending 200→80 Hz, 0.22s, 0.28 vol)
+	# with noise overlay for a viscous, biological rupture feel. The low
+	# descending tone conveys a pressurized spore bursting open, distinct
+	# from the generic SFX_EXPLOSION (which is dry and percussive). The
+	# noise-hit timbre adds the wet, organic quality.
+	_sfx_streams[SFX_POISON_BURST] = _gen_descending(200.0, 80.0, 0.22, 0.28)
+	# Void breath — a deep guttural energy discharge (descending 160→60 Hz,
+	# 0.30s, 0.35 vol). Deeper and longer than SFX_SHOOT_VOID (220→110 Hz,
+	# 0.18s) since this is a boss's signature attack, not a single bolt.
+	# The deep descending sweep conveys void energy being expelled in a
+	# cone — the sound of dark matter being projected outward.
+	_sfx_streams[SFX_VOID_BREATH] = _gen_descending(160.0, 60.0, 0.30, 0.35)
+	# Pillar impact — a heavy crystalline slam (noise hit, 0.20s, 0.40 vol).
+	# Longer and louder than SFX_BREAKABLE (0.25s, 0.45 vol for crate shatter)
+	# since a massive crystal pillar hitting the ground from 25m is far more
+	# impactful than a small crate. The noise-hit timbre conveys a solid
+	# crystalline mass striking the earth — a weighty, mineral crash.
+	_sfx_streams[SFX_PILLAR_IMPACT] = _gen_noise_hit(0.20, 0.40)
+	# Gravity fling — a rapid upward energy burst (ascending 120→400 Hz,
+	# 0.14s, 0.22 vol). The ascending pitch conveys objects being launched
+	# upward by gravitational force — the reverse of the descending
+	# SFX_GRAVITY_CHARGE (70→35 Hz) which conveys energy building down/in.
+	# Moderate volume since the fling happens alongside the field activation
+	# SFX_EXPLOSION, so it needs to be audible but not compete.
+	_sfx_streams[SFX_GRAVITY_FLING] = _gen_descending(120.0, 400.0, 0.14, 0.22)
 
 
 func _generate_all_music() -> void:

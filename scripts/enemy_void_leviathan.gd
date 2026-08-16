@@ -293,6 +293,10 @@ func _fire_void_breath() -> void:
 		proj.set("projectile_color", Color(0.5, 0.1, 0.8))
 		get_parent().add_child(proj)
 		proj.global_position = global_position + Vector3(0, 1.5, 0)
+	# Enhancement Pack 69: Void breath SFX — a deep guttural discharge for the
+	# Leviathan's signature 7-bolt cone attack. Every other boss attack in the
+	# game has audio; the void breath had a visual muzzle flash but was silent.
+	AudioManager.play_sfx(AudioManager.SFX_VOID_BREATH)
 	# Muzzle flash
 	var flash := OmniLight3D.new()
 	flash.light_color = Color(0.6, 0.1, 0.9)

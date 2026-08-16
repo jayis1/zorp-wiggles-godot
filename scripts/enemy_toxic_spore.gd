@@ -46,6 +46,10 @@ func _die() -> void:
 	# Extra toxic burst particles for flavor
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.TOXIC_SPORE_CLOUD_COLOR, 24, 0.6)
+	# Enhancement Pack 69: Death SFX — a wet corrosive pop for the spore
+	# rupturing and releasing its poison cloud. Previously the death had
+	# particles but no audio — the spore silently burst into a cloud.
+	AudioManager.play_sfx(AudioManager.SFX_POISON_BURST)
 	super._die()
 
 ## Spawn a lingering poison cloud at the spore's death position. The cloud is a

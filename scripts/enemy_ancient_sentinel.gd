@@ -380,6 +380,12 @@ func _spawn_pillar_drop(target_pos: Vector3) -> void:
 		# Camera shake
 		if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 			GameManager.camera_rig.add_trauma(0.25)
+		# Enhancement Pack 69: Pillar impact SFX — a heavy crystalline slam for
+		# the falling crystal pillar striking the ground. The pillar drops from
+		# 25m height and deals 40 damage — a significant event that had particles
+		# + light flash + camera shake but no audio. The noise-hit timbre reads
+		# as a solid crystalline mass striking the earth.
+		AudioManager.play_sfx(AudioManager.SFX_PILLAR_IMPACT)
 		# Remove the pillar
 		pillar.queue_free()
 	)
