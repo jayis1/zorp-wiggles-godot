@@ -49,6 +49,15 @@ func _ready() -> void:
 	_home = global_position
 	_build_visuals()
 	call_deferred("_update_home")
+	# ── Spawn-in pop animation ── NPCs appear with a gentle scale-up from
+	#    zero. Ease-out-elastic gives a lively bounce that suits friendly
+	#    characters "arriving" in the world. Without this, NPCs simply pop
+	#    into existence at full scale, inconsistent with the animated
+	#    spawn-in of treasure chests, lore stones, and other world objects.
+	scale = Vector3.ZERO
+	var spawn_tween := create_tween()
+	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.6) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 func _update_home() -> void:
 	_home = global_position

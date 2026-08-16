@@ -45,6 +45,16 @@ func _ready() -> void:
 	_wander_timer = randf_range(2.0, 5.0)
 	_bob_phase = randf() * TAU
 	_build_visuals()
+	# ── Spawn-in pop animation ── wildlife appears with a gentle scale-up
+	#    from zero, matching the treasure chest and lore stone spawn language.
+	#    Without this, wildlife simply pops into existence at full scale when
+	#    the world generator scatters them — jarring compared to the animated
+	#    spawn-in of other world objects. Ease-out-back gives a small overshoot
+	#    so the creature "bounces" into life.
+	scale = Vector3.ZERO
+	var spawn_tween := create_tween()
+	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.4) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 func _build_visuals() -> void:
 	# Body — a small sphere, species-colored, emissive for visibility.

@@ -64,6 +64,16 @@ func _ready() -> void:
 	_build_visuals()
 	# Start in idle — wait briefly before the first cycle.
 	_timer = randf_range(1.0, 4.0)
+	# ── Spawn-in pop animation ── the hazard's root node scales up from
+	#    zero so the hazard "emerges" into the world rather than popping
+	#    in at full scale. Ease-out-back gives a subtle overshoot. The
+	#    telegraph mesh and hazard mesh start hidden (visible = false),
+	#    so only the root scale matters for the initial appearance.
+	#    Matches the treasure chest and lore stone spawn language.
+	scale = Vector3.ZERO
+	var spawn_tween := create_tween()
+	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.35) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 func _lookup_config(type_name: String) -> Dictionary:
 	for entry in GameConstants.ENV_HAZARD_TYPES:

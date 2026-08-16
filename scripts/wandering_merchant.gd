@@ -58,6 +58,18 @@ func _ready() -> void:
 	_lifetime_left = GameConstants.WANDERING_MERCHANT_LIFETIME
 	_build_visuals()
 	call_deferred("_update_home")
+	# ── Spawn-in materialization ── the merchant arrives with a scale-up
+	#    from zero + a small materialization particle burst. This matches
+	#    the language of enemy spawn animations and the treasure chest /
+	#    lore stone spawn-in. Without this, the merchant simply appears at
+	#    full scale — jarring for a "rare wandering" NPC that's supposed
+	#    to feel like it traveled to the player's location.
+	scale = Vector3.ZERO
+	var spawn_tween := create_tween()
+	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.5) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	if ParticleEffects:
+		ParticleEffects.spawn_materialization(get_parent(), global_position + Vector3(0, 0.5, 0))
 
 func _update_home() -> void:
 	_home = global_position

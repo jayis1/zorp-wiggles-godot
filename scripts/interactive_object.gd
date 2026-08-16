@@ -55,6 +55,17 @@ func _ready() -> void:
 	_build_visuals()
 	# Collision shape is provided by the scene.
 	_collision_shape = get_node_or_null("CollisionShape3D")
+	# ── Spawn-in pop animation ── the object scales up from zero so it
+	#    "emerges" into the world. Ease-out-back gives a subtle overshoot
+	#    that suits solid objects settling into place. Without this,
+	#    switches, doors, and breakable walls simply appear at full scale
+	#    when the world generator scatters them — inconsistent with the
+	#    animated spawn-in of treasure chests, lore stones, and other
+	#    world objects. 0.3s is quick enough not to delay gameplay.
+	scale = Vector3.ZERO
+	var spawn_tween := create_tween()
+	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.3) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 func _lookup_config(type_name: String) -> Dictionary:
 	for entry in GameConstants.INTERACTIVE_TYPES:

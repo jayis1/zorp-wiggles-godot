@@ -11,6 +11,8 @@ extends Area3D
 
 signal chest_opened(chest: Node, trapped: bool)
 
+const MIMIC_SCENE := preload("res://scenes/entities/enemy_blob.tscn")
+
 # ─── State ───────────────────────────────────────────────────────────────────
 var _opened: bool = false
 var _trapped: bool = false
@@ -283,11 +285,7 @@ func _trigger_trap() -> void:
 	var parent: Node = get_parent()
 	if not parent:
 		return
-	var mimic_scene_path := "res://scenes/entities/enemy_blob.tscn"
-	if not ResourceLoader.exists(mimic_scene_path):
-		return  # No enemy scene available — skip the trap spawn.
-	var enemy_scene: PackedScene = load(mimic_scene_path)
-	var enemy: CharacterBody3D = enemy_scene.instantiate()
+	var enemy: CharacterBody3D = MIMIC_SCENE.instantiate()
 	# Configure as a basic trap enemy (low HP, low damage — it's a nuisance).
 	# These must be set BEFORE add_child so EnemyBase._ready() picks them up
 	# (it reads base_color/base_scale to build the material and spawn tween).
