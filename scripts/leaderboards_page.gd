@@ -43,12 +43,12 @@ func _process(delta: float) -> void:
 	# Tab switching with 1-6 keys when visible
 	if _visible_flag:
 		var new_tab := _current_tab
-		if Input.is_key_pressed(KEY_1): new_tab = 0
-		elif Input.is_key_pressed(KEY_2): new_tab = 1
-		elif Input.is_key_pressed(KEY_3): new_tab = 2
-		elif Input.is_key_pressed(KEY_4): new_tab = 3
-		elif Input.is_key_pressed(KEY_5): new_tab = 4
-		elif Input.is_key_pressed(KEY_6): new_tab = 5
+		if Input.is_physical_key_pressed(KEY_1): new_tab = 0
+		elif Input.is_physical_key_pressed(KEY_2): new_tab = 1
+		elif Input.is_physical_key_pressed(KEY_3): new_tab = 2
+		elif Input.is_physical_key_pressed(KEY_4): new_tab = 3
+		elif Input.is_physical_key_pressed(KEY_5): new_tab = 4
+		elif Input.is_physical_key_pressed(KEY_6): new_tab = 5
 		if new_tab != _prev_tab:
 			_current_tab = new_tab
 			_prev_tab = new_tab

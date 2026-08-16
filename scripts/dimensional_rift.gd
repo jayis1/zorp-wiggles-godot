@@ -43,11 +43,11 @@ func _ready() -> void:
 		# Apply the rift vortex shader
 		_mat = ShaderMaterial.new()
 		_mat.shader = RIFT_SHADER
-			var dim_color: Color = GameConstants.DIMENSION_COLORS.get(target_dimension, Color(0.8, 0.9, 1.0))
-			_mat.set_shader_parameter("dimension_color", dim_color)
-			_mat.set_shader_parameter("strength", 1.0)
-			_mat.set_shader_parameter("time_scale", 1.0)
-			vortex_plane.material_override = _mat
+		var dim_color: Color = GameConstants.DIMENSION_COLORS.get(target_dimension, Color(0.8, 0.9, 1.0))
+		_mat.set_shader_parameter("dimension_color", dim_color)
+		_mat.set_shader_parameter("strength", 1.0)
+		_mat.set_shader_parameter("time_scale", 1.0)
+		vortex_plane.material_override = _mat
 
 	# Create a central sphere glow
 	if mesh_instance:

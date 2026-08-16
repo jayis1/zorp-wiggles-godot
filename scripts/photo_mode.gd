@@ -122,21 +122,21 @@ func _process(delta: float) -> void:
 		return
 	# WASD + Space/Shift movement in camera-local space
 	var input_dir: Vector3 = Vector3.ZERO
-	if Input.is_key_pressed(KEY_W):
+	if Input.is_physical_key_pressed(KEY_W):
 		input_dir.z -= 1
-	if Input.is_key_pressed(KEY_S):
+	if Input.is_physical_key_pressed(KEY_S):
 		input_dir.z += 1
-	if Input.is_key_pressed(KEY_A):
+	if Input.is_physical_key_pressed(KEY_A):
 		input_dir.x -= 1
-	if Input.is_key_pressed(KEY_D):
+	if Input.is_physical_key_pressed(KEY_D):
 		input_dir.x += 1
-	if Input.is_key_pressed(KEY_SPACE):
+	if Input.is_physical_key_pressed(KEY_SPACE):
 		input_dir.y += 1
-	if Input.is_key_pressed(KEY_SHIFT):
+	if Input.is_physical_key_pressed(KEY_SHIFT):
 		input_dir.y -= 1
 	# Speed boost with Ctrl
 	var speed: float = _move_speed
-	if Input.is_key_pressed(KEY_CTRL):
+	if Input.is_physical_key_pressed(KEY_CTRL):
 		speed *= 3.0
 	# Transform input direction by the camera's basis (so W = forward relative to view)
 	var basis: Basis = _free_camera.global_transform.basis

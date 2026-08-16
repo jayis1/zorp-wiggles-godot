@@ -76,11 +76,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ping") and GameManager.player_is_alive and not GameManager.is_paused:
 		# Determine ping type from modifier keys
 		var ptype: int = PingType.DEFAULT
-		if Input.is_key_pressed(KEY_SHIFT):
+		if Input.is_physical_key_pressed(KEY_SHIFT):
 			ptype = PingType.DANGER
-		elif Input.is_key_pressed(KEY_ALT):
+		elif Input.is_physical_key_pressed(KEY_ALT):
 			ptype = PingType.LOOT
-		elif Input.is_key_pressed(KEY_CTRL):
+		elif Input.is_physical_key_pressed(KEY_CTRL):
 			ptype = PingType.NAV
 		_drop_ping(ptype)
 		get_viewport().set_input_as_handled()
