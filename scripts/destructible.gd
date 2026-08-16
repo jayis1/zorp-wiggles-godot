@@ -91,6 +91,11 @@ func take_damage_from(amount: int, _source_pos: Vector3 = Vector3.ZERO) -> void:
 		return
 	hp -= amount
 	_hit_flash_timer = 0.12
+	# Hit SFX — a subtle crack sound on each hit (not just on shatter).
+	# Uses SFX_BREAKABLE at 0.5× volume so non-lethal hits are quieter than
+	# the full shatter at 1.0× volume, matching the enemy hit→death audio
+	# hierarchy where hits are subtler than kills.
+	AudioManager.play_sfx_volume(AudioManager.SFX_BREAKABLE, 0.5)
 	if _mat:
 		# Kill any active flash tween so the new flash starts from white
 		# cleanly instead of fighting a previous tween's setter.
@@ -103,6 +108,15 @@ func take_damage_from(amount: int, _source_pos: Vector3 = Vector3.ZERO) -> void:
 		_flash_tween.tween_property(_mat, "albedo_color", fragment_color, 0.12) \
 			.set_ease(Tween.EASE_OUT) \
 			.set_trans(Tween.TRANS_QUAD)
+	# Small dust poof on each hit — sells the crate taking damage, matching
+	# the breakable wall's hit dust feedback.
+	var parent: Node = get_parent()
+	if parent and ParticleEffects:
+		ParticleEffects.spawn_death_poof(parent, global_position + Vector3(0, 1.0, 0), fragment_color, 0.3)
+	# Camera shake feedback — matches the breakable wall's hit trauma.
+	var cam: Node3D = GameManager.camera_rig
+	if cam and cam.has_method("add_trauma"):
+		cam.add_trauma(0.04)
 	if hp <= 0:
 		_shatter()
 

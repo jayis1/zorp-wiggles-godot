@@ -5,6 +5,9 @@
 
 extends Area3D
 
+# ─── Preloaded shader ──────────────────────────────────────────────────────────
+const RIFT_SHADER := preload("res://assets/shaders/rift_vortex.gdshader")
+
 # ─── Configuration ─────────────────────────────────────────────────────────────
 @export var target_dimension: int = GameConstants.Dimension.VOID
 @export var lifetime: float = 60.0
@@ -38,10 +41,8 @@ func _ready() -> void:
 		# disc lying on the XZ plane. No rotation needed.
 
 		# Apply the rift vortex shader
-		var shader: Shader = load("res://assets/shaders/rift_vortex.gdshader")
-		if shader:
-			_mat = ShaderMaterial.new()
-			_mat.shader = shader
+		_mat = ShaderMaterial.new()
+		_mat.shader = RIFT_SHADER
 			var dim_color: Color = GameConstants.DIMENSION_COLORS.get(target_dimension, Color(0.8, 0.9, 1.0))
 			_mat.set_shader_parameter("dimension_color", dim_color)
 			_mat.set_shader_parameter("strength", 1.0)

@@ -214,7 +214,7 @@ This game was originally built with the **Ursina engine** (Python/Panda3D) as a 
 - **Local co-op** with Player 2 "Zerp"
 - **118 procedural SFX** + 12 biome music tracks + dynamic music intensity
 - **8 procedural anomalous zone traits** with real gameplay effects (toxic haze, magma fissures, gravity well, echo chamber, glowing, crystal shard, mirror surface, rain indoor)
-- **321+ git commits** of development history
+- **371+ git commits** of development history
 
 ---
 

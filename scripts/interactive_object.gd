@@ -309,6 +309,9 @@ func take_damage(amount: int, _source_pos: Vector3 = Vector3.ZERO) -> void:
 	if object_type != "breakable_wall":
 		return
 	_hp -= amount
+	# Hit SFX — a subtle crack on each hit (quieter than the full shatter
+	# at 1.0× volume), matching the destructible crate hit audio hierarchy.
+	AudioManager.play_sfx_volume(AudioManager.SFX_BREAKABLE, 0.5)
 	# Hit flash.
 	if _material:
 		_material.emission_energy_multiplier = 3.0
