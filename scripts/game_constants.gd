@@ -3560,7 +3560,14 @@ const GAUNTLET_TIME_PER_BIOME: float = 90.0
 const GAUNTLET_KILLS_PER_BIOME: int = 15
 const GAUNTLET_ENEMY_MULT: float = 1.2
 
-const BOSS_GAUNTLET_QUEUE: Array[int] = [7, 1, 2, 14, 15, 16]
+const BOSS_GAUNTLET_QUEUE: Array[int] = [
+	EnemyType.DRAKE,           # 7  — opening boss
+	EnemyType.SERPENT,         # 1  — second
+	EnemyType.GRAVITON,        # 2  — third
+	EnemyType.VOID_LEVIATHAN,  # 18 — penultimate
+	EnemyType.ANCIENT_SENTINEL, # 19 — mega-boss
+	EnemyType.GRAVITY_ELEMENTAL, # 20 — final escalating boss
+]
 const BOSS_GAUNTLET_HP_MULT_PER_INDEX: float = 0.15
 const BOSS_GAUNTLET_DAMAGE_MULT_PER_INDEX: float = 0.08
 const BOSS_GAUNTLET_SPEED_MULT_PER_INDEX: float = 0.03
