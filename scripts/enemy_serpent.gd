@@ -3,13 +3,17 @@
 ## On death, segments scatter into independent mini-enemies.
 ## Ported from Plasma Serpent logic in Ursina game.py.
 
-extends "res://scripts/enemy_base.gd"
+extends EnemyBase
 
-# Note: class_name removed to fix Godot 4.4 class resolution order issue.
-# These scripts are loaded via preload() in autoload scripts (BossArena,
-# GameModeManager, EndgameManager) before the global class registry is
-# built, causing "Could not resolve class EnemyBase" parse errors.
-# The scenes reference the script by path, so class_name is not needed.
+class_name EnemySerpent
+
+# class_name is REQUIRED for Godot 4.4 class resolution. Without it, the
+# script is not registered in the global class registry and `extends
+# EnemyBase` fails to resolve when the script is loaded via preload() in
+# autoload scripts (BossArena, GameModeManager, EndgameManager) before
+# enemy_base.gd has been loaded through the resource system. The scenes
+# reference the script by path, so the class_name is not strictly needed
+# for scene instantiation, but it IS needed for the extends to resolve.
 
 # ─── Segment Data ─────────────────────────────────────────────────────────────
 var segment_nodes: Array[MeshInstance3D] = []
