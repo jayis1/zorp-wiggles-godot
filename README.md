@@ -173,7 +173,7 @@ zorp-wiggles-godot/
 │   ├── animation_system.gd       # AnimationPlayer library
 │   ├── navigation_manager.gd     # NavMesh generation (autoload)
 │   ├── co_op_manager.gd          # Co-op system (autoload)
-│   └── ...                       # 163 scripts total
+│   └── ...                       # 166 scripts total
 ├── assets/
 │   └── shaders/                  # 13 custom .gdshader files
 ├── CONVERSION_TRACKER.md         # Development progress tracker

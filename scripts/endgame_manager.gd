@@ -17,22 +17,28 @@ extends Node
 
 # ─── Preloaded scenes ─────────────────────────────────────────────────────────
 const COLLECTIBLE_SCENE := preload("res://scenes/entities/collectible.tscn")
-# Boss scenes loaded at runtime to avoid Godot 4.4 class resolution order
-# issues during autoload init (enemy_drake.gd/enemy_serpent.gd extend
-# enemy_base.gd which may not be registered yet at preload time).
+const DRAKE_SCENE := preload("res://scenes/entities/enemy_drake.tscn")
+const SERPENT_SCENE := preload("res://scenes/entities/enemy_serpent.tscn")
+const GRAVITON_SCENE := preload("res://scenes/entities/enemy_graviton.tscn")
+const VOID_LEVIATHAN_SCENE := preload("res://scenes/entities/enemy_void_leviathan.tscn")
+const ANCIENT_SENTINEL_SCENE := preload("res://scenes/entities/enemy_ancient_sentinel.tscn")
+const GRAVITY_ELEMENTAL_SCENE := preload("res://scenes/entities/enemy_gravity_elemental.tscn")
+const ECHO_KNIGHT_SCENE := preload("res://scenes/entities/enemy_echo_knight.tscn")
+const TIME_WARDEN_SCENE := preload("res://scenes/entities/enemy_time_warden.tscn")
+const BLOB_SCENE := preload("res://scenes/entities/enemy_blob.tscn")
 var BOSS_SCENES: Dictionary = {}
 func _init_boss_scenes() -> void:
 	if BOSS_SCENES.is_empty():
 		BOSS_SCENES = {
-			GameConstants.EnemyType.DRAKE: load("res://scenes/entities/enemy_drake.tscn"),
-			GameConstants.EnemyType.SERPENT: load("res://scenes/entities/enemy_serpent.tscn"),
-			GameConstants.EnemyType.GRAVITON: load("res://scenes/entities/enemy_graviton.tscn"),
-			GameConstants.EnemyType.VOID_LEVIATHAN: load("res://scenes/entities/enemy_void_leviathan.tscn"),
-			GameConstants.EnemyType.ANCIENT_SENTINEL: load("res://scenes/entities/enemy_ancient_sentinel.tscn"),
-			GameConstants.EnemyType.GRAVITY_ELEMENTAL: load("res://scenes/entities/enemy_gravity_elemental.tscn"),
-			GameConstants.EnemyType.ECHO_KNIGHT: load("res://scenes/entities/enemy_echo_knight.tscn"),
-			GameConstants.EnemyType.TIME_WARDEN: load("res://scenes/entities/enemy_time_warden.tscn"),
-			GameConstants.EnemyType.BLOB: load("res://scenes/entities/enemy_blob.tscn"),
+			GameConstants.EnemyType.DRAKE: DRAKE_SCENE,
+			GameConstants.EnemyType.SERPENT: SERPENT_SCENE,
+			GameConstants.EnemyType.GRAVITON: GRAVITON_SCENE,
+			GameConstants.EnemyType.VOID_LEVIATHAN: VOID_LEVIATHAN_SCENE,
+			GameConstants.EnemyType.ANCIENT_SENTINEL: ANCIENT_SENTINEL_SCENE,
+			GameConstants.EnemyType.GRAVITY_ELEMENTAL: GRAVITY_ELEMENTAL_SCENE,
+			GameConstants.EnemyType.ECHO_KNIGHT: ECHO_KNIGHT_SCENE,
+			GameConstants.EnemyType.TIME_WARDEN: TIME_WARDEN_SCENE,
+			GameConstants.EnemyType.BLOB: BLOB_SCENE,
 		}
 
 # ─── Signals ────────────────────────────────────────────────────────────────────

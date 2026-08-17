@@ -22,17 +22,20 @@ extends Node
 # ─── Preloaded scenes ─────────────────────────────────────────────────────────
 const WARNING_SCENE := preload("res://scenes/entities/spawn_warning.tscn")
 const COLLECTIBLE_SCENE := preload("res://scenes/entities/collectible.tscn")
-# Boss scenes loaded at runtime to avoid Godot 4.4 class resolution order
-# issues during autoload init (enemy_drake.gd extends enemy_base.gd which
-# may not be registered yet at preload time).
+# Boss scenes preloaded at class scope — safe in Godot 4.4 since .tscn scripts
+# resolve at instantiation, not at preload time.
+const DRAKE_SCENE := preload("res://scenes/entities/enemy_drake.tscn")
+const VOID_LEVIATHAN_SCENE := preload("res://scenes/entities/enemy_void_leviathan.tscn")
+const ANCIENT_SENTINEL_SCENE := preload("res://scenes/entities/enemy_ancient_sentinel.tscn")
+const GRAVITY_ELEMENTAL_SCENE := preload("res://scenes/entities/enemy_gravity_elemental.tscn")
 var BOSS_SCENES: Dictionary = {}
 func _init_boss_scenes() -> void:
 	if BOSS_SCENES.is_empty():
 		BOSS_SCENES = {
-			GameConstants.EnemyType.DRAKE: load("res://scenes/entities/enemy_drake.tscn"),
-			GameConstants.EnemyType.VOID_LEVIATHAN: load("res://scenes/entities/enemy_void_leviathan.tscn"),
-			GameConstants.EnemyType.ANCIENT_SENTINEL: load("res://scenes/entities/enemy_ancient_sentinel.tscn"),
-			GameConstants.EnemyType.GRAVITY_ELEMENTAL: load("res://scenes/entities/enemy_gravity_elemental.tscn"),
+			GameConstants.EnemyType.DRAKE: DRAKE_SCENE,
+			GameConstants.EnemyType.VOID_LEVIATHAN: VOID_LEVIATHAN_SCENE,
+			GameConstants.EnemyType.ANCIENT_SENTINEL: ANCIENT_SENTINEL_SCENE,
+			GameConstants.EnemyType.GRAVITY_ELEMENTAL: GRAVITY_ELEMENTAL_SCENE,
 		}
 
 signal world_boss_spawned(boss: Node, boss_display_name: String)

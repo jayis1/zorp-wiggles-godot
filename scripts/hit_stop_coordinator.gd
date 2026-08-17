@@ -57,6 +57,13 @@ func _ready() -> void:
 	# session left it stuck (e.g. a crash during a freeze).
 	Engine.time_scale = 1.0
 	_current_applied_scale = 1.0
+	# Connect to game_restarted so the coordinator resets cleanly even if
+	# GameManager.restart_game() is bypassed (e.g. scene reload from save).
+	if GameManager:
+		GameManager.game_restarted.connect(_on_game_restarted)
+
+func _on_game_restarted() -> void:
+	reset()
 
 func _process(_delta: float) -> void:
 	if _active_freezes.is_empty():
