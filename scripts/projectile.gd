@@ -1223,6 +1223,30 @@ func _impact_effect(override_color: Color = Color(0.0, 0.0, 0.0, -1.0)) -> void:
 		# language across UI + world effects.
 		if override_color.a >= 0.0 and burst.has_method("set") and "impact_color" in burst:
 			burst.set("impact_color", override_color)
+		# ── Light intensity hierarchy ── Scale the impact flash brightness
+		# by hit type so bigger hits produce a brighter light. The hierarchy
+		# mirrors the camera trauma scaling (normal < crit < kill < boss):
+		#   normal hit → 3.5 (default, set in _pool_reset)
+		#   crit       → 5.0 (gold flash is brighter)
+		#   kill       → 6.5 (warm orange flash is even brighter)
+		#   boss kill  → 8.0 (magenta flash is the brightest — climactic)
+		# This creates a visual hierarchy where the player's peripheral
+		# vision registers the hit weight from the flash intensity alone,
+		# even before the damage number or camera shake registers.
+		if burst.has_method("set") and "light_intensity" in burst:
+			if override_color.a >= 0.0:
+				# Determine hit tier from the override color:
+				# boss kill = magenta (1.0, 0.2, 0.8), kill = orange (1.0, 0.7, 0.15),
+				# crit = gold (1.0, 0.85, 0.2). We check the green channel to
+				# distinguish: magenta has low green (0.2), orange has mid
+				# green (0.7), gold has high green (0.85).
+				if override_color.g < 0.4:
+					burst.set("light_intensity", 8.0)  # Boss kill
+				elif override_color.g < 0.8:
+					burst.set("light_intensity", 6.5)  # Kill
+				else:
+					burst.set("light_intensity", 5.0)  # Crit
+			# Normal hits keep the default 3.5 from _pool_reset
 		# For pooled instances, _ready() doesn't auto-play (it checks
 		# is_pooled_instance). We must explicitly call _play() after
 		# setting impact_color. Non-pooled instances already auto-played

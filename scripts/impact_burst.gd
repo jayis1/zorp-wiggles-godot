@@ -47,6 +47,13 @@ var _is_setup: bool = false  # True after first _ready() — prevents re-creatin
 ## so enemy projectiles and AoE effects can reuse the same impact scene
 ## with their own color identity.
 var impact_color: Color = Color(0.0, 0.0, 0.0, -1.0)  # Negative alpha = no override
+## Light flash intensity — scales the OmniLight3D energy on the impact frame.
+## Default 3.5 (normal hit). Callers can set this higher for crits (5.0) or
+## kills (6.5) so bigger hits produce a brighter flash, creating a visual
+## hierarchy: normal < crit < kill < boss kill. This mirrors the camera
+## trauma hierarchy (0.03 → 0.06 → 0.10 → death) so the light flash and
+## the camera shake agree on the hit's weight.
+var light_intensity: float = 3.5
 
 func _ready() -> void:
 	if not _is_setup:
@@ -121,11 +128,15 @@ func _play() -> void:
 	if _material:
 		_main_tween.parallel().tween_property(_material, "albedo_color:a", 0.0, 0.25) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	# Light: brighter initial pop (3.5 vs 2.5) + faster fade (80ms vs 120ms)
+	# Light: brighter initial pop for bigger hits + faster fade (80ms vs 120ms)
 	# for a sharper, more intense flash that reads as an instantaneous
 	# energy discharge rather than a soft glow. The shorter duration also
 	# reduces the per-impact light cost during rapid-fire combat.
-	_light.light_energy = 3.5
+	# The intensity is set by the caller via `light_intensity` — normal hits
+	# use 3.5, crits 5.0, kills 6.5, boss kills 8.0 — so the flash brightness
+	# scales with the hit's weight, creating a visual hierarchy that matches
+	# the camera trauma and damage number scaling.
+	_light.light_energy = light_intensity
 	if _light_tween and _light_tween.is_valid():
 		_light_tween.kill()
 	_light_tween = _light.create_tween()
@@ -151,6 +162,7 @@ func _pool_reset() -> void:
 	if _material:
 		_material.albedo_color.a = 0.8
 	impact_color = Color(0.0, 0.0, 0.0, -1.0)  # Reset to default (no override)
+	light_intensity = 3.5  # Reset to default (normal hit)
 
 ## Pool cleanup — called when the impact burst is released back to the pool.
 ## Hides the light so it doesn't render while dormant.

@@ -505,17 +505,31 @@ class TurretDeploy extends Node3D:
 		var move_tw := bolt.create_tween()
 		move_tw.tween_property(bolt, "global_position", end_pos, bolt_lifetime)
 		move_tw.tween_callback(bolt.queue_free)
-		# Muzzle flash
-		var flash := OmniLight3D.new()
-		flash.light_color = Color(0.7, 0.85, 0.3)
-		flash.light_energy = 4.0
-		flash.omni_range = 3.0
-		get_parent().add_child(flash)
-		flash.global_position = _head.global_position + dir * 0.8
-		var flash_tw := flash.create_tween()
-		flash_tw.tween_property(flash, "light_energy", 0.0, 0.08) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-		flash_tw.tween_callback(flash.queue_free)
+		# Muzzle flash — use the transient light pool for consistent memory
+		# management. The turret fires repeatedly during its active period,
+		# and each shot previously allocated a standalone OmniLight3D +
+		# tween → queue_free. The pool reuses dormant lights, eliminating
+		# per-shot allocation churn during sustained turret fire.
+		var _muzzle_pos: Vector3 = _head.global_position + dir * 0.8
+		if PerformanceOptimizer:
+			var flash := PerformanceOptimizer.acquire_transient_light(
+				_muzzle_pos, Color(0.7, 0.85, 0.3), 4.0, 0.15, 3.0, 1.0)
+			if flash:
+				var flash_tw := flash.create_tween()
+				flash_tw.tween_property(flash, "light_energy", 0.0, 0.08) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		else:
+			# Fallback: standalone light (non-pooled path)
+			var flash := OmniLight3D.new()
+			flash.light_color = Color(0.7, 0.85, 0.3)
+			flash.light_energy = 4.0
+			flash.omni_range = 3.0
+			get_parent().add_child(flash)
+			flash.global_position = _muzzle_pos
+			var flash_tw := flash.create_tween()
+			flash_tw.tween_property(flash, "light_energy", 0.0, 0.08) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			flash_tw.tween_callback(flash.queue_free)
 		# Enhancement Pack 41: Turret fire uses a softer, distinct sound
 		AudioManager.play_sfx_volume(AudioManager.SFX_SHOOT_ENERGY, 0.5)
 

@@ -575,19 +575,34 @@ func _execute_lightning_strike(pos: Vector3) -> void:
 	# Visual: bright white-blue OmniLight flash + particle burst
 	var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
 	if parent:
-		# Light flash
-		var flash: OmniLight3D = OmniLight3D.new()
-		flash.light_color = Color(0.7, 0.8, 1.0)
-		flash.light_energy = 8.0
-		flash.omni_range = 20.0
-		parent.add_child(flash)
-		flash.global_position = pos + Vector3(0, 8, 0)
-		var tw: Tween = create_tween()
-		tw.tween_property(flash, "light_energy", 0.0, 0.4).set_trans(Tween.TRANS_QUAD) \
-			.set_ease(Tween.EASE_OUT)
-		tw.parallel().tween_property(flash, "omni_range", 5.0, 0.4) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-		tw.chain().tween_callback(flash.queue_free)
+		# Light flash — use the transient light pool for consistent memory
+		# management with the rest of the codebase. Lightning strikes can
+		# fire repeatedly during a storm, and each previously allocated a
+		# standalone OmniLight3D + tween → queue_free. The pool reuses
+		# dormant lights, eliminating per-strike allocation churn.
+		if PerformanceOptimizer:
+			var flash := PerformanceOptimizer.acquire_transient_light(
+				pos + Vector3(0, 8, 0), Color(0.7, 0.8, 1.0), 8.0, 0.45, 20.0, 1.0)
+			if flash:
+				var tw: Tween = flash.create_tween()
+				tw.tween_property(flash, "light_energy", 0.0, 0.4).set_trans(Tween.TRANS_QUAD) \
+					.set_ease(Tween.EASE_OUT)
+				tw.parallel().tween_property(flash, "omni_range", 5.0, 0.4) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		else:
+			# Fallback: standalone light (non-pooled path)
+			var flash: OmniLight3D = OmniLight3D.new()
+			flash.light_color = Color(0.7, 0.8, 1.0)
+			flash.light_energy = 8.0
+			flash.omni_range = 20.0
+			parent.add_child(flash)
+			flash.global_position = pos + Vector3(0, 8, 0)
+			var tw: Tween = create_tween()
+			tw.tween_property(flash, "light_energy", 0.0, 0.4).set_trans(Tween.TRANS_QUAD) \
+				.set_ease(Tween.EASE_OUT)
+			tw.parallel().tween_property(flash, "omni_range", 5.0, 0.4) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			tw.chain().tween_callback(flash.queue_free)
 		# Particle burst (electrical spark column)
 		ParticleEffects.spawn_explosion(parent, pos + Vector3(0, 2, 0), Color(0.6, 0.7, 1.0), 80, 0.6)
 		# Camera shake
@@ -686,19 +701,33 @@ func _execute_meteor_strike(pos: Vector3) -> void:
 	AudioManager.play_sfx(AudioManager.SFX_THUNDER)
 	var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
 	if parent:
-		# Big fiery light flash
-		var flash: OmniLight3D = OmniLight3D.new()
-		flash.light_color = Color(1.0, 0.4, 0.1)
-		flash.light_energy = 12.0
-		flash.omni_range = 25.0
-		parent.add_child(flash)
-		flash.global_position = pos + Vector3(0, 6, 0)
-		var tw: Tween = create_tween()
-		tw.tween_property(flash, "light_energy", 0.0, 0.6).set_trans(Tween.TRANS_QUAD) \
-			.set_ease(Tween.EASE_OUT)
-		tw.parallel().tween_property(flash, "omni_range", 8.0, 0.6) \
-			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-		tw.chain().tween_callback(flash.queue_free)
+		# Big fiery light flash — use the transient light pool for consistent
+		# memory management. Meteor strikes are less frequent than lightning
+		# but produce a larger, longer-lasting flash, so pooling still helps
+		# during intense storm phases with multiple back-to-back meteors.
+		if PerformanceOptimizer:
+			var flash := PerformanceOptimizer.acquire_transient_light(
+				pos + Vector3(0, 6, 0), Color(1.0, 0.4, 0.1), 12.0, 0.65, 25.0, 1.0)
+			if flash:
+				var tw: Tween = flash.create_tween()
+				tw.tween_property(flash, "light_energy", 0.0, 0.6).set_trans(Tween.TRANS_QUAD) \
+					.set_ease(Tween.EASE_OUT)
+				tw.parallel().tween_property(flash, "omni_range", 8.0, 0.6) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		else:
+			# Fallback: standalone light (non-pooled path)
+			var flash: OmniLight3D = OmniLight3D.new()
+			flash.light_color = Color(1.0, 0.4, 0.1)
+			flash.light_energy = 12.0
+			flash.omni_range = 25.0
+			parent.add_child(flash)
+			flash.global_position = pos + Vector3(0, 6, 0)
+			var tw: Tween = create_tween()
+			tw.tween_property(flash, "light_energy", 0.0, 0.6).set_trans(Tween.TRANS_QUAD) \
+				.set_ease(Tween.EASE_OUT)
+			tw.parallel().tween_property(flash, "omni_range", 8.0, 0.6) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			tw.chain().tween_callback(flash.queue_free)
 		# Large explosion particles (bigger than lightning)
 		ParticleEffects.spawn_mega_explosion(parent, pos + Vector3(0, 2, 0), Color(1.0, 0.4, 0.1))
 		# Camera shake (bigger than lightning — meteors hit harder)
@@ -788,18 +817,30 @@ func _tick_magnetic_storm(delta: float) -> void:
 		# identity — the player hears their dash electronics short-circuiting.
 		AudioManager.play_sfx(AudioManager.SFX_EMP_PULSE)
 		# Visual: brief blue-white light flash at the player's position
+		# — use the transient light pool for consistent memory management.
 		var player: CharacterBody3D = _get_player()
 		var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
 		if parent and player and is_instance_valid(player):
-			var flash: OmniLight3D = OmniLight3D.new()
-			flash.light_color = Color(0.6, 0.7, 1.0)
-			flash.light_energy = 6.0
-			flash.omni_range = 18.0
-			parent.add_child(flash)
-			flash.global_position = player.global_position + Vector3(0, 3, 0)
-			var tw: Tween = create_tween()
-			tw.tween_property(flash, "light_energy", 0.0, 0.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-			tw.chain().tween_callback(flash.queue_free)
+			if PerformanceOptimizer:
+				var flash := PerformanceOptimizer.acquire_transient_light(
+					player.global_position + Vector3(0, 3, 0),
+					Color(0.6, 0.7, 1.0), 6.0, 0.55, 18.0, 1.0)
+				if flash:
+					var tw: Tween = flash.create_tween()
+					tw.tween_property(flash, "light_energy", 0.0, 0.5) \
+						.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			else:
+				# Fallback: standalone light (non-pooled path)
+				var flash: OmniLight3D = OmniLight3D.new()
+				flash.light_color = Color(0.6, 0.7, 1.0)
+				flash.light_energy = 6.0
+				flash.omni_range = 18.0
+				parent.add_child(flash)
+				flash.global_position = player.global_position + Vector3(0, 3, 0)
+				var tw: Tween = create_tween()
+				tw.tween_property(flash, "light_energy", 0.0, 0.5) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+				tw.chain().tween_callback(flash.queue_free)
 			# Small camera shake for the pulse impact
 			if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 				GameManager.camera_rig.add_trauma(0.25)
@@ -836,19 +877,29 @@ func _tick_gravity_anomaly(delta: float) -> void:
 			# reversing. Pitched up for upward shift, down for downward.
 			AudioManager.play_sfx_pitched(AudioManager.SFX_GRAVITY_SHIFT,
 				1.2 if direction < 0 else 0.8)
-			# Visual: violet light pulse
+			# Visual: violet light pulse — use the transient light pool.
 			var player: CharacterBody3D = _get_player()
 			var parent: Node = GameManager.world if GameManager.world else get_tree().current_scene
 			if parent and player and is_instance_valid(player):
-				var flash: OmniLight3D = OmniLight3D.new()
-				flash.light_color = Color(0.7, 0.4, 1.0)
-				flash.light_energy = 5.0
-				flash.omni_range = 15.0
-				parent.add_child(flash)
-				flash.global_position = player.global_position + Vector3(0, 3, 0)
-				var tw: Tween = create_tween()
-				tw.tween_property(flash, "light_energy", 0.0, 0.6).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-				tw.chain().tween_callback(flash.queue_free)
+				if PerformanceOptimizer:
+					var flash := PerformanceOptimizer.acquire_transient_light(
+						player.global_position + Vector3(0, 3, 0),
+						Color(0.7, 0.4, 1.0), 5.0, 0.65, 15.0, 1.0)
+					if flash:
+						var tw: Tween = flash.create_tween()
+						tw.tween_property(flash, "light_energy", 0.0, 0.6) \
+							.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+				else:
+					var flash: OmniLight3D = OmniLight3D.new()
+					flash.light_color = Color(0.7, 0.4, 1.0)
+					flash.light_energy = 5.0
+					flash.omni_range = 15.0
+					parent.add_child(flash)
+					flash.global_position = player.global_position + Vector3(0, 3, 0)
+					var tw: Tween = create_tween()
+					tw.tween_property(flash, "light_energy", 0.0, 0.6) \
+						.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+					tw.chain().tween_callback(flash.queue_free)
 				if GameManager.camera_rig and GameManager.camera_rig.has_method("add_trauma"):
 					GameManager.camera_rig.add_trauma(0.2)
 
