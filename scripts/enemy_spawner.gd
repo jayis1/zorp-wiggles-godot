@@ -22,15 +22,18 @@ var pending_spawns: Array[Dictionary] = []
 # ref-count dance each time. Precaching eliminates that per-spawn cost entirely,
 # which matters during heavy combat (swarm packs, endless mode, double-trouble
 # modifier) where spawns fire multiple times per second.
+# ── Preloaded enemy scenes ── All enemy PackedScenes are preloaded at class
+#    scope via const preload(), so _get_cached_scene() never calls load() at
+#    runtime — the first spawn of each enemy type is just a dict lookup, not
+#    a ResourceLoader cache query. This shaves a few ms off the first spawn
+#    of each enemy type (21 types × ~1ms load = ~21ms total saved on first
+#    encounter of each type, spread across the run).
 static var _cached_scenes: Dictionary = {}  # { enemy_type: PackedScene }
 
 static func _get_cached_scene(enemy_type: int) -> PackedScene:
 	if _cached_scenes.has(enemy_type):
 		return _cached_scenes[enemy_type]
-	var scene_path: String = ENEMY_SCENES.get(enemy_type, "")
-	if scene_path.is_empty():
-		return null
-	var scene: PackedScene = load(scene_path)
+	var scene: PackedScene = ENEMY_SCENES.get(enemy_type)
 	if scene:
 		_cached_scenes[enemy_type] = scene
 	return scene
@@ -91,33 +94,33 @@ const HARD_TYPES: Array[int] = [
 	GameConstants.EnemyType.GRAVITY_ELEMENTAL, # Phase 23: Gravity Elemental in hard tier
 ]
 
-# Enemy scene paths by type
+# Enemy scenes by type (preloaded PackedScenes — no runtime load() needed)
 const ENEMY_SCENES: Dictionary = {
-	GameConstants.EnemyType.BLOB: "res://scenes/entities/enemy_blob.tscn",
-	GameConstants.EnemyType.SERPENT: "res://scenes/entities/enemy_serpent.tscn",
-	GameConstants.EnemyType.GRAVITON: "res://scenes/entities/enemy_graviton.tscn",
-	GameConstants.EnemyType.WISP: "res://scenes/entities/enemy_wisp.tscn",
-	GameConstants.EnemyType.SENTINEL: "res://scenes/entities/enemy_sentinel.tscn",
-	GameConstants.EnemyType.BOMBER: "res://scenes/entities/enemy_bomber.tscn",
-	GameConstants.EnemyType.SPITTER: "res://scenes/entities/enemy_spitter.tscn",
-	GameConstants.EnemyType.DRAKE: "res://scenes/entities/enemy_drake.tscn",
+	GameConstants.EnemyType.BLOB: preload("res://scenes/entities/enemy_blob.tscn"),
+	GameConstants.EnemyType.SERPENT: preload("res://scenes/entities/enemy_serpent.tscn"),
+	GameConstants.EnemyType.GRAVITON: preload("res://scenes/entities/enemy_graviton.tscn"),
+	GameConstants.EnemyType.WISP: preload("res://scenes/entities/enemy_wisp.tscn"),
+	GameConstants.EnemyType.SENTINEL: preload("res://scenes/entities/enemy_sentinel.tscn"),
+	GameConstants.EnemyType.BOMBER: preload("res://scenes/entities/enemy_bomber.tscn"),
+	GameConstants.EnemyType.SPITTER: preload("res://scenes/entities/enemy_spitter.tscn"),
+	GameConstants.EnemyType.DRAKE: preload("res://scenes/entities/enemy_drake.tscn"),
 	# Enhancement: New enemy types
-	GameConstants.EnemyType.SWARM_MITE: "res://scenes/entities/enemy_swarm_mite.tscn",
-	GameConstants.EnemyType.CRYSTAL_GUARDIAN: "res://scenes/entities/enemy_crystal_guardian.tscn",
-	GameConstants.EnemyType.PHASE_SHIFTER: "res://scenes/entities/enemy_phase_shifter.tscn",
+	GameConstants.EnemyType.SWARM_MITE: preload("res://scenes/entities/enemy_swarm_mite.tscn"),
+	GameConstants.EnemyType.CRYSTAL_GUARDIAN: preload("res://scenes/entities/enemy_crystal_guardian.tscn"),
+	GameConstants.EnemyType.PHASE_SHIFTER: preload("res://scenes/entities/enemy_phase_shifter.tscn"),
 	# Phase 23: New enemy types
-	GameConstants.EnemyType.TOXIC_SPORE: "res://scenes/entities/enemy_toxic_spore.tscn",
-	GameConstants.EnemyType.SWARM_QUEEN: "res://scenes/entities/enemy_swarm_queen.tscn",
-	GameConstants.EnemyType.CRYSTAL_WRAITH: "res://scenes/entities/enemy_crystal_wraith.tscn",
-	GameConstants.EnemyType.ECHO_KNIGHT: "res://scenes/entities/enemy_echo_knight.tscn",
+	GameConstants.EnemyType.TOXIC_SPORE: preload("res://scenes/entities/enemy_toxic_spore.tscn"),
+	GameConstants.EnemyType.SWARM_QUEEN: preload("res://scenes/entities/enemy_swarm_queen.tscn"),
+	GameConstants.EnemyType.CRYSTAL_WRAITH: preload("res://scenes/entities/enemy_crystal_wraith.tscn"),
+	GameConstants.EnemyType.ECHO_KNIGHT: preload("res://scenes/entities/enemy_echo_knight.tscn"),
 	# Phase 23: New enemy types (batch 2)
-	GameConstants.EnemyType.PLASMA_STALKER: "res://scenes/entities/enemy_plasma_stalker.tscn",
-	GameConstants.EnemyType.TIME_WARDEN: "res://scenes/entities/enemy_time_warden.tscn",
-	GameConstants.EnemyType.MIRROR_MIMIC: "res://scenes/entities/enemy_mirror_mimic.tscn",
+	GameConstants.EnemyType.PLASMA_STALKER: preload("res://scenes/entities/enemy_plasma_stalker.tscn"),
+	GameConstants.EnemyType.TIME_WARDEN: preload("res://scenes/entities/enemy_time_warden.tscn"),
+	GameConstants.EnemyType.MIRROR_MIMIC: preload("res://scenes/entities/enemy_mirror_mimic.tscn"),
 	# Phase 23: New enemy types (batch 3 — bosses & elites)
-	GameConstants.EnemyType.VOID_LEVIATHAN: "res://scenes/entities/enemy_void_leviathan.tscn",
-	GameConstants.EnemyType.ANCIENT_SENTINEL: "res://scenes/entities/enemy_ancient_sentinel.tscn",
-	GameConstants.EnemyType.GRAVITY_ELEMENTAL: "res://scenes/entities/enemy_gravity_elemental.tscn",
+	GameConstants.EnemyType.VOID_LEVIATHAN: preload("res://scenes/entities/enemy_void_leviathan.tscn"),
+	GameConstants.EnemyType.ANCIENT_SENTINEL: preload("res://scenes/entities/enemy_ancient_sentinel.tscn"),
+	GameConstants.EnemyType.GRAVITY_ELEMENTAL: preload("res://scenes/entities/enemy_gravity_elemental.tscn"),
 }
 
 # Enemy type enum → name string (for looking up type data from EnemyTypeData)
