@@ -148,17 +148,13 @@ func _try_spawn_world_boss() -> void:
 	world_boss_spawned.emit(null, display_name)
 
 func _materialize_world_boss(boss_type: int, spawn_pos: Vector3, display_name: String) -> void:
-	# Use preloaded BOSS_SCENES dictionary; fall back to runtime load for any
-	# boss type not in the preloaded dict.
+	# Use preloaded BOSS_SCENES dictionary; fall back to EnemySpawner's
+	# cached scene lookup for any boss type not in the preloaded dict.
 	var scene: PackedScene = BOSS_SCENES.get(boss_type)
 	if scene == null:
-		var scene_path: String = EnemySpawner.ENEMY_SCENES.get(boss_type, "")
-		if scene_path.is_empty():
-			print_verbose("[WorldBossManager] No scene for boss type %d" % boss_type)
-			return
-		scene = load(scene_path)
+		scene = EnemySpawner._get_cached_scene(boss_type)
 		if not scene:
-			print_verbose("[WorldBossManager] Failed to load boss scene: %s" % scene_path)
+			print_verbose("[WorldBossManager] No scene for boss type %d" % boss_type)
 			return
 	var boss: CharacterBody3D = scene.instantiate()
 	boss.position = spawn_pos

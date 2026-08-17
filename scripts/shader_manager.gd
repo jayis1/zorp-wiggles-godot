@@ -67,28 +67,28 @@ var _fog_target_density: float = 0.02
 var _fog_transition_progress: float = 1.0  # 1 = fully on target
 var _fog_elapsed: float = 0.0
 
-# ─── Shader file paths ───────────────────────────────────────────────────────
-const SHADER_PATHS: Dictionary = {
-	"heat_distortion": "res://assets/shaders/heat_distortion.gdshader",
-	"frost_vignette": "res://assets/shaders/frost_vignette.gdshader",
-	"chromatic_aberration": "res://assets/shaders/chromatic_aberration.gdshader",
-	"dissolve": "res://assets/shaders/dissolve.gdshader",
-	"crystal_refraction": "res://assets/shaders/crystal_refraction.gdshader",
-	"low_hp_vignette": "res://assets/shaders/low_hp_vignette.gdshader",
-	"boss_enrage": "res://assets/shaders/boss_enrage.gdshader",
-	"dimension_transition": "res://assets/shaders/dimension_transition.gdshader",
-	"biome_transition_fog": "res://assets/shaders/biome_transition_fog.gdshader",
+# ─── Preloaded shaders ──────────────────────────────────────────────────────
+# Shaders are preloaded at class scope via const preload() so there's no
+# runtime load() or ResourceLoader cache lookup during _ready. This
+# eliminates 9 load() calls on startup and ensures shaders are available
+# immediately (preload happens at parse time, not at _ready time).
+const SHADERS: Dictionary = {
+	"heat_distortion": preload("res://assets/shaders/heat_distortion.gdshader"),
+	"frost_vignette": preload("res://assets/shaders/frost_vignette.gdshader"),
+	"chromatic_aberration": preload("res://assets/shaders/chromatic_aberration.gdshader"),
+	"dissolve": preload("res://assets/shaders/dissolve.gdshader"),
+	"crystal_refraction": preload("res://assets/shaders/crystal_refraction.gdshader"),
+	"low_hp_vignette": preload("res://assets/shaders/low_hp_vignette.gdshader"),
+	"boss_enrage": preload("res://assets/shaders/boss_enrage.gdshader"),
+	"dimension_transition": preload("res://assets/shaders/dimension_transition.gdshader"),
+	"biome_transition_fog": preload("res://assets/shaders/biome_transition_fog.gdshader"),
 }
 
 func _ready() -> void:
-	# Load all shaders upfront so biome transitions are instant
-	for key in SHADER_PATHS:
-		var path: String = SHADER_PATHS[key]
-		var shader: Shader = load(path)
-		if shader:
-			_shaders[key] = shader
-		else:
-			push_warning("[ShaderManager] Failed to load shader: %s" % path)
+	# Shaders are already preloaded at class scope — just copy them into
+	# the runtime _shaders dict so the rest of the script's API works
+	# unchanged.
+	_shaders = SHADERS.duplicate()
 
 	# Create the two biome overlay rects (A and B for cross-fading)
 	_biome_rect = _create_overlay_rect()

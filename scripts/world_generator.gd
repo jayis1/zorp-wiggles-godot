@@ -38,6 +38,44 @@ var grid: Array[int] = []  # Flattened 2D array of biome types
 var decorations: Array[Node3D] = []
 var ground_collision: StaticBody3D = null
 
+# ── Preloaded enemy scenes ── Enemy name → PackedScene, preloaded at class
+#    scope so world-gen spawns skip runtime load() entirely. The static
+#    dict is built once on first use and reused for every subsequent spawn.
+static var _enemy_scenes: Dictionary = {}
+const _BLOB_SCENE := preload("res://scenes/entities/enemy_blob.tscn")
+const _DRAKE_SCENE := preload("res://scenes/entities/enemy_drake.tscn")
+const _SPITTER_SCENE := preload("res://scenes/entities/enemy_spitter.tscn")
+const _BOMBER_SCENE := preload("res://scenes/entities/enemy_bomber.tscn")
+const _SENTINEL_SCENE := preload("res://scenes/entities/enemy_sentinel.tscn")
+const _SERPENT_SCENE := preload("res://scenes/entities/enemy_serpent.tscn")
+const _GRAVITON_SCENE := preload("res://scenes/entities/enemy_graviton.tscn")
+const _WISP_SCENE := preload("res://scenes/entities/enemy_wisp.tscn")
+
+static func _get_enemy_scene(type_name: String) -> PackedScene:
+	if _enemy_scenes.is_empty():
+		_enemy_scenes = {
+			"Slime Blob": _BLOB_SCENE,
+			"Space Beetle": _BLOB_SCENE,
+			"Void Wraith": _BLOB_SCENE,
+			"Lava Crawler": _BLOB_SCENE,
+			"Crystal Guardian": _BLOB_SCENE,
+			"Plasma Drake": _DRAKE_SCENE,
+			"Phase Shifter": _BLOB_SCENE,
+			"Spore Spitter": _SPITTER_SCENE,
+			"Swarm Mite": _BLOB_SCENE,
+			"Void Bomber": _BOMBER_SCENE,
+			"Nebula Phantom": _BLOB_SCENE,
+			"Starburst Sentinel": _SENTINEL_SCENE,
+			"Cosmic Leech": _BLOB_SCENE,
+			"Void Stalker": _BLOB_SCENE,
+			"Plasma Serpent": _SERPENT_SCENE,
+			"Graviton": _GRAVITON_SCENE,
+			"Void Wisp": _WISP_SCENE,
+			"Echo Wraith": _BLOB_SCENE,
+			"Shard Golem": _BLOB_SCENE,
+		}
+	return _enemy_scenes.get(type_name, _BLOB_SCENE)
+
 func _ready() -> void:
 	_generate_world()
 
@@ -505,31 +543,11 @@ func _random_collectible_type() -> int:
 func _spawn_enemy_at(type_name: String, pos: Vector3) -> void:
 	# Spawn an enemy of the given type at the given position.
 	var type_data: Dictionary = EnemyTypeData.get_type(type_name)
-	# Map enemy names to their specialized scenes
-	var scene_map: Dictionary = {
-		"Slime Blob": "res://scenes/entities/enemy_blob.tscn",
-		"Space Beetle": "res://scenes/entities/enemy_blob.tscn",
-		"Void Wraith": "res://scenes/entities/enemy_blob.tscn",
-		"Lava Crawler": "res://scenes/entities/enemy_blob.tscn",
-		"Crystal Guardian": "res://scenes/entities/enemy_blob.tscn",
-		"Plasma Drake": "res://scenes/entities/enemy_drake.tscn",
-		"Phase Shifter": "res://scenes/entities/enemy_blob.tscn",
-		"Spore Spitter": "res://scenes/entities/enemy_spitter.tscn",
-		"Swarm Mite": "res://scenes/entities/enemy_blob.tscn",
-		"Void Bomber": "res://scenes/entities/enemy_bomber.tscn",
-		"Nebula Phantom": "res://scenes/entities/enemy_blob.tscn",
-		"Starburst Sentinel": "res://scenes/entities/enemy_sentinel.tscn",
-		"Cosmic Leech": "res://scenes/entities/enemy_blob.tscn",
-		"Void Stalker": "res://scenes/entities/enemy_blob.tscn",
-		"Plasma Serpent": "res://scenes/entities/enemy_serpent.tscn",
-		"Graviton": "res://scenes/entities/enemy_graviton.tscn",
-		"Void Wisp": "res://scenes/entities/enemy_wisp.tscn",
-		"Echo Wraith": "res://scenes/entities/enemy_blob.tscn",
-		"Shard Golem": "res://scenes/entities/enemy_blob.tscn",
-	}
-	var scene_path: String = scene_map.get(type_name, "res://scenes/entities/enemy_blob.tscn")
-	var enemy_scene: PackedScene = load(scene_path)
-	var enemy: CharacterBody3D = enemy_scene.instantiate()
+	# Map enemy names to their preloaded PackedScenes. Scenes are preloaded
+	# at class scope so there's no runtime load() per spawn, and the dict
+	# is built once on first use (static cache) instead of every call.
+	var scene: PackedScene = _get_enemy_scene(type_name)
+	var enemy: CharacterBody3D = scene.instantiate()
 	# Set local position before add_child (avoids !is_inside_tree error when
 	# reading global_position). The World node is at origin, so local == global.
 	enemy.position = pos

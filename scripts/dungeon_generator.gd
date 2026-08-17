@@ -421,8 +421,10 @@ func _theme_enemy_pool(theme: int) -> Array[int]:
 			return [GameConstants.EnemyType.BLOB]
 
 func _spawn_enemy_at(enemy_type: int, pos: Vector3) -> void:
-	var scene_path := _enemy_scene_path(enemy_type)
-	var scene: PackedScene = load(scene_path)
+	# Use EnemySpawner's cached scene lookup instead of runtime load() —
+	# the spawner caches PackedScenes on first use, so subsequent dungeon
+	# spawns skip the ResourceLoader cache lookup entirely.
+	var scene: PackedScene = EnemySpawner._get_cached_scene(enemy_type)
 	if not scene:
 		return
 	var enemy := scene.instantiate()
@@ -438,51 +440,6 @@ func _spawn_enemy_at(enemy_type: int, pos: Vector3) -> void:
 		# Materialization particles + SFX for dungeon enemy spawns
 		ParticleEffects.spawn_materialization(get_tree().current_scene, pos, enemy.base_color)
 		AudioManager.play_sfx(AudioManager.SFX_SPAWN_IN)
-
-func _enemy_scene_path(enemy_type: int) -> String:
-	match enemy_type:
-		GameConstants.EnemyType.BLOB:
-			return "res://scenes/entities/enemy_blob.tscn"
-		GameConstants.EnemyType.SERPENT:
-			return "res://scenes/entities/enemy_serpent.tscn"
-		GameConstants.EnemyType.WISP:
-			return "res://scenes/entities/enemy_wisp.tscn"
-		GameConstants.EnemyType.BOMBER:
-			return "res://scenes/entities/enemy_bomber.tscn"
-		GameConstants.EnemyType.SENTINEL:
-			return "res://scenes/entities/enemy_sentinel.tscn"
-		GameConstants.EnemyType.SPITTER:
-			return "res://scenes/entities/enemy_spitter.tscn"
-		GameConstants.EnemyType.DRAKE:
-			return "res://scenes/entities/enemy_drake.tscn"
-		GameConstants.EnemyType.GRAVITON:
-			return "res://scenes/entities/enemy_graviton.tscn"
-		GameConstants.EnemyType.TOXIC_SPORE:
-			return "res://scenes/entities/enemy_toxic_spore.tscn"
-		GameConstants.EnemyType.CRYSTAL_GUARDIAN:
-			return "res://scenes/entities/enemy_crystal_guardian.tscn"
-		GameConstants.EnemyType.CRYSTAL_WRAITH:
-			return "res://scenes/entities/enemy_crystal_wraith.tscn"
-		GameConstants.EnemyType.ECHO_KNIGHT:
-			return "res://scenes/entities/enemy_echo_knight.tscn"
-		GameConstants.EnemyType.SWARM_QUEEN:
-			return "res://scenes/entities/enemy_swarm_queen.tscn"
-		GameConstants.EnemyType.PLASMA_STALKER:
-			return "res://scenes/entities/enemy_plasma_stalker.tscn"
-		GameConstants.EnemyType.MIRROR_MIMIC:
-			return "res://scenes/entities/enemy_mirror_mimic.tscn"
-		GameConstants.EnemyType.TIME_WARDEN:
-			return "res://scenes/entities/enemy_time_warden.tscn"
-		GameConstants.EnemyType.VOID_LEVIATHAN:
-			return "res://scenes/entities/enemy_void_leviathan.tscn"
-		GameConstants.EnemyType.ANCIENT_SENTINEL:
-			return "res://scenes/entities/enemy_ancient_sentinel.tscn"
-		GameConstants.EnemyType.GRAVITY_ELEMENTAL:
-			return "res://scenes/entities/enemy_gravity_elemental.tscn"
-		GameConstants.EnemyType.PHASE_SHIFTER:
-			return "res://scenes/entities/enemy_phase_shifter.tscn"
-		_:
-			return "res://scenes/entities/enemy_blob.tscn"
 
 # ─── Dungeon Boss ───────────────────────────────────────────────────────────────
 
@@ -500,8 +457,7 @@ func _spawn_dungeon_boss(room: Dictionary, theme: int, dungeon_id: int) -> void:
 			boss_type = GameConstants.EnemyType.GRAVITY_ELEMENTAL
 		_:
 			boss_type = GameConstants.EnemyType.DRAKE
-	var scene_path := _enemy_scene_path(boss_type)
-	var scene: PackedScene = load(scene_path)
+	var scene: PackedScene = EnemySpawner._get_cached_scene(boss_type)
 	if not scene:
 		return
 	var boss := scene.instantiate()

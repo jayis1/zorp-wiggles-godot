@@ -44,8 +44,8 @@ const UI_SCALE_STEP: float = 0.05
 const UI_SCALE_DEFAULT: float = 1.0
 
 const SAVE_PATH: String = "user://zorp_accessibility.json"
-const FILTER_SHADER_PATH: String = "res://assets/shaders/color_filter.gdshader"
-const COLORBLIND_SHADER_PATH: String = "res://assets/shaders/colorblind.gdshader"
+const FILTER_SHADER: Shader = preload("res://assets/shaders/color_filter.gdshader")
+const COLORBLIND_SHADER: Shader = preload("res://assets/shaders/colorblind.gdshader")
 
 # ── Runtime state ──
 var _filter_rect: ColorRect = null
@@ -78,13 +78,10 @@ signal ui_scale_changed(scale: float)
 
 func _ready() -> void:
 	layer = 60  # Above ShaderManager (50), below HUD (100)
-	# Load shaders
-	_filter_shader = load(FILTER_SHADER_PATH)
-	_colorblind_shader = load(COLORBLIND_SHADER_PATH)
-	if not _filter_shader:
-		push_warning("[AccessibilityManager] Failed to load color_filter shader")
-	if not _colorblind_shader:
-		push_warning("[AccessibilityManager] Failed to load colorblind shader")
+	# Shaders are preloaded at class scope (FILTER_SHADER, COLORBLIND_SHADER)
+	# so there's no runtime load() or resource cache lookup.
+	_filter_shader = FILTER_SHADER
+	_colorblind_shader = COLORBLIND_SHADER
 
 	# Create the two overlay rects
 	_filter_rect = _create_overlay_rect()
