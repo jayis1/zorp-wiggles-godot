@@ -127,7 +127,8 @@ func _process(delta: float) -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if _opened:
 		return
-	if not body.is_in_group("player"):
+	# Co-op: both P1 and P2 can open treasure chests.
+	if not (body.is_in_group("player") or body.is_in_group("player2")):
 		return
 	_open_chest()
 

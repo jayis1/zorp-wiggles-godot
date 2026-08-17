@@ -1945,3 +1945,24 @@ All 5 spawn-in animations use the same visual language: `scale = Vector3.ZERO` �
 
 ### Design Rationale
 The Endless, Boss Rush, Speedrun, Daily Challenge, and Weekly Challenge modes all have persistent HUD overlays that give the player constant awareness of their mode-specific progress. The three endgame challenge modes (Survival, Gauntlet, Boss Gauntlet) were the only modes without dedicated HUDs — they relied entirely on transient `add_message()` calls that disappeared after a few seconds. This was a significant polish gap: these are the game's hardest modes where progress awareness is most critical. The three new HUDs match the established visual language (top-center pill overlay, fade in/out, progress bars, flash pulses on transitions) while using distinct color palettes (red-orange for survival, orange-red for gauntlet, deep red for boss gauntlet) to differentiate them from the existing mode HUDs.
+
+## Enhancement Pack 71 — Co-op P2 World Interaction Fix + Phase 23 Enemy Death SFX
+
+### Co-op P2 World Interaction Exclusion Bug Fix (10 scripts)
+- **Bug: Player 2 (Zerp) could not interact with any world object** — all `_on_body_entered` handlers for interactive world objects only checked `body.is_in_group("player")` and ignored `"player2"`. In local co-op, P2 is in the `"player2"` group (not `"player"`), so P2 walking into a portal, monolith, healing shrine, lore stone, treasure chest, dimensional rift, collectible, fast travel waypoint, destructible crate, dungeon entrance, loot cave, or ancient vault would silently do nothing. This was a major co-op gameplay bug — P2 was completely locked out of all world interactions except combat (which already checked both groups). Fixed by adding `or body.is_in_group("player2")` to the group check in all 10 affected scripts:
+  - `portal.gd` — P2 can now use inter-biome portals
+  - `monolith.gd` — P2 can now activate monolith buff structures
+  - `healing_shrine.gd` — P2 can now use healing shrines (heals P2 via `CoOpManager.p2_heal()` instead of `GameManager.heal()`; survival mode suppresses P2 healing too)
+  - `lore_stone.gd` — P2 can now read lore stones
+  - `treasure_chest.gd` — P2 can now open treasure chests
+  - `dimensional_rift.gd` — P2 can now enter dimensional rifts
+  - `collectible.gd` — P2 can now collect items by touching them (already handled P2 in mirror-dimension hostile-collectible path, but the base touch-to-collect check was P1-only)
+  - `destructible.gd` — P2 dashing into a destructible crate now smashes it
+  - `dungeon_generator.gd` — P2 can now enter dungeon entrances
+  - `endgame_manager.gd` — P2 can now enter loot caves and the Ancient Vault
+- **Healing shrine P2-specific fix** — the shrine previously always called `GameManager.heal()` (P1's heal) regardless of who triggered it. Now it checks `_is_p2` and routes to `CoOpManager.p2_heal()` when P2 touches the shrine, with survival-mode suppression matching P1's behavior.
+
+### Phase 23 Enemy Death SFX (2 new SFX)
+- **SFX_MIRROR_SHATTER** — a cascading high-pitched crystalline shatter (C7→G6→C6→G5, 2093→1568→1047→784 Hz, 0.18s, 0.30 vol) for the Mirror Mimic's death. The cascading descending arpeggio conveys a mirror cracking into reflective fragments — the unique sonic identity for a mirror-themed enemy. Previously the Mirror Mimic's death only played the generic SFX_ENEMY_DEATH from the base class, giving the mirror enemy no distinct death sound despite its unique mirror-shatter particle burst. Added to `_PITCH_VARIATION_SFX` for natural micro-detuning.
+- **SFX_QUEEN_DEATH** — a deep, wet, organic collapse (180→80 Hz descending, 0.30s, 0.35 vol) for the Swarm Queen's death. Deeper and longer than SFX_ENEMY_DEATH so it reads as a "brood mother falling" — a major enemy eliminated. The low descending tone conveys a large organism collapsing. Previously the Swarm Queen's death only played the generic SFX_ENEMY_DEATH, giving the queen no distinct death sound despite her unique "final mite swarm release" mechanic. Added to `_PITCH_VARIATION_SFX` for natural micro-detuning.
+- **Total SFX count: 124** (up from 122).

@@ -571,7 +571,8 @@ func _build_loot_cave_entrance(cave: Dictionary) -> void:
 	})
 
 func _on_loot_cave_entered(body: Node, cave_id: int) -> void:
-	if not body.is_in_group("player"):
+	# Co-op: both P1 and P2 can enter loot caves.
+	if not (body.is_in_group("player") or body.is_in_group("player2")):
 		return
 	enter_loot_cave(cave_id)
 
@@ -798,7 +799,8 @@ func _build_vault_entrance() -> void:
 	}
 
 func _on_vault_entered(body: Node, root: Node3D) -> void:
-	if not body.is_in_group("player"):
+	# Co-op: both P1 and P2 can open the Ancient Vault.
+	if not (body.is_in_group("player") or body.is_in_group("player2")):
 		return
 	try_open_vault(root)
 

@@ -167,17 +167,27 @@ func _process(delta: float) -> void:
 			_light.light_energy = 1.0 + 0.3 * sin(_time * 3.0) + _discharge_light_energy
 
 func _on_body_entered(body: Node3D) -> void:
-	if not body.is_in_group("player"):
+	# Co-op: both P1 and P2 can use healing shrines.
+	if not (body.is_in_group("player") or body.is_in_group("player2")):
 		return
 	if cooldown > 0.0:
 		return
 
-	# Heal the player
+	# Heal the player (P1 or P2 depending on who triggered the shrine)
 	cooldown = GameConstants.SHRINE_COOLDOWN
+	var _is_p2: bool = body.is_in_group("player2")
+	var _heal_suppressed: bool = GameModeManager and GameModeManager.is_survival()
 	# ── Phase 34: Survival mode — no shrine healing ──
-	GameManager.block_heal_next_call()
-	GameManager.heal(GameConstants.SHRINE_HEAL_AMOUNT)
-	if GameModeManager and GameModeManager.is_survival():
+	if _is_p2:
+		if _heal_suppressed:
+			# In survival mode, P2 healing is also suppressed — just don't heal.
+			pass
+		else:
+			CoOpManager.p2_heal(GameConstants.SHRINE_HEAL_AMOUNT)
+	else:
+		GameManager.block_heal_next_call()
+		GameManager.heal(GameConstants.SHRINE_HEAL_AMOUNT)
+	if _heal_suppressed:
 		GameManager.add_message("☠ Survival: Shrine healing suppressed!")
 	else:
 		GameManager.add_message("Healing Shrine! +%d HP" % GameConstants.SHRINE_HEAL_AMOUNT)

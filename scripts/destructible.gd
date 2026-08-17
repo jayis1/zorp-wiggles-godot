@@ -127,8 +127,8 @@ func take_damage(amount: int) -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if _is_broken:
 		return
-	# Player dashing into a destructible smashes it instantly
-	if body.is_in_group("player"):
+	# Co-op: both P1 and P2 dashing into a destructible smash it instantly.
+	if body.is_in_group("player") or body.is_in_group("player2"):
 		var player_script = body
 		if player_script.get("is_dashing") == true:
 			_shatter()

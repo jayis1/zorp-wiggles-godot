@@ -117,7 +117,8 @@ func _process(delta: float) -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if _read:
 		return
-	if not body.is_in_group("player"):
+	# Co-op: both P1 and P2 can read lore stones.
+	if not (body.is_in_group("player") or body.is_in_group("player2")):
 		return
 	_read_lore()
 

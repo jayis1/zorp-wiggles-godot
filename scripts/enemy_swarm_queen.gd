@@ -135,4 +135,7 @@ func _die() -> void:
 	# Extra particle burst for the queen's death
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.SWARM_QUEEN_COLOR, 30, 0.7)
+	# Enhancement Pack 71: dedicated queen death groan — deep organic collapse
+	# that conveys the brood mother falling. Plays before the base SFX_ENEMY_DEATH.
+	AudioManager.play_sfx(AudioManager.SFX_QUEEN_DEATH)
 	super._die()

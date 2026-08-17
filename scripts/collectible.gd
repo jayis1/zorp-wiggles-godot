@@ -709,7 +709,8 @@ func _physics_process(delta: float) -> void:
 		_collect()
 
 func _on_body_entered(body: Node3D) -> void:
-	if body.is_in_group("player"):
+	# Co-op: both P1 and P2 can collect items by touching them.
+	if body.is_in_group("player") or body.is_in_group("player2"):
 		_collect()
 
 ## Free the collectible after the despawn fade-out completes. Removes from

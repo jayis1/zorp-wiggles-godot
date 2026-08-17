@@ -215,7 +215,8 @@ func _process(delta: float) -> void:
 				rmat.emission_energy_multiplier = rune_breath
 
 func _on_body_entered(body: Node3D) -> void:
-	if not body.is_in_group("player"):
+	# Co-op: both P1 and P2 can activate monoliths.
+	if not (body.is_in_group("player") or body.is_in_group("player2")):
 		return
 	if cooldown > 0.0:
 		return

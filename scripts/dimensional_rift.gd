@@ -129,7 +129,8 @@ func _check_player_proximity() -> void:
 		_dissolve_and_expire()
 
 func _on_body_entered(body: Node3D) -> void:
-	if body.is_in_group("player"):
+	# Co-op: both P1 and P2 can enter dimensional rifts.
+	if body.is_in_group("player") or body.is_in_group("player2"):
 		# Phase 20: Audio — rift SFX
 		AudioManager.play_sfx(AudioManager.SFX_RIFT)
 		DimensionSystem.enter_dimension(target_dimension)

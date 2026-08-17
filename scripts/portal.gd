@@ -123,7 +123,8 @@ func _process(delta: float) -> void:
 					mat2.emission_energy_multiplier = 1.0
 
 func _on_body_entered(body: Node3D) -> void:
-	if not body.is_in_group("player"):
+	# Co-op: both P1 ("player") and P2 ("player2") can use portals.
+	if not (body.is_in_group("player") or body.is_in_group("player2")):
 		return
 	if cooldown > 0.0:
 		return

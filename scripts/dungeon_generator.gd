@@ -219,7 +219,8 @@ func _build_entrance(dungeon: Dictionary) -> void:
 	})
 
 func _on_entrance_body_entered(body: Node, dungeon_id: int) -> void:
-	if not body.is_in_group("player"):
+	# Co-op: both P1 and P2 can enter dungeons.
+	if not (body.is_in_group("player") or body.is_in_group("player2")):
 		return
 	enter_dungeon(dungeon_id)
 

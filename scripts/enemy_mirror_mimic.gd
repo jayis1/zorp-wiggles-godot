@@ -175,4 +175,8 @@ func _die() -> void:
 	# Also a silvery burst for the "mirror" identity
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.MIRROR_MIMIC_COLOR, 16, 0.4)
+	# Enhancement Pack 71: dedicated mirror shatter SFX — cascading high-pitched
+	# chime that conveys a mirror cracking into fragments. Plays before the
+	# base SFX_ENEMY_DEATH so the player hears the mirror theme distinctly.
+	AudioManager.play_sfx(AudioManager.SFX_MIRROR_SHATTER)
 	super._die()

@@ -617,6 +617,24 @@ const SFX_PILLAR_IMPACT: String = "pillar_impact"
 # A rapid upward energy burst conveying objects being hurled by gravitational force.
 const SFX_GRAVITY_FLING: String = "gravity_fling"
 
+# ── Enhancement Pack 71: Phase 23 enemy death SFX ──
+# Mirror shatter — a high-pitched crystalline shattering cascade for the Mirror
+# Mimic's death. The mirror-chrome enemy shatters like a broken mirror: a
+# rapid descending chime (C7→G6→C6→G5, 0.18s) with a noise-hit tail for the
+# glassy crash. Higher pitch than SFX_BREAKABLE (which is for crates/walls)
+# because a mirror shattering is brighter and more musical — the cascading
+# descending arpeggio conveys reflective fragments scattering. The base
+# SFX_ENEMY_DEATH also fires from _die(), but this unique sound plays first
+# so the player hears the mirror theme on top of the generic death sound.
+const SFX_MIRROR_SHATTER: String = "mirror_shatter"
+# Swarm Queen death groan — a deep, wet, organic collapse for the Swarm
+# Queen's death. A low descending tone (180→80 Hz, 0.30s) with a noise-hit
+# body conveys a large organism collapsing — the brood mother dying. Deeper
+# and longer than SFX_ENEMY_DEATH (which fires from base _die at ~0.25s) so
+# it reads as a distinct "major enemy eliminated" cue. The wet timbre matches
+# the chitinous/organic theme of the queen.
+const SFX_QUEEN_DEATH: String = "queen_death"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -1017,6 +1035,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_DUNGEON_CLEAR, SFX_GAUNTLET_CLEAR,
 	# Enhancement Pack 69: Missing boss & enemy attack SFX get pitch variation
 	SFX_POISON_BURST, SFX_VOID_BREATH, SFX_PILLAR_IMPACT, SFX_GRAVITY_FLING,
+	# Enhancement Pack 71: Phase 23 enemy death SFX get pitch variation
+	SFX_MIRROR_SHATTER, SFX_QUEEN_DEATH,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1708,6 +1728,16 @@ func _generate_all_sfx() -> void:
 	# Moderate volume since the fling happens alongside the field activation
 	# SFX_EXPLOSION, so it needs to be audible but not compete.
 	_sfx_streams[SFX_GRAVITY_FLING] = _gen_descending(120.0, 400.0, 0.14, 0.22)
+	# ── Enhancement Pack 71: Phase 23 enemy death SFX ──
+	# Mirror shatter — cascading descending chime (C7=2093→G6=1568→C6=1047→G5=784)
+	# with a short noise-hit tail for the glassy crash. The high-pitched cascade
+	# conveys a mirror shattering into fragments. Moderate volume (0.30) so it
+	# reads as a distinct event alongside the base SFX_ENEMY_DEATH.
+	_sfx_streams[SFX_MIRROR_SHATTER] = _gen_chime([2093.0, 1568.0, 1047.0, 784.0], 0.18, 0.30)
+	# Swarm Queen death groan — deep descending tone (180→80 Hz) with noise-hit
+	# body for an organic collapse. Longer (0.30s) and deeper than the base
+	# enemy death SFX so it reads as a "brood mother falling" moment.
+	_sfx_streams[SFX_QUEEN_DEATH] = _gen_descending(180.0, 80.0, 0.30, 0.35)
 
 
 func _generate_all_music() -> void:
