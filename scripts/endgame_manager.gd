@@ -51,6 +51,7 @@ var _gauntlet_biome_timer: float = 0.0
 var _gauntlet_kills_this_biome: int = 0
 var _gauntlet_total_time: float = 0.0
 var _gauntlet_completed: bool = false
+var _gauntlet_current_biome_name: String = ""
 var _boss_gauntlet_active: bool = false
 var _boss_gauntlet_index: int = 0
 var _boss_gauntlet_intermission: float = 0.0
@@ -187,6 +188,9 @@ func is_survival_active() -> bool:
 func get_survival_time() -> float:
 	return _survival_time
 
+func get_survival_next_boss_time() -> float:
+	return _survival_next_boss_time
+
 func start_survival() -> void:
 	_survival_active = true
 	_survival_time = 0.0
@@ -274,6 +278,18 @@ func get_gauntlet_index() -> int:
 func get_gauntlet_total_time() -> float:
 	return _gauntlet_total_time
 
+func get_gauntlet_biome_timer() -> float:
+	return _gauntlet_biome_timer
+
+func get_gauntlet_kills_this_biome() -> int:
+	return _gauntlet_kills_this_biome
+
+func get_gauntlet_current_biome_name() -> String:
+	return _gauntlet_current_biome_name
+
+func is_gauntlet_completed() -> bool:
+	return _gauntlet_completed
+
 func start_gauntlet() -> void:
 	_gauntlet_active = true
 	_gauntlet_index = 0
@@ -298,6 +314,7 @@ func _advance_gauntlet_biome() -> void:
 	var biome_id: int = biome_pool[_rng.randi() % biome_pool.size()]
 	_gauntlet_biome_timer = GameConstants.GAUNTLET_TIME_PER_BIOME
 	_gauntlet_kills_this_biome = 0
+	_gauntlet_current_biome_name = GameConstants.BIOME_NAMES.get(biome_id, "Unknown")
 	GameManager.add_message("⚔ Gauntlet %d/%d: %s — Kill %d enemies in %ds!" % [
 		_gauntlet_index + 1, GameConstants.GAUNTLET_BIOME_COUNT,
 		GameConstants.BIOME_NAMES.get(biome_id, "Unknown"),
@@ -360,6 +377,12 @@ func get_boss_gauntlet_index() -> int:
 
 func get_boss_gauntlet_total_time() -> float:
 	return _boss_gauntlet_total_time
+
+func get_boss_gauntlet_intermission() -> float:
+	return _boss_gauntlet_intermission
+
+func is_boss_gauntlet_completed() -> bool:
+	return _boss_gauntlet_completed
 
 func start_boss_gauntlet() -> void:
 	_boss_gauntlet_active = true
@@ -1033,6 +1056,7 @@ func _on_game_restarted() -> void:
 	_gauntlet_biome_timer = 0.0
 	_gauntlet_kills_this_biome = 0
 	_gauntlet_total_time = 0.0
+	_gauntlet_current_biome_name = ""
 	_boss_gauntlet_active = false
 	_boss_gauntlet_completed = false
 	_boss_gauntlet_index = 0

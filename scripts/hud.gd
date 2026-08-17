@@ -37,6 +37,9 @@ const BRH_SCRIPT := preload("res://scripts/boss_rush_hud.gd")
 const EWH_SCRIPT := preload("res://scripts/endless_wave_hud.gd")
 const DCH_SCRIPT := preload("res://scripts/daily_challenge_hud.gd")
 const WCH_SCRIPT := preload("res://scripts/weekly_challenge_hud.gd")
+const SH_SCRIPT := preload("res://scripts/survival_hud.gd")
+const GH_SCRIPT := preload("res://scripts/gauntlet_hud.gd")
+const BGH_SCRIPT := preload("res://scripts/boss_gauntlet_hud.gd")
 const VS_SCRIPT := preload("res://scripts/victory_screen.gd")
 const BIC_SCRIPT := preload("res://scripts/boss_intro_card.gd")
 const CF_SCRIPT := preload("res://scripts/crit_flash.gd")
@@ -605,6 +608,24 @@ func _ready() -> void:
 	wch_ctrl.set_script(WCH_SCRIPT)
 	wch_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(wch_ctrl)
+
+	# ── Phase 34: Endgame Mode HUDs — Survival, Gauntlet, Boss Gauntlet ──
+	# Persistent HUD overlays for the three endgame challenge modes, matching
+	# the visual language of the Endless, Boss Rush, and Speedrun HUDs.
+	var sh_ctrl := Control.new()
+	sh_ctrl.set_script(SH_SCRIPT)
+	sh_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(sh_ctrl)
+
+	var gh_ctrl := Control.new()
+	gh_ctrl.set_script(GH_SCRIPT)
+	gh_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(gh_ctrl)
+
+	var bgh_ctrl := Control.new()
+	bgh_ctrl.set_script(BGH_SCRIPT)
+	bgh_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bgh_ctrl)
 
 	# ── Phase 30: Victory Screen (boss rush / speedrun / endless completion) ──
 	var vs_ctrl := Control.new()
