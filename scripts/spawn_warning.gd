@@ -72,6 +72,18 @@ const _FLASH_FRAC := 0.85
 
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 
+# ── Secondary inner ring ── A second, smaller ring that expands faster
+#    than the primary ring and fades out sooner. This gives the spawn
+#    telegraph visual depth — instead of a single growing circle, the
+#    player sees two concentric rings expanding at different rates,
+#    creating a "energy converging" read that's more dynamic than a
+#    single hoop. The inner ring uses the same tier color but at lower
+#    alpha so it reads as a secondary echo, not a competing element.
+#    The ring is created programmatically (no scene file change needed)
+#    and shares the base mesh geometry (scaled differently).
+var _inner_ring: MeshInstance3D = null
+var _inner_ring_mat: StandardMaterial3D = null
+
 # ── Ground glow light ── An OmniLight3D that illuminates the ground below
 #    the spawn warning, making spawns visible in dark biomes and giving the
 #    telegraph a physical "energy gathering" presence. The light grows with
@@ -88,6 +100,24 @@ func _ready() -> void:
 		_material.emission = _base_emission * 0.5
 		_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mesh.material_override = _material
+	# ── Secondary inner ring ── Create a second MeshInstance3D that
+	#    shares the main ring's mesh geometry but has its own material
+	#    (lower alpha, no emission — a dim echo ring). It's positioned
+	#    slightly above the main ring (y=0.06 vs y=0.05) to avoid
+	#    z-fighting. The inner ring expands faster and fades quicker,
+	#    creating a two-layer telegraph that reads as converging energy.
+	if mesh:
+		_inner_ring = MeshInstance3D.new()
+		_inner_ring.mesh = mesh.mesh if mesh.mesh else CylinderMesh.new()
+		_inner_ring_mat = StandardMaterial3D.new()
+		_inner_ring_mat.albedo_color = Color(_base_color.r, _base_color.g, _base_color.b, 0.25)
+		_inner_ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_inner_ring_mat.emission_enabled = true
+		_inner_ring_mat.emission = _base_emission * 0.2
+		_inner_ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_inner_ring.material_override = _inner_ring_mat
+		_inner_ring.position = Vector3(0, 0.01, 0)  # Slight Y offset to avoid z-fighting
+		add_child(_inner_ring)
 	# ── Ground glow ── A low OmniLight3D placed at ground level that grows
 	# with the warning ring and intensifies during the anticipation flash.
 	# The light color matches the warning red so it reads as a threat glow.
@@ -126,6 +156,39 @@ func _process(delta: float) -> void:
 	var eased: float = 1.0 - pow(1.0 - progress, 3.0)
 	var s: float = 1.0 + eased * 0.6
 	scale = Vector3.ONE * s
+
+	# ── Secondary inner ring ── Expands at 1.4x the main ring's rate and
+	#    fades out faster (alpha peaks at 50% progress then decays). This
+	#    creates a two-layer "energy converging" read — the inner ring
+	#    races ahead of the outer ring, giving the telegraph more depth
+	#    than a single growing circle. The inner ring also gets a slight
+	#    Y-axis spin (incoherent with the main ring) so the two rings
+	#    read as distinct energy layers, not a single doubled hoop.
+	#    During the anticipation flash the inner ring snaps to white
+	#    alongside the main ring (but dimmer) for a cohesive flash.
+	if _inner_ring and _inner_ring_mat:
+		# Inner ring expands faster — eases out but reaches ~1.4x the scale
+		var inner_eased: float = 1.0 - pow(1.0 - progress, 2.0)  # Quadratic (faster onset)
+		var inner_s: float = 1.0 + inner_eased * 0.85
+		_inner_ring.scale = Vector3.ONE * inner_s
+		# Spin the inner ring in the opposite direction for visual separation
+		_inner_ring.rotation.y = -age * 4.0
+		# Alpha: ramps up to 0.25 at 30% progress, then fades to 0 by 80%
+		var inner_alpha: float = 0.0
+		if progress < 0.3:
+			inner_alpha = (progress / 0.3) * 0.25
+		else:
+			inner_alpha = (1.0 - clampf((progress - 0.3) / 0.5, 0.0, 1.0)) * 0.25
+		# During the anticipation flash, snap to white (dimmer than main)
+		if progress >= _FLASH_FRAC:
+			var flash_t: float = (progress - _FLASH_FRAC) / (1.0 - _FLASH_FRAC)
+			var flash_intensity: float = flash_t * flash_t
+			_inner_ring_mat.albedo_color = _base_color.lerp(_FLASH_COLOR, flash_intensity * 0.6)
+			_inner_ring_mat.albedo_color.a = flash_intensity * 0.3
+			_inner_ring_mat.emission = _base_emission.lerp(_FLASH_EMISSION, flash_intensity * 0.5) * flash_intensity
+		else:
+			_inner_ring_mat.albedo_color = Color(_base_color.r, _base_color.g, _base_color.b, inner_alpha)
+			_inner_ring_mat.emission = _base_emission * inner_alpha * 0.8
 
 	# ── Ground glow: ramp the light energy and range with the ring progress.
 	# The light starts dim (0.3, set in _ready) and brightens as the ring
@@ -201,6 +264,9 @@ func _process(delta: float) -> void:
 		# gives the spawn a satisfying "snap" exit.
 		if _material:
 			_material.albedo_color = Color(_FLASH_COLOR.r, _FLASH_COLOR.g, _FLASH_COLOR.b, 0.9)
+		# Hide the inner ring during the pop — it's done its telegraph job
+		if _inner_ring:
+			_inner_ring.visible = false
 		var pop_tween := create_tween()
 		pop_tween.set_parallel(true)
 		pop_tween.tween_property(self, "scale", Vector3.ONE * 2.2, 0.12) \

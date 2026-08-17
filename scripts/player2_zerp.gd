@@ -96,6 +96,19 @@ var pulse_wave_cooldown_timer: float = 0.0
 # ── Tracked shoot pulse tween ── Tracks the shoot recoil + scale pulse so
 #    rapid fire doesn't stack tweens. P2 parity with P1.
 var _shoot_pulse_tween: Tween = null
+# ── Tracked pulse wave squash tween ── Tracks the pulse wave cast squash so
+#    rapid re-casts don't stack tweens. P2 parity with P1.
+var _pulse_squash_tween: Tween = null
+# ── Reusable muzzle flash light (P1 parity) ── Instead of creating a new
+#    OmniLight3D on every shot (~9/sec), we create ONE persistent light as a
+#    child of the player's parent and re-tween it per shot. This eliminates
+#    the allocate→tween→queue_free churn that generates GC pressure during
+#    sustained combat. The light stays at energy=0 between shots (no render
+#    cost — Godot skips zero-energy lights) and is repositioned + re-flared
+#    on each _spawn_projectile call. The tween is killed and recreated each
+#    shot so rapid fire never stacks tweens.
+var _muzzle_light: OmniLight3D = null
+var _muzzle_tween: Tween = null
 # ── Pickup pulse tweens ── Tracks the pickup feedback scale pop + emission
 #    flash so rapid magnet-chain pickups restart cleanly (P1 parity).
 var _pickup_pulse_tween: Tween = null
@@ -759,6 +772,29 @@ func _spawn_projectile() -> void:
 	# ── Phase 30: Adaptive shoot SFX — P2 also gets per-mod shoot sounds ──
 	# P2 shares P1's equipped mod, so the same adaptive SFX mapping applies.
 	AudioManager.play_shoot_sfx(mod_id)
+	# ── Reusable muzzle flash light (P1 parity) ── A brief OmniLight3D
+	#    flash at the muzzle position on each shot. P1 has this but P2
+	#    was missing it, making P2's shots feel less punchy in co-op.
+	#    The light is created once and reused (energy=0 between shots)
+	#    so there's no per-shot allocation. Color matches the equipped
+	#    weapon mod (or P2's base color for unmodded shots). The tween
+	#    uses TRANS_CUBIC for a "hold bright then snap out" read,
+	#    matching P1's muzzle flash language.
+	var muzzle_color: Color = proj_color if mod_id != GameConstants.WeaponMod.NONE else base_color
+	if not _muzzle_light:
+		_muzzle_light = OmniLight3D.new()
+		_muzzle_light.omni_range = 3.5
+		_muzzle_light.omni_attenuation = 1.5
+		_muzzle_light.light_energy = 0.0
+		get_parent().add_child(_muzzle_light)
+	_muzzle_light.light_color = muzzle_color
+	_muzzle_light.global_position = global_position + Vector3(0, 0.5, 0)
+	_muzzle_light.light_energy = 4.0
+	if _muzzle_tween and _muzzle_tween.is_valid():
+		_muzzle_tween.kill()
+	_muzzle_tween = _muzzle_light.create_tween()
+	_muzzle_tween.tween_property(_muzzle_light, "light_energy", 0.0, 0.06) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	# Scale pulse + recoil on shoot — P2 parity with P1's shoot juice.
 	# The recoil nudges the mesh backward (opposite the shoot direction)
 	# using tween_method so mesh.position.y (owned by the idle bob) is
@@ -840,6 +876,33 @@ func _use_pulse_wave() -> void:
 	# consistent with P1's ability cast feedback.
 	if cam_rig and cam_rig.has_method("kick_fov"):
 		cam_rig.kick_fov(-4.0)
+	# ── Hit-stop on cast (P1 parity) ── A brief, gentle world freeze
+	#    (60ms at 0.25x scale) sells the pulse wave as a weighty "moment"
+	#    rather than a button press. P1 has this but P2 was missing it,
+	#    making P2's pulse wave feel less impactful in co-op. Routed
+	#    through HitStopCoordinator so it composes correctly with any
+	#    simultaneous freezes (e.g. a crit landing the same frame).
+	HitStopCoordinator.request_freeze(0.25, 0.06)
+	# ── Player body squash on cast (P1 parity) ── The dash has a squash-
+	#    and-stretch reaction, and P1's pulse wave has one too, but P2's
+	#    pulse wave didn't move the player mesh at all. A quick downward
+	#    squash (compress vertically, stretch horizontally) on the cast
+	#    frame gives the ability physical weight: Zerp "gathers" energy
+	#    before the wave bursts outward. Skipped during dash/slide
+	#    (their tweens own mesh.scale) and uses a tracked tween so rapid
+	#    re-casts don't stack.
+	if mesh and not is_dashing and not is_sliding:
+		if _pulse_squash_tween and _pulse_squash_tween.is_valid():
+			_pulse_squash_tween.kill()
+		_pulse_squash_tween = create_tween()
+		# Impact: quick flat squash (wider + shorter) in 60ms
+		_pulse_squash_tween.tween_property(mesh, "scale",
+			Vector3(1.3, 0.65, 1.3), 0.06) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		# Recovery: bounce back with elastic for a juicy spring
+		_pulse_squash_tween.tween_property(mesh, "scale",
+			Vector3.ONE, 0.22) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 func _try_pulse_wave_or_buffer() -> void:
 	if pulse_wave_cooldown_timer > 0:
@@ -1192,6 +1255,13 @@ func _update_cosmetic_color(_delta: float) -> void:
 func _exit_tree() -> void:
 	_dismiss_idle_aura()
 	_shoot_pulse_tween = null
+	# Clean up pulse wave squash tween so it doesn't reference freed mesh.
+	_pulse_squash_tween = null
+	# Clean up muzzle flash light + tween (P1 parity).
+	_muzzle_tween = null
+	if _muzzle_light and is_instance_valid(_muzzle_light):
+		_muzzle_light.queue_free()
+		_muzzle_light = null
 	# Clean up pickup pulse tweens so they don't reference freed nodes.
 	_pickup_pulse_tween = null
 	_pickup_emit_tween = null

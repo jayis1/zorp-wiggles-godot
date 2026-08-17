@@ -583,7 +583,7 @@ func _on_reward_chest_opened(_chest: Node, _trapped: bool, dungeon_id: int) -> v
 
 # ─── Per-Frame ──────────────────────────────────────────────────────────────────
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	# Allow exiting dungeon via Esc key when inside.
 	if _active_dungeon_id >= 0 and Input.is_action_just_pressed("ui_cancel"):
 		exit_dungeon()
