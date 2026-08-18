@@ -750,6 +750,17 @@ func _die() -> void:
 	# If already downed and bleed-out timer expired, or no co-op partner → actual death
 	player_is_alive = false
 	player_is_downed = false
+	# ── Death hit-stop ── A brief, deep world freeze (120ms at 0.03x) on the
+	#    frame the player dies. The killing blow that ends the run should land
+	#    with cinematic weight — the longest and deepest freeze in the game,
+	#    sitting above the boss-kill (90ms @ 0.04x) and crit (45ms @ 0.08x)
+	#    tiers so the death moment reads as the most significant event. The
+	#    freeze composes with the existing camera trauma (0.35 from
+	#    take_damage) and the death screen's staggered fade-in, giving the
+	#    player a visceral "everything stops" beat before the game-over UI
+	#    appears. Routed through HitStopCoordinator for correct overlap
+	#    composition (the killing-blow damage freeze may still be active).
+	HitStopCoordinator.request_freeze(0.03, 0.12)
 	player_died.emit()
 	print_verbose("[ZorpWiggles] Zorp died! Score: %d, Kills: %d, Best Combo: %d" % [player_score, player_kills, player_best_combo])
 

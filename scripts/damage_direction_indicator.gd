@@ -31,6 +31,13 @@ var _indicators: Array[Dictionary] = []
 const SCALE_POP_PEAK: float = 1.6
 const SCALE_POP_DURATION: float = 0.12
 
+# Cached player reference — avoids a scene-tree group scan on every damage
+# hit. Damage can fire several times per second during heavy combat, and
+# each hit was doing get_first_node_in_group("player") — a hashed group
+# lookup. Matching the lazy-cache pattern used by boss_tension_vignette,
+# enemy_spawner, and collectible.
+var _cached_player: Node3D = null
+
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -39,9 +46,16 @@ func _ready() -> void:
 	# Connect to GameManager's damage signal
 	GameManager.damage_taken_from.connect(_on_damage_taken_from)
 
+# Lazily cache the player node — only re-scan when the cache is stale.
+func _get_player() -> Node3D:
+	if _cached_player and is_instance_valid(_cached_player):
+		return _cached_player
+	_cached_player = get_tree().get_first_node_in_group("player")
+	return _cached_player
+
 func _on_damage_taken_from(source_pos: Vector3) -> void:
-	var player: Node3D = get_tree().get_first_node_in_group("player")
-	if not player or not is_instance_valid(player):
+	var player: Node3D = _get_player()
+	if not player:
 		return
 	# Calculate angle from player to damage source (in XZ plane)
 	var dx: float = source_pos.x - player.global_position.x
