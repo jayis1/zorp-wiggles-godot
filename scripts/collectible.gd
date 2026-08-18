@@ -82,6 +82,13 @@ const DESPAWN_WARNING_DURATION: float = 4.0    # Flicker phase before fade
 const DESPAWN_PAUSE_RADIUS: float = 12.0       # Don't despawn if player this close
 var _despawn_fade_tween: Tween = null
 
+# ── Cached rarity flag ── _is_rare() performs 9 comparisons and is called
+#    from ~6+ sites per frame (spawn glow, spin speed, despawn timer, breathing
+#    scale, pickup flash, tilt amplitude). Caching the result in _ready() and
+#    reading the bool eliminates ~54 comparisons per frame per collectible —
+#    meaningful when dozens of collectibles are on screen during mass drops.
+var _rare_cached: bool = false
+
 # ─── Type-specific config ────────────────────────────────────────────────────
 const TYPE_CONFIG := {
 	GameConstants.CollectibleType.XP_ORB: {"color": Color(0.4, 0.2, 1.0), "value": 10, "scale": 0.3},
@@ -191,6 +198,11 @@ func _ready() -> void:
 	# Setup visual based on type
 	_apply_type_config()
 	
+	# Cache the rarity flag so the per-frame hot paths (spin speed, breathing
+	# scale, despawn timer, tilt amplitude, pickup flash) read a bool instead
+	# of calling _is_rare() (~9 comparisons) 6+ times per physics frame.
+	_rare_cached = _is_rare()
+	
 	# Start bobbing animation
 	base_y = global_position.y
 	base_pos_x = global_position.x
@@ -199,10 +211,14 @@ func _ready() -> void:
 	# ── Initialize despawn timer ── Rare items get a 3× longer lifetime so
 	#    the player has ample time to backtrack for valuable drops. Common
 	#    items (XP orbs, space gloop) despawn sooner to keep the world clean.
-	_despawn_timer = DESPAWN_LIFETIME_RARE if _is_rare() else DESPAWN_LIFETIME
+	_despawn_timer = DESPAWN_LIFETIME_RARE if _rare_cached else DESPAWN_LIFETIME
 
 func set_type(type: int) -> void:
 	collectible_type = type
+	# Update the cached rarity flag BEFORE _apply_type_config() so the
+	# glow-light check reads the correct value (set_type is called before
+	# _ready, so the cache must be fresh at this point).
+	_rare_cached = _is_rare()
 	_apply_type_config()
 
 ## ── Phase 8: Collectible bounce and tumble ──────────────────────────────────────
@@ -363,7 +379,9 @@ func _apply_type_config() -> void:
 		# Rare collectibles get a persistent point light so they glow in
 		# dark biomes and are visible from a distance.
 		# Phase 16: Crafting materials also get the glow (they're valuable).
-		if _is_rare():
+		# _rare_cached is updated in set_type() before this is called, and
+		# in _ready() for the default-type path.
+		if _rare_cached:
 			var glow := OmniLight3D.new()
 			glow.light_color = config["color"]
 			glow.light_energy = 1.2
@@ -487,7 +505,7 @@ func _physics_process(delta: float) -> void:
 		# visual hierarchy where valuable pickups draw the eye. Crafting
 		# materials (rare) spin faster than common XP orbs.
 		var rarity_spin: float = 1.5  # Common default
-		if _is_rare():
+		if _rare_cached:
 			rarity_spin = 3.0
 		elif collectible_type == GameConstants.CollectibleType.STAR_FRUIT \
 				or collectible_type == GameConstants.CollectibleType.HEALTH_FRAGMENT:
@@ -510,7 +528,7 @@ func _physics_process(delta: float) -> void:
 		# Skip during despawn fade — the fade tween owns self.scale and the
 		# mesh pulse would visually fight the dissolve.
 		if mesh_instance and not _despawn_warning:
-			var pulse_amp: float = 0.06 if not _is_rare() else 0.09
+			var pulse_amp: float = 0.06 if not _rare_cached else 0.09
 			var scale_pulse: float = 1.0 + sin(bob_offset * 1.5) * pulse_amp
 			mesh_instance.scale = Vector3.ONE * scale_pulse
 
@@ -698,7 +716,7 @@ func _physics_process(delta: float) -> void:
 		var idle_tilt_x: float = 0.0
 		var idle_tilt_z: float = 0.0
 		if not is_magnetic and not _despawn_warning:
-			var tilt_amp: float = 0.10 if not _is_rare() else 0.16  # ~6° / ~9°
+			var tilt_amp: float = 0.10 if not _rare_cached else 0.16  # ~6° / ~9°
 			idle_tilt_x = sin(bob_offset * 0.8) * tilt_amp
 			idle_tilt_z = sin(bob_offset * 1.1 + PI * 0.33) * tilt_amp * 0.7
 		mesh_instance.rotation.x = _pull_tilt_current.x + idle_tilt_x
@@ -851,7 +869,7 @@ func _collect() -> void:
 	#    (hostile collectibles) since the collection path returns early.
 	ParticleEffects.spawn_spawn_ring(
 		get_parent(), global_position, config["color"],
-		3.5 if _is_rare() else 2.0)
+		3.5 if _rare_cached else 2.0)
 
 	# ── Player pickup feedback pulse ── A subtle scale pop on the player
 	#    mesh when collecting an item, so pickups feel tactile — Zorp
@@ -871,7 +889,7 @@ func _collect() -> void:
 	elif _cached_player and is_instance_valid(_cached_player):
 		_pickup_pulse_target = _cached_player
 	if _pickup_pulse_target and _pickup_pulse_target.has_method("_play_pickup_pulse"):
-		_pickup_pulse_target._play_pickup_pulse(config["color"], _is_rare())
+		_pickup_pulse_target._play_pickup_pulse(config["color"], _rare_cached)
 
 	# ── Pickup light flash ── A brief OmniLight3D at the pickup point that
 	# flashes the collectible's color and fades over 0.25s. Gives pickups
@@ -881,7 +899,7 @@ func _collect() -> void:
 	# of creating/freeing a new OmniLight3D per pickup.
 	var flash_intensity: float = 2.0
 	var flash_range: float = 3.0
-	if _is_rare():
+	if _rare_cached:
 		flash_intensity = 3.5
 		flash_range = 5.0
 	if PerformanceOptimizer:

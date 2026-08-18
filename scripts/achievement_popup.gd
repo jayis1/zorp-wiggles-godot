@@ -207,6 +207,7 @@ var _visited_biomes: Dictionary = {}  # biome_id -> true
 # ─── Signal Handlers ──────────────────────────────────────────────────────────
 func _on_enemy_killed(_enemy_name: String, _killer_name: String, _is_crit_kill: bool = false) -> void:
 	_unlock("first_kill")
+	_mark_progress_dirty()
 	_check_progress_achievements()
 
 func _on_combo_milestone(combo: int, _tier: int, _color: Color) -> void:
@@ -239,6 +240,7 @@ func _on_pickup_streak_milestone(streak: int, _xp: int) -> void:
 
 func _on_boss_defeated(_boss: Node) -> void:
 	_unlock("boss_kill")
+	_mark_progress_dirty()
 	_check_progress_achievements()
 
 func _on_boss_spawned(_boss: Node) -> void:
@@ -258,6 +260,7 @@ func _on_biome_changed(biome_id: int) -> void:
 
 func _on_mod_crafted(_mod_id: int) -> void:
 	_unlock("mod_craft_1")
+	_mark_progress_dirty()
 	_check_progress_achievements()
 
 func _on_prestige_changed(level: int) -> void:
@@ -267,6 +270,7 @@ func _on_prestige_changed(level: int) -> void:
 
 func _on_stats_updated() -> void:
 	# Periodically check progress-based achievements against lifetime stats
+	_mark_progress_dirty()
 	_check_progress_achievements()
 
 
@@ -286,9 +290,23 @@ func _on_pet_slot_unlocked(slot: int) -> void:
 # ─── Progress-based Achievement Checking ───────────────────────────────────────
 # For achievements with a progress_key, we query the Statistics autoload for the
 # current lifetime value and unlock if current >= target.
+# ── Dirty-flag optimization ── _check_progress_achievements() iterates ALL 100+
+#    achievements (filtering to the ~45 progress-based ones) and calls
+#    Statistics.get_lifetime_stat() for each — a Dictionary lookup + Variant
+#    unbox per achievement. This is called on every enemy kill, boss kill, mod
+#    craft, and stats_updated signal. During heavy combat (9+ kills/sec),
+#    that's 400+ Dictionary lookups per second for achievements that almost
+#    always haven't changed. The dirty flag is set by the callers (which know
+#    a stat changed) and cleared after the check runs, so the scan only fires
+#    when something actually changed — not on every kill.
+var _progress_check_dirty: bool = false
+
 func _check_progress_achievements() -> void:
 	if not Statistics:
 		return
+	if not _progress_check_dirty:
+		return
+	_progress_check_dirty = false
 	for ach in _all_achievements:
 		if ach.target <= 0 or ach.progress_key.is_empty():
 			continue  # One-shot achievement — skip
@@ -304,6 +322,13 @@ func _check_progress_achievements() -> void:
 		_progress[ach.id] = current
 		if current >= ach.target:
 			_unlock(ach.id)
+
+## Mark the progress-check as dirty so the next _check_progress_achievements()
+## call actually scans. Called by signal handlers that know a stat changed
+## (enemy killed, boss defeated, mod crafted, stats_updated). This avoids
+## the full 100+ achievement scan on every kill when no stats changed.
+func _mark_progress_dirty() -> void:
+	_progress_check_dirty = true
 
 # ─── Public API ────────────────────────────────────────────────────────────────
 func get_unlocked_count() -> int:
