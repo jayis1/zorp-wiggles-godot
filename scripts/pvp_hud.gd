@@ -9,6 +9,22 @@ extends Control
 class_name PvpHud
 
 var _fade_alpha: float = 0.0
+# ── HP bar smooth ratio ── Tracks the eased HP bar fill ratio so the bars
+#    animate smoothly instead of snapping when HP changes. Uses exponential
+#    lerp (frame-rate-independent) like the main HUD HP bar.
+var _p1_hp_ratio: float = 1.0
+var _p2_hp_ratio: float = 1.0
+var _p1_hp_prev: float = 1.0
+var _p2_hp_prev: float = 1.0
+# ── HP bar damage flash ── When a player takes damage, the HP bar fill
+#    briefly flashes white. The flash decays over FLASH_DURATION seconds
+#    using ease-out cubic for a sharp onset and gentle tail — matching
+#    the main HUD's HP bar flash language.
+var _p1_flash_timer: float = 0.0
+var _p2_flash_timer: float = 0.0
+const HP_BAR_FLASH_DURATION: float = 0.25
+const HP_BAR_SMOOTHING: float = 8.0
+const FADE_SMOOTHING: float = 6.0
 
 
 func _ready() -> void:
@@ -17,10 +33,49 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	# Fade in/out based on PvP activity
+	# Fade in/out based on PvP activity — exponential lerp (frame-rate-independent).
+	# The old move_toward(_fade_alpha, target, delta * 4.0) was frame-rate dependent:
+	# at 144Hz the fade completed ~2.4x faster than at 60Hz, making the transition
+	# feel instant on high-refresh displays and sluggish on low-refresh ones.
+	# Exponential lerp converges at the same real-time rate regardless of FPS.
 	var target: float = 1.0 if (PvpArena and PvpArena.is_pvp_active()) else 0.0
-	_fade_alpha = move_toward(_fade_alpha, target, delta * 4.0)
+	var fade_weight: float = 1.0 - exp(-FADE_SMOOTHING * delta)
+	_fade_alpha = lerpf(_fade_alpha, target, fade_weight)
 	if _fade_alpha > 0.01:
+		# ── Smooth HP bar ratios + flash timers ── Updated in _process (not
+		#    _draw) so the animation runs at a consistent rate regardless of
+		#    when _draw is called by the rendering pipeline.
+		if PvpArena and PvpArena.is_pvp_active():
+			var state: Dictionary = PvpArena.get_pvp_state()
+			var p1_hp: int = int(state.get("p1_hp", 0))
+			var p1_max: int = int(state.get("p1_max_hp", 100))
+			var p2_hp: int = int(state.get("p2_hp", 0))
+			var p2_max: int = int(state.get("p2_max_hp", 100))
+			var p1_target_ratio: float = clampf(float(p1_hp) / float(p1_max), 0.0, 1.0) if p1_max > 0 else 0.0
+			var p2_target_ratio: float = clampf(float(p2_hp) / float(p2_max), 0.0, 1.0) if p2_max > 0 else 0.0
+			# Snap ratios to target on first activation (when fade just started)
+			# so the bars don't animate from 0 → full on the first frame.
+			if _fade_alpha < 0.05:
+				_p1_hp_ratio = p1_target_ratio
+				_p2_hp_ratio = p2_target_ratio
+				_p1_hp_prev = p1_target_ratio
+				_p2_hp_prev = p2_target_ratio
+			# Detect damage (ratio drop) → trigger flash
+			if p1_target_ratio < _p1_hp_prev - 0.001:
+				_p1_flash_timer = HP_BAR_FLASH_DURATION
+			_p1_hp_prev = p1_target_ratio
+			if p2_target_ratio < _p2_hp_prev - 0.001:
+				_p2_flash_timer = HP_BAR_FLASH_DURATION
+			_p2_hp_prev = p2_target_ratio
+			# Decay flash timers
+			if _p1_flash_timer > 0.0:
+				_p1_flash_timer = maxf(0.0, _p1_flash_timer - delta)
+			if _p2_flash_timer > 0.0:
+				_p2_flash_timer = maxf(0.0, _p2_flash_timer - delta)
+			# Ease ratios
+			var bar_weight: float = 1.0 - exp(-HP_BAR_SMOOTHING * delta)
+			_p1_hp_ratio = lerpf(_p1_hp_ratio, p1_target_ratio, bar_weight)
+			_p2_hp_ratio = lerpf(_p2_hp_ratio, p2_target_ratio, bar_weight)
 		queue_redraw()
 
 
@@ -67,7 +122,9 @@ func _draw() -> void:
 		var timer_str: String = "%d" % int(timer)
 		var timer_color: Color = Color(0.8, 0.9, 1.0, a) if timer > 20 else Color(1.0, 0.7, 0.3, a) if timer > 10 else Color(1.0, 0.3, 0.3, a)
 		_draw_centered_text(font, timer_str, Vector2(screen.x / 2, 45), 16, timer_color)
-	# ── HP bars ──
+	# ── HP bars ── Read HP values from state for the text display; the
+	#    smoothed fill ratio and flash timer are computed in _process and
+	#    passed to _draw_hp_bar for the animated fill.
 	var p1_hp: int = int(state.get("p1_hp", 0))
 	var p1_max: int = int(state.get("p1_max_hp", 100))
 	var p2_hp: int = int(state.get("p2_hp", 0))
@@ -77,19 +134,18 @@ func _draw() -> void:
 	var hp_bar_h: float = 24.0
 	var p1_bar_x: float = 30.0
 	var p1_bar_y: float = screen.y - 50.0
-	_draw_hp_bar(p1_bar_x, p1_bar_y, hp_bar_w, hp_bar_h, p1_hp, p1_max, Color(0.4, 0.9, 1.0), a, "ZORP", font)
+	_draw_hp_bar(p1_bar_x, p1_bar_y, hp_bar_w, hp_bar_h, p1_hp, p1_max, Color(0.4, 0.9, 1.0), a, "ZORP", font, _p1_hp_ratio, _p1_flash_timer)
 	# P2 HP bar (bottom-right)
 	var p2_bar_x: float = screen.x - 30 - hp_bar_w
 	var p2_bar_y: float = screen.y - 50.0
-	_draw_hp_bar(p2_bar_x, p2_bar_y, hp_bar_w, hp_bar_h, p2_hp, p2_max, Color(1.0, 0.4, 0.8), a, "ZERP", font)
+	_draw_hp_bar(p2_bar_x, p2_bar_y, hp_bar_w, hp_bar_h, p2_hp, p2_max, Color(1.0, 0.4, 0.8), a, "ZERP", font, _p2_hp_ratio, _p2_flash_timer)
 
 
-func _draw_hp_bar(x: float, y: float, w: float, h: float, hp: int, max_hp: int, color: Color, a: float, label: String, font) -> void:
+func _draw_hp_bar(x: float, y: float, w: float, h: float, hp: int, max_hp: int, color: Color, a: float, label: String, font, ratio: float, flash_timer: float) -> void:
 	# Background
 	draw_rect(Rect2(x, y, w, h), Color(0.1, 0.12, 0.18, 0.9 * a), true)
 	draw_rect(Rect2(x, y, w, h), Color(0.3, 0.4, 0.5, 0.5 * a), false, 1.0)
-	# Fill
-	var ratio: float = clampf(float(hp) / float(max_hp), 0.0, 1.0) if max_hp > 0 else 0.0
+	# Fill — uses the smoothed ratio (animated in _process) instead of raw HP
 	var fill_w: float = w * ratio
 	# Color shifts from green to yellow to red
 	var fill_color: Color = color
@@ -97,6 +153,13 @@ func _draw_hp_bar(x: float, y: float, w: float, h: float, hp: int, max_hp: int, 
 		fill_color = Color(1.0, 0.3, 0.3, a)
 	elif ratio < 0.6:
 		fill_color = Color(1.0, 0.8, 0.3, a)
+	# ── Damage flash ── Blend the fill color toward white while the flash
+	#    timer is active, using ease-out cubic for a sharp onset and gentle
+	#    tail. This matches the main HUD's HP bar damage flash language.
+	if flash_timer > 0.0:
+		var flash_env: float = flash_timer / HP_BAR_FLASH_DURATION
+		flash_env = 1.0 - pow(1.0 - flash_env, 3.0)  # ease-out cubic
+		fill_color = fill_color.lerp(Color.WHITE, flash_env * 0.7)
 	draw_rect(Rect2(x, y, fill_w, h), fill_color, true)
 	# Label
 	_draw_text(font, label, x + 8, y + 4, 14, Color(1.0, 1.0, 1.0, a))

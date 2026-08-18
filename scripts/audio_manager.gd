@@ -676,6 +676,15 @@ const SFX_PHANTOM_HIT: String = "phantom_hit"
 # spectral enemy no distinct death sound despite its unique phase-shift identity.
 const SFX_SPECTRAL_DEATH: String = "spectral_death"
 
+# ── Typewriter blip ── A very short, soft high-frequency tick that plays during
+#    the dialogue panel's typewriter text reveal. Fires every ~3 characters so
+#    the player hears the text "being typed" — the classic JRRL/visual-novel
+#    pattern. Very low volume (0.06) and short duration (0.018s) so rapid
+#    character reveals don't stack into noise. The frequency (1200Hz) is
+#    distinct from SFX_UI_HOVER (900Hz) and SFX_UI_CLICK (600Hz) so dialogue
+#    blips don't sound like UI interactions.
+const SFX_TYPEWRITER: String = "typewriter"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -1801,6 +1810,8 @@ func _generate_all_sfx() -> void:
 	# Matches the Phase Shifter's spectral nature — a ghost fading from the
 	# material plane.
 	_sfx_streams[SFX_SPECTRAL_DEATH] = _gen_descending(440.0, 110.0, 0.25, 0.25)
+	# Typewriter blip — very short, very quiet high-frequency tick for dialogue
+	_sfx_streams[SFX_TYPEWRITER] = _gen_blip(1200.0, 0.018, 0.06)
 
 
 func _generate_all_music() -> void:

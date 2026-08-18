@@ -18,6 +18,14 @@ var _char_timer: float = 0.0
 var _auto_timer: float = 0.0
 var _is_active: bool = false
 var _fully_revealed: bool = false
+# ── Typewriter blip ── Plays a soft tick every N characters during the
+#    typewriter reveal so the player hears the text being "typed" — the
+#    classic visual-novel pattern. The interval (every 3 chars) keeps the
+#    blips from stacking into noise during fast reveals. The blip is
+#    skipped on non-alphabetic characters (spaces, punctuation, BBCode
+#    tags) so only "letter" keystrokes make sound, matching real typing.
+const TYPEWRITER_BLIP_INTERVAL: int = 3
+var _blip_char_counter: int = 0
 
 # ─── UI nodes ────────────────────────────────────────────────────────────────
 var _panel: Panel
@@ -44,6 +52,7 @@ func _on_game_restarted() -> void:
 	_displayed_chars = 0
 	_char_timer = 0.0
 	_auto_timer = 0.0
+	_blip_char_counter = 0
 	_set_visible(false)
 
 func _build_ui() -> void:
@@ -110,8 +119,29 @@ func _process(delta: float) -> void:
 		var chars_per_sec: float = GameConstants.DIALOGUE_TEXT_SPEED
 		var target_chars: int = int(_char_timer * chars_per_sec)
 		if target_chars > _displayed_chars:
+			var prev_chars: int = _displayed_chars
 			_displayed_chars = target_chars
 			_update_text_display()
+			# ── Typewriter blip ── Play a soft tick every TYPEWRITER_BLIP_INTERVAL
+			#    characters so the player hears the text being typed. Only fires
+			#    on alphabetic characters (skips spaces, punctuation, BBCode) so
+			#    the blips match real typing sounds. The counter accumulates from
+			#    prev_chars so rapid multi-character reveals still blip correctly.
+			var new_chars: int = _displayed_chars - prev_chars
+			_blip_char_counter += new_chars
+			if _blip_char_counter >= TYPEWRITER_BLIP_INTERVAL:
+				_blip_char_counter = 0
+				var full: String = String(_lines[_line_index]) if _line_index < _lines.size() else ""
+				var char_idx: int = mini(_displayed_chars - 1, full.length() - 1)
+				if char_idx >= 0:
+					var c: String = full[char_idx]
+					# Only blip on letters and digits — skip spaces, punctuation,
+					# BBCode tags, and other non-text characters so the blips
+					# match real typing sounds.
+					var is_alnum: bool = (c >= "a" and c <= "z") or (c >= "A" and c <= "Z") or (c >= "0" and c <= "9")
+					if is_alnum:
+						if AudioManager:
+							AudioManager.play_sfx(AudioManager.SFX_TYPEWRITER)
 			if _displayed_chars >= _current_line_length():
 				_fully_revealed = true
 				_auto_timer = 0.0
@@ -206,6 +236,7 @@ func show_dialogue(npc_name: String, lines: Array, npc_node: Node) -> void:
 	_char_timer = 0.0
 	_auto_timer = 0.0
 	_fully_revealed = false
+	_blip_char_counter = 0
 	_is_active = true
 	_name_label.text = npc_name
 	_set_visible(true)
@@ -224,6 +255,7 @@ func _advance() -> void:
 	_char_timer = 0.0
 	_auto_timer = 0.0
 	_fully_revealed = false
+	_blip_char_counter = 0
 	_update_text_display()
 
 func _end() -> void:
