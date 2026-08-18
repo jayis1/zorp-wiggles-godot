@@ -385,6 +385,9 @@ func get_berserker_damage_mult() -> float:
 		return _berserker_damage_mult
 	return 1.0
 
+func get_berserker_threshold() -> float:
+	return _berserker_threshold
+
 # ─── Query API (used by other systems) ────────────────────────────────────────
 
 func get_active_modifiers() -> Array[int]:

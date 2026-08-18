@@ -50,6 +50,7 @@ const RB_SCRIPT := preload("res://scripts/replay_browser.gd")
 const PVP_SCRIPT := preload("res://scripts/pvp_hud.gd")
 const PAM_SCRIPT := preload("res://scripts/pet_accessory_menu.gd")
 const PTM_SCRIPT := preload("res://scripts/pet_training_menu.gd")
+const WMI_SCRIPT := preload("res://scripts/world_modifier_indicator.gd")
 
 # ─── HP Bar ──────────────────────────────────────────────────────────────────
 @onready var hp_bar: ColorRect = $HPBarContainer/HPBar
@@ -526,6 +527,15 @@ func _ready() -> void:
 	wi_ctrl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	wi_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(wi_ctrl)
+
+	# ── Phase 33: World Modifier Indicator ──
+	# Persistent on-screen display of active world modifiers for normal mode.
+	# Challenge mode HUDs (Daily/Weekly) suppress this to avoid duplicate display.
+	var wmi_ctrl := Control.new()
+	wmi_ctrl.set_script(WMI_SCRIPT)
+	wmi_ctrl.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	wmi_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(wmi_ctrl)
 
 	# ── Phase 19: Co-op HUD ──
 	var coop_ctrl := Control.new()

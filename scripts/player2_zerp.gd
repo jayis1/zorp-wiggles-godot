@@ -90,6 +90,16 @@ var _skin_emission_mult: float = 1.0
 # ── Enhancement Pack 39: Time Warden slow field entry/exit tracking (P2) ──
 var _in_time_warden_field: bool = false
 
+# ── Berserker rage aura (P2 parity with P1) ──
+var _berserker_aura_light: OmniLight3D = null
+var _berserker_active: bool = false
+var _berserker_pulse_phase: float = 0.0
+const _BERSERKER_PULSE_SPEED: float = 4.0
+
+# ── Vampire leech sparkle (P2 parity with P1) ──
+var _vampire_leech_timer: float = 0.0
+const _VAMPIRE_LEECH_FX_COOLDOWN: float = 0.15
+
 # ─── Combat ───────────────────────────────────────────────────────────────────
 var shoot_cooldown_timer: float = 0.0
 var pulse_wave_cooldown_timer: float = 0.0
@@ -249,6 +259,8 @@ func _physics_process(delta: float) -> void:
 	_handle_dash(delta)
 	_update_idle_breathing(delta)
 	_update_idle_aura(delta)
+	_update_berserker_aura(delta)
+	_update_vampire_leech(delta)
 	_update_movement_lean(delta)
 	_update_low_hp_heartbeat(delta)
 	_update_invuln_blink()
@@ -1196,6 +1208,59 @@ func _dismiss_idle_aura() -> void:
 		if tree:
 			tree.create_timer(3.0).timeout.connect(aura.queue_free)
 
+# ── Berserker rage aura (P2 parity with P1) ──
+func _update_berserker_aura(delta: float) -> void:
+	if not WorldModifierSystem or not WorldModifierSystem.is_initialized():
+		_dismiss_berserker_aura()
+		return
+	if not WorldModifierSystem.has_modifier(WorldModifierSystem.Modifier.BERSERKER):
+		_dismiss_berserker_aura()
+		return
+	if is_dashing or is_sliding:
+		return
+	var hp_ratio: float = float(CoOpManager.p2_hp) / float(CoOpManager.p2_max_hp) \
+		if CoOpManager and CoOpManager.p2_max_hp > 0 else 1.0
+	var threshold: float = WorldModifierSystem.get_berserker_threshold()
+	if threshold <= 0.0 or hp_ratio > threshold or hp_ratio <= 0.0:
+		_dismiss_berserker_aura()
+		return
+	if not _berserker_active:
+		_berserker_active = true
+		_berserker_aura_light = OmniLight3D.new()
+		_berserker_aura_light.light_color = Color(1.0, 0.15, 0.1)
+		_berserker_aura_light.light_energy = 2.0
+		_berserker_aura_light.omni_range = 6.0
+		_berserker_aura_light.omni_attenuation = 1.2
+		add_child(_berserker_aura_light)
+	var urgency: float = 1.0 - clampf(hp_ratio / threshold, 0.0, 1.0)
+	var pulse_speed: float = _BERSERKER_PULSE_SPEED + urgency * 3.0
+	_berserker_pulse_phase += delta * pulse_speed
+	var pulse: float = 0.5 + 0.5 * sin(_berserker_pulse_phase)
+	_berserker_aura_light.light_energy = 1.5 + pulse * 2.0
+	_berserker_aura_light.omni_range = 5.0 + pulse * 2.0
+
+func _dismiss_berserker_aura() -> void:
+	if _berserker_aura_light and is_instance_valid(_berserker_aura_light):
+		_berserker_aura_light.queue_free()
+		_berserker_aura_light = null
+	_berserker_active = false
+	_berserker_pulse_phase = 0.0
+
+# ── Vampire leech sparkle (P2 parity with P1) ──
+func _update_vampire_leech(delta: float) -> void:
+	if _vampire_leech_timer > 0.0:
+		_vampire_leech_timer -= delta
+
+func trigger_vampire_leech_fx(heal_amount: int) -> void:
+	if heal_amount <= 0:
+		return
+	if _vampire_leech_timer > 0.0:
+		return
+	_vampire_leech_timer = _VAMPIRE_LEECH_FX_COOLDOWN
+	var parent_node: Node = get_parent()
+	if parent_node and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(parent_node, global_position, Color(0.3, 1.0, 0.4))
+
 # ── Mutation color support (matching P1): biome mutations shift P2's color ──
 func _apply_mutation_color(mutation: int, mut_color: Color) -> void:
 	_mutation_colors[mutation] = mut_color
@@ -1254,6 +1319,7 @@ func _update_cosmetic_color(_delta: float) -> void:
 # Clean up signal connections when P2 is freed (drop-out or bleed-out).
 func _exit_tree() -> void:
 	_dismiss_idle_aura()
+	_dismiss_berserker_aura()
 	_shoot_pulse_tween = null
 	# Clean up pulse wave squash tween so it doesn't reference freed mesh.
 	_pulse_squash_tween = null

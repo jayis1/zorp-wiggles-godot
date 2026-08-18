@@ -753,6 +753,30 @@ func _hit_enemy(enemy: Node3D) -> void:
 		else:
 			enemy.take_damage(total_damage)
 
+		# ── Phase 33: Vampire world modifier — heal player 5% of damage dealt ──
+		# The Vampire modifier gives lifesteal: 5% of damage dealt is returned as
+		# healing. We call get_vampire_heal() which returns 0 if the modifier
+		# isn't active, so this is a no-op for non-Vampire runs. The heal is
+		# applied via GameManager.heal() (P1) or CoOpManager.p2_heal() (P2)
+		# which handle clamping and emit the heal signal. The visual feedback
+		# (green sparkle burst) is triggered from the player's
+		# trigger_vampire_leech_fx() method.
+		if WorldModifierSystem and WorldModifierSystem.is_initialized():
+			var vampire_heal: int = WorldModifierSystem.get_vampire_heal(total_damage)
+			if vampire_heal > 0:
+				var is_p2: bool = has_meta("is_p2_projectile")
+				if is_p2 and CoOpManager and CoOpManager.p2_active:
+					CoOpManager.p2_heal(vampire_heal)
+					if CoOpManager.p2_node and is_instance_valid(CoOpManager.p2_node) \
+							and CoOpManager.p2_node.has_method("trigger_vampire_leech_fx"):
+						CoOpManager.p2_node.trigger_vampire_leech_fx(vampire_heal)
+				elif GameManager.player_is_alive:
+					GameManager.heal(vampire_heal)
+					# Trigger the green sparkle visual on the player
+					if GameManager.player and is_instance_valid(GameManager.player) \
+							and GameManager.player.has_method("trigger_vampire_leech_fx"):
+						GameManager.player.trigger_vampire_leech_fx(vampire_heal)
+
 	# Damage number popup — boss kills get a distinct "BOSS SLAIN!" variant.
 	# The player's position is passed as the source so the damage number drifts
 	# away from the player (toward the player's view), making hits feel

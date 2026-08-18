@@ -211,6 +211,25 @@ var _lean_current: Vector3 = Vector3.ZERO  # Current lean rotation (radians)
 const _LEAN_MAX_ANGLE: float = 0.12        # Max tilt ~7° in any direction
 const _LEAN_SMOOTHING: float = 10.0        # How fast lean eases (higher = snappier)
 
+# ── Berserker rage aura (World Modifier: BERSERKER) ── When the Berserker
+#    world modifier is active and the player drops below 30% HP, Zorp gains a
+#    pulsing red rage aura — an OmniLight3D + emission shift toward deep red.
+#    This gives the player a visceral "I'm in the danger zone AND powered up"
+#    cue, distinct from the low-HP heartbeat (which is purely a danger signal).
+#    The rage aura communicates power, not fear — matching the 3× damage boost.
+var _berserker_aura_light: OmniLight3D = null
+var _berserker_active: bool = false
+var _berserker_pulse_phase: float = 0.0
+const _BERSERKER_PULSE_SPEED: float = 4.0  # Hz of the rage pulse
+
+# ── Vampire leech sparkle (World Modifier: VAMPIRE) ── When the Vampire world
+#    modifier is active, each hit that heals the player spawns a brief green
+#    sparkle burst at Zorp's position. This gives lifesteal a visible "I'm
+#    healing from this hit" feedback so the player understands the modifier's
+#    benefit without reading the HP bar.
+var _vampire_leech_timer: float = 0.0  # Cooldown to prevent per-frame spam
+const _VAMPIRE_LEECH_FX_COOLDOWN: float = 0.15  # Min seconds between sparkle bursts
+
 # ─── Combat ───────────────────────────────────────────────────────────────────
 var shoot_cooldown_timer: float = 0.0
 var pulse_wave_cooldown_timer: float = 0.0
@@ -428,6 +447,10 @@ func _on_game_restarted_player() -> void:
 	# Clear input buffers so a press from the previous run doesn't carry over
 	_interact_buffer_timer = 0.0
 	_deploy_buffer_timer = 0.0
+	# Clean up berserker aura light so it doesn't persist into the new run
+	_dismiss_berserker_aura()
+	# Reset vampire leech cooldown
+	_vampire_leech_timer = 0.0
 
 func _on_player_levelup_pet_emote(_level: int) -> void:
 	if pet and is_instance_valid(pet) and pet.has_method("trigger_emote"):
@@ -695,6 +718,8 @@ func _physics_process(delta: float) -> void:
 	_update_low_hp_heartbeat(delta)
 	_update_dash_exhaustion(delta)
 	_update_idle_aura(delta)
+	_update_berserker_aura(delta)
+	_update_vampire_leech(delta)
 	# ── Phase 30: Update cosmetic skin color (RAINBOW cycles hue at runtime) ──
 	_update_cosmetic_color(delta)
 
@@ -939,6 +964,87 @@ func _dismiss_idle_aura() -> void:
 		if tree:
 			tree.create_timer(3.0).timeout.connect(aura.queue_free)
 	_idle_aura_timer = 0.0
+
+# ── Berserker rage aura (World Modifier: BERSERKER) ──
+# When the Berserker modifier is active and HP < 30%, Zorp gets a pulsing red
+# OmniLight aura + emission shift. The pulse rate accelerates as HP drops
+# toward zero, matching the escalating danger. The aura is distinct from the
+# low-HP heartbeat: the heartbeat is a fear/danger signal (red throbbing),
+# while the berserker aura is a power/fury signal (bright red energy radiating
+# outward). Both can be active simultaneously — the heartbeat throbs while
+# the rage aura radiates.
+func _update_berserker_aura(delta: float) -> void:
+	if not WorldModifierSystem or not WorldModifierSystem.is_initialized():
+		_dismiss_berserker_aura()
+		return
+	if not WorldModifierSystem.has_modifier(WorldModifierSystem.Modifier.BERSERKER):
+		_dismiss_berserker_aura()
+		return
+	if is_dashing or is_sliding:
+		# Don't remove the aura during dash — just skip the pulse update.
+		# The light stays on but doesn't pulse, which reads as "rage on hold."
+		return
+	var hp_ratio: float = float(GameManager.player_hp) / float(GameManager.player_max_hp) \
+		if GameManager.player_max_hp > 0 else 1.0
+	var threshold: float = WorldModifierSystem.get_berserker_threshold()
+	if threshold <= 0.0 or hp_ratio > threshold or hp_ratio <= 0.0:
+		_dismiss_berserker_aura()
+		return
+	# Activate the aura
+	if not _berserker_active:
+		_berserker_active = true
+		_berserker_aura_light = OmniLight3D.new()
+		_berserker_aura_light.light_color = Color(1.0, 0.15, 0.1)
+		_berserker_aura_light.light_energy = 2.0
+		_berserker_aura_light.omni_range = 6.0
+		_berserker_aura_light.omni_attenuation = 1.2
+		add_child(_berserker_aura_light)
+	# Pulse the light — faster as HP drops toward zero
+	var urgency: float = 1.0 - clampf(hp_ratio / threshold, 0.0, 1.0)
+	var pulse_speed: float = _BERSERKER_PULSE_SPEED + urgency * 3.0
+	_berserker_pulse_phase += delta * pulse_speed
+	var pulse: float = 0.5 + 0.5 * sin(_berserker_pulse_phase)
+	_berserker_aura_light.light_energy = 1.5 + pulse * 2.0
+	_berserker_aura_light.omni_range = 5.0 + pulse * 2.0
+	# Emission shift toward deep red — rage color
+	if _player_material and not is_invuln_blinking:
+		var rage_blend: float = 0.3 + pulse * 0.2
+		var rage_color: Color = base_color.lerp(Color(1.0, 0.15, 0.1), rage_blend)
+		# Only lerp if the heartbeat isn't active (it owns emission at low HP)
+		if hp_ratio > _HEARTBEAT_HP_THRESHOLD:
+			_player_material.emission = rage_color * 0.4
+			_player_material.emission_energy_multiplier = 1.0 + pulse * 0.5
+
+func _dismiss_berserker_aura() -> void:
+	if _berserker_aura_light and is_instance_valid(_berserker_aura_light):
+		_berserker_aura_light.queue_free()
+		_berserker_aura_light = null
+	_berserker_active = false
+	_berserker_pulse_phase = 0.0
+
+# ── Vampire leech sparkle (World Modifier: VAMPIRE) ──
+# When the Vampire modifier is active, the player heals 5% of damage dealt.
+# This function checks for recent healing (via the player_healed signal) and
+# spawns a green sparkle burst at Zorp's position to give lifesteal a visible
+# "I'm healing from this hit" feedback. The sparkle is throttled to prevent
+# per-frame spam during rapid-fire combat.
+func _update_vampire_leech(delta: float) -> void:
+	# Tick down the cooldown
+	if _vampire_leech_timer > 0.0:
+		_vampire_leech_timer -= delta
+
+# Called externally (from projectile.gd via GameManager.heal) when the Vampire
+# modifier heals the player. Spawns a green sparkle burst at Zorp's position.
+func trigger_vampire_leech_fx(heal_amount: int) -> void:
+	if heal_amount <= 0:
+		return
+	if _vampire_leech_timer > 0.0:
+		return  # Throttled — skip this burst
+	_vampire_leech_timer = _VAMPIRE_LEECH_FX_COOLDOWN
+	# Spawn a small green sparkle burst at the player's position
+	var parent_node: Node = get_parent()
+	if parent_node and ParticleEffects:
+		ParticleEffects.spawn_pickup_sparkle(parent_node, global_position, Color(0.3, 1.0, 0.4))
 
 # ── Movement lean: tilts Zorp's mesh toward the velocity direction for a
 #    sense of weight and momentum. The tilt is proportional to speed and
