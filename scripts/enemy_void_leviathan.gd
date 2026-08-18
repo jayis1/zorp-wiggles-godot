@@ -308,8 +308,6 @@ func _fire_void_breath() -> void:
 	flash_tw.tween_property(flash, "light_energy", 0.0, 0.3) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	flash_tw.tween_callback(flash.queue_free)
-	# Audio cue — deep void breath (uses rumble for a massive boss attack)
-	AudioManager.play_sfx(AudioManager.SFX_ARENA)
 
 ## Summon Void Wisps around the leviathan (stage 2+).
 func _summon_wisps() -> void:
