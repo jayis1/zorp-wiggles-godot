@@ -158,6 +158,10 @@ func _die() -> void:
 	# Restore material so the death visuals are solid, not translucent
 	if _material and _phase_state == PhaseState.PHASED:
 		_apply_material_material()
+	# Spectral death SFX — a wide descending sweep for a ghost dissolving.
+	# Previously the Phase Shifter relied solely on the generic SFX_ENEMY_DEATH
+	# from the base class, giving the spectral enemy no distinct death sound.
+	AudioManager.play_sfx(AudioManager.SFX_SPECTRAL_DEATH)
 	# Phase shift burst on death — extra particles for the spectral theme
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.PHASE_SHIFTER_COLOR, 24, 0.5)

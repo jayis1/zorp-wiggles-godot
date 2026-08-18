@@ -162,6 +162,10 @@ func _execute_attack(player: Node3D) -> void:
 		var copy_world_pos: Vector3 = global_position + offset
 		var dist: float = copy_world_pos.distance_to(player.global_position)
 		if dist < attack_range + 0.5:  # Small tolerance for the sync hit
+			# Phantom hit SFX — an ethereal impact shimmer for the shadow
+			# copy's strike. Previously the copy's hit had particles but
+			# no audio, making it hard to tell when a phantom connected.
+			AudioManager.play_sfx(AudioManager.SFX_PHANTOM_HIT)
 			# Route to the correct player in co-op
 			if player.is_in_group("player2"):
 				CoOpManager.p2_take_damage(copy_damage, copy_world_pos)

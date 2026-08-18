@@ -160,6 +160,12 @@ func _update_boss_attacks(delta: float) -> void:
 		charge_duration = 0.8
 		# Set charge velocity immediately so the first frame of charging moves the drake
 		velocity = charge_dir * GameConstants.DRAKE_CHARGE_SPEED
+		# Charge start SFX — reuse SFX_ENEMY_LUNGE (a descending impact whoosh)
+		# at a lower pitch for the boss's charge. The lunge SFX already conveys
+		# a committed forward lunge; at 0.5× pitch it reads as a massive boss
+		# version of the same motion. Previously the Drake's charge attack had
+		# no audio at the start — the boss silently accelerated toward the player.
+		AudioManager.play_sfx_pitched(AudioManager.SFX_ENEMY_LUNGE, 0.5)
 		return
 
 	# Fire breath
@@ -169,6 +175,9 @@ func _update_boss_attacks(delta: float) -> void:
 		fire_breath_timer = GameConstants.DRAKE_FIRE_BREATH_COOLDOWN
 
 func _fire_breath(player: Node3D) -> void:
+	# Fire breath SFX — a fiery roaring whoosh for the Drake's signature attack.
+	# Previously this was the only boss cone attack in the game with no audio.
+	AudioManager.play_sfx(AudioManager.SFX_DRAGON_BREATH)
 	# Fire multiple projectiles in a cone toward the player
 	var base_dir: Vector3 = (player.global_position - global_position).normalized()
 	base_dir.y = 0

@@ -160,6 +160,10 @@ func _advance_teleport_state() -> void:
 		TeleportState.NORMAL:
 			_teleport_state = TeleportState.WARN
 			_teleport_timer = GameConstants.TIME_WARDEN_TELEPORT_WARN_TIME
+			# Audio cue for the WARN phase — a subtle ascending tick so the
+			# player knows a teleport is imminent. Previously the WARN phase
+			# had only a visual blink telegraph but no audio.
+			AudioManager.play_sfx(AudioManager.SFX_TIME_WARDEN_WARN)
 		TeleportState.WARN:
 			_teleport_state = TeleportState.TELEPORTING
 			_teleport_timer = 0.1  # Brief teleporting state

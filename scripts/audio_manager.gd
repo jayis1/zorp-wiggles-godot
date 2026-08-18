@@ -635,6 +635,47 @@ const SFX_MIRROR_SHATTER: String = "mirror_shatter"
 # the chitinous/organic theme of the queen.
 const SFX_QUEEN_DEATH: String = "queen_death"
 
+# Drake fire breath — a fiery roaring whoosh (descending 300→100 Hz, 0.25s, 0.30 vol)
+# for the Plasma Drake's 5-bolt cone fire breath attack. The low descending sweep
+# conveys a dragon exhaling fire — a deep, sustained roar. Deeper and longer than
+# SFX_SHOOT_POISON (a single spitter bolt) since this is a boss's signature attack
+# firing 5 projectiles simultaneously. The noise-hit body adds the crackling fire
+# texture. Previously the Drake's fire breath was completely silent — all other boss
+# attacks had audio (Void Leviathan void breath, Ancient Sentinel beam/pillars/nova,
+# Gravity Elemental charge/field/fling).
+const SFX_DRAGON_BREATH: String = "dragon_breath"
+
+# Time Warden teleport warn — a rapid ascending tick (800→1200 Hz, 0.05s, 0.10 vol)
+# that plays during the Time Warden's WARN phase (0.5s blink telegraph before
+# teleporting). The fast ascending blip conveys temporal energy charging — the
+# sound of a clock winding up before a jump. Very short and quiet since the WARN
+# phase lasts 0.5s and the sound should be a subtle "get ready" cue, not a loud
+# alarm. Previously the WARN phase had only a visual blink telegraph (albedo
+# color oscillation between base color and white) but no audio — the player had
+# no cue that a teleport was imminent until the teleport itself fired with
+# SFX_TELEPORT. Now the player gets a 0.5s audio warning.
+const SFX_TIME_WARDEN_WARN: String = "time_warden_warn"
+
+# Echo Knight phantom hit — an ethereal impact shimmer (descending 600→300 Hz,
+# 0.10s, 0.18 vol) that plays when a shadow copy's attack connects with the player.
+# The descending ethereal tone conveys a phantom strike — a ghostly blade
+# hitting from an unexpected angle. Distinct from SFX_ENEMY_LUNGE (the real
+# knight's physical lunge impact) so the player can tell by ear whether the real
+# knight or a copy landed the hit. Previously the copy's hit had a particle burst
+# (8 particles in Echo Knight color) but no audio — the player saw the spark but
+# heard nothing from the phantom's contribution to the attack.
+const SFX_PHANTOM_HIT: String = "phantom_hit"
+
+# Phase Shifter death — a spectral dissolving sweep (descending 440→110 Hz,
+# 0.25s, 0.25 vol) for the Phase Shifter's death. The wide descending sweep
+# conveys a spectral entity dissolving — a ghost fading from the material plane.
+# The sine timbre (no noise body) gives it a pure, otherworldly quality matching
+# the Phase Shifter's spectral nature. Previously the Phase Shifter's _die() had
+# a 24-particle burst in PHASE_SHIFTER_COLOR but no dedicated death SFX — it
+# relied solely on the generic SFX_ENEMY_DEATH from the base class, giving the
+# spectral enemy no distinct death sound despite its unique phase-shift identity.
+const SFX_SPECTRAL_DEATH: String = "spectral_death"
+
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
 
@@ -1037,6 +1078,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_POISON_BURST, SFX_VOID_BREATH, SFX_PILLAR_IMPACT, SFX_GRAVITY_FLING,
 	# Enhancement Pack 71: Phase 23 enemy death SFX get pitch variation
 	SFX_MIRROR_SHATTER, SFX_QUEEN_DEATH,
+	# Enhancement Pack 74: Missing enemy attack & death SFX get pitch variation
+	SFX_DRAGON_BREATH, SFX_TIME_WARDEN_WARN, SFX_PHANTOM_HIT, SFX_SPECTRAL_DEATH,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1738,6 +1781,26 @@ func _generate_all_sfx() -> void:
 	# body for an organic collapse. Longer (0.30s) and deeper than the base
 	# enemy death SFX so it reads as a "brood mother falling" moment.
 	_sfx_streams[SFX_QUEEN_DEATH] = _gen_descending(180.0, 80.0, 0.30, 0.35)
+	# ── Enhancement Pack 74: Missing enemy attack & death SFX ──
+	# Dragon breath — a fiery roaring whoosh (descending 300→100 Hz, 0.25s,
+	# 0.30 vol). The low descending sweep conveys a dragon exhaling fire.
+	# Deeper and longer than a single spitter bolt since this is a boss's
+	# signature cone attack firing 5 projectiles simultaneously.
+	_sfx_streams[SFX_DRAGON_BREATH] = _gen_descending(300.0, 100.0, 0.25, 0.30)
+	# Time Warden teleport warn — a rapid ascending tick (800→1200 Hz, 0.05s,
+	# 0.10 vol). Very short and quiet — a subtle "temporal energy charging" cue
+	# during the 0.5s WARN phase before the teleport fires.
+	_sfx_streams[SFX_TIME_WARDEN_WARN] = _gen_descending(800.0, 1200.0, 0.05, 0.10)
+	# Phantom hit — an ethereal impact shimmer (descending 600→300 Hz, 0.10s,
+	# 0.18 vol). Conveys a ghostly blade striking from an unexpected angle.
+	# Distinct from SFX_ENEMY_LUNGE so the player can tell a copy hit from
+	# the real knight's hit.
+	_sfx_streams[SFX_PHANTOM_HIT] = _gen_descending(600.0, 300.0, 0.10, 0.18)
+	# Spectral death — a wide descending sweep (440→110 Hz, 0.25s, 0.25 vol)
+	# with a pure sine timbre (no noise body) for an otherworldly dissolve.
+	# Matches the Phase Shifter's spectral nature — a ghost fading from the
+	# material plane.
+	_sfx_streams[SFX_SPECTRAL_DEATH] = _gen_descending(440.0, 110.0, 0.25, 0.25)
 
 
 func _generate_all_music() -> void:
