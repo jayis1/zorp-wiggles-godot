@@ -179,4 +179,8 @@ func _die() -> void:
 	# Plasma burst on death — extra particles for the plasma theme
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.PLASMA_STALKER_COLOR, 22, 0.5)
+	# ── Enhancement Pack 75: Plasma death SFX — a wet plasma pop conveying
+	#    hot plasma dissipating. Distinct from the generic SFX_ENEMY_DEATH
+	#    so the stalker's cloaking energy release has its own sonic identity.
+	AudioManager.play_sfx(AudioManager.SFX_PLASMA_DEATH)
 	super._die()

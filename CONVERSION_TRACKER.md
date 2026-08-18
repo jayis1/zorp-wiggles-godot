@@ -2015,3 +2015,30 @@ The Endless, Boss Rush, Speedrun, Daily Challenge, and Weekly Challenge modes al
 
 ### Total SFX count: 128 (up from 124)
 - 4 new SFX added in Enhancement Pack 74 (SFX_DRAGON_BREATH, SFX_TIME_WARDEN_WARN, SFX_PHANTOM_HIT, SFX_SPECTRAL_DEATH).
+
+## Enhancement Pack 75 — Enemy Death SFX Coverage + Graviton Warning SFX + World Modifier Indicator Tween Easing
+
+### Graviton Pull Warning Charge-Up SFX (`enemy_graviton.gd` + `audio_manager.gd`)
+- **New SFX_GRAVITON_WARN** — a subtle ascending charge tone (200→400 Hz, 0.15s, 0.10 vol) that plays when the Graviton's warning ring first appears (1.5s before the pull activates). The ascending pitch conveys energy building up, giving the player an audio cue to dash away before the pull engages. Previously the warning ring appeared visually but had no audio — the player had to be looking at the Graviton to notice the ring. Now the charge-up sound provides an early warning even when the player isn't looking. Played at 0.5× volume so it's a subtle cue, not a loud alarm. Added to `_PITCH_VARIATION_SFX`.
+
+### Plasma Stalker Death SFX (`enemy_plasma_stalker.gd` + `audio_manager.gd`)
+- **New SFX_PLASMA_DEATH** — a wet plasma pop (descending 300→80 Hz, 0.15s, 0.22 vol) for the Plasma Stalker's death. The low descending tone conveys hot plasma dissipating — the stalker's cloaking energy releasing. Previously the Plasma Stalker relied solely on the generic `SFX_ENEMY_DEATH` from the base class, giving the cloaking stalker no distinct death sound despite its unique plasma-cloak identity. Shorter and quieter than `SFX_SPECTRAL_DEATH` (the Phase Shifter's death) since the stalker is a physical entity, not a spectral one. Added to `_PITCH_VARIATION_SFX`.
+
+### Time Warden Death SFX (`enemy_time_warden.gd` + `audio_manager.gd`)
+- **New SFX_TEMPORAL_DEATH** — a temporal collapse chime (440→880→220 Hz, 0.30s, 0.25 vol) for the Time Warden's death. The rising-then-falling pitch conveys time "snapping back" — the warden's temporal field collapsing inward. Uses a chime (sine timbre) for an otherworldly quality matching the warden's time-manipulating nature. Previously the Time Warden relied solely on the generic `SFX_ENEMY_DEATH`, giving the time-themed elite no distinct death sound despite its unique temporal field and teleport abilities. Longer than a standard death since the warden is an elite enemy with a more significant death. Added to `_PITCH_VARIATION_SFX`.
+
+### Echo Knight Death SFX (`enemy_echo_knight.gd` + `audio_manager.gd`)
+- **New SFX_ECHO_DEATH** — a shadowy dissolution (descending 330→110 Hz, 0.20s, 0.22 vol) for the Echo Knight's death. The low descending tone conveys a phantom knight dissolving into shadow — the echoes fading into nothingness alongside their creator. Previously the Echo Knight relied solely on the generic `SFX_ENEMY_DEATH`, giving the phantom-summoning knight no distinct death sound despite its unique shadow-copy identity. Deeper and shorter than `SFX_SPECTRAL_DEATH` since the Echo Knight is a melee fighter, not a spectral entity. Added to `_PITCH_VARIATION_SFX`.
+
+### Gravity Elemental Death SFX (`enemy_gravity_elemental.gd` + `audio_manager.gd`)
+- **New SFX_GRAVITIC_DEATH** — a gravitic collapse (descending 100→30 Hz, 0.35s, 0.30 vol) for the Gravity Elemental's death. The very deep descending tone conveys gravity imploding — a massive gravitational entity collapsing inward. Deeper and longer than all other death SFX since the Gravity Elemental is an elite enemy with the most dramatic death. Previously the Gravity Elemental relied solely on the generic `SFX_ENEMY_DEATH`, giving the gravity-manipulating elite no distinct death sound despite its unique gravity-field identity. Added to `_PITCH_VARIATION_SFX`.
+
+### Plasma Serpent Death SFX (`enemy_serpent.gd` + `audio_manager.gd`)
+- **New SFX_SERPENT_DEATH** — a plasma scatter pop (descending 500→150 Hz, 0.18s, 0.25 vol) for the Plasma Serpent's death. The mid-range descending tone conveys plasma energy dispersing as the serpent's body scatters into segments. Shorter than other death SFX since the serpent "dies" by scattering into mini-enemies, not fully dissolving. Previously the Plasma Serpent relied solely on the generic `SFX_ENEMY_DEATH`, giving the serpent no distinct death sound despite its unique scatter-into-segments death mechanic. Added to `_PITCH_VARIATION_SFX`.
+
+### World Modifier Indicator Tween Easing (`world_modifier_indicator.gd`)
+- **3 linear-default tweens fixed** — the World Modifier Indicator HUD's entrance and exit animations had 3 `tween_property` calls with `set_ease()` but no `set_trans()`, defaulting to `TRANS_LINEAR` (linear interpolation). The entrance `modulate:a` fade-in, exit `modulate:a` fade-out, and exit `offset_left` slide-out all now use `TRANS_QUAD` alongside their existing `EASE_OUT`/`EASE_IN`, giving the indicator's fade and slide a natural quadratic curve. The entrance `offset_left` slide-in already had `TRANS_BACK` for the overshoot effect. This completes the universal tween easing effort — every non-intentional tween in the codebase now has a proper nonlinear curve.
+
+### Total SFX count: 135 (up from 128)
+- 6 new SFX added in Enhancement Pack 75 (SFX_GRAVITON_WARN, SFX_PLASMA_DEATH, SFX_TEMPORAL_DEATH, SFX_ECHO_DEATH, SFX_GRAVITIC_DEATH, SFX_SERPENT_DEATH). All 6 added to `_PITCH_VARIATION_SFX`.
+- README SFX count corrected from 129 to 135.

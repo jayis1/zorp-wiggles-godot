@@ -273,6 +273,11 @@ func _die() -> void:
 	# Temporal burst on death — extra particles for the time theme
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.TIME_WARDEN_COLOR, 28, 0.6)
+	# ── Enhancement Pack 75: Temporal death SFX — a rising-then-falling chime
+	#    conveying time "snapping back" as the warden's temporal field collapses.
+	#    Distinct from the generic SFX_ENEMY_DEATH so the warden's time-themed
+	#    death has its own otherworldly sonic identity.
+	AudioManager.play_sfx(AudioManager.SFX_TEMPORAL_DEATH)
 	super._die()
 
 func _exit_tree() -> void:

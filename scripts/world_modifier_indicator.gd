@@ -180,7 +180,7 @@ func _show() -> void:
 	_transition_tween = create_tween()
 	_transition_tween.set_parallel(true)
 	_transition_tween.tween_property(_panel, "modulate:a", 1.0, _ENTRANCE_DURATION) \
-		.set_ease(Tween.EASE_OUT)
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	_transition_tween.tween_property(_panel, "offset_left", 8.0, _ENTRANCE_DURATION) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
@@ -193,7 +193,7 @@ func _hide() -> void:
 	_transition_tween = create_tween()
 	_transition_tween.set_parallel(true)
 	_transition_tween.tween_property(_panel, "modulate:a", 0.0, _EXIT_DURATION) \
-		.set_ease(Tween.EASE_IN)
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_transition_tween.tween_property(_panel, "offset_left", 8.0 + _SLIDE_OFFSET, _EXIT_DURATION) \
-		.set_ease(Tween.EASE_IN)
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_transition_tween.chain().tween_callback(func(): _panel.visible = false)

@@ -154,6 +154,11 @@ func _physics_process(delta: float) -> void:
 				var mat := pull_ring.material_override as StandardMaterial3D
 				if mat:
 					mat.albedo_color = Color(0.706, 0.0, 1.0, 0.15)
+				# ── Enhancement Pack 75: Warning ring charge-up SFX — the
+				#    visual warning ring appears 1.5s before the pull
+				#    activates, but had no audio. A subtle ascending charge
+				#    tone gives the player an audio cue to dash away.
+				AudioManager.play_sfx_volume(AudioManager.SFX_GRAVITON_WARN, 0.5)
 
 		# Activate pull
 		if cooldown_timer <= 0 and is_alerted and dist_to_player < GameConstants.GRAVITON_PULL_RADIUS:

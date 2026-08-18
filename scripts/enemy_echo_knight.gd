@@ -236,4 +236,9 @@ func _die() -> void:
 	# Extra shadowy particle burst on death
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.ECHO_KNIGHT_COLOR, 20, 0.5)
+	# ── Enhancement Pack 75: Echo death SFX — a shadowy dissolution conveying
+	#    the phantom knight and its copies fading into nothingness. Distinct
+	#    from the generic SFX_ENEMY_DEATH so the echo-themed death has its
+	#    own sonic identity.
+	AudioManager.play_sfx(AudioManager.SFX_ECHO_DEATH)
 	super._die()

@@ -108,6 +108,11 @@ func _die() -> void:
 	# signature cyan-green brings it in line with the rest of the roster.
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		base_color, 24, 0.5)
+	# ── Enhancement Pack 75: Serpent death SFX — a plasma scatter pop conveying
+	#    plasma energy dispersing as the serpent's body scatters into segments.
+	#    Distinct from the generic SFX_ENEMY_DEATH so the serpent's scatter
+	#    death has its own sonic identity.
+	AudioManager.play_sfx(AudioManager.SFX_SERPENT_DEATH)
 	# Scatter segments into mini-enemies before death
 	for i in range(segment_nodes.size()):
 		var seg := segment_nodes[i]

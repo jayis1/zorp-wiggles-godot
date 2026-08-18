@@ -298,4 +298,9 @@ func _die() -> void:
 	# Gravitic burst on death
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.GRAVITY_ELEMENTAL_COLOR, 24, 0.6)
+	# ── Enhancement Pack 75: Gravitic death SFX — a deep gravitic collapse
+	#    conveying gravity "imploding" as the elemental's field collapses inward.
+	#    Distinct from the generic SFX_ENEMY_DEATH so the gravity-themed death
+	#    has its own deep, weighty sonic identity.
+	AudioManager.play_sfx(AudioManager.SFX_GRAVITIC_DEATH)
 	super._die()

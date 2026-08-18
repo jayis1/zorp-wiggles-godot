@@ -684,6 +684,25 @@ const SFX_SPECTRAL_DEATH: String = "spectral_death"
 #    distinct from SFX_UI_HOVER (900Hz) and SFX_UI_CLICK (600Hz) so dialogue
 #    blips don't sound like UI interactions.
 const SFX_TYPEWRITER: String = "typewriter"
+# Enhancement Pack 75: Graviton pull warning charge-up — the warning ring
+# appears 1.5s before the pull activates but had no audio. A subtle ascending
+# charge tone gives the player an audio cue to prepare for the pull.
+const SFX_GRAVITON_WARN: String = "graviton_warn"
+# Enhancement Pack 75: Plasma Stalker death — a plasma dissipating pop for
+# the cloaking stalker's death, distinct from the generic enemy death.
+const SFX_PLASMA_DEATH: String = "plasma_death"
+# Enhancement Pack 75: Time Warden death — a temporal collapse chime for
+# the time-manipulating elite's death, conveying time "snapping back."
+const SFX_TEMPORAL_DEATH: String = "temporal_death"
+# Enhancement Pack 75: Echo Knight death — a shadowy dissolution chime for
+# the phantom knight's death, conveying echoes fading into nothingness.
+const SFX_ECHO_DEATH: String = "echo_death"
+# Enhancement Pack 75: Gravity Elemental death — a gravitic collapse chime
+# for the gravity-manipulating elite's death, conveying gravity "imploding."
+const SFX_GRAVITIC_DEATH: String = "gravitic_death"
+# Enhancement Pack 75: Plasma Serpent death — a plasma scatter sound for
+# the serpent's death, conveying plasma energy dispersing into segments.
+const SFX_SERPENT_DEATH: String = "serpent_death"
 
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
@@ -1089,6 +1108,10 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_MIRROR_SHATTER, SFX_QUEEN_DEATH,
 	# Enhancement Pack 74: Missing enemy attack & death SFX get pitch variation
 	SFX_DRAGON_BREATH, SFX_TIME_WARDEN_WARN, SFX_PHANTOM_HIT, SFX_SPECTRAL_DEATH,
+	# Enhancement Pack 75: new enemy SFX get pitch variation
+	SFX_GRAVITON_WARN, SFX_PLASMA_DEATH, SFX_TEMPORAL_DEATH, SFX_ECHO_DEATH,
+	SFX_GRAVITIC_DEATH,
+	SFX_SERPENT_DEATH,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1812,6 +1835,40 @@ func _generate_all_sfx() -> void:
 	_sfx_streams[SFX_SPECTRAL_DEATH] = _gen_descending(440.0, 110.0, 0.25, 0.25)
 	# Typewriter blip — very short, very quiet high-frequency tick for dialogue
 	_sfx_streams[SFX_TYPEWRITER] = _gen_blip(1200.0, 0.018, 0.06)
+	# Enhancement Pack 75: Graviton pull warning — a subtle ascending charge tone
+	# (200→400 Hz, 0.15s, 0.10 vol) that plays when the warning ring first appears.
+	# The ascending pitch conveys energy building up before the pull engages.
+	# Very quiet since it's a warning cue, not a dramatic event.
+	_sfx_streams[SFX_GRAVITON_WARN] = _gen_descending(200.0, 400.0, 0.15, 0.10)
+	# Enhancement Pack 75: Plasma Stalker death — a wet plasma pop (descending
+	# 300→80 Hz, 0.15s, 0.22 vol). The low descending tone conveys hot plasma
+	# dissipating — the stalker's cloaking energy releasing. Shorter and quieter
+	# than SFX_SPECTRAL_DEATH since the stalker is a physical entity, not a ghost.
+	_sfx_streams[SFX_PLASMA_DEATH] = _gen_descending(300.0, 80.0, 0.15, 0.22)
+	# Enhancement Pack 75: Time Warden death — a temporal collapse chime
+	# (440→880→220 Hz, 0.30s, 0.25 vol). The rising-then-falling pitch conveys
+	# time "snapping back" — the warden's temporal field collapsing inward.
+	# Uses a chime (sine timbre) for an otherworldly quality matching the warden's
+	# time-manipulating nature. Longer than a standard death since the warden
+	# is an elite enemy with a more significant death.
+	_sfx_streams[SFX_TEMPORAL_DEATH] = _gen_chime([440.0, 880.0, 220.0], 0.10, 0.25)
+	# Enhancement Pack 75: Echo Knight death — a shadowy dissolution (descending
+	# 330→110 Hz, 0.20s, 0.22 vol). The low descending tone conveys a phantom
+	# knight dissolving into shadow — deeper and shorter than SFX_SPECTRAL_DEATH
+	# since the Echo Knight is a melee fighter, not a spectral entity.
+	_sfx_streams[SFX_ECHO_DEATH] = _gen_descending(330.0, 110.0, 0.20, 0.22)
+	# Enhancement Pack 75: Gravity Elemental death — a gravitic collapse
+	# (descending 100→30 Hz, 0.35s, 0.30 vol). The very deep descending tone
+	# conveys gravity imploding — a massive gravitational entity collapsing
+	# inward. Deeper and longer than other death SFX since the Gravity
+	# Elemental is an elite enemy with a more dramatic death.
+	_sfx_streams[SFX_GRAVITIC_DEATH] = _gen_descending(100.0, 30.0, 0.35, 0.30)
+	# Enhancement Pack 75: Plasma Serpent death — a plasma scatter pop
+	# (descending 500→150 Hz, 0.18s, 0.25 vol). The mid-range descending tone
+	# conveys plasma energy dispersing as the serpent's body scatters into
+	# segments. Shorter than other death SFX since the serpent "dies" by
+	# scattering into mini-enemies, not fully dissolving.
+	_sfx_streams[SFX_SERPENT_DEATH] = _gen_descending(500.0, 150.0, 0.18, 0.25)
 
 
 func _generate_all_music() -> void:
