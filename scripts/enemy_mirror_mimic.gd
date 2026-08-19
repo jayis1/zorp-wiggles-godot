@@ -179,4 +179,5 @@ func _die() -> void:
 	# chime that conveys a mirror cracking into fragments. Plays before the
 	# base SFX_ENEMY_DEATH so the player hears the mirror theme distinctly.
 	AudioManager.play_sfx(AudioManager.SFX_MIRROR_SHATTER)
+	_suppress_base_death_sfx = true
 	super._die()

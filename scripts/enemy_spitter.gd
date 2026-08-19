@@ -172,3 +172,19 @@ func _fire_spit(player: Node3D) -> void:
 	proj.set("lifetime", GameConstants.SPORE_SPIT_LIFETIME)
 	get_parent().add_child(proj)
 	proj.global_position = global_position + Vector3(0, 0.5, 0)
+# Enhancement Pack 76: Thematic death effect — the Spitter was one of three
+# remaining Phase 2 enemies (Graviton, Sentinel, Spitter) that relied solely
+# on the generic base-class death poof + SFX_ENEMY_DEATH. Now _die() spawns
+# a 16-particle orange-brown spore burst conveying the spitter's biological
+# ammunition sac rupturing, and plays a dedicated SFX_SPITTER_DEATH
+# (descending 350→100 Hz) instead of the generic enemy death sound. The
+# orange-brown burst matches the spitter's base_color, giving the death a
+# distinct visual identity. Fewer particles (16 vs 20) since the spitter is
+# a biological enemy, not an energy or crystalline one.
+func _die() -> void:
+	var parent := get_parent()
+	if parent and ParticleEffects:
+		ParticleEffects.spawn_explosion(parent, global_position, base_color, 16, 0.30)
+	AudioManager.play_sfx(AudioManager.SFX_SPITTER_DEATH)
+	_suppress_base_death_sfx = true
+	super._die()

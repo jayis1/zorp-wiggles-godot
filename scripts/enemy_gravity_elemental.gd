@@ -303,4 +303,5 @@ func _die() -> void:
 	#    Distinct from the generic SFX_ENEMY_DEATH so the gravity-themed death
 	#    has its own deep, weighty sonic identity.
 	AudioManager.play_sfx(AudioManager.SFX_GRAVITIC_DEATH)
+	_suppress_base_death_sfx = true
 	super._die()

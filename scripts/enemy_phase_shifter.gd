@@ -162,6 +162,7 @@ func _die() -> void:
 	# Previously the Phase Shifter relied solely on the generic SFX_ENEMY_DEATH
 	# from the base class, giving the spectral enemy no distinct death sound.
 	AudioManager.play_sfx(AudioManager.SFX_SPECTRAL_DEATH)
+	_suppress_base_death_sfx = true
 	# Phase shift burst on death — extra particles for the spectral theme
 	ParticleEffects.spawn_explosion(get_parent(), global_position,
 		GameConstants.PHASE_SHIFTER_COLOR, 24, 0.5)

@@ -50,6 +50,7 @@ func _die() -> void:
 	# rupturing and releasing its poison cloud. Previously the death had
 	# particles but no audio — the spore silently burst into a cloud.
 	AudioManager.play_sfx(AudioManager.SFX_POISON_BURST)
+	_suppress_base_death_sfx = true
 	super._die()
 
 ## Spawn a lingering poison cloud at the spore's death position. The cloud is a

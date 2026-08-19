@@ -183,4 +183,5 @@ func _die() -> void:
 	#    hot plasma dissipating. Distinct from the generic SFX_ENEMY_DEATH
 	#    so the stalker's cloaking energy release has its own sonic identity.
 	AudioManager.play_sfx(AudioManager.SFX_PLASMA_DEATH)
+	_suppress_base_death_sfx = true
 	super._die()

@@ -158,6 +158,12 @@ var _killed_by_p2: bool = false
 # feed can display crit kills in gold with a ✦ prefix.
 var _killed_by_crit: bool = false
 
+# Enhancement Pack 76: When a subclass _die() override plays a dedicated
+# thematic death SFX, it sets this flag to true before calling super._die()
+# so the base class skips the generic SFX_ENEMY_DEATH. This prevents audio
+# clutter from two death sounds playing simultaneously.
+var _suppress_base_death_sfx: bool = false
+
 # ── Phase 24: Mind Control — when controlled, enemy fights for the player ──
 # The controlled enemy retargets to attack other enemies instead of the player.
 # Other enemies will also target the controlled enemy. Lasts MIND_CONTROL_DURATION.
@@ -1564,7 +1570,11 @@ func _die() -> void:
 	if GameManager.player and is_instance_valid(GameManager.player):
 		_death_dist = global_position.distance_to(GameManager.player.global_position)
 	var _death_vol: float = _compute_dist_atten(_death_dist)
-	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_ENEMY_DEATH, death_pitch, _death_vol)
+	# Enhancement Pack 76: Skip generic death SFX if subclass already played
+	# a dedicated thematic death sound (set _suppress_base_death_sfx = true
+	# before calling super._die() to use this).
+	if not _suppress_base_death_sfx:
+		AudioManager.play_sfx_pitched_volume(AudioManager.SFX_ENEMY_DEATH, death_pitch, _death_vol)
 	# ── Phase 18: Boss Arena — emit boss_defeated for arena-promoted bosses ──
 	if is_arena_boss:
 		GameManager.boss_defeated.emit(self)

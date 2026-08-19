@@ -138,4 +138,5 @@ func _die() -> void:
 	# Enhancement Pack 71: dedicated queen death groan — deep organic collapse
 	# that conveys the brood mother falling. Plays before the base SFX_ENEMY_DEATH.
 	AudioManager.play_sfx(AudioManager.SFX_QUEEN_DEATH)
+	_suppress_base_death_sfx = true
 	super._die()

@@ -703,6 +703,24 @@ const SFX_GRAVITIC_DEATH: String = "gravitic_death"
 # Enhancement Pack 75: Plasma Serpent death — a plasma scatter sound for
 # the serpent's death, conveying plasma energy dispersing into segments.
 const SFX_SERPENT_DEATH: String = "serpent_death"
+# Enhancement Pack 76: Graviton death — a gravitational collapse pop
+# (descending 140→50 Hz, 0.22s, 0.25 vol). The deep descending tone conveys
+# the graviton's gravity field collapsing inward — a purple energy entity
+# imploding. Deeper than SFX_SERPENT_DEATH since the graviton is a tankier
+# mid-tier enemy with a more substantial presence.
+const SFX_GRAVITON_DEATH: String = "graviton_death"
+# Enhancement Pack 76: Sentinel death — a metallic crystalline shatter
+# (descending 800→200 Hz, 0.20s, 0.25 vol). The wide descending sweep
+# conveys a stationary turret's energy core rupturing — a gold-orange
+# crystalline structure cracking apart. Higher register than the graviton
+# since the sentinel is a lighter, more energetic enemy.
+const SFX_SENTINEL_DEATH: String = "sentinel_death"
+# Enhancement Pack 76: Spitter death — a wet acidic pop (descending
+# 350→100 Hz, 0.18s, 0.22 vol). The low descending tone conveys a spore
+# sac rupturing — the spitter's biological ammunition detonating on
+# death. Shorter and wetter than other death SFX since the spitter is
+# a biological ranged enemy, not a heavy or spectral one.
+const SFX_SPITTER_DEATH: String = "spitter_death"
 
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
@@ -1112,6 +1130,8 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_GRAVITON_WARN, SFX_PLASMA_DEATH, SFX_TEMPORAL_DEATH, SFX_ECHO_DEATH,
 	SFX_GRAVITIC_DEATH,
 	SFX_SERPENT_DEATH,
+	# Enhancement Pack 76: Phase 2 enemy death SFX get pitch variation
+	SFX_GRAVITON_DEATH, SFX_SENTINEL_DEATH, SFX_SPITTER_DEATH,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1869,6 +1889,18 @@ func _generate_all_sfx() -> void:
 	# segments. Shorter than other death SFX since the serpent "dies" by
 	# scattering into mini-enemies, not fully dissolving.
 	_sfx_streams[SFX_SERPENT_DEATH] = _gen_descending(500.0, 150.0, 0.18, 0.25)
+	# Enhancement Pack 76: Graviton death — a gravitational collapse pop
+	# (descending 140→50 Hz, 0.22s, 0.25 vol). Deeper than the serpent
+	# since the graviton is a tankier mid-tier enemy.
+	_sfx_streams[SFX_GRAVITON_DEATH] = _gen_descending(140.0, 50.0, 0.22, 0.25)
+	# Enhancement Pack 76: Sentinel death — a metallic crystalline shatter
+	# (descending 800→200 Hz, 0.20s, 0.25 vol). Higher register since the
+	# sentinel is a lighter, more energetic gold-orange turret.
+	_sfx_streams[SFX_SENTINEL_DEATH] = _gen_descending(800.0, 200.0, 0.20, 0.25)
+	# Enhancement Pack 76: Spitter death — a wet acidic pop (descending
+	# 350→100 Hz, 0.18s, 0.22 vol). Shorter and quieter since the spitter
+	# is a biological ranged enemy, not a heavy or spectral one.
+	_sfx_streams[SFX_SPITTER_DEATH] = _gen_descending(350.0, 100.0, 0.18, 0.22)
 
 
 func _generate_all_music() -> void:

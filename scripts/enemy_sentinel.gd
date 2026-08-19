@@ -95,3 +95,18 @@ func _fire_shockwave() -> void:
 	shockwave.set("damage", GameConstants.STARBURST_SHOCKWAVE_DAMAGE)
 	shockwave.set("max_radius", GameConstants.STARBURST_SHOCKWAVE_MAX_RADIUS)
 	shockwave.set("expand_speed", GameConstants.STARBURST_SHOCKWAVE_EXPAND_SPEED)
+# Enhancement Pack 76: Thematic death effect — the Sentinel was one of three
+# remaining Phase 2 enemies (Graviton, Sentinel, Spitter) that relied solely
+# on the generic base-class death poof + SFX_ENEMY_DEATH. Now _die() spawns
+# a 20-particle gold-orange energy burst conveying the stationary turret's
+# core rupturing, and plays a dedicated SFX_SENTINEL_DEATH (descending
+# 800→200 Hz) instead of the generic enemy death sound. The gold-orange
+# burst matches the sentinel's base_color, giving the death a distinct
+# visual identity.
+func _die() -> void:
+	var parent := get_parent()
+	if parent and ParticleEffects:
+		ParticleEffects.spawn_explosion(parent, global_position, base_color, 20, 0.35)
+	AudioManager.play_sfx(AudioManager.SFX_SENTINEL_DEATH)
+	_suppress_base_death_sfx = true
+	super._die()

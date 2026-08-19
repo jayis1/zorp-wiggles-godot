@@ -63,6 +63,7 @@ func _die() -> void:
 		GameConstants.CRYSTAL_WRAITH_COLOR)
 	# Audio cue — crystal shatter sound (uses breakable SFX for a crystal-crack feel)
 	AudioManager.play_sfx(AudioManager.SFX_BREAKABLE)
+	_suppress_base_death_sfx = true
 	super._die()
 
 ## Spawn 3-5 RigidBody3D crystal shards that fly outward, then reform into

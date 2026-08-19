@@ -278,6 +278,7 @@ func _die() -> void:
 	#    Distinct from the generic SFX_ENEMY_DEATH so the warden's time-themed
 	#    death has its own otherworldly sonic identity.
 	AudioManager.play_sfx(AudioManager.SFX_TEMPORAL_DEATH)
+	_suppress_base_death_sfx = true
 	super._die()
 
 func _exit_tree() -> void:

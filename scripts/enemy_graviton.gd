@@ -177,3 +177,18 @@ func _physics_process(delta: float) -> void:
 			# ── Phase 8: Enable the Area3D gravity well for RigidBody physics objects
 			if gravity_well:
 				gravity_well.gravity = GameConstants.GRAVITON_AREA_GRAVITY
+
+# Enhancement Pack 76: Thematic death effect — the Graviton was one of three
+# remaining Phase 2 enemies (Graviton, Sentinel, Spitter) that relied solely
+# on the generic base-class death poof + SFX_ENEMY_DEATH. Now _die() spawns
+# a 20-particle purple energy burst conveying the graviton's gravity field
+# collapsing, and plays a dedicated SFX_GRAVITON_DEATH (descending 140→50 Hz)
+# instead of the generic enemy death sound. The purple burst matches the
+# graviton's base_color, giving the death a distinct visual identity.
+func _die() -> void:
+	var parent := get_parent()
+	if parent and ParticleEffects:
+		ParticleEffects.spawn_explosion(parent, global_position, base_color, 20, 0.35)
+	AudioManager.play_sfx(AudioManager.SFX_GRAVITON_DEATH)
+	_suppress_base_death_sfx = true
+	super._die()

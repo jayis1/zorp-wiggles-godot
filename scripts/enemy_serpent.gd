@@ -113,6 +113,7 @@ func _die() -> void:
 	#    Distinct from the generic SFX_ENEMY_DEATH so the serpent's scatter
 	#    death has its own sonic identity.
 	AudioManager.play_sfx(AudioManager.SFX_SERPENT_DEATH)
+	_suppress_base_death_sfx = true
 	# Scatter segments into mini-enemies before death
 	for i in range(segment_nodes.size()):
 		var seg := segment_nodes[i]

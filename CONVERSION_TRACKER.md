@@ -2042,3 +2042,22 @@ The Endless, Boss Rush, Speedrun, Daily Challenge, and Weekly Challenge modes al
 ### Total SFX count: 135 (up from 128)
 - 6 new SFX added in Enhancement Pack 75 (SFX_GRAVITON_WARN, SFX_PLASMA_DEATH, SFX_TEMPORAL_DEATH, SFX_ECHO_DEATH, SFX_GRAVITIC_DEATH, SFX_SERPENT_DEATH). All 6 added to `_PITCH_VARIATION_SFX`.
 - README SFX count corrected from 129 to 135.
+
+## Enhancement Pack 76 — Phase 2 Enemy Death Effects + Death SFX Suppression
+
+### Graviton Death Particle Burst + Dedicated SFX (`enemy_graviton.gd` + `audio_manager.gd`)
+- **Thematic purple energy burst on death** — the Graviton was one of three remaining Phase 2 enemies (Graviton, Sentinel, Spitter) that relied solely on the generic base-class death poof + SFX_ENEMY_DEATH. Now `_die()` spawns a 20-particle purple energy burst (`ParticleEffects.spawn_explosion` in `base_color`) conveying the graviton's gravity field collapsing inward, and plays a dedicated `SFX_GRAVITON_DEATH` (descending 140→50 Hz, 0.22s, 0.25 vol) — a deep gravitational collapse pop. Deeper than `SFX_SERPENT_DEATH` (500→150 Hz) since the graviton is a tankier mid-tier enemy with a more substantial presence. Added to `_PITCH_VARIATION_SFX` for natural micro-detuning.
+
+### Sentinel Death Particle Burst + Dedicated SFX (`enemy_sentinel.gd` + `audio_manager.gd`)
+- **Thematic gold-orange energy burst on death** — the Starburst Sentinel was another remaining Phase 2 enemy with only the generic death poof. Now `_die()` spawns a 20-particle gold-orange energy burst conveying the stationary turret's energy core rupturing, and plays a dedicated `SFX_SENTINEL_DEATH` (descending 800→200 Hz, 0.20s, 0.25 vol) — a metallic crystalline shatter. Higher register than the graviton since the sentinel is a lighter, more energetic enemy. Added to `_PITCH_VARIATION_SFX`.
+
+### Spitter Death Particle Burst + Dedicated SFX (`enemy_spitter.gd` + `audio_manager.gd`)
+- **Thematic orange-brown spore burst on death** — the Spore Spitter was the last remaining Phase 2 enemy with only the generic death poof. Now `_die()` spawns a 16-particle orange-brown spore burst (fewer particles than the graviton/sentinel's 20 since the spitter is a biological enemy, not an energy or crystalline one) conveying the spitter's biological ammunition sac rupturing, and plays a dedicated `SFX_SPITTER_DEATH` (descending 350→100 Hz, 0.18s, 0.22 vol) — a wet acidic pop. Shorter and quieter than other death SFX since the spitter is a biological ranged enemy. Added to `_PITCH_VARIATION_SFX`.
+
+### Death SFX Suppression System (`enemy_base.gd` + 12 enemy scripts)
+- **`_suppress_base_death_sfx` flag** — a new boolean field on `EnemyBase` that subclass `_die()` overrides set to `true` before calling `super._die()` to skip the generic `SFX_ENEMY_DEATH` in the base class. This prevents audio clutter from two death sounds playing simultaneously — previously every enemy with a dedicated death SFX (Crystal Wraith, Plasma Stalker, Phase Shifter, Time Warden, Echo Knight, Gravity Elemental, Mirror Mimic, Swarm Queen, Toxic Spore, Crystal Guardian, and now Graviton, Sentinel, Spitter) would play their thematic death sound AND the generic `SFX_ENEMY_DEATH` from the base class, creating an audio clash. The flag is checked in `enemy_base.gd` `_die()` right before the `AudioManager.play_sfx_pitched_volume(SFX_ENEMY_DEATH, ...)` call. Enemies without dedicated death SFX (Blob, Bomber, Swarm Mite, Drake, Void Leviathan, Ancient Sentinel) leave the flag at its default `false` and continue using the base class death sound as before.
+
+### Total SFX count: 138 (up from 135)
+- 3 new SFX added in Enhancement Pack 76 (SFX_GRAVITON_DEATH, SFX_SENTINEL_DEATH, SFX_SPITTER_DEATH). All 3 added to `_PITCH_VARIATION_SFX`.
+- Every enemy type in the game now has a bespoke thematic death particle effect (completing the roster coverage started in Enhancement Packs 51 and 56).
+- Every enemy type with a distinct visual identity now has a dedicated death SFX, with the base class generic death sound suppressed to prevent audio clutter.

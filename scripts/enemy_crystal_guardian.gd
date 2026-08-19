@@ -149,4 +149,5 @@ func _die() -> void:
 	ParticleEffects.spawn_shield_break_shatter(get_parent(), global_position,
 		GameConstants.CRYSTAL_GUARDIAN_SHARD_COLOR)
 	AudioManager.play_sfx(AudioManager.SFX_BREAKABLE)
+	_suppress_base_death_sfx = true
 	super._die()

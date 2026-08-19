@@ -241,4 +241,5 @@ func _die() -> void:
 	#    from the generic SFX_ENEMY_DEATH so the echo-themed death has its
 	#    own sonic identity.
 	AudioManager.play_sfx(AudioManager.SFX_ECHO_DEATH)
+	_suppress_base_death_sfx = true
 	super._die()
