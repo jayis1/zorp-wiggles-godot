@@ -225,4 +225,10 @@ func _die() -> void:
 	# Override: if not already exploded, do normal death
 	if has_exploded:
 		return
+	# Suppress the base class generic death SFX — the bomber has its own
+	# fuse-fizzle death sound before the explosion sound plays.
+	_suppress_base_death_sfx = true
+	# Play a short fuse-fizzle death SFX — the fuse burning out before the
+	# explosion. The actual explosion sound plays separately in _explode().
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_BOMBER_DEATH, 1.0, 0.4)
 	super._die()

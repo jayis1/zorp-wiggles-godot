@@ -721,6 +721,39 @@ const SFX_SENTINEL_DEATH: String = "sentinel_death"
 # death. Shorter and wetter than other death SFX since the spitter is
 # a biological ranged enemy, not a heavy or spectral one.
 const SFX_SPITTER_DEATH: String = "spitter_death"
+# Enhancement Pack 77: Void Leviathan death — a colossal void collapse
+# (descending 80→20 Hz, 0.40s, 0.35 vol). The extremely deep, long descending
+# tone conveys a massive void entity collapsing in on itself — the largest
+# serpentine boss dissolving into the void. Deeper and longer than ALL other
+# death SFX since the Void Leviathan is the biggest boss in the game.
+const SFX_LEVIATHAN_DEATH: String = "leviathan_death"
+# Enhancement Pack 77: Ancient Sentinel death — a colossal ancient energy
+# discharge (descending 120→40 Hz, 0.35s, 0.32 vol). The deep sustained
+# descending tone conveys a mega-boss's ancient power core detonating —
+# a colossal stationary guardian's energy dispersing. Deeper than the
+# Ancient Sentinel's pillar impact (higher register) since the death is
+# the full entity, not a single attack.
+const SFX_SENTINEL_BOSS_DEATH: String = "sentinel_boss_death"
+# Enhancement Pack 77: Bomber death — the existing SFX_EXPLOSION already
+# covers the kamikaze detonation, but the death itself (before the
+# explosion) had no distinct sound. A short crackling fuse fizzle
+# (descending 400→150 Hz, 0.08s, 0.15 vol) plays right before the
+# explosion sound — the fuse burning out before the bang.
+const SFX_BOMBER_DEATH: String = "bomber_death"
+# Enhancement Pack 77: Wisp death — a void teleport-out pop (ascending
+# 600→1200 Hz, 0.08s, 0.15 vol). The ascending tone conveys the wisp
+# teleporting away on death — it doesn't truly "die" but dissolves back
+# into the void. Short and high-pitched matching the wisp's ethereal nature.
+const SFX_WISP_DEATH: String = "wisp_death"
+# Enhancement Pack 77: Swarm Mite death — a tiny squish pop (descending
+# 800→400 Hz, 0.04s, 0.12 vol). Very short and quiet since the mite is
+# the smallest, weakest enemy. The high-pitched squish conveys a tiny
+# bug being squashed. Much shorter and quieter than all other death SFX.
+const SFX_MITE_DEATH: String = "mite_death"
+# Enhancement Pack 77: Drake death — a deep, sustained dragon roar collapse
+# (descending 200→60 Hz, 0.35s, 0.32 vol). Deeper than regular enemies since
+# the Drake is a boss, but not as deep as the Void Leviathan's 80→20 Hz.
+const SFX_DRAKE_DEATH: String = "drake_death"
 
 # Maps WeaponMod enum value → SFX name. Mods not in the map fall back to SFX_SHOOT_STANDARD.
 var _mod_shoot_sfx: Dictionary = {}
@@ -1132,6 +1165,9 @@ const _PITCH_VARIATION_SFX: Array[String] = [
 	SFX_SERPENT_DEATH,
 	# Enhancement Pack 76: Phase 2 enemy death SFX get pitch variation
 	SFX_GRAVITON_DEATH, SFX_SENTINEL_DEATH, SFX_SPITTER_DEATH,
+	# Enhancement Pack 77: Remaining boss/enemy death SFX get pitch variation
+	SFX_LEVIATHAN_DEATH, SFX_SENTINEL_BOSS_DEATH, SFX_BOMBER_DEATH,
+	SFX_WISP_DEATH, SFX_MITE_DEATH, SFX_DRAKE_DEATH,
 ]
 const _PITCH_VARIATION_AMOUNT: float = 0.06  # ±6% — subtle but perceptible
 
@@ -1901,6 +1937,24 @@ func _generate_all_sfx() -> void:
 	# 350→100 Hz, 0.18s, 0.22 vol). Shorter and quieter since the spitter
 	# is a biological ranged enemy, not a heavy or spectral one.
 	_sfx_streams[SFX_SPITTER_DEATH] = _gen_descending(350.0, 100.0, 0.18, 0.22)
+	# Enhancement Pack 77: Void Leviathan death — a colossal void collapse
+	# (descending 80→20 Hz, 0.40s, 0.35 vol). Deepest and longest death SFX.
+	_sfx_streams[SFX_LEVIATHAN_DEATH] = _gen_descending(80.0, 20.0, 0.40, 0.35)
+	# Enhancement Pack 77: Ancient Sentinel death — a colossal ancient energy
+	# discharge (descending 120→40 Hz, 0.35s, 0.32 vol).
+	_sfx_streams[SFX_SENTINEL_BOSS_DEATH] = _gen_descending(120.0, 40.0, 0.35, 0.32)
+	# Enhancement Pack 77: Bomber death — a short fuse fizzle before the
+	# explosion sound (descending 400→150 Hz, 0.08s, 0.15 vol).
+	_sfx_streams[SFX_BOMBER_DEATH] = _gen_descending(400.0, 150.0, 0.08, 0.15)
+	# Enhancement Pack 77: Wisp death — a void teleport-out pop (ascending
+	# 600→1200 Hz, 0.08s, 0.15 vol). Uses a chime with ascending freqs.
+	_sfx_streams[SFX_WISP_DEATH] = _gen_chime([600.0, 1200.0], 0.08, 0.15)
+	# Enhancement Pack 77: Swarm Mite death — a tiny squish pop (descending
+	# 800→400 Hz, 0.04s, 0.12 vol). Shortest and quietest death SFX.
+	_sfx_streams[SFX_MITE_DEATH] = _gen_descending(800.0, 400.0, 0.04, 0.12)
+	# Enhancement Pack 77: Drake death — a deep, sustained dragon roar collapse
+	# (descending 200→60 Hz, 0.35s, 0.32 vol).
+	_sfx_streams[SFX_DRAKE_DEATH] = _gen_descending(200.0, 60.0, 0.35, 0.32)
 
 
 func _generate_all_music() -> void:

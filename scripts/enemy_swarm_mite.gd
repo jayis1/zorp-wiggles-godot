@@ -44,4 +44,8 @@ func _die() -> void:
 	var parent := get_parent()
 	if parent and ParticleEffects:
 		ParticleEffects.spawn_explosion(parent, global_position, base_color, 10, 0.25)
+	# Suppress the base class generic death SFX — the mite plays its own
+	# dedicated SFX_MITE_DEATH (a tiny squish pop) matching its tiny size.
+	_suppress_base_death_sfx = true
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_MITE_DEATH, 1.0, 0.2)
 	super._die()

@@ -197,6 +197,13 @@ func _fire_breath(player: Node3D) -> void:
 		proj.global_position = global_position + Vector3(0, 1.0, 0)
 
 func _die() -> void:
+	# Suppress the base class generic death SFX — the Drake plays its own
+	# dedicated SFX_DRAKE_DEATH below.
+	_suppress_base_death_sfx = true
+	# Play a dedicated death SFX — a deep, sustained dragon roar collapse
+	# (descending 200→60 Hz, 0.35s, 0.32 vol). Deeper than regular enemies
+	# since the Drake is a boss, but not as deep as the Void Leviathan.
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_DRAKE_DEATH, 0.8, 0.6)
 	# Boss death — extra rewards and notification
 	GameManager.add_message("Plasma Drake defeated!")
 	# Only emit boss_defeated / clear_current_boss here if NOT a world boss.

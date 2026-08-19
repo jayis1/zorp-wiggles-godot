@@ -495,6 +495,11 @@ func _enter_enrage() -> void:
 		GameManager.camera_rig.add_trauma(0.5)
 
 func _die() -> void:
+	# Suppress the base class generic death SFX — the Ancient Sentinel plays
+	# its own dedicated SFX_SENTINEL_BOSS_DEATH below.
+	_suppress_base_death_sfx = true
+	# Play dedicated death SFX — a colossal ancient energy discharge.
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_SENTINEL_BOSS_DEATH, 0.8, 0.7)
 	# Clean up beam
 	if _beam_mesh:
 		_beam_mesh.queue_free()

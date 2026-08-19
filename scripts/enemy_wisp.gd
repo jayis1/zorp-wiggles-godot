@@ -107,3 +107,11 @@ func _teleport_behind_player() -> void:
 
 	teleport_cooldown = GameConstants.VOID_WISP_TELEPORT_COOLDOWN
 	is_alerted = true
+
+func _die() -> void:
+	# Suppress the base class generic death SFX — the wisp plays its own
+	# dedicated SFX_WISP_DEATH (a void teleport-out pop) since the wisp
+	# doesn't truly "die" but dissolves back into the void.
+	_suppress_base_death_sfx = true
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_WISP_DEATH, 1.0, 0.3)
+	super._die()

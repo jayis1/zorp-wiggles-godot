@@ -425,6 +425,12 @@ func _update_body_segments(delta: float) -> void:
 			sl.light_energy = 0.4 + 0.3 * pulse
 
 func _die() -> void:
+	# Suppress the base class generic death SFX — the Void Leviathan plays
+	# its own dedicated SFX_LEVIATHAN_DEATH below.
+	_suppress_base_death_sfx = true
+	# Play dedicated death SFX — a colossal void collapse (deepest, longest
+	# death SFX in the game, matching the largest boss).
+	AudioManager.play_sfx_pitched_volume(AudioManager.SFX_LEVIATHAN_DEATH, 0.8, 0.7)
 	# Collapse the body segment-by-segment with cascading particle bursts.
 	# IMPORTANT: The segment meshes and lights are children of this leviathan,
 	# but super._die() (called below) schedules queue_free on self after 0.1s,

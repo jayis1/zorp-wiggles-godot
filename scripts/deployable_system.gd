@@ -503,7 +503,8 @@ class TurretDeploy extends Node3D:
 		var travel_dist: float = GameConstants.TURRET_DEPLOY_PROJECTILE_SPEED * bolt_lifetime
 		var end_pos: Vector3 = bolt.global_position + dir * travel_dist
 		var move_tw := bolt.create_tween()
-		move_tw.tween_property(bolt, "global_position", end_pos, bolt_lifetime)
+		move_tw.tween_property(bolt, "global_position", end_pos, bolt_lifetime) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		move_tw.tween_callback(bolt.queue_free)
 		# Muzzle flash — use the transient light pool for consistent memory
 		# management. The turret fires repeatedly during its active period,
