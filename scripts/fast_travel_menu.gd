@@ -132,10 +132,23 @@ func _draw() -> void:
 	else:
 		eased = _fade_alpha * _fade_alpha * _fade_alpha  # ease_in_cubic
 	var a: float = eased
-	var panel_x: float = 440.0
-	var panel_y: float = 120.0
-	var panel_w: float = 400.0
-	var panel_h: float = 480.0
+	# ── Panel pop-in entrance ── The Button-based menus scale up from ~0.92
+	#    with an overshoot ease for a satisfying "pop-in". This _draw()-based
+	#    menu only faded, which felt flat by comparison. We derive a scale
+	#    factor from the existing eased alpha (no new state) so the panel
+	#    scales 0.96→1.0 in sync with the fade. The dim background is drawn at
+	#    full size; only the panel and its contents scale around the panel's
+	#    center so the click hitboxes (computed from panel_x/y/w/h) scale
+	#    with the visual during the entrance, matching Button menus.
+	var _panel_pop: float = lerpf(0.96, 1.0, eased)
+	var _base_panel_w: float = 400.0
+	var _base_panel_h: float = 480.0
+	var _base_panel_cx: float = 440.0 + _base_panel_w / 2.0
+	var _base_panel_cy: float = 120.0 + _base_panel_h / 2.0
+	var panel_w: float = _base_panel_w * _panel_pop
+	var panel_h: float = _base_panel_h * _panel_pop
+	var panel_x: float = _base_panel_cx - panel_w / 2.0
+	var panel_y: float = _base_panel_cy - panel_h / 2.0
 
 	# Dim background.
 	draw_rect(Rect2(0, 0, size.x, size.y), Color(0, 0, 0, 0.5 * a), true)

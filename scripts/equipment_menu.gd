@@ -202,13 +202,26 @@ func _draw() -> void:
 	var screen := size
 	# Full-screen dim background
 	draw_rect(Rect2(Vector2.ZERO, screen), Color(0.02, 0.03, 0.08, 0.90 * a), true)
+	# ── Panel pop-in entrance ── The Button-based menus (settings, crafting,
+	#    weapon_mod_fusion) scale up from ~0.92 with an overshoot ease for a
+	#    satisfying "pop-in". This _draw()-based menu only faded, which felt
+	#    flat by comparison. We derive a scale factor from the existing eased
+	#    alpha (no new state) so the panel scales 0.96→1.0 in sync with the
+	#    fade — subtle for this large near-fullscreen panel. The dim
+	#    background is drawn at full size (it should never scale); only the
+	#    panel and its contents scale around the screen center so hitboxes
+	#    (computed from panel_x/y/w/h) scale with the visual, matching how
+	#    Button menus scale their clickable area during entrance.
+	var _panel_pop: float = lerpf(0.96, 1.0, eased)
+	var _panel_cx: float = screen.x / 2.0
+	var _panel_cy: float = screen.y / 2.0
 	# Main panel
-	var panel_x: float = 40.0
-	var panel_y: float = 30.0
-	var panel_w: float = screen.x - 80.0
-	var panel_h: float = screen.y - 60.0
+	var panel_w: float = (screen.x - 80.0) * _panel_pop
+	var panel_h: float = (screen.y - 60.0) * _panel_pop
 	if panel_w < 600: panel_w = 600
 	if panel_h < 400: panel_h = 400
+	var panel_x: float = _panel_cx - panel_w / 2.0
+	var panel_y: float = _panel_cy - panel_h / 2.0
 	var panel_rect := Rect2(panel_x, panel_y, panel_w, panel_h)
 	draw_rect(panel_rect, Color(0.05, 0.06, 0.12, 0.95 * a), true)
 	draw_rect(panel_rect, Color(0.5, 0.4, 0.8, 0.5 * a), false, 2.0)
