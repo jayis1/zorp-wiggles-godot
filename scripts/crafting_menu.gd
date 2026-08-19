@@ -271,14 +271,21 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ─── Signal Handlers ──────────────────────────────────────────────────────────
 
+# ── Close animation tween ── Tracks the exit fade+scale tween so a
+#    rapid re-open can kill it cleanly without leaving stale state.
+var _close_tween: Tween = null
+
 func _on_menu_toggled(is_open: bool) -> void:
-	_is_open = is_open
-	visible = is_open
-	# Open/close SFX — open at 1.0× pitch, close at 0.85× matching
-	# the open/close audio language used across all UI panels.
-	if AudioManager:
-		AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0 if is_open else 0.85)
 	if is_open:
+		_is_open = true
+		visible = true
+		# Kill any in-progress close tween so the open animation starts fresh
+		if _close_tween and _close_tween.is_valid():
+			_close_tween.kill()
+		# Open/close SFX — open at 1.0× pitch matching the open/close
+		# audio language used across all UI panels.
+		if AudioManager:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 1.0)
 		_update_inventory_display()
 		_update_discovered_list()
 		_update_equipped_label()
@@ -300,10 +307,41 @@ func _on_menu_toggled(is_open: bool) -> void:
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			tween.parallel().tween_property(_bg_panel, "scale", Vector2.ONE, 0.28) \
 				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	# Pause game when menu is open (but not if player is dead)
-	if GameManager.player_is_alive:
-		GameManager.is_paused = is_open
-		get_tree().paused = is_open
+		# Pause game when menu is open (but not if player is dead)
+		if GameManager.player_is_alive:
+			GameManager.is_paused = true
+			get_tree().paused = true
+	else:
+		# ── Smooth close animation ── The menu previously snapped invisible
+		#    instantly on close, which felt jarring compared to the smooth
+		#    entrance. Now the panel fades out + scales down to 0.92 (the
+		#    mirror of the entrance) over 0.15s before hiding. The game
+		#    unpauses immediately so gameplay resumes right away, but the
+		#    visual lingers briefly for a polished dissolve. This matches
+		#    the pause menu and death screen exit animations for cohesive
+		#    UI language across all overlay menus.
+		if AudioManager:
+			AudioManager.play_sfx_pitched(AudioManager.SFX_UI_CLICK, 0.85)
+		# Unpause immediately — the visual fade is non-blocking
+		if GameManager.player_is_alive:
+			GameManager.is_paused = false
+			get_tree().paused = false
+		if _bg_panel:
+			_bg_panel.pivot_offset = Vector2(_bg_panel.size.x * 0.5, _bg_panel.size.y * 0.5)
+			if _close_tween and _close_tween.is_valid():
+				_close_tween.kill()
+			_close_tween = create_tween()
+			_close_tween.tween_property(_bg_panel, "modulate:a", 0.0, 0.15) \
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+			_close_tween.parallel().tween_property(_bg_panel, "scale", Vector2(0.92, 0.92), 0.15) \
+				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+			_close_tween.tween_callback(func():
+				_is_open = false
+				visible = false
+			)
+		else:
+			_is_open = false
+			visible = false
 
 func _on_mod_equipped(mod_id: int) -> void:
 	_update_equipped_label()
@@ -473,15 +511,50 @@ func _on_button_release(btn: Button) -> void:
 	_hover_tweens[btn] = tween
 
 func _on_material_button_pressed(mat_type: int) -> void:
+	var btn: Button = _material_buttons.get(mat_type) as Button
 	if _selected_materials.has(mat_type):
 		# Deselect
 		_selected_materials.erase(mat_type)
 	else:
 		# Don't select more than 3
 		if _selected_materials.size() >= 3:
+			# ── Selection-full shake ── A quick horizontal shake on the
+			#    craft button tells the player "you can't select more"
+			#    without needing to read the text. Uses a kill-and-
+			#    recreate tween so rapid presses restart cleanly.
+			if _craft_button:
+				if _hover_tweens.has(_craft_button):
+					var existing: Tween = _hover_tweens[_craft_button]
+					if is_instance_valid(existing):
+						existing.kill()
+				var shake_tween := create_tween()
+				var orig_x: float = _craft_button.position.x
+				shake_tween.tween_property(_craft_button, "position:x", orig_x + 4.0, 0.04) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+				shake_tween.tween_property(_craft_button, "position:x", orig_x - 4.0, 0.04) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+				shake_tween.tween_property(_craft_button, "position:x", orig_x, 0.06) \
+					.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			return
 		# Don't select the same type twice (recipes use different materials)
 		_selected_materials.append(mat_type)
+	# ── Selection scale pulse ── A quick scale pop on the material button
+	#    gives tactile feedback that the selection registered — the button
+	#    snaps to 1.15× then eases back to 1.0 with a slight overshoot.
+	#    Mirrors the shoot scale-pulse language on the player mesh so
+	#    selection feels as physical as firing a shot. Uses the hover
+	#    tween dict so a rapid select/deselect doesn't stack tweens.
+	if btn:
+		if _hover_tweens.has(btn):
+			var existing: Tween = _hover_tweens[btn]
+			if is_instance_valid(existing):
+				existing.kill()
+		var pulse_tween := create_tween()
+		pulse_tween.tween_property(btn, "scale", Vector2(1.15, 1.15), 0.06) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		pulse_tween.tween_property(btn, "scale", Vector2.ONE, 0.12) \
+			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+		_hover_tweens[btn] = pulse_tween
 	_update_inventory_display()
 
 func _on_craft_pressed() -> void:
@@ -499,6 +572,22 @@ func _on_craft_pressed() -> void:
 		# Phase 20: Audio — craft SFX
 		AudioManager.play_sfx(AudioManager.SFX_CRAFT)
 		var mod_name: String = GameConstants.WEAPON_MOD_NAMES[result]
+		# ── Craft success pulse ── A quick scale pop on the craft button
+		#    gives tactile feedback that the craft succeeded — the button
+		#    snaps to 1.2× then springs back with an elastic bounce,
+		#    matching the main menu's button-release feel. Uses the hover
+		#    tween dict so it composes cleanly with any in-progress hover.
+		if _craft_button:
+			if _hover_tweens.has(_craft_button):
+				var existing: Tween = _hover_tweens[_craft_button]
+				if is_instance_valid(existing):
+					existing.kill()
+			var craft_pulse := create_tween()
+			craft_pulse.tween_property(_craft_button, "scale", Vector2(1.2, 1.2), 0.08) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			craft_pulse.tween_property(_craft_button, "scale", Vector2.ONE, 0.20) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
+			_hover_tweens[_craft_button] = craft_pulse
 		# For new discoveries, _on_mod_crafted already set the result label
 		# to "★ NEW MOD DISCOVERED" — don't overwrite it. For re-crafts (mod
 		# was already known), show the "already known" confirmation.
@@ -510,11 +599,30 @@ func _on_craft_pressed() -> void:
 		_result_label.text = "✗ Invalid combination! Try another mix."
 		_result_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
 		# ── Craft failure SFX ── A low dissonant buzz so the player gets
-		# immediate audio feedback that the combination didn't work.
-		# Previously the only feedback was a red text message — easy to
-		# miss during fast-paced crafting experimentation.
+		#    immediate audio feedback that the combination didn't work.
+		#    Previously the only feedback was a red text message — easy to
+		#    miss during fast-paced crafting experimentation.
 		if AudioManager:
 			AudioManager.play_sfx(AudioManager.SFX_CRAFT_FAIL)
+		# ── Craft failure shake ── A quick horizontal shake on the craft
+		#    button mirrors the "selection full" shake language so all
+		#    invalid actions get a consistent tactile "no" read. The
+		#    shake is slightly wider (±5px vs ±4px) to feel more like a
+		#    "rejection" than a "capacity" cue.
+		if _craft_button:
+			if _hover_tweens.has(_craft_button):
+				var existing: Tween = _hover_tweens[_craft_button]
+				if is_instance_valid(existing):
+					existing.kill()
+			var fail_shake := create_tween()
+			var orig_x: float = _craft_button.position.x
+			fail_shake.tween_property(_craft_button, "position:x", orig_x + 5.0, 0.04) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			fail_shake.tween_property(_craft_button, "position:x", orig_x - 5.0, 0.04) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			fail_shake.tween_property(_craft_button, "position:x", orig_x, 0.06) \
+				.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			_hover_tweens[_craft_button] = fail_shake
 	_update_inventory_display()
 
 func _on_clear_pressed() -> void:
