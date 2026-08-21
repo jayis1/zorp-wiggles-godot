@@ -100,14 +100,15 @@ var _fading_out_particles: Array[GPUParticles3D] = []
 
 func _spawn_biome_particles(biome_id: int) -> void:
 	# ── Crossfade: fade out existing weather particles instead of hard
-	#    queue_free. The particles' modulate.a is tweened to 0 over
+	#    queue_free. GeometryInstance3D uses transparency (0=opaque, 1=hidden)
+	#    rather than CanvasItem.modulate.
 	#    CROSSFADE_DURATION, then the node is freed. This prevents the
 	#    jarring instant-pop when crossing biome boundaries.
 	if _current_particles and is_instance_valid(_current_particles):
 		_fading_out_particles.append(_current_particles)
 		var old_particles := _current_particles
 		var fade_tween := create_tween()
-		fade_tween.tween_property(old_particles, "modulate:a", 0.0, CROSSFADE_DURATION) \
+		fade_tween.tween_property(old_particles, "transparency", 1.0, CROSSFADE_DURATION) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		fade_tween.tween_callback(old_particles.queue_free)
 		_current_particles = null
@@ -117,7 +118,7 @@ func _spawn_biome_particles(biome_id: int) -> void:
 		_fading_out_particles.append(_atmosphere_particles)
 		var old_atmo := _atmosphere_particles
 		var atmo_fade_tween := create_tween()
-		atmo_fade_tween.tween_property(old_atmo, "modulate:a", 0.0, CROSSFADE_DURATION) \
+		atmo_fade_tween.tween_property(old_atmo, "transparency", 1.0, CROSSFADE_DURATION) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 		atmo_fade_tween.tween_callback(old_atmo.queue_free)
 		_atmosphere_particles = null
@@ -131,9 +132,9 @@ func _spawn_biome_particles(biome_id: int) -> void:
 		# ── Fade in the new particles ── Start at alpha 0 and tween to 1
 		#    so the new biome's particles ease in alongside the old ones
 		#    fading out, creating a crossfade rather than a pop-in.
-		_current_particles.modulate.a = 0.0
+		_current_particles.transparency = 1.0
 		var fade_in_tween := create_tween()
-		fade_in_tween.tween_property(_current_particles, "modulate:a", 1.0, CROSSFADE_DURATION) \
+		fade_in_tween.tween_property(_current_particles, "transparency", 0.0, CROSSFADE_DURATION) \
 			.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 	# ── Phase 11: Spawn atmosphere particles (dust motes, pollen, fireflies) ──
@@ -143,8 +144,8 @@ func _spawn_biome_particles(biome_id: int) -> void:
 		# ── Fade in atmosphere particles ── Match the weather particles'
 		#    crossfade so both layers transition smoothly together.
 		if _atmosphere_particles:
-			_atmosphere_particles.modulate.a = 0.0
+			_atmosphere_particles.transparency = 1.0
 			var atmo_fade_in := create_tween()
-			atmo_fade_in.tween_property(_atmosphere_particles, "modulate:a", 1.0, CROSSFADE_DURATION) \
+			atmo_fade_in.tween_property(_atmosphere_particles, "transparency", 0.0, CROSSFADE_DURATION) \
 				.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		# Atmosphere particles follow the AmbientParticles node (which follows the player)

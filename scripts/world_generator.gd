@@ -367,7 +367,10 @@ func _spawn_destructibles() -> void:
 				# Set properties BEFORE add_child so _ready() sees the correct values.
 				# _ready() uses fragment_color to create the material, so it must be
 				# set before the node enters the scene tree.
-				prop.global_position = Vector3(wx, 0.0, wz)
+				# The node is not inside the tree yet, so use its parent-local
+				# position. Setting global_position here asks Godot for a missing
+				# global transform and floods the error log once per prop.
+				prop.position = Vector3(wx, 0.0, wz)
 				# Crystal biome → crystal destructibles (more XP), others → crates
 				if biome == GameConstants.Biome.CRYSTAL:
 					prop.is_crystal = true

@@ -125,6 +125,28 @@ You are Zorp, a squishy green alien exploring a procedurally-generated 3D planet
 
 No external assets needed — all sounds, music, particles, and meshes are generated procedurally at runtime.
 
+### Current stability pass
+
+The latest quality pass focuses on making the existing game dependable before adding more systems:
+
+- Fixed circular autoload dependencies that prevented clean Godot 4.4 project imports.
+- Removed committed `.godot` editor caches so each checkout builds correct class metadata.
+- Fixed the world-modifier HUD parse failure that blocked the gameplay HUD.
+- Fixed invalid GPU-particle fade properties and first-use death-effect materials.
+- Added explicit object-pool cleanup to prevent leaked render resources on exit.
+- Replaced invalid zero-scale spawn transforms with invertible near-zero transforms.
+- Fixed procedural props assigning global transforms before entering the scene tree.
+- Rebuilt the main menu as a responsive layout: all dynamic buttons and controls remain visible at different resolutions and aspect ratios.
+- Added keyboard focus to **Start Game** for immediate controller/keyboard navigation.
+
+For a command-line smoke check with a local Godot 4.4 binary:
+
+```bash
+godot --headless --editor --path . --quit
+godot --headless --path . --quit-after 120
+godot --headless --path . --quit-after 180 scenes/main.tscn
+```
+
 ---
 
 ## 📁 Project Structure

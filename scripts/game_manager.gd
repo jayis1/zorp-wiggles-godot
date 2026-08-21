@@ -786,8 +786,12 @@ func restart_game() -> void:
 	projectiles.clear()
 	# ── Phase 23: Clear Time Warden slow-field registry on restart ──
 	# Prevents stale warden positions from slowing the player after a restart.
-	if EnemyTimeWarden:
-		EnemyTimeWarden.clear_registry()
+	# Load enemy scripts lazily to avoid a compile-time cycle: EnemyBase reads
+	# GameManager during combat, while GameManager previously referenced enemy
+	# global classes during autoload initialization.
+	var time_warden_script: GDScript = load("res://scripts/enemy_time_warden.gd")
+	if time_warden_script:
+		time_warden_script.clear_registry()
 	# ── Phase 19: Reset co-op state ──
 	player_is_downed = false
 	p1_downed_timer = 0.0
@@ -802,7 +806,9 @@ func restart_game() -> void:
 	# and every enemy in the new run would unnecessarily scan for MC traitors
 	# every frame. The scene tree frees all enemies on restart, so no
 	# _end_mind_control calls fire to decrement the counter naturally.
-	EnemyBase._active_mc_count = 0
+	var enemy_base_script: GDScript = load("res://scripts/enemy_base.gd")
+	if enemy_base_script:
+		enemy_base_script._active_mc_count = 0
 	_start_game()
 	game_restarted.emit()
 

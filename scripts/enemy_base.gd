@@ -188,6 +188,12 @@ static var _active_mc_count: int = 0
 @onready var body_mesh: MeshInstance3D = $BodyMesh
 @onready var alert_indicator: Label3D = $AlertIndicator
 
+## Resolve the optional optimizer at runtime. Several early autoloads preload
+## enemy scenes before PerformanceOptimizer itself is registered, so referring
+## to the autoload identifier here creates a circular compile-time dependency.
+func _performance_optimizer() -> Node:
+	return get_node_or_null("/root/PerformanceOptimizer")
+
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("enemies")
@@ -196,8 +202,9 @@ func _ready() -> void:
 	# Enemies have particles (aura, death poof) and lights (emission glow).
 	# The PerformanceOptimizer adjusts these based on distance to player,
 	# reducing particle counts and dimming lights for far enemies.
-	if PerformanceOptimizer:
-		PerformanceOptimizer.register_lod_target(self)
+	var performance_optimizer := _performance_optimizer()
+	if performance_optimizer:
+		performance_optimizer.register_lod_target(self)
 
 	# ── Phase 10: Create AI controller for advanced behaviors ──
 	if use_smart_ai:
@@ -282,7 +289,8 @@ func _physics_process(delta: float) -> void:
 	# but the expensive AI logic (pathfinding, LOS checks, pack updates) is
 	# throttled. This can cut enemy CPU cost by 30-50% when many are active.
 	var _ai_skip: bool = false
-	if PerformanceOptimizer and GameManager.player and is_instance_valid(GameManager.player):
+	var performance_optimizer := _performance_optimizer()
+	if performance_optimizer and GameManager.player and is_instance_valid(GameManager.player):
 		var _dist_to_player: float = global_position.distance_to(GameManager.player.global_position)
 		if _dist_to_player > 80.0:
 			# Far enemies: only run AI every 3rd frame
@@ -1538,8 +1546,9 @@ func _die() -> void:
 		if mc_light:
 			mc_light.queue_free()
 	# ── Phase 35: Unregister from LOD management ──
-	if PerformanceOptimizer:
-		PerformanceOptimizer.unregister_lod_target(self)
+	var performance_optimizer := _performance_optimizer()
+	if performance_optimizer:
+		performance_optimizer.unregister_lod_target(self)
 	var killer_name: String = GameConstants.P2_NAME if _killed_by_p2 else "Zorp"
 	# ── Enhancement Pack 54: Pass crit kill flag to register_kill ──
 	GameManager.register_kill(enemy_name, killer_name, _killed_by_crit)
@@ -1699,8 +1708,9 @@ func _die() -> void:
 	#    auto-reclaims it after the duration.
 	var death_flash_energy: float = 3.0 + base_scale * 2.0
 	var death_flash_range: float = 4.0 + base_scale * 3.0
-	if PerformanceOptimizer:
-		var death_light := PerformanceOptimizer.acquire_transient_light(
+	var death_optimizer := _performance_optimizer()
+	if death_optimizer:
+		var death_light: OmniLight3D = death_optimizer.acquire_transient_light(
 			global_position + Vector3(0, 0.5, 0),
 			base_color,
 			death_flash_energy,
@@ -1709,7 +1719,7 @@ func _die() -> void:
 			1.2
 		)
 		if death_light:
-			var light_tween := death_light.create_tween()
+			var light_tween: Tween = death_light.create_tween()
 			light_tween.tween_property(death_light, "light_energy", 0.0, 0.3) \
 				.set_ease(Tween.EASE_OUT) \
 				.set_trans(Tween.TRANS_CUBIC)

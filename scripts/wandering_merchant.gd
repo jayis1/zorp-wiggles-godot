@@ -64,7 +64,7 @@ func _ready() -> void:
 	#    lore stone spawn-in. Without this, the merchant simply appears at
 	#    full scale — jarring for a "rare wandering" NPC that's supposed
 	#    to feel like it traveled to the player's location.
-	scale = Vector3.ZERO
+	scale = Vector3.ONE * 0.001
 	var spawn_tween := create_tween()
 	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.5) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)

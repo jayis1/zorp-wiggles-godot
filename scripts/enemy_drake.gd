@@ -3,16 +3,10 @@
 ## Phase 1 (>25% HP): normal chase + fire breath
 ## Phase 2 (<25% HP): enrage — faster, stronger, charges at player
 
-extends EnemyBase
+extends "res://scripts/enemy_base.gd"
 
-class_name EnemyDrake
-
-# class_name is REQUIRED for Godot 4.4 class resolution. Without it, the
-# script is not registered in the global class registry and `extends
-# EnemyBase` fails to resolve when the script is loaded via preload() in
-# autoload scripts (BossArena, GameModeManager, EndgameManager) before
-# enemy_base.gd has been loaded through the resource system. boss_arena.gd
-# uses boss.get("enemy_type") instead of `is EnemyDrake`.
+# Use a path-based base class because this boss is preloaded by autoloads
+# before the editor has guaranteed global class registration order.
 
 # ─── Drake State ──────────────────────────────────────────────────────────────
 var is_enraged: bool = false

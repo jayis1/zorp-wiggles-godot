@@ -51,7 +51,9 @@ func _ready() -> void:
 	#    the world generator scatters them — jarring compared to the animated
 	#    spawn-in of other world objects. Ease-out-back gives a small overshoot
 	#    so the creature "bounces" into life.
-	scale = Vector3.ZERO
+	# A zero basis cannot be inverted by physics/rendering while the spawn
+	# tween runs. Start imperceptibly small but mathematically valid.
+	scale = Vector3.ONE * 0.001
 	var spawn_tween := create_tween()
 	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.4) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
