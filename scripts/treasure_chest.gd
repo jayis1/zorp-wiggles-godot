@@ -38,7 +38,7 @@ func _ready() -> void:
 	# Spawn-in animation: chest rises from the ground with a scale pop.
 	# Disable collision during the rise so the player can't trigger it mid-spawn.
 	# (Collision shape is on the scene root; we monitor body_entered via signal.)
-	scale = Vector3.ZERO
+	scale = Vector3.ONE * 0.001
 	global_position.y -= 0.6
 	var spawn_tween := create_tween()
 	spawn_tween.tween_property(self, "global_position:y",

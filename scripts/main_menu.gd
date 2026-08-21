@@ -68,8 +68,74 @@ func _ready() -> void:
 	_add_character_select_button()
 	# Show the currently selected mode on the subtitle
 	_update_mode_subtitle()
+	# Keep all menu actions visible across window sizes and aspect ratios.
+	resized.connect(_layout_menu)
+	_layout_menu()
+	start_button.grab_focus()
 	# Play entrance animation
 	_animate_entrance()
+
+## Lay out the menu from the current viewport instead of relying on the
+## original 1280x720 pixel offsets. Dynamic buttons (continue/mode/character)
+## previously pushed Quit and the controls legend below the viewport.
+func _layout_menu() -> void:
+	var viewport_size := size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	var center_x: float = viewport_size.x * 0.5
+	var button_width: float = clampf(viewport_size.x * 0.42, 280.0, 420.0)
+	var button_height: float = 52.0
+	var gap: float = 10.0
+	var buttons: Array[Button] = []
+	if _continue_button:
+		buttons.append(_continue_button)
+	buttons.append(start_button)
+	buttons.append(settings_button)
+	var mode_button: Button = get_node_or_null("ModeSelectButton")
+	var character_button: Button = get_node_or_null("CharacterSelectButton")
+	if mode_button:
+		buttons.append(mode_button)
+	if character_button:
+		buttons.append(character_button)
+	buttons.append(quit_button)
+
+	var title_top: float = maxf(24.0, viewport_size.y * 0.06)
+	title_label.offset_left = maxf(16.0, center_x - minf(520.0, viewport_size.x * 0.46))
+	title_label.offset_right = minf(viewport_size.x - 16.0, center_x + minf(520.0, viewport_size.x * 0.46))
+	title_label.offset_top = title_top
+	title_label.offset_bottom = title_top + 100.0
+	title_label.add_theme_font_size_override("font_size", 42 if viewport_size.y < 700.0 else 56)
+	subtitle_label.offset_left = maxf(16.0, center_x - button_width)
+	subtitle_label.offset_right = minf(viewport_size.x - 16.0, center_x + button_width)
+	subtitle_label.offset_top = title_label.offset_bottom + 8.0
+	subtitle_label.offset_bottom = subtitle_label.offset_top + 32.0
+
+	var total_height: float = buttons.size() * button_height + maxf(0.0, buttons.size() - 1) * gap
+	var menu_top: float = subtitle_label.offset_bottom + 18.0
+	var controls_top: float = viewport_size.y - 66.0
+	var available_height: float = maxf(button_height, controls_top - menu_top - 12.0)
+	# Compress spacing and button height on short windows before allowing scroll-
+	# free content to clip. 720p keeps the full-size presentation.
+	if total_height > available_height:
+		gap = 6.0
+		button_height = maxf(38.0, (available_height - (buttons.size() - 1) * gap) / buttons.size())
+		total_height = buttons.size() * button_height + (buttons.size() - 1) * gap
+	var y: float = menu_top + maxf(0.0, (available_height - total_height) * 0.5)
+	for button in buttons:
+		button.offset_left = center_x - button_width * 0.5
+		button.offset_right = center_x + button_width * 0.5
+		button.offset_top = y
+		button.offset_bottom = y + button_height
+		button.pivot_offset = Vector2(button_width * 0.5, button_height * 0.5)
+		button.add_theme_font_size_override("font_size", 18 if button_height < 46.0 else 22)
+		y += button_height + gap
+
+	controls_label.offset_left = maxf(16.0, center_x - minf(480.0, viewport_size.x * 0.46))
+	controls_label.offset_right = minf(viewport_size.x - 16.0, center_x + minf(480.0, viewport_size.x * 0.46))
+	controls_label.offset_top = viewport_size.y - 62.0
+	controls_label.offset_bottom = viewport_size.y - 8.0
+	controls_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	controls_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 # ── Phase 31: Add a "Continue" button above Start if a save exists ──
 # The button shows a short summary of the save (level, biome, time) so the

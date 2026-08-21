@@ -54,7 +54,7 @@ func _ready() -> void:
 	#    characters "arriving" in the world. Without this, NPCs simply pop
 	#    into existence at full scale, inconsistent with the animated
 	#    spawn-in of treasure chests, lore stones, and other world objects.
-	scale = Vector3.ZERO
+	scale = Vector3.ONE * 0.001
 	var spawn_tween := create_tween()
 	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.6) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)

@@ -89,6 +89,9 @@ static func _ensure_shared_particle_meshes() -> void:
 		_shared_dash_trail_mesh.height = 0.6
 		_shared_dash_trail_mesh.radial_segments = 6
 		_shared_dash_trail_mesh.rings = 3
+	# Particle helpers duplicate this material alongside the mesh templates.
+	# Ensure it exists even when no explosion effect has run yet.
+	_ensure_shared_explosion_resources()
 
 static func _ensure_shared_explosion_resources() -> void:
 	if _shared_explosion_mesh == null:

@@ -62,7 +62,7 @@ func _ready() -> void:
 	#    when the world generator scatters them — inconsistent with the
 	#    animated spawn-in of treasure chests, lore stones, and other
 	#    world objects. 0.3s is quick enough not to delay gameplay.
-	scale = Vector3.ZERO
+	scale = Vector3.ONE * 0.001
 	var spawn_tween := create_tween()
 	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.3) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)

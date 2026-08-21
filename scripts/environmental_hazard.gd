@@ -70,7 +70,7 @@ func _ready() -> void:
 	#    telegraph mesh and hazard mesh start hidden (visible = false),
 	#    so only the root scale matters for the initial appearance.
 	#    Matches the treasure chest and lore stone spawn language.
-	scale = Vector3.ZERO
+	scale = Vector3.ONE * 0.001
 	var spawn_tween := create_tween()
 	spawn_tween.tween_property(self, "scale", Vector3.ONE, 0.35) \
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)

@@ -85,6 +85,16 @@ func _ready() -> void:
 	_current_quality_level = 2
 	print_verbose("[PerformanceOptimizer] Initialized — auto-quality enabled")
 
+func _exit_tree() -> void:
+	# Prewarmed instances are intentionally kept outside the scene tree. They
+	# must be freed explicitly on shutdown or Godot reports leaked render RIDs.
+	clear_all_pools()
+	for light in _light_pool:
+		if is_instance_valid(light):
+			light.free()
+	_light_pool.clear()
+	_lod_targets.clear()
+
 func _process(delta: float) -> void:
 	# Track frame time
 	# We can't measure the current frame's time yet, so we use the delta
@@ -669,10 +679,14 @@ func _on_game_restarted() -> void:
 
 ## Clear all pools (called on scene change or game exit).
 func clear_all_pools() -> void:
+	for instance_id in _active_instances.keys().duplicate():
+		var active_node: Node = instance_from_id(instance_id)
+		if active_node and is_instance_valid(active_node):
+			active_node.free()
 	for path in _pools:
 		var pool: Dictionary = _pools[path]
 		for node in pool["free"]:
 			if is_instance_valid(node):
-				node.queue_free()
+				node.free()
 	_pools.clear()
 	_active_instances.clear()

@@ -179,7 +179,9 @@ static func setup_collectible_animations(anim_player: AnimationPlayer) -> void:
 	var spawn_scale_track := spawn.add_track(Animation.TYPE_VALUE)
 	spawn.track_set_path(spawn_scale_track, "MeshInstance3D:scale")
 	spawn.track_set_interpolation_type(spawn_scale_track, Animation.INTERPOLATION_CUBIC)
-	spawn.track_insert_key(spawn_scale_track, 0.0, Vector3.ZERO)
+	# Never write a zero basis to a live Node3D: render/physics code needs an
+	# invertible transform during the first animation frame.
+	spawn.track_insert_key(spawn_scale_track, 0.0, Vector3.ONE * 0.001)
 	spawn.track_insert_key(spawn_scale_track, 0.6, Vector3.ONE)
 	lib.add_animation(ANIM_COLLECTIBLE_SPAWN, spawn)
 

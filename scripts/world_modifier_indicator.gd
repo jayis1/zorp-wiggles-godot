@@ -196,4 +196,8 @@ func _hide() -> void:
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_transition_tween.tween_property(_panel, "offset_left", 8.0 + _SLIDE_OFFSET, _EXIT_DURATION) \
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	_transition_tween.chain().tween_callback(func(): _panel.visible = false)
+	_transition_tween.chain().tween_callback(_finish_hide)
+
+func _finish_hide() -> void:
+	if _panel:
+		_panel.visible = false
